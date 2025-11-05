@@ -69,22 +69,14 @@ export class VectorStoreService {
    */
   async search_relevant_content(context: EducationalContext): Promise<SearchResponse> {
     const startTime = Date.now();
-    
+
     try {
       console.log(`🔍 Vector Search: ${context.query.substring(0, 50)}... for Class ${context.grade_level} ${context.subject}`);
 
       // Step 1: Check cache first
-      const cachedResult = await this.cacheService.getCachedVectorSearchResults(
-        context.query,
-        {
-          grade_level: context.grade_level,
-          subject: context.subject,
-          board_type: context.board_type,
-          limit: context.limit || 5,
-          content_types: context.content_types || ['text'],
-          cognitive_level: context.cognitive_level
-        }
-      );
+      // Generate cache key from context
+      const cacheKey = `vector_search:${context.query}:${context.grade_level}:${context.subject}:${context.board_type}`;
+      const cachedResult = await this.cacheService.get<SearchResponse>(cacheKey);
 
       if (cachedResult) {
         console.log(`⚡ Cache hit for vector search - ${Date.now() - startTime}ms`);
@@ -139,19 +131,12 @@ export class VectorStoreService {
         confidence: this.calculateConfidence(results)
       };
 
-      // Step 3: Cache the results for future use
-      await this.cacheService.cacheVectorSearchResults(
-        context.query,
-        {
-          grade_level: context.grade_level,
-          subject: context.subject,
-          board_type: context.board_type,
-          limit: context.limit || 5,
-          content_types: context.content_types || ['text'],
-          cognitive_level: context.cognitive_level
-        },
-        searchResponse
-      );
+      // Step 3: Cache the results for future use (7 days TTL)
+      const cacheKey = `vector_search:${context.query}:${context.grade_level}:${context.subject}:${context.board_type}`;
+      await this.cacheService.set(cacheKey, searchResponse, {
+        ttl: 7 * 24 * 60 * 60, // 7 days
+        tags: [`subject:${context.subject}`, `grade:${context.grade_level}`]
+      });
 
       return searchResponse;
       
