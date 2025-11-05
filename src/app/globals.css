@@ -1,0 +1,869 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Note: additional global CSS files are imported from app/layout.tsx to avoid @import issues in some builds */
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --apple-blue: #0071e3;
+  --apple-blue-dark: #005bb5;
+
+  /* shadcn/ui theme variables */
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 222.2 47.4% 11.2%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222.2 84% 4.9%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 222.2 84% 4.9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 222.2 84% 4.9%;
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  /* Base Colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* VG Educational Color System */
+  --color-vg-primary-50: var(--vg-primary-50);
+  --color-vg-primary-100: var(--vg-primary-100);
+  --color-vg-primary-200: var(--vg-primary-200);
+  --color-vg-primary-300: var(--vg-primary-300);
+  --color-vg-primary-400: var(--vg-primary-400);
+  --color-vg-primary-500: var(--vg-primary-500);
+  --color-vg-primary-600: var(--vg-primary-600);
+  --color-vg-primary-700: var(--vg-primary-700);
+  --color-vg-primary-800: var(--vg-primary-800);
+  --color-vg-primary-900: var(--vg-primary-900);
+
+  /* VG Sanskrit & Cultural Colors */
+  --color-vg-sanskrit-50: var(--vg-sanskrit-50);
+  --color-vg-sanskrit-100: var(--vg-sanskrit-100);
+  --color-vg-sanskrit-200: var(--vg-sanskrit-200);
+  --color-vg-sanskrit-300: var(--vg-sanskrit-300);
+  --color-vg-sanskrit-400: var(--vg-sanskrit-400);
+  --color-vg-sanskrit-500: var(--vg-sanskrit-500);
+  --color-vg-sanskrit-600: var(--vg-sanskrit-600);
+  --color-vg-sanskrit-700: var(--vg-sanskrit-700);
+  --color-vg-sanskrit-800: var(--vg-sanskrit-800);
+  --color-vg-sanskrit-900: var(--vg-sanskrit-900);
+
+  --color-vg-cultural-50: var(--vg-cultural-50);
+  --color-vg-cultural-100: var(--vg-cultural-100);
+  --color-vg-cultural-200: var(--vg-cultural-200);
+  --color-vg-cultural-300: var(--vg-cultural-300);
+  --color-vg-cultural-400: var(--vg-cultural-400);
+  --color-vg-cultural-500: var(--vg-cultural-500);
+  --color-vg-cultural-600: var(--vg-cultural-600);
+  --color-vg-cultural-700: var(--vg-cultural-700);
+  --color-vg-cultural-800: var(--vg-cultural-800);
+  --color-vg-cultural-900: var(--vg-cultural-900);
+
+  /* VG Semantic Colors */
+  --color-vg-success-50: var(--vg-success-50);
+  --color-vg-success-100: var(--vg-success-100);
+  --color-vg-success-500: var(--vg-success-500);
+  --color-vg-success-600: var(--vg-success-600);
+  --color-vg-success-700: var(--vg-success-700);
+
+  --color-vg-warning-50: var(--vg-warning-50);
+  --color-vg-warning-100: var(--vg-warning-100);
+  --color-vg-warning-500: var(--vg-warning-500);
+  --color-vg-warning-600: var(--vg-warning-600);
+  --color-vg-warning-700: var(--vg-warning-700);
+
+  --color-vg-error-50: var(--vg-error-50);
+  --color-vg-error-100: var(--vg-error-100);
+  --color-vg-error-500: var(--vg-error-500);
+  --color-vg-error-600: var(--vg-error-600);
+  --color-vg-error-700: var(--vg-error-700);
+
+  /* Typography System */
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-sf-pro: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-vg-primary: 'Inter', system-ui, sans-serif;
+  --font-vg-cultural: 'Noto Sans Devanagari', serif;
+
+  /* VG Typography Scale */
+  --font-size-vg-xs: var(--vg-text-xs);
+  --font-size-vg-sm: var(--vg-text-sm);
+  --font-size-vg-base: var(--vg-text-base);
+  --font-size-vg-lg: var(--vg-text-lg);
+  --font-size-vg-xl: var(--vg-text-xl);
+  --font-size-vg-2xl: var(--vg-text-2xl);
+  --font-size-vg-3xl: var(--vg-text-3xl);
+  --font-size-vg-4xl: var(--vg-text-4xl);
+  --font-size-vg-5xl: var(--vg-text-5xl);
+
+  /* VG Spacing Scale */
+  --spacing-vg-0: var(--vg-space-0);
+  --spacing-vg-1: var(--vg-space-1);
+  --spacing-vg-2: var(--vg-space-2);
+  --spacing-vg-3: var(--vg-space-3);
+  --spacing-vg-4: var(--vg-space-4);
+  --spacing-vg-5: var(--vg-space-5);
+  --spacing-vg-6: var(--vg-space-6);
+  --spacing-vg-8: var(--vg-space-8);
+  --spacing-vg-10: var(--vg-space-10);
+  --spacing-vg-12: var(--vg-space-12);
+  --spacing-vg-16: var(--vg-space-16);
+  --spacing-vg-20: var(--vg-space-20);
+
+  /* VG Shadow System */
+  --box-shadow-vg-xs: var(--vg-shadow-xs);
+  --box-shadow-vg-sm: var(--vg-shadow-sm);
+  --box-shadow-vg-md: var(--vg-shadow-md);
+  --box-shadow-vg-lg: var(--vg-shadow-lg);
+  --box-shadow-vg-xl: var(--vg-shadow-xl);
+  --box-shadow-vg-2xl: var(--vg-shadow-2xl);
+
+  /* VG Border Radius */
+  --border-radius-vg-sm: var(--vg-radius-sm);
+  --border-radius-vg-md: var(--vg-radius-md);
+  --border-radius-vg-lg: var(--vg-radius-lg);
+  --border-radius-vg-xl: var(--vg-radius-xl);
+  --border-radius-vg-2xl: var(--vg-radius-2xl);
+  --border-radius-vg-3xl: var(--vg-radius-3xl);
+
+  /* VG Animation Durations */
+  --animation-duration-vg-fast: var(--vg-duration-fast);
+  --animation-duration-vg-normal: var(--vg-duration-normal);
+  --animation-duration-vg-slow: var(--vg-duration-slow);
+  --animation-duration-vg-slower: var(--vg-duration-slower);
+
+  /* VG Custom Animations */
+  --animation-vg-fade-in: vg-fade-in var(--vg-duration-slow) ease-out;
+  --animation-vg-scale-in: vg-scale-in var(--vg-duration-normal) ease-out;
+  --animation-vg-slide-in-right: vg-slide-in-right var(--vg-duration-slow) ease-out;
+  --animation-vg-slide-in-left: vg-slide-in-left var(--vg-duration-slow) ease-out;
+  --animation-vg-educational-pulse: vg-educational-pulse 2s infinite;
+  --animation-vg-cultural-glow: vg-cultural-glow 3s ease-in-out infinite;
+  --animation-vg-float: vg-float 3s ease-in-out infinite;
+
+  /* VG Backdrop Blur */
+  --backdrop-blur-vg-sm: blur(var(--vg-blur-sm));
+  --backdrop-blur-vg-md: blur(var(--vg-blur-md));
+  --backdrop-blur-vg-lg: blur(var(--vg-blur-lg));
+  --backdrop-blur-vg-xl: blur(var(--vg-blur-xl));
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+
+    /* shadcn/ui dark theme variables */
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sf-pro);
+}
+
+/* Apple-inspired animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s ease-out forwards;
+}
+
+.animate-on-scroll {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.6s ease-out;
+}
+
+.animate-on-scroll.animate-fade-in-up {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Glassmorphic effects */
+.glassmorphic-card {
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Focus styles for accessibility */
+.focus-ring:focus {
+  outline: 2px solid var(--apple-blue);
+  outline-offset: 2px;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Line clamp utilities */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+/* Reduced motion support - consolidated */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  .parallax-container * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
+}
+
+/* Educational Formatting Styles for Virat Gyankosh */
+.highlight-definition {
+  color: #0071e3;
+  font-weight: 600;
+  background-color: rgba(0, 113, 227, 0.1);
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.highlight-key-point {
+  color: #28a745;
+  font-weight: 600;
+  background-color: rgba(40, 167, 69, 0.1);
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.highlight-alert {
+  color: #dc3545;
+  font-weight: 600;
+  background-color: rgba(220, 53, 69, 0.1);
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+/* Chat message formatting for educational content */
+.chat-message {
+  line-height: 1.6;
+}
+
+.chat-message h2 {
+  margin: 1rem 0 0.5rem 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.chat-message h3 {
+  margin: 0.75rem 0 0.5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.chat-message ul, .chat-message ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.chat-message li {
+  margin: 0.25rem 0;
+}
+
+.chat-message em {
+  font-style: italic;
+  color: #0071e3;
+}
+
+.chat-message strong {
+  font-weight: 600;
+}
+
+.chat-message u {
+  text-decoration: underline;
+  text-decoration-color: #0071e3;
+  text-underline-offset: 2px;
+}
+
+/* Page citation styling */
+.page-citation {
+  background-color: #e3f2fd;
+  color: #1565c0;
+  font-weight: 600;
+  font-size: 0.85em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #bbdefb;
+  margin-left: 4px;
+  display: inline-block;
+  font-family: 'Courier New', monospace;
+}
+
+/* Dark mode support for educational formatting */
+@media (prefers-color-scheme: dark) {
+  .highlight-definition {
+    color: #4da6ff;
+    background-color: rgba(77, 166, 255, 0.15);
+  }
+
+  .highlight-key-point {
+    color: #5cb85c;
+    background-color: rgba(92, 184, 92, 0.15);
+  }
+
+  .highlight-alert {
+    color: #f56565;
+    background-color: rgba(245, 101, 101, 0.15);
+  }
+
+  .chat-message em {
+    color: #4da6ff;
+  }
+
+  .chat-message u {
+    text-decoration-color: #4da6ff;
+  }
+
+  .page-citation {
+    background-color: #1a237e;
+    color: #90caf9;
+    border-color: #3949ab;
+  }
+}
+
+/* Enhanced Mathematical Formula Display Styles for VG Kosh */
+.math-inline {
+  font-family: 'Times New Roman', serif;
+  font-style: italic;
+}
+
+.math-display {
+  font-family: 'Times New Roman', serif;
+  text-align: center;
+  margin: 1rem 0;
+  font-size: 1.1em;
+}
+
+/* MathJax Enhanced Display Styles */
+.MathJax_Display {
+  margin: 1.5em 0 !important;
+  text-align: center !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.MathJax {
+  font-size: 110% !important;
+  line-height: 1.4 !important;
+}
+
+mjx-container[display="true"] {
+  margin: 1.5em 0 !important;
+  text-align: center !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+/* Consolidated Formula Container Styling - Merged basic and perplexity styles */
+.formula-container,
+.perplexity-formula-container {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.formula-container::before,
+.perplexity-formula-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6, #06b6d4);
+  border-radius: 16px 16px 0 0;
+}
+
+.formula-container:hover,
+.perplexity-formula-container:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+  border-color: #6366f1;
+}
+
+/* Subject-specific styling - consolidated */
+.chemistry-formula,
+.perplexity-formula-container.chemistry-formula {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border-color: #22c55e;
+}
+
+.chemistry-formula::before,
+.perplexity-formula-container.chemistry-formula::before {
+  background: linear-gradient(90deg, #22c55e, #16a34a, #15803d);
+}
+
+.physics-formula,
+.perplexity-formula-container.physics-formula {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-color: #3b82f6;
+}
+
+.physics-formula::before,
+.perplexity-formula-container.physics-formula::before {
+  background: linear-gradient(90deg, #3b82f6, #06b6d4, #0891b2);
+}
+
+.math-formula,
+.perplexity-formula-container.math-formula {
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+  border-color: #a855f7;
+}
+
+.math-formula::before,
+.perplexity-formula-container.math-formula::before {
+  background: linear-gradient(90deg, #a855f7, #c084fc, #d946ef);
+}
+
+/* Enhanced content with formulas */
+.formula-enhanced-content {
+  position: relative;
+}
+
+.formula-enhanced-content .MathJax_Display,
+.formula-enhanced-content mjx-container[display="true"] {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 8px;
+  padding: 0.5rem;
+  margin: 1rem 0;
+}
+
+/* Dark mode support for formulas */
+.dark .formula-container {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+.dark .chemistry-formula {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.dark .physics-formula {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(59, 130, 246, 0.05) 100%);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.dark .formula-enhanced-content .MathJax_Display,
+.dark .formula-enhanced-content mjx-container[display="true"] {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Mobile responsiveness for formulas */
+@media (max-width: 768px) {
+  .MathJax_Display, mjx-container[display="true"] {
+    margin: 1em 0 !important;
+  }
+
+  .formula-container {
+    padding: 1rem;
+    margin: 0.75rem 0;
+  }
+
+  .MathJax {
+    font-size: 105% !important;
+  }
+}
+
+/* High contrast mode for accessibility */
+@media (prefers-contrast: high) {
+  .formula-container {
+    border-width: 2px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+}
+
+/* Print styles for formulas */
+@media print {
+  .formula-container {
+    background: white !important;
+    border: 1px solid #000 !important;
+    box-shadow: none !important;
+  }
+
+  .formula-container::before {
+    display: none !important;
+  }
+}
+
+/* ========================================
+   PERPLEXITY-LEVEL FORMULA ENHANCEMENTS
+   ======================================== */
+
+/* Perplexity-Level MathJax Enhancement */
+.perplexity-math-renderer {
+  position: relative;
+}
+
+.perplexity-math-renderer mjx-container[display="true"] {
+  margin: 1.5em 0 !important;
+  text-align: center !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 1em;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.dark .perplexity-math-renderer mjx-container[display="true"] {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.perplexity-math-renderer mjx-container[display="true"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+.dark .perplexity-math-renderer mjx-container[display="true"]:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  border-color: rgba(139, 92, 246, 0.6);
+}
+
+.perplexity-math-renderer mjx-container {
+  line-height: 1.6 !important;
+  font-size: 115% !important;
+  font-family: 'Computer Modern', 'Latin Modern Math', 'STIX Two Math', serif !important;
+}
+
+/* Enhanced Typography for Academic Quality */
+.perplexity-math-renderer mjx-math {
+  font-weight: 400 !important;
+  letter-spacing: 0.02em;
+}
+
+/* Chemistry Formula Enhancements for Perplexity-level */
+.chemistry-formula .perplexity-math-renderer mjx-container[display="true"] {
+  background: rgba(34, 197, 94, 0.1) !important;
+  border-color: rgba(34, 197, 94, 0.3) !important;
+}
+
+.dark .chemistry-formula .perplexity-math-renderer mjx-container[display="true"] {
+  background: rgba(34, 197, 94, 0.15) !important;
+  border-color: rgba(34, 197, 94, 0.4) !important;
+}
+
+/* Physics Formula Enhancements for Perplexity-level */
+.physics-formula .perplexity-math-renderer mjx-container[display="true"] {
+  background: rgba(59, 130, 246, 0.1) !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+.dark .physics-formula .perplexity-math-renderer mjx-container[display="true"] {
+  background: rgba(59, 130, 246, 0.15) !important;
+  border-color: rgba(59, 130, 246, 0.4) !important;
+}
+
+/* Accessibility Enhancements */
+.perplexity-math-renderer mjx-container[display="true"]:focus {
+  outline: 2px solid rgba(139, 92, 246, 0.6);
+  outline-offset: 2px;
+}
+
+/* Mobile Responsiveness for Perplexity-level */
+@media (max-width: 768px) {
+  .perplexity-math-renderer mjx-container[display="true"] {
+    padding: 0.75em;
+    margin: 1em 0 !important;
+    font-size: 110% !important;
+  }
+}
+
+/* Enhanced MathJax scaling - consolidated */
+.formula-container mjx-container,
+.perplexity-formula-container mjx-container {
+  font-size: 125% !important;
+  line-height: 1.5 !important;
+}
+
+/* Enhanced MathJax scaling for Perplexity-level quality */
+.perplexity-formula-container mjx-container {
+  font-size: 125% !important;
+  line-height: 1.5 !important;
+}
+
+/* Dark mode support for enhanced containers */
+.dark .perplexity-formula-container {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.8) 100%);
+  border-color: rgba(100, 116, 139, 0.3);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.dark .perplexity-formula-container.math-formula {
+  background: linear-gradient(135deg, rgba(88, 28, 135, 0.2) 0%, rgba(147, 51, 234, 0.1) 100%);
+  border-color: rgba(168, 85, 247, 0.4);
+}
+
+.dark .perplexity-formula-container.physics-formula {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.dark .perplexity-formula-container.chemistry-formula {
+  background: linear-gradient(135deg, rgba(20, 83, 45, 0.2) 0%, rgba(34, 197, 94, 0.1) 100%);
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+/* Print Optimization for Perplexity-level */
+@media print {
+  .perplexity-math-renderer mjx-container[display="true"] {
+    background: white !important;
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    backdrop-filter: none;
+  }
+
+  .perplexity-formula-container {
+    background: white !important;
+    border: 2px solid #000 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  .perplexity-formula-container::before {
+    display: none !important;
+  }
+}
+/* AI Tutor Chat Interface - Prevent Horizontal Overflow */
+.formatted-content {
+  max-width: 100%;
+  overflow-x: hidden;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.formatted-content * {
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+.formatted-content pre,
+.formatted-content code {
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.formatted-content table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* GFM table styling for lesson plans */
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.95em;
+  display: table;
+  overflow-x: auto;
+}
+.prose thead th {
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+}
+.prose tbody td {
+  border: 1px solid #e5e7eb;
+  padding: 0.5rem 0.75rem;
+}
+.prose tbody tr:nth-child(odd) { background: #fcfcfd; }
+.prose tbody tr:nth-child(even) { background: #f9fafb; }
+
+@media (prefers-color-scheme: dark) {
+  .prose thead th { background: #0f172a; border-color: #334155; }
+  .prose tbody td { border-color: #334155; }
+  .prose tbody tr:nth-child(odd) { background: #0b1220; }
+  .prose tbody tr:nth-child(even) { background: #0a0f1a; }
+}
+
+/* Print-friendly layout */
+@media print {
+  body { background: white !important; color: black !important; }
+  .no-print { display: none !important; }
+  .prose { font-size: 12pt; line-height: 1.5; }
+  .prose h1 { font-size: 20pt; }
+  .prose h2 { font-size: 16pt; }
+  .prose h3 { font-size: 14pt; }
+  .prose table { page-break-inside: avoid; }
+}
+
+/* Enhanced Educational Content Formatting */
+.formatted-content {
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.formatted-content h1,
+.formatted-content h2,
+.formatted-content h3 {
+  scroll-margin-top: 2rem;
+}
+
+.formatted-content h2 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+.formatted-content h3 {
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.formatted-content p {
+  margin-bottom: 1rem;
+}
+
+.formatted-content ul,
+.formatted-content ol {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+.formatted-content li {
+  margin-bottom: 0.5rem;
+  line-height: 1.7;
+}
+
+.formatted-content li > p {
+  margin-bottom: 0.25rem;
+}
+
+/* Question formatting */
+.formatted-content li strong:first-child {
+  color: #1e40af;
+  font-weight: 600;
+}
+
+/* Highlighted terms */
+.formatted-content mark {
+  background-color: #fef3c7;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+/* Better spacing for nested lists */
+.formatted-content ul ul,
+.formatted-content ol ol,
+.formatted-content ul ol,
+.formatted-content ol ul {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VG Kosh - Offline Mode</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f97316 0%, #2563eb 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .offline-container {
+            max-width: 500px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .offline-icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        
+        .features {
+            text-align: left;
+            margin: 30px 0;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .features h3 {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .feature-list {
+            list-style: none;
+        }
+        
+        .feature-list li {
+            margin: 10px 0;
+            padding-left: 25px;
+            position: relative;
+        }
+        
+        .feature-list li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #4ade80;
+            font-weight: bold;
+        }
+        
+        .retry-btn {
+            background: linear-gradient(45deg, #4ade80, #22c55e);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 20px;
+        }
+        
+        .retry-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .status.online {
+            background: rgba(74, 222, 128, 0.2);
+            border: 1px solid #4ade80;
+        }
+        
+        .status.offline {
+            background: rgba(248, 113, 113, 0.2);
+            border: 1px solid #f87171;
+        }
+        
+        .indian-context {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            opacity: 0.8;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">🌐</div>
+        <h1>VG Kosh Offline Mode</h1>
+        <p class="subtitle">🇮🇳 Designed for India's diverse connectivity</p>
+        
+        <div class="features">
+            <h3>Available Offline Features</h3>
+            <ul class="feature-list">
+                <li>Study with downloaded flashcards</li>
+                <li>Use CurricuTimer (Pomodoro sessions)</li>
+                <li>Create new study notes</li>
+                <li>Track your progress</li>
+                <li>Access saved dictionary words</li>
+                <li>Review previous sessions</li>
+            </ul>
+        </div>
+        
+        <div id="connectionStatus" class="status offline">
+            📡 Currently Offline - Working with cached data
+        </div>
+        
+        <button class="retry-btn" onclick="checkConnection()">
+            🔄 Check Connection
+        </button>
+        
+        <div class="indian-context">
+            "शिक्षा सबसे शक्तिशाली हथियार है जिससे आप दुनिया बदल सकते हैं"<br>
+            - Education is the most powerful weapon to change the world
+        </div>
+    </div>
+
+    <script>
+        // Check online status
+        function updateConnectionStatus() {
+            const statusEl = document.getElementById('connectionStatus');
+            
+            if (navigator.onLine) {
+                statusEl.className = 'status online';
+                statusEl.innerHTML = '🟢 Back Online - Syncing your data...';
+                
+                // Try to sync and redirect
+                setTimeout(() => {
+                    window.location.href = '/dashboard/user/productivity';
+                }, 2000);
+            } else {
+                statusEl.className = 'status offline';
+                statusEl.innerHTML = '📡 Currently Offline - Working with cached data';
+            }
+        }
+        
+        function checkConnection() {
+            updateConnectionStatus();
+            
+            // Try to fetch a small resource to verify connection
+            fetch('/favicon.ico', { 
+                method: 'HEAD',
+                cache: 'no-cache'
+            })
+            .then(() => {
+                // Connection successful
+                document.getElementById('connectionStatus').innerHTML = '🟢 Connection Restored! Redirecting...';
+                setTimeout(() => {
+                    window.location.href = '/dashboard/user/productivity';
+                }, 1500);
+            })
+            .catch(() => {
+                // Still offline
+                document.getElementById('connectionStatus').innerHTML = '📡 Still Offline - Please check your internet connection';
+            });
+        }
+        
+        // Listen for online/offline events
+        window.addEventListener('online', updateConnectionStatus);
+        window.addEventListener('offline', updateConnectionStatus);
+        
+        // Initial status check
+        updateConnectionStatus();
+        
+        // Auto-check connection every 30 seconds
+        setInterval(checkConnection, 30000);
+    </script>
+</body>
+</html>

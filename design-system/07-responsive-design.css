@@ -1,0 +1,421 @@
+/**
+ * DigiClassroom Design System - Responsive Design
+ * Mobile-first responsive patterns and breakpoints
+ */
+
+:root {
+  /* === RESPONSIVE BREAKPOINTS === */
+  --vg-screen-xs: 475px;
+  --vg-screen-sm: 640px;
+  --vg-screen-md: 768px;
+  --vg-screen-lg: 1024px;
+  --vg-screen-xl: 1280px;
+  --vg-screen-2xl: 1536px;
+
+  /* === CONTAINER SIZES === */
+  --vg-container-xs: 100%;
+  --vg-container-sm: 640px;
+  --vg-container-md: 768px;
+  --vg-container-lg: 1024px;
+  --vg-container-xl: 1280px;
+  --vg-container-2xl: 1536px;
+
+  /* === RESPONSIVE SPACING === */
+  --vg-space-responsive-xs: 1rem;
+  --vg-space-responsive-sm: 1.5rem;
+  --vg-space-responsive-md: 2rem;
+  --vg-space-responsive-lg: 3rem;
+  --vg-space-responsive-xl: 4rem;
+}
+
+/* === CONTAINER UTILITIES === */
+
+.vg-container {
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 475px) {
+  .vg-container {
+    max-width: var(--vg-container-xs);
+  }
+}
+
+@media (min-width: 640px) {
+  .vg-container {
+    max-width: var(--vg-container-sm);
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .vg-container {
+    max-width: var(--vg-container-md);
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .vg-container {
+    max-width: var(--vg-container-lg);
+  }
+}
+
+@media (min-width: 1280px) {
+  .vg-container {
+    max-width: var(--vg-container-xl);
+  }
+}
+
+@media (min-width: 1536px) {
+  .vg-container {
+    max-width: var(--vg-container-2xl);
+  }
+}
+
+/* === RESPONSIVE GRID SYSTEM === */
+
+.vg-grid-responsive {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .vg-grid-responsive {
+    gap: 1.5rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) {
+  .vg-grid-responsive {
+    gap: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .vg-grid-responsive {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .vg-grid-responsive {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* === RESPONSIVE TYPOGRAPHY === */
+
+.vg-text-responsive-sm {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.vg-text-responsive-base {
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+
+.vg-text-responsive-lg {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+.vg-text-responsive-xl {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+.vg-text-responsive-2xl {
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+
+.vg-text-responsive-3xl {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+}
+
+@media (min-width: 640px) {
+  .vg-text-responsive-lg {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+  
+  .vg-text-responsive-xl {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+  
+  .vg-text-responsive-2xl {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+  }
+  
+  .vg-text-responsive-3xl {
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .vg-text-responsive-xl {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+  }
+  
+  .vg-text-responsive-2xl {
+    font-size: 2.25rem;
+    line-height: 2.5rem;
+  }
+  
+  .vg-text-responsive-3xl {
+    font-size: 3rem;
+    line-height: 1;
+  }
+}
+
+/* === RESPONSIVE SPACING === */
+
+.vg-p-responsive {
+  padding: var(--vg-space-responsive-xs);
+}
+
+@media (min-width: 640px) {
+  .vg-p-responsive {
+    padding: var(--vg-space-responsive-sm);
+  }
+}
+
+@media (min-width: 768px) {
+  .vg-p-responsive {
+    padding: var(--vg-space-responsive-md);
+  }
+}
+
+@media (min-width: 1024px) {
+  .vg-p-responsive {
+    padding: var(--vg-space-responsive-lg);
+  }
+}
+
+@media (min-width: 1280px) {
+  .vg-p-responsive {
+    padding: var(--vg-space-responsive-xl);
+  }
+}
+
+/* === RESPONSIVE COMPONENTS === */
+
+/* Dashboard Layout */
+.vg-dashboard-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+@media (min-width: 768px) {
+  .vg-dashboard-layout {
+    flex-direction: row;
+  }
+}
+
+/* Sidebar Responsive */
+.vg-sidebar {
+  width: 100%;
+  height: auto;
+  position: relative;
+}
+
+@media (min-width: 768px) {
+  .vg-sidebar {
+    width: 16rem;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+  }
+  
+  .vg-sidebar.collapsed {
+    width: 4rem;
+  }
+}
+
+/* Card Grid Responsive */
+.vg-card-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .vg-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .vg-card-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .vg-card-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Chat Interface Responsive */
+.vg-chat-container {
+  height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (min-width: 768px) {
+  .vg-chat-container {
+    height: 500px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .vg-chat-container {
+    height: 600px;
+  }
+}
+
+/* Form Responsive */
+.vg-form-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 640px) {
+  .vg-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+}
+
+/* === MOBILE-FIRST UTILITIES === */
+
+/* Hide on mobile */
+.vg-hidden-mobile {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .vg-hidden-mobile {
+    display: block;
+  }
+}
+
+/* Show only on mobile */
+.vg-mobile-only {
+  display: block;
+}
+
+@media (min-width: 768px) {
+  .vg-mobile-only {
+    display: none;
+  }
+}
+
+/* Responsive text alignment */
+.vg-text-center-mobile {
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .vg-text-center-mobile {
+    text-align: left;
+  }
+}
+
+/* === TOUCH-FRIENDLY INTERACTIONS === */
+
+@media (hover: none) and (pointer: coarse) {
+  /* Touch device styles */
+  .vg-touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .vg-hover-lift:hover {
+    transform: none;
+  }
+  
+  .vg-hover-scale:hover {
+    transform: none;
+  }
+  
+  /* Increase tap targets */
+  button, 
+  .vg-button,
+  a {
+    min-height: 44px;
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* === RESPONSIVE ANIMATIONS === */
+
+@media (prefers-reduced-motion: reduce) {
+  .vg-animate-bounce,
+  .vg-animate-pulse,
+  .vg-animate-slide-in-up,
+  .vg-animate-slide-in-down,
+  .vg-animate-fade-in-scale,
+  .vg-animate-shimmer,
+  .vg-animate-float,
+  .vg-animate-glow,
+  .vg-animate-spin {
+    animation: none;
+  }
+  
+  .vg-hover-lift,
+  .vg-hover-scale,
+  .vg-hover-glow,
+  .vg-hover-rotate {
+    transition: none;
+  }
+}
+
+/* === PRINT STYLES === */
+
+@media print {
+  .vg-no-print {
+    display: none !important;
+  }
+  
+  .vg-print-break-before {
+    page-break-before: always;
+  }
+  
+  .vg-print-break-after {
+    page-break-after: always;
+  }
+  
+  /* Ensure good contrast for printing */
+  .vg-glass-card {
+    background: white !important;
+    border: 1px solid #ccc !important;
+    box-shadow: none !important;
+  }
+  
+  /* Remove animations for print */
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

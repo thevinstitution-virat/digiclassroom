@@ -1,0 +1,125 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: digiclassroom-config
+  namespace: digiclassroom
+  labels:
+    app: digiclassroom-ai-tutor
+data:
+  NODE_ENV: "production"
+  NEXT_PUBLIC_API_URL: "https://digiclassroom.example.com/api"
+  QDRANT_URL: "http://qdrant-service:6333"
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  APM_ENABLED: "true"
+  USE_UNIFIED_PROMPTS: "true"
+  LOG_LEVEL: "info"
+  # Database configuration
+  DB_HOST: "mysql-service"
+  DB_PORT: "3306"
+  DB_NAME: "digiclassroom"
+  DB_USER: "digiclassroom_user"
+  # Redis cache TTL settings
+  CACHE_TTL_VECTOR_SEARCH: "3600"
+  CACHE_TTL_VERIFICATION: "1800"
+  CACHE_TTL_MODEL_RESPONSES: "7200"
+  CACHE_TTL_AGENT_RESPONSES: "1800"
+  # LLM routing configuration
+  MODEL_ROUTING_LOOKUP: "command-r7b-12-2024"
+  MODEL_ROUTING_TUTORING: "command-r-08-2024"
+  MODEL_ROUTING_REASONING: "command-r-plus-08-2024"
+  MODEL_ROUTING_FALLBACK: "gpt-4o-mini"
+  # Temperature settings
+  TEMPERATURE_LOOKUP: "0.1"
+  TEMPERATURE_TUTORING: "0.4"
+  TEMPERATURE_REASONING: "0.7"
+  TEMPERATURE_UI_PROMPTS: "0.7"
+  # Content verification thresholds
+  OVERALL_FIDELITY_THRESHOLD: "0.95"
+  SENTENCE_SIMILARITY_THRESHOLD: "0.85"
+  SEMANTIC_SIMILARITY_THRESHOLD: "0.80"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-config
+  namespace: digiclassroom
+  labels:
+    app: mysql
+data:
+  my.cnf: |
+    [mysqld]
+    # Performance optimizations
+    innodb_buffer_pool_size = 1G
+    innodb_log_file_size = 256M
+    max_connections = 200
+    query_cache_size = 64M
+    query_cache_type = 1
+    
+    # Character set
+    character-set-server = utf8mb4
+    collation-server = utf8mb4_unicode_ci
+    
+    # Logging
+    slow_query_log = 1
+    slow_query_log_file = /var/log/mysql/slow.log
+    long_query_time = 2
+    
+    # Security
+    bind-address = 0.0.0.0
+    skip-name-resolve
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: digiclassroom
+  labels:
+    app: redis
+data:
+  redis.conf: |
+    # Memory management
+    maxmemory 1gb
+    maxmemory-policy allkeys-lru
+    
+    # Persistence
+    save 900 1
+    save 300 10
+    save 60 10000
+    appendonly yes
+    appendfsync everysec
+    
+    # Performance
+    tcp-keepalive 300
+    timeout 0
+    
+    # Security
+    protected-mode yes
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qdrant-config
+  namespace: digiclassroom
+  labels:
+    app: qdrant
+data:
+  config.yaml: |
+    service:
+      http_port: 6333
+      grpc_port: 6334
+      enable_cors: true
+    
+    storage:
+      performance:
+        max_search_threads: 4
+        max_optimization_threads: 2
+      wal:
+        wal_capacity_mb: 64
+        wal_segments_ahead: 3
+      optimizers:
+        memmap_threshold_kb: 200000
+        indexing_threshold_kb: 20000
+    
+    log_level: INFO

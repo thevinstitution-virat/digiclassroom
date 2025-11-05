@@ -1,0 +1,128 @@
+/**
+ * DigiClassroom Design System - Visual Identity
+ * Educational-focused color palette and brand elements
+ */
+
+:root {
+  /* === PRIMARY BRAND COLORS === */
+  --apple-blue: #0071e3;
+  --apple-blue-dark: #005bb5;
+  
+  /* VG Educational Color System */
+  --vg-primary-50: #fef7ee;
+  --vg-primary-100: #fdedd3;
+  --vg-primary-200: #fbd7a5;
+  --vg-primary-300: #f8bc6d;
+  --vg-primary-400: #f59e0b;
+  --vg-primary-500: #f97316; /* Primary Orange */
+  --vg-primary-600: #ea580c;
+  --vg-primary-700: #c2410c;
+  --vg-primary-800: #9a3412;
+  --vg-primary-900: #7c2d12;
+
+  /* Secondary Blue Scale */
+  --vg-secondary-50: #eff6ff;
+  --vg-secondary-100: #dbeafe;
+  --vg-secondary-200: #bfdbfe;
+  --vg-secondary-300: #93c5fd;
+  --vg-secondary-400: #60a5fa;
+  --vg-secondary-500: #2563eb; /* Primary Blue */
+  --vg-secondary-600: #1d4ed8;
+  --vg-secondary-700: #1e40af;
+  --vg-secondary-800: #1e3a8a;
+  --vg-secondary-900: #1e293b;
+
+  /* === EDUCATIONAL SEMANTIC COLORS === */
+  --vg-success-50: #f0fdf4;
+  --vg-success-500: #22c55e;
+  --vg-success-600: #16a34a;
+  
+  --vg-warning-50: #fffbeb;
+  --vg-warning-500: #f59e0b;
+  --vg-warning-600: #d97706;
+  
+  --vg-error-50: #fef2f2;
+  --vg-error-500: #ef4444;
+  --vg-error-600: #dc2626;
+
+  /* === CULTURAL COLORS === */
+  --vg-sanskrit-50: #fdf4ff;
+  --vg-sanskrit-500: #a855f7;
+  --vg-sanskrit-600: #9333ea;
+
+  /* === NEUTRAL GRAYS === */
+  --vg-gray-50: #f9fafb;
+  --vg-gray-100: #f3f4f6;
+  --vg-gray-200: #e5e7eb;
+  --vg-gray-300: #d1d5db;
+  --vg-gray-400: #9ca3af;
+  --vg-gray-500: #6b7280;
+  --vg-gray-600: #4b5563;
+  --vg-gray-700: #374151;
+  --vg-gray-800: #1f2937;
+  --vg-gray-900: #111827;
+
+  /* === GLASSMORPHISM === */
+  --glass-bg: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  --glass-backdrop: blur(10px);
+
+  /* === GRADIENTS === */
+  --gradient-primary: linear-gradient(135deg, var(--vg-primary-500), var(--vg-secondary-500));
+  --gradient-educational: linear-gradient(135deg, #f97316, #2563eb);
+  --gradient-cultural: linear-gradient(135deg, #a855f7, #ec4899);
+  --gradient-success: linear-gradient(135deg, #22c55e, #16a34a);
+  --gradient-warning: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+/* Dark Mode Overrides */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --glass-bg: rgba(0, 0, 0, 0.2);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* === GRADIENT TEXT UTILITIES === */
+.vg-text-gradient-educational {
+  background: var(--gradient-educational);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.vg-text-gradient-cultural {
+  background: var(--gradient-cultural);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* === APPLE-STYLE BUTTON GRADIENTS === */
+.vg-apple-button-primary {
+  background: linear-gradient(180deg, #007aff 0%, #0051d5 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.vg-apple-button-primary:hover {
+  background: linear-gradient(180deg, #0056cc 0%, #003d99 100%);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* === EDUCATIONAL HIGHLIGHT COLORS === */
+.highlight-definition {
+  background-color: var(--vg-primary-50);
+  border-left: 3px solid var(--vg-primary-500);
+}
+
+.highlight-key-point {
+  background-color: var(--vg-secondary-50);
+  border-left: 3px solid var(--vg-secondary-500);
+}
+
+.highlight-alert {
+  background-color: var(--vg-warning-50);
+  border-left: 3px solid var(--vg-warning-500);
+}

@@ -1,0 +1,185 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-deployment
+  namespace: digiclassroom
+  labels:
+    app: mysql
+    component: database
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+        component: database
+    spec:
+      containers:
+      - name: mysql
+        image: mysql:8.0
+        ports:
+        - containerPort: 3306
+          name: mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secrets
+              key: MYSQL_ROOT_PASSWORD
+        - name: MYSQL_DATABASE
+          value: "digiclassroom"
+        - name: MYSQL_USER
+          value: "digiclassroom_user"
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secrets
+              key: MYSQL_PASSWORD
+        volumeMounts:
+        - name: mysql-storage
+          mountPath: /var/lib/mysql
+        - name: mysql-config
+          mountPath: /etc/mysql/conf.d
+        - name: mysql-init
+          mountPath: /docker-entrypoint-initdb.d
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1"
+        livenessProbe:
+          exec:
+            command:
+            - mysqladmin
+            - ping
+            - -h
+            - localhost
+            - -u
+            - root
+            - -p$(MYSQL_ROOT_PASSWORD)
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - mysqladmin
+            - ping
+            - -h
+            - localhost
+            - -u
+            - root
+            - -p$(MYSQL_ROOT_PASSWORD)
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+      volumes:
+      - name: mysql-storage
+        persistentVolumeClaim:
+          claimName: mysql-pvc
+      - name: mysql-config
+        configMap:
+          name: mysql-config
+      - name: mysql-init
+        configMap:
+          name: mysql-init-scripts
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-service
+  namespace: digiclassroom
+  labels:
+    app: mysql
+spec:
+  selector:
+    app: mysql
+  ports:
+  - port: 3306
+    targetPort: 3306
+    name: mysql
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+  namespace: digiclassroom
+  labels:
+    app: mysql
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: fast-ssd
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-init-scripts
+  namespace: digiclassroom
+  labels:
+    app: mysql
+data:
+  01-init.sql: |
+    -- DigiClassroom Database Initialization
+    CREATE DATABASE IF NOT EXISTS digiclassroom CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    USE digiclassroom;
+    
+    -- Create tables for AI Tutor functionality
+    CREATE TABLE IF NOT EXISTS conversations (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      user_id VARCHAR(255) NOT NULL,
+      session_id VARCHAR(255) NOT NULL,
+      message TEXT NOT NULL,
+      response TEXT NOT NULL,
+      agent_type VARCHAR(100) NOT NULL,
+      grade_level INT NOT NULL,
+      subject VARCHAR(100) NOT NULL,
+      board_type VARCHAR(50) NOT NULL,
+      fidelity_score DECIMAL(5,3),
+      content_verified BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_user_session (user_id, session_id),
+      INDEX idx_agent_type (agent_type),
+      INDEX idx_grade_subject (grade_level, subject)
+    );
+    
+    CREATE TABLE IF NOT EXISTS performance_metrics (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      operation VARCHAR(100) NOT NULL,
+      duration_ms INT NOT NULL,
+      success BOOLEAN NOT NULL,
+      model_used VARCHAR(100),
+      tokens_used INT,
+      cache_hit BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_operation (operation),
+      INDEX idx_created_at (created_at)
+    );
+    
+    CREATE TABLE IF NOT EXISTS content_verification_logs (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      content_hash VARCHAR(64) NOT NULL,
+      fidelity_score DECIMAL(5,3) NOT NULL,
+      verification_passed BOOLEAN NOT NULL,
+      failed_sentences_count INT DEFAULT 0,
+      citations_count INT DEFAULT 0,
+      source_chunks_count INT DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_content_hash (content_hash),
+      INDEX idx_fidelity_score (fidelity_score)
+    );
+    
+    -- Grant permissions
+    GRANT ALL PRIVILEGES ON digiclassroom.* TO 'digiclassroom_user'@'%';
+    FLUSH PRIVILEGES;

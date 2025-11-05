@@ -1,0 +1,37 @@
+{
+  "models_path": "./models/doc-extract-engine",
+  "processing_options": {
+    "do_ocr": true,
+    "do_table_structure": true,
+    "do_formula_recognition": true,
+    "languages": ["eng", "hin", "ta", "te", "mr", "gu", "bn", "kn", "ml", "or", "pa"],
+    "language_names": {
+      "eng": "English",
+      "hin": "Hindi (Devanagari)",
+      "ta": "Tamil",
+      "te": "Telugu",
+      "mr": "Marathi",
+      "gu": "Gujarati",
+      "bn": "Bengali",
+      "kn": "Kannada",
+      "ml": "Malayalam",
+      "or": "Odia",
+      "pa": "Punjabi"
+    },
+    "gpu_enabled": true,
+    "batch_size": 1,
+    "max_pages": 50
+  },
+  "output_formats": ["json", "markdown"],
+  "performance": {
+    "memory_limit_gb": 4,
+    "timeout_seconds": 10800,
+    "parallel_workers": 1
+  },
+  "fallback_options": {
+    "use_pymupdf": true,
+    "use_docling": true,
+    "confidence_threshold": 0.7
+  }
+}
+

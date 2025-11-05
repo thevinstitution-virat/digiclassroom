@@ -1,0 +1,100 @@
+# Development Docker Compose for DigiClassroom
+# Essential services for local development
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: digiclassroom-mysql-dev
+    ports:
+      - "3307:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpassword123
+      - MYSQL_DATABASE=virat_gyankosh
+      - MYSQL_USER=digiclassroom_user
+      - MYSQL_PASSWORD=digiclassroom123
+      - MYSQL_ALLOW_EMPTY_PASSWORD=no
+      - MYSQL_ROOT_HOST=%  # Allow root from any host
+    volumes:
+      - mysql_dev_data:/var/lib/mysql
+      - ./setup-database.sql:/docker-entrypoint-initdb.d/setup-database.sql
+      - ./mysql/init:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --bind-address=0.0.0.0
+      --max_connections=1000
+      --innodb_buffer_pool_size=256M
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword123"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - digiclassroom-dev
+
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:v1.7.4
+    container_name: digiclassroom-qdrant-dev
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_dev_storage:/qdrant/storage
+      - ./qdrant_config:/qdrant/config
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+      - QDRANT__LOG_LEVEL=INFO
+      - QDRANT__SERVICE__ENABLE_CORS=true
+      - QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS=2
+      - QDRANT__STORAGE__PERFORMANCE__MAX_OPTIMIZATION_THREADS=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - digiclassroom-dev
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: digiclassroom-redis-dev
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --requirepass redis123
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    volumes:
+      - redis_dev_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - digiclassroom-dev
+
+volumes:
+  mysql_dev_data:
+    driver: local
+  qdrant_dev_storage:
+    driver: local
+  redis_dev_data:
+    driver: local
+
+networks:
+  digiclassroom-dev:
+    driver: bridge

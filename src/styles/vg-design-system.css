@@ -1,0 +1,269 @@
+/* VG Design System CSS */
+/* Core design system styles for Digi Classroom */
+
+:root {
+  /* Brand Colors */
+  --primary-orange: #f97316;
+  --primary-blue: #2563eb;
+  --secondary-purple: #7c3aed;
+  --accent-green: #10b981;
+
+  /* VG Educational Color System */
+  --vg-primary-50: #eff6ff;
+  --vg-primary-100: #dbeafe;
+  --vg-primary-200: #bfdbfe;
+  --vg-primary-300: #93c5fd;
+  --vg-primary-400: #60a5fa;
+  --vg-primary-500: #3b82f6;
+  --vg-primary-600: #2563eb;
+  --vg-primary-700: #1d4ed8;
+  --vg-primary-800: #1e40af;
+  --vg-primary-900: #1e3a8a;
+
+  /* VG Sanskrit & Cultural Colors */
+  --vg-sanskrit-50: #faf5ff;
+  --vg-sanskrit-100: #f3e8ff;
+  --vg-sanskrit-200: #e9d5ff;
+  --vg-sanskrit-300: #d8b4fe;
+  --vg-sanskrit-400: #c084fc;
+  --vg-sanskrit-500: #a855f7;
+  --vg-sanskrit-600: #9333ea;
+  --vg-sanskrit-700: #7c3aed;
+  --vg-sanskrit-800: #6b21a8;
+  --vg-sanskrit-900: #581c87;
+
+  --vg-cultural-50: #fff7ed;
+  --vg-cultural-100: #ffedd5;
+  --vg-cultural-200: #fed7aa;
+  --vg-cultural-300: #fdba74;
+  --vg-cultural-400: #fb923c;
+  --vg-cultural-500: #f97316;
+  --vg-cultural-600: #ea580c;
+  --vg-cultural-700: #c2410c;
+  --vg-cultural-800: #9a3412;
+  --vg-cultural-900: #7c2d12;
+
+  /* VG Semantic Colors */
+  --vg-success-50: #f0fdf4;
+  --vg-success-100: #dcfce7;
+  --vg-success-500: #22c55e;
+  --vg-success-600: #16a34a;
+  --vg-success-700: #15803d;
+
+  --vg-warning-50: #fffbeb;
+  --vg-warning-100: #fef3c7;
+  --vg-warning-500: #f59e0b;
+  --vg-warning-600: #d97706;
+  --vg-warning-700: #b45309;
+
+  --vg-error-50: #fef2f2;
+  --vg-error-100: #fee2e2;
+  --vg-error-500: #ef4444;
+  --vg-error-600: #dc2626;
+  --vg-error-700: #b91c1c;
+
+  /* Typography System */
+  --vg-text-xs: 0.75rem;
+  --vg-text-sm: 0.875rem;
+  --vg-text-base: 1rem;
+  --vg-text-lg: 1.125rem;
+  --vg-text-xl: 1.25rem;
+  --vg-text-2xl: 1.5rem;
+  --vg-text-3xl: 1.875rem;
+  --vg-text-4xl: 2.25rem;
+  --vg-text-5xl: 3rem;
+
+  /* VG Spacing Scale */
+  --vg-space-0: 0;
+  --vg-space-1: 0.25rem;
+  --vg-space-2: 0.5rem;
+  --vg-space-3: 0.75rem;
+  --vg-space-4: 1rem;
+  --vg-space-5: 1.25rem;
+  --vg-space-6: 1.5rem;
+  --vg-space-8: 2rem;
+  --vg-space-10: 2.5rem;
+  --vg-space-12: 3rem;
+  --vg-space-16: 4rem;
+  --vg-space-20: 5rem;
+
+  /* VG Shadow System */
+  --vg-shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --vg-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --vg-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --vg-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --vg-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --vg-shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+
+  /* VG Border Radius */
+  --vg-radius-sm: 0.125rem;
+  --vg-radius-md: 0.375rem;
+  --vg-radius-lg: 0.5rem;
+  --vg-radius-xl: 0.75rem;
+  --vg-radius-2xl: 1rem;
+  --vg-radius-3xl: 1.5rem;
+
+  /* VG Animation Durations */
+  --vg-duration-fast: 150ms;
+  --vg-duration-normal: 300ms;
+  --vg-duration-slow: 500ms;
+  --vg-duration-slower: 800ms;
+
+  /* VG Backdrop Blur */
+  --vg-blur-sm: 4px;
+  --vg-blur-md: 8px;
+  --vg-blur-lg: 16px;
+  --vg-blur-xl: 24px;
+
+  /* Glassmorphism */
+  --glass-bg: rgba(255, 255, 255, 0.1);
+  --glass-border: rgba(255, 255, 255, 0.2);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+
+  /* Legacy Spacing (for backward compatibility) */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+
+  /* Typography */
+  --font-primary: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-heading: "Inter", var(--font-primary);
+}
+
+/* Glassmorphic Components */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+  border-radius: 12px;
+}
+
+/* Button Styles */
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-orange), var(--primary-blue));
+  color: white;
+  border: none;
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Utility Classes */
+.text-gradient {
+  background: linear-gradient(135deg, var(--primary-orange), var(--primary-blue));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Dark Mode Enhancements */
+.dark {
+  /* Override brand colors for better dark mode contrast */
+  --primary-orange: #fb923c;
+  --primary-blue: #60a5fa;
+  --secondary-purple: #a855f7;
+  --accent-green: #34d399;
+
+  /* Dark mode specific backgrounds */
+  --glass-bg: rgba(31, 41, 55, 0.8);
+  --glass-border: rgba(75, 85, 99, 0.3);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+
+  /* Dark mode text colors */
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+}
+
+/* Smooth theme transitions */
+* {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+}
+
+/* Enhanced button styles for dark mode */
+.dark .btn-primary:hover {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+}
+
+/* Theme toggle animations */
+@keyframes rotate-in {
+  from {
+    transform: rotate(-90deg) scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: rotate(0deg) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes rotate-out {
+  from {
+    transform: rotate(0deg) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: rotate(90deg) scale(0);
+    opacity: 0;
+  }
+}
+
+/* Segmented theme toggle enhancements */
+.theme-toggle-segment {
+  position: relative;
+  overflow: hidden;
+}
+
+.theme-toggle-segment::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.theme-toggle-segment:hover::before {
+  left: 100%;
+}
+
+/* Active segment glow effect */
+.theme-toggle-active {
+  box-shadow:
+    0 0 0 1px rgba(249, 115, 22, 0.3),
+    0 4px 12px rgba(249, 115, 22, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Focus ring for accessibility */
+.theme-toggle-segment:focus-visible {
+  outline: 2px solid #f97316;
+  outline-offset: 2px;
+}

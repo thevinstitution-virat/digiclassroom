@@ -1,0 +1,101 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+/test-results
+/test-documents
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# temporary files
+/tmp
+/tmp/*
+/temp
+*.tmp
+tmp.py
+tmp_*.py
+test-*.js
+test_*.js
+test-*.ps1
+removal-report.json
+nul
+
+# ===== PHASE 2 ADDITIONS =====
+
+# Large third-party code (47 MB - PDF-Extract-Kit)
+/vendor/
+
+# Python virtual environments (8+ GB)
+/.venv/
+/.venv310/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Vector database runtime data
+/qdrant_data/
+
+# AI models (if large)
+/models/pdf-extract-kit/
+
+# User uploads and runtime data
+/uploads/
+/logs/
+*.log
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-*
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+Thumbs.db
+desktop.ini
+
+# Phase cleanup reports (archived to docs/reports/)
+PHASE_*_CLEANUP_REPORT.md
+PHASE_*_STRUCTURE_CLEANUP_REPORT.md
+
+# Backup files
+*.backup
+.gitignore.backup
