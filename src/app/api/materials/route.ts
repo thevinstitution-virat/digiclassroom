@@ -4,15 +4,7 @@ import { z } from 'zod'
 import mysql from 'mysql2/promise'
 import { MaterialsFilter, MaterialItem } from '@/types/user-management'
 import type { EnhancedMaterial } from '@/types/google-drive'
-
-// Database connection configuration
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'virat_gyankosh',
-  port: parseInt(process.env.DB_PORT || '3306')
-}
+import { getConnection } from '@/lib/db/connection' // ✅ Use centralized connection pool
 
 // Validation schema for materials request
 const MaterialsRequestSchema = z.object({
@@ -175,7 +167,7 @@ export async function POST(request: NextRequest) {
 // Helper functions (these would typically be in separate service files)
 
 async function getUserProfile(userId: string) {
-  const connection = await mysql.createConnection(dbConfig)
+  const connection = await getConnection()
 
   try {
     const [rows] = await connection.execute(
@@ -197,12 +189,12 @@ async function getUserProfile(userId: string) {
       isOnboardingComplete: profile.is_onboarding_complete
     }
   } finally {
-    await connection.end()
+    connection.release() // ✅ Release connection back to pool
   }
 }
 
 async function createDefaultUserProfile(userId: string) {
-  const connection = await mysql.createConnection(dbConfig)
+  const connection = await getConnection()
 
   try {
     // Create a default profile for testing
@@ -226,7 +218,7 @@ async function createDefaultUserProfile(userId: string) {
     console.error('Error creating default user profile:', error)
     return null
   } finally {
-    await connection.end()
+    connection.release() // ✅ Release connection back to pool
   }
 }
 
@@ -239,7 +231,7 @@ async function getMaterials(
     sortOrder: string
   }
 ) {
-  const connection = await mysql.createConnection(dbConfig)
+  const connection = await getConnection()
 
   try {
     // Build WHERE clause based on filters
@@ -383,7 +375,7 @@ async function getMaterials(
       }
     }
   } finally {
-    await connection.end()
+    connection.release() // ✅ Release connection back to pool
   }
 }
 
@@ -392,7 +384,7 @@ async function logMaterialAccess(
   accessType: string,
   filter: MaterialsFilter
 ) {
-  const connection = await mysql.createConnection(dbConfig)
+  const connection = await getConnection()
 
   try {
     await connection.execute(`
@@ -408,7 +400,7 @@ async function logMaterialAccess(
   } catch (error) {
     console.warn('Failed to log material access:', error)
   } finally {
-    await connection.end()
+    connection.release() // ✅ Release connection back to pool
   }
 }
 
