@@ -1340,7 +1340,7 @@ Loading your subscription details...`,
     // Send confirmation and start chatting
     setTimeout(() => {
       const confirmationMessage: Message = {
-        id: 'confirmation',
+        id: `confirmation-${Date.now()}`, // ✅ FIX: Generate unique ID to prevent React key conflicts
         role: 'assistant',
         content: `Excellent! I'm ready to help you with **${menuItem?.title}**.
 
