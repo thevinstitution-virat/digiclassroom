@@ -5,7 +5,8 @@
 
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { qdrantSearch } from '../ai/rag/qdrant-search';
-import { RedisCacheService, getRedisCacheService } from './redis_cache_service';
+import type { ICacheService } from './interfaces';
+import { RedisCacheService } from './implementations/redis-cache.service';
 
 export interface EducationalContext {
   query: string;
@@ -44,7 +45,7 @@ export interface SearchResponse {
 export class VectorStoreService {
   private client: QdrantClient;
   private collectionName = 'digiclassroom';
-  private cacheService: RedisCacheService;
+  private cacheService: ICacheService;
 
   constructor() {
     this.client = new QdrantClient({
@@ -52,8 +53,13 @@ export class VectorStoreService {
       checkCompatibility: false
     });
 
-    // Initialize Redis cache service
-    this.cacheService = getRedisCacheService();
+    // Initialize Redis cache service (enterprise implementation)
+    this.cacheService = new RedisCacheService({
+      host: process.env.REDIS_HOST || 'localhost',
+      port: parseInt(process.env.REDIS_PORT || '6379'),
+      password: process.env.REDIS_PASSWORD,
+      db: parseInt(process.env.REDIS_DB || '0')
+    });
 
     console.log('🔍 Vector Store Service initialized with Redis caching');
   }
