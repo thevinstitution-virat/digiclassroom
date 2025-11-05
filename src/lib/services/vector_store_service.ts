@@ -132,7 +132,7 @@ export class VectorStoreService {
       };
 
       // Step 3: Cache the results for future use (7 days TTL)
-      const cacheKey = `vector_search:${context.query}:${context.grade_level}:${context.subject}:${context.board_type}`;
+      // Reuse cacheKey from line 78
       await this.cacheService.set(cacheKey, searchResponse, {
         ttl: 7 * 24 * 60 * 60, // 7 days
         tags: [`subject:${context.subject}`, `grade:${context.grade_level}`]
