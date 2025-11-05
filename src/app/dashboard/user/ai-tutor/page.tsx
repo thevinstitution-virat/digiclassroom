@@ -834,7 +834,7 @@ Loading your subscription details...`,
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const data = line.slice(6)
-            if (data === '[DONE]') break
+            if (data === '[DONE]') continue // ✅ FIX: Continue to process remaining messages before breaking
 
             try {
               const parsed = JSON.parse(data)
