@@ -1,25 +1,14 @@
 // VG Kosh Practest Engine - Test Session Database Queries
 
 import mysql from 'mysql2/promise'
-import { 
-  TestSession, 
-  UserResponse, 
+import {
+  TestSession,
+  UserResponse,
   CustomTestParameters,
-  TestSessionStatus 
+  TestSessionStatus
 } from '@/types/practest'
 import { v4 as uuidv4 } from 'uuid'
-
-// Database connection (reuse existing VG Kosh connection)
-const getConnection = async () => {
-  return mysql.createConnection({
-    host: process.env.MYSQL_HOST || 'localhost',
-    port: parseInt(process.env.MYSQL_PORT || '3306'),
-    user: process.env.MYSQL_USER || 'root',
-    password: process.env.MYSQL_PASSWORD || '',
-    database: process.env.MYSQL_DATABASE || 'virat_gyankosh',
-    charset: 'utf8mb4'
-  })
-}
+import { getConnection } from './connection' // ✅ Use centralized connection pool
 
 export class PractestSessionQueries {
   
@@ -58,10 +47,10 @@ export class PractestSessionQueries {
       console.log('✅ Test session created:', sessionId)
       return sessionId
     } finally {
-      await connection.end()
+      connection.release() // ✅ Release connection back to pool
     }
   }
-  
+
   /**
    * Get test session by ID
    */
@@ -76,13 +65,13 @@ export class PractestSessionQueries {
       
       const sessions = rows as any[]
       if (sessions.length === 0) return null
-      
+
       return this.mapRowToSession(sessions[0])
     } finally {
-      await connection.end()
+      connection.release() // ✅ Release connection back to pool
     }
   }
-  
+
   /**
    * Get active sessions for a user
    */
@@ -99,10 +88,10 @@ export class PractestSessionQueries {
       const sessions = rows as any[]
       return sessions.map(row => this.mapRowToSession(row))
     } finally {
-      await connection.end()
+      connection.release() // ✅ Release connection back to pool
     }
   }
-  
+
   /**
    * Submit an answer for a question
    */
@@ -168,13 +157,13 @@ export class PractestSessionQueries {
         Math.min(existingResponses.length, session.selected_questions.length),
         sessionId
       ])
-      
+
       console.log('✅ Answer submitted:', { sessionId, questionId, isCorrect, marksAwarded })
     } finally {
-      await connection.end()
+      connection.release() // ✅ Release connection back to pool
     }
   }
-  
+
   /**
    * Complete a test session
    */
@@ -220,10 +209,10 @@ export class PractestSessionQueries {
       // Return updated session
       return await this.getSession(sessionId) as TestSession
     } finally {
-      await connection.end()
+      connection.release() // ✅ Release connection back to pool
     }
   }
-  
+
   /**
    * Update session time remaining
    */
@@ -237,10 +226,10 @@ export class PractestSessionQueries {
         WHERE id = ?
       `, [timeRemainingSeconds, sessionId])
     } finally {
-      await connection.end()
+      connection.release() // ✅ Release connection back to pool
     }
   }
-  
+
   /**
    * Get user's test history
    */
@@ -268,13 +257,13 @@ export class PractestSessionQueries {
       `, [userId, limit, offset])
       
       const sessions = (rows as any[]).map(row => this.mapRowToSession(row))
-      
+
       return { sessions, total }
     } finally {
-      await connection.end()
+      connection.release() // ✅ Release connection back to pool
     }
   }
-  
+
   /**
    * Generate comprehensive analytics for a completed session
    */

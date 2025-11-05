@@ -1,10 +1,10 @@
 // VG Kosh Practest Engine - Database Query Utilities
 
 import mysql from 'mysql2/promise'
-import { 
-  PractestQuestion, 
-  TestConfiguration, 
-  TestSession, 
+import {
+  PractestQuestion,
+  TestConfiguration,
+  TestSession,
   CurriculumStructure,
   Board,
   DifficultyLevel,
@@ -12,18 +12,7 @@ import {
   GenerateTestRequest,
   CustomTestParameters
 } from '@/types/practest'
-
-// Database connection (reuse existing VG Kosh connection)
-const getConnection = async () => {
-  return mysql.createConnection({
-    host: process.env.MYSQL_HOST || 'localhost',
-    port: parseInt(process.env.MYSQL_PORT || '3306'),
-    user: process.env.MYSQL_USER || 'root',
-    password: process.env.MYSQL_PASSWORD || '',
-    database: process.env.MYSQL_DATABASE || 'virat_gyankosh',
-    charset: 'utf8mb4'
-  })
-}
+import { getConnection } from './connection' // ✅ Use centralized connection pool
 
 // Question Bank Queries
 export class PractestQuestionQueries {
@@ -79,10 +68,10 @@ export class PractestQuestionQueries {
       
       return (result as any).insertId
     } finally {
-      await connection.end()
+      connection.release() // ✅ Release connection back to pool
     }
   }
-  
+
   // Get questions by curriculum filters
   static async getQuestionsByCurriculum(
     board: Board,
@@ -121,10 +110,10 @@ export class PractestQuestionQueries {
       const [rows] = await connection.execute(query, params)
       return this.mapRowsToQuestions(rows as any[])
     } finally {
-      await connection.end()
+      connection.release() // ✅ Release connection back to pool
     }
   }
-  
+
   // Get questions by difficulty distribution
   static async getQuestionsByDifficulty(
     baseFilters: {
@@ -167,13 +156,13 @@ export class PractestQuestionQueries {
         const questions = this.mapRowsToQuestions(rows as any[])
         allQuestions.push(...questions.slice(0, count))
       }
-      
+
       return allQuestions
     } finally {
-      await connection.end()
+      connection.release() // ✅ Release connection back to pool
     }
   }
-  
+
   // Update question usage statistics
   static async updateQuestionStats(
     questionId: string,
@@ -193,10 +182,10 @@ export class PractestQuestionQueries {
         WHERE id = ?
       `, [isCorrect ? 1 : 0, timeSpent, questionId])
     } finally {
-      await connection.end()
+      connection.release() // ✅ Release connection back to pool
     }
   }
-  
+
   // Get questions for admin management
   static async getQuestionsForAdmin(
     filters: {
@@ -255,13 +244,13 @@ export class PractestQuestionQueries {
       )
       
       const questions = this.mapRowsToQuestions(rows as any[])
-      
+
       return { questions, total }
     } finally {
-      await connection.end()
+      connection.release() // ✅ Release connection back to pool
     }
   }
-  
+
   // Get single question by ID
   static async getQuestionById(questionId: string): Promise<PractestQuestion | null> {
     const connection = await getConnection()
@@ -275,7 +264,7 @@ export class PractestQuestionQueries {
       const questions = this.mapRowsToQuestions(rows as any[])
       return questions.length > 0 ? questions[0] : null
     } finally {
-      await connection.end()
+      connection.release() // ✅ Release connection back to pool
     }
   }
 
