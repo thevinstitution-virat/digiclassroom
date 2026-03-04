@@ -1,39 +1,21 @@
 'use client'
 
 import React from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/core/ui/card'
+import { Card, CardContent } from '@/components/core/ui/card'
 import { Button } from '@/components/core/ui/button'
-import { Input } from '@/components/core/ui/input'
 import { Badge } from '@/components/core/ui/badge'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/core/ui/select'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/core/ui/dialog'
 import FormattedContent from '@/components/ai/core/FormattedContent'
 import LessonPlanContainer from '@/components/learning/lesson/LessonPlanContainer'
 import { FeedbackWidget } from '@/components/user/profile/feedback/FeedbackWidget'
 import AnswerActionButtons from '@/components/ai/core/AnswerActionButtons'
-import {
-  Brain,
-  Upload,
-  X,
-  User,
-  Bot,
-  Settings,
-  BookOpen,
-  FileText,
-  Loader2,
-  CheckCircle,
-  Zap,
-  Lock,
-  Sparkles,
-  ArrowRight,
-  History,
-} from 'lucide-react'
+import { User, Bot, BookOpen, FileText, Loader2, X, Zap } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MultiModalInput } from '@/components/ai/tutor/MultiModalInput'
 import { ChatHistoryPanel } from '@/components/ai/tutor/ChatHistoryPanel'
 import { StreamingChatMessage } from '@/components/ai/chat/StreamingChatMessage'
 import { ChatErrorBoundary } from '@/components/core/common/ChatErrorBoundary'
 import { useAiTutor } from './_hooks/useAiTutor'
+import { TutorHeader, UpgradeModal, ContextSelector } from './_components'
 import type { Message } from './_types'
 
 export default function AITutorPage() {
@@ -103,111 +85,14 @@ export default function AITutorPage() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50/30 via-blue-50/40 to-indigo-100/50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900">
       <div className="container mx-auto px-4 py-4 max-w-4xl">
         {/* Header */}
-        <Card className="mb-3 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-0 shadow-lg rounded-2xl overflow-hidden">
-          <CardHeader className="pb-4 bg-gradient-to-r from-orange-500/5 to-blue-500/5 dark:from-orange-500/10 dark:to-blue-500/10">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-orange-500 to-blue-600 flex items-center justify-center shadow-lg">
-                  <Brain className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <CardTitle className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
-                    Virat Gyankosh
-                  </CardTitle>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">
-                    Your intelligent educational companion with curriculum-aligned content
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-4">
-                {/* Quota Display */}
-                {!isLoadingSubscription && subscriptionData && (
-                  <div className="flex flex-col items-end">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        Questions Today:
-                      </span>
-                      <span className={`text-sm font-semibold ${subscriptionData.quota.percentage_used >= 80
-                        ? 'text-red-600'
-                        : subscriptionData.quota.percentage_used >= 50
-                          ? 'text-yellow-600'
-                          : 'text-green-600'
-                        }`}>
-                        {subscriptionData.quota.questions_remaining}/{subscriptionData.quota.daily_limit}
-                      </span>
-                    </div>
-                    {/* Progress bar */}
-                    <div className="w-32 h-1.5 bg-gray-200 rounded-full mt-1 overflow-hidden">
-                      <div
-                        className={`h-full transition-all duration-300 ${subscriptionData.quota.percentage_used >= 80
-                          ? 'bg-red-500'
-                          : subscriptionData.quota.percentage_used >= 50
-                            ? 'bg-yellow-500'
-                            : 'bg-green-500'
-                          }`}
-                        style={{ width: `${Math.min(100, subscriptionData.quota.percentage_used)}%` }}
-                      />
-                    </div>
-                    {subscriptionData.quota.percentage_used >= 80 && (
-                      <a
-                        href="/dashboard/user/upgrade"
-                        className="text-xs text-blue-600 hover:underline mt-1"
-                      >
-                        Upgrade
-                      </a>
-                    )}
-                  </div>
-                )}
-
-                {/* Connection Status Indicator */}
-                <div className="flex items-center space-x-1 text-xs">
-                  <div className={`w-2 h-2 rounded-full ${connectionStatus === 'online' ? 'bg-green-500' :
-                    connectionStatus === 'offline' ? 'bg-red-500' :
-                      'bg-yellow-500 animate-pulse'
-                    }`}></div>
-                  <span className={`${connectionStatus === 'online' ? 'text-green-600' :
-                    connectionStatus === 'offline' ? 'text-red-600' :
-                      'text-yellow-600'
-                    }`}>
-                    {connectionStatus === 'online' ? 'Online' :
-                      connectionStatus === 'offline' ? 'Offline' :
-                        'Checking...'}
-                  </span>
-                </div>
-
-                {/* History Button */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsHistoryPanelOpen(true)}
-                  className="text-xs text-blue-600 border-blue-300 hover:bg-blue-50"
-                  title="View chat history"
-                >
-                  <History className="h-3 w-3 mr-1" />
-                  History
-                </Button>
-
-                {/* Reset Conversation Button */}
-                {conversationState.phase === 'chatting' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={resetConversation}
-                    className="text-xs text-orange-600 border-orange-300 hover:bg-orange-50"
-                  >
-                    <Settings className="h-3 w-3 mr-1" />
-                    Reset
-                  </Button>
-                )}
-
-
-              </div>
-            </div>
-
-
-          </CardHeader>
-        </Card>
+        <TutorHeader
+          isLoadingSubscription={isLoadingSubscription}
+          subscriptionData={subscriptionData}
+          connectionStatus={connectionStatus}
+          conversationPhase={conversationState.phase}
+          onOpenHistory={() => setIsHistoryPanelOpen(true)}
+          onReset={resetConversation}
+        />
 
         {/* Subscription Loading/Error Display */}
         {isLoadingSubscription && (
@@ -765,78 +650,14 @@ export default function AITutorPage() {
                 </div>
               )}
 
-              {/* 🚀 PRIORITY 2: Advanced Context Selector with Upgrade CTAs */}
-              {shouldShowContextSelector() && (
-                <div className="mb-3">
-                  <div className="flex items-center space-x-2">
-                    <Select
-                      value={getCurrentContextValue()}
-                      onValueChange={handleContextChange}
-                    >
-                      <SelectTrigger className="w-56 h-11 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-2 border-orange-200/60 dark:border-orange-700/60 hover:border-blue-400/80 dark:hover:border-blue-500/80 rounded-xl shadow-sm hover:shadow-md transition-all duration-200 focus:ring-2 focus:ring-blue-500/20">
-                        <SelectValue placeholder="Select board & class" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-md border-2 border-orange-200/60 dark:border-orange-700/60 rounded-xl shadow-lg max-h-[400px]">
-                        {/* Unlocked Options Section */}
-                        {generateContextOptions().filter(opt => !opt.isLocked).length > 0 && (
-                          <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                            Your Access
-                          </div>
-                        )}
-                        {generateContextOptions().filter(opt => !opt.isLocked).map(option => (
-                          <SelectItem
-                            key={option.value}
-                            value={option.value}
-                            className="cursor-pointer hover:bg-gradient-to-r hover:from-orange-50/60 hover:to-blue-50/60 dark:hover:from-orange-900/20 dark:hover:to-blue-900/20 rounded-lg transition-colors duration-150 my-0.5"
-                          >
-                            <span className="font-medium text-gray-800 dark:text-gray-200">{option.label}</span>
-                          </SelectItem>
-                        ))}
-
-                        {/* Locked Options Section - Upgrade CTA */}
-                        {generateContextOptions().filter(opt => opt.isLocked).length > 0 && (
-                          <>
-                            <div className="px-2 py-1.5 mt-2 text-xs font-semibold text-orange-600 dark:text-orange-400 uppercase tracking-wide flex items-center">
-                              <Sparkles className="h-3 w-3 mr-1" />
-                              Upgrade to Unlock
-                            </div>
-                            {generateContextOptions().filter(opt => opt.isLocked).slice(0, 8).map(option => (
-                              <SelectItem
-                                key={option.value}
-                                value={option.value}
-                                className="cursor-pointer hover:bg-gradient-to-r hover:from-orange-50 hover:to-blue-50 dark:hover:from-orange-900/20 dark:hover:to-blue-900/20 rounded-lg transition-colors duration-150 my-0.5 opacity-75"
-                              >
-                                <div className="flex items-center justify-between w-full">
-                                  <span className="font-medium text-gray-600 dark:text-gray-400">{option.label}</span>
-                                  <Badge variant="outline" className="ml-2 text-xs bg-gradient-to-r from-orange-100 to-blue-100 dark:from-orange-900/30 dark:to-blue-900/30 border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-400">
-                                    {option.requiredPlan}
-                                  </Badge>
-                                </div>
-                              </SelectItem>
-                            ))}
-                            {generateContextOptions().filter(opt => opt.isLocked).length > 8 && (
-                              <div className="px-2 py-2 text-xs text-gray-500 dark:text-gray-400 text-center italic">
-                                +{generateContextOptions().filter(opt => opt.isLocked).length - 8} more options available
-                              </div>
-                            )}
-                          </>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-400">
-                      <span className="hidden sm:inline">Switch anytime</span>
-                      {subscriptionData && (
-                        <Badge variant="outline" className="ml-1 bg-gradient-to-r from-orange-50 to-blue-50 dark:from-orange-900/30 dark:to-blue-900/30 border-orange-200 dark:border-orange-700 text-orange-700 dark:text-orange-400 font-semibold">
-                          {subscriptionData.subscription.plan_code === 'FREE_TRIAL' ? 'Free Trial' :
-                            subscriptionData.subscription.plan_code === 'BASIC' || subscriptionData.subscription.plan_code === 'BASIC_CBSE' ? 'Basic' :
-                              subscriptionData.subscription.plan_code === 'CLASSIC' ? 'Classic' :
-                                subscriptionData.subscription.plan_code === 'PRO' || subscriptionData.subscription.plan_code === 'PRO_CBSE' ? 'Pro' : 'Premium'}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* Context Selector */}
+              <ContextSelector
+                visible={shouldShowContextSelector()}
+                currentValue={getCurrentContextValue()}
+                options={generateContextOptions()}
+                subscriptionData={subscriptionData}
+                onValueChange={handleContextChange}
+              />
 
               {/* Multi-Modal Input Component */}
               <MultiModalInput
@@ -858,122 +679,19 @@ export default function AITutorPage() {
         </Card>
       </div>
 
-      {/* 🚀 Upgrade Modal - ChatGPT-style monetization */}
-      <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
-        <DialogContent className="sm:max-w-md bg-gradient-to-br from-orange-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 border-2 border-orange-200/60 dark:border-orange-700/60">
-          <DialogHeader>
-            <div className="flex items-center justify-center mb-4">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-orange-400 to-blue-500 rounded-full blur-xl opacity-50 animate-pulse"></div>
-                <div className="relative bg-gradient-to-r from-orange-500 to-blue-600 p-4 rounded-full">
-                  <Lock className="h-8 w-8 text-white" />
-                </div>
-              </div>
-            </div>
-            <DialogTitle className="text-2xl font-bold text-center bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
-              Upgrade to {upgradeModalData?.requiredPlan} Plan
-            </DialogTitle>
-            <DialogDescription className="text-center text-gray-600 dark:text-gray-400 mt-2">
-              Unlock access to <span className="font-semibold text-gray-800 dark:text-gray-200">{upgradeModalData?.selectedBoard} {upgradeModalData?.selectedClass}</span> and more!
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            {/* Current Selection Info */}
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-orange-200/60 dark:border-orange-700/60 rounded-xl p-4">
-              <div className="flex items-start space-x-3">
-                <div className="bg-gradient-to-r from-orange-100 to-blue-100 dark:from-orange-900/40 dark:to-blue-900/40 p-2 rounded-lg">
-                  <Sparkles className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-1">You're trying to access:</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    <span className="font-medium">{upgradeModalData?.selectedBoard} {upgradeModalData?.selectedClass}</span>
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Plan Benefits */}
-            <div className="bg-gradient-to-r from-orange-50 to-blue-50 dark:from-orange-900/20 dark:to-blue-900/20 border-2 border-orange-200/40 dark:border-orange-700/40 rounded-xl p-4">
-              <h4 className="font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center">
-                <Sparkles className="h-4 w-4 mr-2 text-orange-600 dark:text-orange-400" />
-                {upgradeModalData?.requiredPlan} Plan Benefits:
-              </h4>
-              <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                {upgradeModalData?.requiredPlan === 'Pro' ? (
-                  <>
-                    <li className="flex items-start">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span><strong>All boards</strong> (CBSE, ICSE, State Board)</span>
-                    </li>
-                    <li className="flex items-start">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span><strong>All classes</strong> (1-12)</span>
-                    </li>
-                    <li className="flex items-start">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span><strong>150 questions/day</strong> (5x more than Basic)</span>
-                    </li>
-                    <li className="flex items-start">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>All subjects included</span>
-                    </li>
-                  </>
-                ) : (
-                  <>
-                    <li className="flex items-start">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span><strong>60 questions/day</strong> (2x more than Basic)</span>
-                    </li>
-                    <li className="flex items-start">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>Access to more classes</span>
-                    </li>
-                    <li className="flex items-start">
-                      <CheckCircle className="h-4 w-4 mr-2 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span>All subjects included</span>
-                    </li>
-                  </>
-                )}
-              </ul>
-            </div>
-
-            {/* Pricing */}
-            <div className="text-center">
-              <div className="inline-flex items-baseline space-x-2">
-                <span className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
-                  {upgradeModalData?.requiredPlanPrice}
-                </span>
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Cancel anytime • No hidden fees</p>
-            </div>
-          </div>
-
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setShowUpgradeModal(false)}
-              className="w-full sm:w-auto border-2 border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500 dark:text-gray-200"
-            >
-              Maybe Later
-            </Button>
-            <Button
-              onClick={handleUpgradeClick}
-              className="w-full sm:w-auto bg-gradient-to-r from-orange-500 to-blue-600 hover:from-orange-600 hover:to-blue-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
-            >
-              Upgrade Now
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        open={showUpgradeModal}
+        onOpenChange={setShowUpgradeModal}
+        data={upgradeModalData}
+        onUpgradeClick={handleUpgradeClick}
+      />
 
       {/* Chat History Panel */}
       <ChatHistoryPanel
         isOpen={isHistoryPanelOpen}
         onClose={() => setIsHistoryPanelOpen(false)}
-        onLoadConversation={async (conversationId) => {
+        onLoadConversation={async (conversationId: string) => {
           console.log('🔄 Loading conversation:', conversationId)
 
           // Don't close panel immediately - let the async operation complete
