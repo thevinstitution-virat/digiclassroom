@@ -1,20 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { auth } from '@/auth'
+import { headers } from 'next/headers'
 import { z } from 'zod'
-import { OnboardingFormData, EnhancedUserProfile } from '@/types/user-management'
+import { UserProfileService } from '@/lib/services/user-profile-service'
+import { db } from '@/db'
+import { user } from '@/db/schema'
+import { eq } from 'drizzle-orm'
+import { subscriptionValidationService } from '@/lib/services/subscription-validation-service'
 
-// Validation schema for user profile
+// Validation schema for user profile from frontend
 const UserProfileSchema = z.object({
-  role: z.enum(['admin', 'teacher', 'student', 'parent', 'guardian']),
-  board: z.enum(['CBSE', 'ICSE', 'STATE_BOARD']),
-  medium: z.enum(['ENGLISH', 'HINDI']),
+  firstName: z.string().min(1, 'First name is required'),
+  lastName: z.string().min(1, 'Last name is required'),
+  role: z.string(),
+  board: z.string(),
+  medium: z.string(),
   class: z.number().min(1).max(12),
-  stream: z.enum(['HUMANITIES', 'BIOLOGY', 'MATHEMATICS', 'COMMERCE']).optional(),
+  stream: z.string().optional(),
   subjects: z.array(z.string()).optional()
 })
 
-// Partial schema for profile updates
 const PartialUserProfileSchema = UserProfileSchema.partial()
+const profileService = new UserProfileService()
+
+/**
+ * Helper to map DB profile to frontend expected format
+ */
+function mapToFrontendProfile(dbProfile: any, subscription: any = null) {
+  return {
+    userId: dbProfile.user_id,
+    clerkId: dbProfile.user_id,
+    role: dbProfile.role,
+    board: dbProfile.board_type,
+    medium: dbProfile.language_preference,
+    class: dbProfile.grade_level || 10,
+    stream: (dbProfile.grade_level >= 11) ? (dbProfile.specialization_subjects?.[0] || 'HUMANITIES') : null,
+    subjects: dbProfile.subjects || [],
+    isOnboardingComplete: true,
+    preferences: {
+      language: dbProfile.language_preference,
+      learningStyle: dbProfile.learning_style || 'visual',
+      difficulty: dbProfile.preferred_explanation_complexity || 'medium'
+    },
+    subscription: {
+      plan: subscription?.plan_code?.toLowerCase() || 'starter',
+      features: ['basic_materials', 'ai_tutor'],
+      expiresAt: subscription?.expiry_date || null
+    },
+    createdAt: dbProfile.created_at,
+    updatedAt: dbProfile.updated_at
+  }
+}
 
 /**
  * GET /api/user/profile
@@ -22,37 +58,43 @@ const PartialUserProfileSchema = UserProfileSchema.partial()
  */
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication
-    const { userId } = await auth()
+    const session = await auth.api.getSession({ headers: await headers() })
+    const userId = session?.user?.id
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Fetch user profile from database
-    const profile = await getUserProfile(userId)
-    
+    const profile = await profileService.getUserProfile(userId)
+    const subscription = await subscriptionValidationService.getUserSubscription(userId)
+
     if (!profile) {
       return NextResponse.json({
         success: true,
         data: null,
+        onboardingComplete: false,
         message: 'Profile not found. Onboarding required.'
       })
     }
 
+    const name = session?.user?.name || ''
+    const hasName = name.trim().length > 0
+
+    // An onboarding is fully complete ONLY if all required fields are present
+    const isComplete = Boolean(
+      hasName &&
+      profile.board_type &&
+      profile.grade_level &&
+      profile.language_preference
+    )
+
     return NextResponse.json({
       success: true,
-      data: profile
+      data: mapToFrontendProfile(profile, subscription),
+      onboardingComplete: isComplete
     })
-
   } catch (error) {
     console.error('Error fetching user profile:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -62,54 +104,73 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
-    const { userId } = await auth()
+    console.log('[PROFILE POST] Starting...')
+    const session = await auth.api.getSession({ headers: await headers() })
+    const userId = session?.user?.id
+    console.log('[PROFILE POST] userId:', userId)
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
-    
-    // Validate profile data
+    console.log('[PROFILE POST] body:', JSON.stringify(body))
     const validatedData = UserProfileSchema.parse(body)
-    
-    // Additional validation for stream requirement
+    console.log('[PROFILE POST] validated:', JSON.stringify(validatedData))
+
     if (validatedData.class >= 11 && !validatedData.stream) {
-      return NextResponse.json(
-        { error: 'Stream is required for classes 11 and 12' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Stream is required for classes 11 and 12' }, { status: 400 })
     }
 
-    // Create or update user profile
-    const profile = await createOrUpdateUserProfile(userId, validatedData)
-    
-    // Log onboarding completion
-    await logOnboardingCompletion(userId, validatedData)
+    const dbProfileData = {
+      user_id: userId,
+      role: (validatedData.role === 'parent' || validatedData.role === 'guardian') ? 'parent_guardian' : validatedData.role as any,
+      board_type: validatedData.board as any,
+      grade_level: validatedData.class,
+      subjects: validatedData.subjects || [],
+      language_preference: validatedData.medium.toLowerCase() as any,
+      specialization_subjects: validatedData.stream ? [validatedData.stream] : undefined,
+      isOnboardingComplete: true
+    }
+    console.log('[PROFILE POST] dbProfileData:', JSON.stringify(dbProfileData))
+
+    // Check if profile exists
+    console.log('[PROFILE POST] Checking existing profile...')
+    const existing = await profileService.getUserProfile(userId)
+    console.log('[PROFILE POST] existing:', existing ? 'yes' : 'no')
+    if (existing) {
+      console.log('[PROFILE POST] Updating profile...')
+      await profileService.updateUserProfile(userId, dbProfileData)
+    } else {
+      console.log('[PROFILE POST] Creating profile...')
+      await profileService.createUserProfile(dbProfileData)
+    }
+
+    // Update user's name in the main users table / BetterAuth session
+    console.log('[PROFILE POST] Updating user name...')
+    const fullName = `${validatedData.firstName} ${validatedData.lastName}`.trim()
+    await db.update(user).set({ name: fullName }).where(eq(user.id, userId))
+    console.log('[PROFILE POST] Write complete, fetching profile...')
+
+    const newProfile = await profileService.getUserProfile(userId)
+    console.log('[PROFILE POST] newProfile:', newProfile ? 'found' : 'null')
+
+    // NOTE: Free trial is NOT auto-created during onboarding.
+    // Users must explicitly click "Start Free Trial" on the pricing page,
+    // which calls POST /api/user/subscription/create-trial.
 
     return NextResponse.json({
       success: true,
-      data: profile,
+      data: mapToFrontendProfile(newProfile),
       message: 'Profile updated successfully'
     })
-
-  } catch (error) {
-    console.error('Error updating user profile:', error)
-    
+  } catch (error: any) {
+    console.error('[PROFILE POST] ERROR:', error?.message || error)
+    console.error('[PROFILE POST] STACK:', error?.stack)
+    console.error('[PROFILE POST] CODE:', error?.code)
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid profile data', details: error.errors },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid profile data', details: error.errors }, { status: 400 })
     }
-
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
 
@@ -119,200 +180,44 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
-    // Check authentication
-    const { userId } = await auth()
+    const session = await auth.api.getSession({ headers: await headers() })
+    const userId = session?.user?.id
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
-    
-    // Partial validation for updates
     const validatedData = PartialUserProfileSchema.parse(body)
-    
-    // Get existing profile
-    const existingProfile = await getUserProfile(userId)
+
+    const existingProfile = await profileService.getUserProfile(userId)
     if (!existingProfile) {
-      return NextResponse.json(
-        { error: 'Profile not found. Please complete onboarding first.' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Profile not found. Please complete onboarding first.' }, { status: 404 })
     }
 
-    // Merge with existing data
-    const updatedData = { ...existingProfile, ...validatedData }
-    
-    // Validate stream requirement after merge
-    if (updatedData.class >= 11 && !updatedData.stream) {
-      return NextResponse.json(
-        { error: 'Stream is required for classes 11 and 12' },
-        { status: 400 }
-      )
+    const dbProfileData: any = {}
+    if (validatedData.role) dbProfileData.role = (validatedData.role === 'parent' || validatedData.role === 'guardian') ? 'parent_guardian' : validatedData.role
+    if (validatedData.board) dbProfileData.board_type = validatedData.board
+    if (validatedData.class) dbProfileData.grade_level = validatedData.class
+    if (validatedData.subjects) dbProfileData.subjects = validatedData.subjects
+    if (validatedData.medium) dbProfileData.language_preference = validatedData.medium.toLowerCase()
+    if (validatedData.stream) dbProfileData.specialization_subjects = [validatedData.stream]
+
+    if (Object.keys(dbProfileData).length > 0) {
+      await profileService.updateUserProfile(userId, dbProfileData)
     }
 
-    // Update profile
-    const profile = await updateUserProfile(userId, validatedData)
+    const updatedProfile = await profileService.getUserProfile(userId)
 
     return NextResponse.json({
       success: true,
-      data: profile,
+      data: mapToFrontendProfile(updatedProfile),
       message: 'Profile updated successfully'
     })
-
   } catch (error) {
     console.error('Error updating user profile:', error)
-    
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid profile data', details: error.errors },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Invalid profile data', details: error.errors }, { status: 400 })
     }
-
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}
-
-// Helper functions (these would typically be in separate service files)
-
-async function getUserProfile(userId: string): Promise<EnhancedUserProfile | null> {
-  // This would query your database
-  // For demo purposes, we'll check if user has completed onboarding and return appropriate data
-
-  console.log(`Fetching profile for user: ${userId}`)
-
-  // In a real implementation, you would query your database here
-  // For now, we'll simulate checking if the user has completed onboarding
-  // by looking for any previous profile creation in the logs or creating a default one
-
-  // Check if this user has completed onboarding (simulated)
-  // In real implementation: SELECT * FROM user_profiles WHERE user_id = ?
-
-  // For demo purposes, let's create a default profile for any authenticated user
-  // This simulates a user who has completed onboarding
-  const defaultProfile: EnhancedUserProfile = {
-    userId: userId,
-    clerkId: userId,
-    role: 'student',
-    board: 'CBSE',
-    medium: 'ENGLISH',
-    class: 10,
-    subjects: ['Mathematics', 'Science', 'English', 'Social Science', 'Hindi'],
-    isOnboardingComplete: true,
-    preferences: {
-      language: 'english',
-      learningStyle: 'visual',
-      difficulty: 'medium'
-    },
-    subscription: {
-      plan: 'starter',
-      features: ['basic_materials', 'ai_tutor'],
-      expiresAt: new Date('2024-12-31')
-    },
-    createdAt: new Date(),
-    updatedAt: new Date()
-  }
-
-  console.log(`Returning profile for user ${userId}:`, defaultProfile)
-  return defaultProfile
-}
-
-async function createOrUpdateUserProfile(
-  userId: string, 
-  data: OnboardingFormData
-): Promise<EnhancedUserProfile> {
-  // This would create or update in your database
-  // For demo purposes, returning mock data
-  
-  const profile: EnhancedUserProfile = {
-    userId,
-    clerkId: userId, // In real implementation, get from Clerk
-    role: data.role,
-    board: data.board,
-    medium: data.medium,
-    class: data.class,
-    stream: data.stream,
-    subjects: data.subjects || getDefaultSubjects(data.class, data.stream),
-    isOnboardingComplete: true,
-    preferences: {
-      language: data.medium.toLowerCase(),
-      learningStyle: 'visual',
-      difficulty: 'medium'
-    },
-    subscription: {
-      plan: 'starter',
-      features: ['basic_materials', 'ai_tutor']
-    },
-    createdAt: new Date(),
-    updatedAt: new Date()
-  }
-
-  // In real implementation, save to database
-  console.log('Creating/updating user profile:', profile)
-  
-  return profile
-}
-
-async function updateUserProfile(
-  userId: string,
-  updates: Partial<OnboardingFormData>
-): Promise<EnhancedUserProfile> {
-  // This would update specific fields in your database
-  // For demo purposes, returning mock updated data
-  
-  const existingProfile = await getUserProfile(userId)
-  if (!existingProfile) {
-    throw new Error('Profile not found')
-  }
-
-  const updatedProfile: EnhancedUserProfile = {
-    ...existingProfile,
-    ...updates,
-    updatedAt: new Date()
-  }
-
-  // In real implementation, save to database
-  console.log('Updating user profile:', updatedProfile)
-  
-  return updatedProfile
-}
-
-async function logOnboardingCompletion(
-  userId: string,
-  profileData: OnboardingFormData
-) {
-  // Log onboarding completion for analytics
-  console.log(`User ${userId} completed onboarding:`, {
-    role: profileData.role,
-    board: profileData.board,
-    class: profileData.class,
-    stream: profileData.stream,
-    completedAt: new Date()
-  })
-}
-
-function getDefaultSubjects(classLevel: number, stream?: string): string[] {
-  // Return default subjects based on class and stream
-  if (classLevel <= 10) {
-    return ['Mathematics', 'Science', 'English', 'Social Science', 'Hindi']
-  }
-
-  switch (stream) {
-    case 'MATHEMATICS':
-      return ['Physics', 'Chemistry', 'Mathematics', 'English']
-    case 'BIOLOGY':
-      return ['Physics', 'Chemistry', 'Biology', 'English']
-    case 'COMMERCE':
-      return ['Accountancy', 'Business Studies', 'Economics', 'English']
-    case 'HUMANITIES':
-      return ['History', 'Geography', 'Political Science', 'English']
-    default:
-      return ['English']
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

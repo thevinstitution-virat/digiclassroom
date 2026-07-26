@@ -1,193 +1,180 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { z } from 'zod'
+// src/app/api/materials/access/route.ts
+// Phase 2b: Previously had NO org scoping at all — used raw getSession with no orgId filter.
+// Double-lock applied:
+//   Lock 1: withOrgContext({ requireOrg: true })
+//   Lock 2: ALL reads/writes include organizationId = orgId
+//
+// This route tracks which users have accessed which materials and returns access history.
+// A user in Org B must never be able to record or read access for Org A's materials.
 
-// Validation schema for access tracking
-const AccessTrackingSchema = z.object({
-  materialId: z.string(),
-  action: z.enum(['view', 'download', 'bookmark', 'share', 'browse']),
-  readingProgress: z.object({
-    currentPage: z.number().optional(),
-    totalPages: z.number().optional(),
-    progressPercentage: z.number().optional(),
-    readingTime: z.number().optional()
-  }).optional(),
-  metadata: z.object({
-    userAgent: z.string().optional(),
-    referrer: z.string().optional(),
-    timestamp: z.string().optional()
-  }).optional()
-})
+import { NextRequest, NextResponse } from 'next/server';
+import { withOrgContext } from '@/lib/auth/with-org-context';
+import type { OrgContext } from '@/lib/auth/get-org-context';
+import { db } from '@/db';
+import { materials, userMaterialAccess } from '@/db/schema';
+import { and, eq, desc, sql } from 'drizzle-orm';
 
-/**
- * POST /api/materials/access
- * Track user material access for analytics
- */
-export async function POST(request: NextRequest) {
-  try {
-    // Check authentication
-    const { userId } = await auth()
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+// ── POST /api/materials/access ────────────────────────────────────────────────
+// Record that the current user accessed a material.
+// Validates the material belongs to the caller's org before recording.
+
+export const POST = withOrgContext(
+  async (req: NextRequest, _ctx: unknown, orgContext: OrgContext) => {
+    const { userId, orgId } = orgContext;
+
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const body = await request.json()
-    
-    // Validate access data
-    const validatedData = AccessTrackingSchema.parse(body)
-    
-    // Get request metadata
-    const userAgent = request.headers.get('user-agent') || ''
-    const referrer = request.headers.get('referer') || ''
-    const ipAddress = request.headers.get('x-forwarded-for') || 
-                     request.headers.get('x-real-ip') || 
-                     'unknown'
+    const { materialId } = body as { materialId?: string };
 
-    // Create access log entry
-    const accessLog = {
-      userId,
-      materialId: validatedData.materialId,
-      action: validatedData.action,
-      readingProgress: validatedData.readingProgress,
-      userAgent,
-      referrer,
-      ipAddress,
-      timestamp: new Date().toISOString()
+    if (!materialId || typeof materialId !== 'string') {
+      return NextResponse.json({ error: 'materialId is required' }, { status: 400 });
     }
 
-    // In a real implementation, you would save this to your database
-    // For demo purposes, we'll just log it
-    console.log('Material access tracked:', accessLog)
+    try {
+      // ── Lock 2a: verify the material belongs to the caller's org ──────────
+      // This prevents a user from recording access to another org's material
+      // by guessing a UUID and calling this endpoint directly.
+      const [material] = await db
+        .select({ id: materials.id, title: materials.title })
+        .from(materials)
+        .where(
+          and(
+            eq(materials.id, materialId),
+            eq(materials.organizationId, orgId),   // ← org scope check
+          ),
+        )
+        .limit(1);
 
-    // Update material download count if it's a download action
-    if (validatedData.action === 'download') {
-      await updateMaterialDownloadCount(validatedData.materialId)
-    }
-
-    // Update user reading progress if provided
-    if (validatedData.readingProgress && validatedData.action === 'view') {
-      await updateUserReadingProgress(userId, validatedData.materialId, validatedData.readingProgress)
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: 'Access tracked successfully'
-    })
-
-  } catch (error) {
-    console.error('Error tracking material access:', error)
-    
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Invalid access data', details: error.errors },
-        { status: 400 }
-      )
-    }
-
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}
-
-/**
- * GET /api/materials/access
- * Get user's material access history (for analytics dashboard)
- */
-export async function GET(request: NextRequest) {
-  try {
-    // Check authentication
-    const { userId, sessionClaims } = await auth()
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const { searchParams } = new URL(request.url)
-    const materialId = searchParams.get('materialId')
-    const action = searchParams.get('action')
-    const limit = parseInt(searchParams.get('limit') || '50')
-    const offset = parseInt(searchParams.get('offset') || '0')
-
-    // Build query filters
-    const filters: any = { userId }
-    if (materialId) filters.materialId = materialId
-    if (action) filters.action = action
-
-    // In a real implementation, you would query your database
-    // For demo purposes, returning mock data
-    const mockAccessHistory = [
-      {
-        id: '1',
-        userId,
-        materialId: 'sample_material_1',
-        action: 'view',
-        timestamp: new Date().toISOString(),
-        readingProgress: {
-          currentPage: 5,
-          totalPages: 20,
-          progressPercentage: 25,
-          readingTime: 15
-        }
-      },
-      {
-        id: '2',
-        userId,
-        materialId: 'sample_material_1',
-        action: 'download',
-        timestamp: new Date(Date.now() - 86400000).toISOString() // 1 day ago
+      if (!material) {
+        // Return 404 not 403 — don't confirm the material exists in another org
+        return NextResponse.json(
+          { error: 'Material not found' },
+          { status: 404 },
+        );
       }
-    ]
 
-    return NextResponse.json({
-      success: true,
-      data: mockAccessHistory.slice(offset, offset + limit),
-      pagination: {
-        limit,
-        offset,
-        total: mockAccessHistory.length
-      }
-    })
+      // ── Lock 2b: record access with orgId ─────────────────────────────────
+      // Upsert pattern: update accessedAt if already accessed, insert if first time.
+      // This prevents duplicate rows from rapid re-access.
+      await db
+        .insert(userMaterialAccess)
+        .values({
+          id:             crypto.randomUUID(),
+          userId,
+          materialId,
+          organizationId: orgId,       // ← always the caller's org
+          accessedAt:     new Date(),
+          accessCount:    1,
+        })
+        .onDuplicateKeyUpdate({
+          set: {
+            accessedAt:  new Date(),
+            accessCount: sql`access_count + 1`,
+          },
+        });
 
-  } catch (error) {
-    console.error('Error fetching access history:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
-  }
-}
+      return NextResponse.json({ success: true, materialId });
 
-// Helper functions (these would typically be in separate service files)
+    } catch (err) {
+      console.error('[materials/access POST]', err);
+      return NextResponse.json(
+        { error: 'Failed to record access' },
+        { status: 500 },
+      );
+    }
+  },
+  { requireOrg: true },
+);
 
-async function updateMaterialDownloadCount(materialId: string) {
-  // In a real implementation, this would update the download count in your database
-  console.log(`Incrementing download count for material: ${materialId}`)
-  
-  // Example SQL query:
-  // UPDATE materials SET download_count = download_count + 1 WHERE id = ?
-}
+// ── GET /api/materials/access ─────────────────────────────────────────────────
+// Return the current user's material access history, scoped to their org.
+// org_admin / owner can optionally pass ?userId= to see another user's history.
 
-async function updateUserReadingProgress(
-  userId: string, 
-  materialId: string, 
-  progress: any
-) {
-  // In a real implementation, this would update or create reading progress in your database
-  console.log(`Updating reading progress for user ${userId}, material ${materialId}:`, progress)
-  
-  // Example SQL query:
-  // INSERT INTO user_reading_progress (user_id, material_id, current_page, total_pages, progress_percentage, reading_time_minutes, last_read_at)
-  // VALUES (?, ?, ?, ?, ?, ?, NOW())
-  // ON DUPLICATE KEY UPDATE
-  // current_page = VALUES(current_page),
-  // progress_percentage = VALUES(progress_percentage),
-  // reading_time_minutes = VALUES(reading_time_minutes),
-  // last_read_at = NOW()
-}
+export const GET = withOrgContext(
+  async (req: NextRequest, _ctx: unknown, orgContext: OrgContext) => {
+    const { userId, orgId, orgRole, isPlatformBypass } = orgContext;
+    const { searchParams } = req.nextUrl;
+
+    // org_admin and above can query any user in their org
+    const canQueryOthers =
+      isPlatformBypass ||
+      orgRole === 'owner' ||
+      orgRole === 'org_admin';
+
+    const targetUserId = canQueryOthers
+      ? (searchParams.get('userId') ?? userId)
+      : userId;   // non-admins can only see their own history
+
+    const limit  = Math.min(50, parseInt(searchParams.get('limit') ?? '20', 10));
+    const page   = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
+    const offset = (page - 1) * limit;
+
+    try {
+      // ── Lock 2: scope access history to the caller's org ──────────────────
+      const [rows, [{ total }]] = await Promise.all([
+        db
+          .select({
+            accessId:    userMaterialAccess.id,
+            materialId:  userMaterialAccess.materialId,
+            accessedAt:  userMaterialAccess.accessedAt,
+            accessCount: userMaterialAccess.accessCount,
+            // Join material details for convenience
+            title:       materials.title,
+            subject:     materials.subject,
+            grade:       materials.grade,
+            type:        materials.type,
+          })
+          .from(userMaterialAccess)
+          .innerJoin(
+            materials,
+            and(
+              eq(userMaterialAccess.materialId, materials.id),
+              eq(materials.organizationId, orgId),   // ← org scope on the join
+            ),
+          )
+          .where(
+            and(
+              eq(userMaterialAccess.userId, targetUserId),
+              eq(userMaterialAccess.organizationId, orgId),  // ← org scope on access
+            ),
+          )
+          .orderBy(desc(userMaterialAccess.accessedAt))
+          .limit(limit)
+          .offset(offset),
+
+        db
+          .select({ total: sql<number>`count(*)` })
+          .from(userMaterialAccess)
+          .where(
+            and(
+              eq(userMaterialAccess.userId, targetUserId),
+              eq(userMaterialAccess.organizationId, orgId),
+            ),
+          ),
+      ]);
+
+      return NextResponse.json({
+        history: rows,
+        pagination: {
+          page,
+          limit,
+          total: Number(total),
+          totalPages: Math.ceil(Number(total) / limit),
+        },
+      });
+
+    } catch (err) {
+      console.error('[materials/access GET]', err);
+      return NextResponse.json(
+        { error: 'Failed to fetch access history' },
+        { status: 500 },
+      );
+    }
+  },
+  { requireOrg: true },
+);

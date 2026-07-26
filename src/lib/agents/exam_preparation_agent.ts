@@ -42,7 +42,7 @@ export class ExamStrategyTool {
   private vectorService: VectorStoreService;
 
   constructor() {
-    this.llmService = OpenAIService.getInstance() as any; // Legacy compatibility
+    this.llmService = OpenAIService.getInstance() as unknown as Record<string, unknown>; // Legacy compatibility
     this.vectorService = new VectorStoreService();
   }
 
@@ -99,7 +99,7 @@ export class ExamStrategyTool {
   /**
    * Extract textbook sources from context results for accurate citations
    */
-  private extractTextbookSources(allContent: any[]): Array<{
+  private extractTextbookSources(allContent: Record<string, unknown>[]): Array<{
     subject: string;
     class_level: string;
     chapter: string;
@@ -137,7 +137,7 @@ export class ExamStrategyTool {
 
   private buildExamStrategyPrompt(
     request: ExamStrategyRequest,
-    allContent: any[],
+    allContent: Record<string, unknown>[],
     timeAvailable: number,
     examType: string
   ): string {
@@ -337,10 +337,14 @@ Remember: "विद्या विनयेन शोभते" - Knowledge sh
   }
 
   private determineCognitiveLevel(gradeLevel: number): string {
-    if (gradeLevel <= 3) return "remember_understand";
-    if (gradeLevel <= 6) return "understand_apply";
-    if (gradeLevel <= 8) return "apply_analyze";
-    if (gradeLevel <= 10) return "analyze_evaluate";
+    if (gradeLevel <= 3)
+  return "remember_understand";
+    if (gradeLevel <= 6)
+  return "understand_apply";
+    if (gradeLevel <= 8)
+  return "apply_analyze";
+    if (gradeLevel <= 10)
+  return "analyze_evaluate";
     return "evaluate_create";
   }
 

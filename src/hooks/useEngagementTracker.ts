@@ -186,7 +186,8 @@ export function useEngagementTracker() {
    */
   const calculateEngagementScore = useCallback((metricsData: EngagementMetrics): number => {
     const totalTime = metricsData.activeTime + metricsData.idleTime
-    if (totalTime === 0) return 0
+    if (totalTime === 0)
+  return 0
 
     const activeRatio = metricsData.activeTime / totalTime
     const interactionDensity = totalTime > 0 ? metricsData.interactions / (totalTime / 60000) : 0 // interactions per minute

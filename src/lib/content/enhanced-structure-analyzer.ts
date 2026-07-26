@@ -264,9 +264,12 @@ export class EnhancedStructureAnalyzer {
 
   private classifyContentType(title: string): 'concept' | 'example' | 'activity' | 'summary' {
     const lower = title.toLowerCase();
-    if (lower.includes('example') || lower.includes('illustration')) return 'example';
-    if (lower.includes('activity') || lower.includes('experiment')) return 'activity';
-    if (lower.includes('summary') || lower.includes('conclusion')) return 'summary';
+    if (lower.includes('example') || lower.includes('illustration'))
+  return 'example';
+    if (lower.includes('activity') || lower.includes('experiment'))
+  return 'activity';
+    if (lower.includes('summary') || lower.includes('conclusion'))
+  return 'summary';
     return 'concept';
   }
 
@@ -330,8 +333,10 @@ export class EnhancedStructureAnalyzer {
   }
 
   private classifyExerciseType(text: string): 'in_text' | 'end_chapter' | 'additional' {
-    if (text.toLowerCase().includes('additional')) return 'additional';
-    if (text.toLowerCase().includes('exercise')) return 'end_chapter';
+    if (text.toLowerCase().includes('additional'))
+  return 'additional';
+    if (text.toLowerCase().includes('exercise'))
+  return 'end_chapter';
     return 'in_text';
   }
 

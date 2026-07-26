@@ -57,6 +57,11 @@ interface QuestionFormData {
   has_diagrams: boolean
   question_image_url: string
   explanation_image_url: string
+  // CASA — page-level citation (verified flag is system-managed, not edited here)
+  casa_book: string
+  casa_edition: string
+  casa_page: string
+  casa_anchor: string
 }
 
 // Mathematical and Scientific Symbols
@@ -123,12 +128,18 @@ export default function QuestionEditor({ question, onSaved, onCancel, onError }:
     has_chemical_formulas: false,
     has_diagrams: false,
     question_image_url: '',
-    explanation_image_url: ''
+    explanation_image_url: '',
+    casa_book: '',
+    casa_edition: '',
+    casa_page: '',
+    casa_anchor: ''
   })
 
   const [activeField, setActiveField] = useState<string>('')
   const [previewMode, setPreviewMode] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [casaVerifying, setCasaVerifying] = useState(false)
+  const [casaResult, setCasaResult] = useState<{ verified: boolean; score: number; message: string; matched?: { page: number | null; chapter: string | null; snippet: string } | null } | null>(null)
 
   // Load question data if editing
   useEffect(() => {
@@ -157,7 +168,11 @@ export default function QuestionEditor({ question, onSaved, onCancel, onError }:
         has_chemical_formulas: question.has_chemical_formulas,
         has_diagrams: question.has_diagrams,
         question_image_url: question.question_image_url || '',
-        explanation_image_url: question.explanation_image_url || ''
+        explanation_image_url: question.explanation_image_url || '',
+        casa_book: question.casa_book || '',
+        casa_edition: question.casa_edition || '',
+        casa_page: question.casa_page != null ? String(question.casa_page) : '',
+        casa_anchor: question.casa_anchor || ''
       })
     }
   }, [question])
@@ -219,18 +234,37 @@ export default function QuestionEditor({ question, onSaved, onCancel, onError }:
         return
       }
 
-      // In production, this would make an API call
-      console.log('Saving question:', formData)
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
+      const res = question?.id
+        ? await fetch(`/api/super-admin/practest/questions/${question.id}`, {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData),
+          })
+        : await fetch('/api/super-admin/practest/questions', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData),
+          })
+      const data = await res.json()
+      if (!data.success) { onError(data.error || 'Failed to save question'); return }
+
       onSaved()
     } catch (error) {
       console.error('Failed to save question:', error)
       onError('Failed to save question')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleVerifyCasa = async () => {
+    if (!question?.id) return
+    setCasaVerifying(true); setCasaResult(null)
+    try {
+      const res = await fetch(`/api/super-admin/practest/questions/${question.id}/verify-casa`, { method: 'POST' })
+      const data = await res.json()
+      if (data.success) setCasaResult(data)
+      else onError(data.error || 'Verification failed')
+    } catch {
+      onError('Verification failed')
+    } finally {
+      setCasaVerifying(false)
     }
   }
 
@@ -328,6 +362,69 @@ export default function QuestionEditor({ question, onSaved, onCancel, onError }:
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Main Editor */}
           <div className="lg:col-span-3 space-y-6">
+            {/* CASA — page-level citation (Vinstitution differentiator) */}
+            <Card className="border-violet-200 dark:border-violet-900/40">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <span>📖 CASA Citation</span>
+                  {question?.casa_verified ? (
+                    <Badge className="bg-green-100 text-green-800">Verified</Badge>
+                  ) : (formData.casa_page || formData.casa_anchor) ? (
+                    <Badge className="bg-yellow-100 text-yellow-800">Cited · unverified</Badge>
+                  ) : (
+                    <Badge variant="outline">Not cited</Badge>
+                  )}
+                </CardTitle>
+                <CardDescription>
+                  Pin this question to its exact board-prescribed source (edition + page). The anchor resolves against the NCERT corpus so re-pagination never breaks the citation.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="md:col-span-2">
+                    <Label>Textbook</Label>
+                    <Input value={formData.casa_book} onChange={(e) => handleInputChange('casa_book', e.target.value)} placeholder="e.g. NCERT Science Class 10" />
+                  </div>
+                  <div>
+                    <Label>Edition</Label>
+                    <Input value={formData.casa_edition} onChange={(e) => handleInputChange('casa_edition', e.target.value)} placeholder="e.g. 2023" />
+                  </div>
+                  <div>
+                    <Label>Page</Label>
+                    <Input type="number" value={formData.casa_page} onChange={(e) => handleInputChange('casa_page', e.target.value)} placeholder="e.g. 142" />
+                  </div>
+                  <div className="md:col-span-4">
+                    <Label>Source anchor <span className="text-xs text-gray-400">(NCERT corpus chunk id — edition-resilient)</span></Label>
+                    <Input value={formData.casa_anchor} onChange={(e) => handleInputChange('casa_anchor', e.target.value)} placeholder="qdrant point id / stable locator" />
+                  </div>
+                </div>
+
+                {question?.id ? (
+                  <div className="mt-4">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button variant="outline" size="sm" onClick={handleVerifyCasa} disabled={casaVerifying}>
+                        {casaVerifying ? 'Verifying…' : '✓ Verify against NCERT corpus'}
+                      </Button>
+                      {casaResult && (
+                        <span className={`text-sm ${casaResult.verified ? 'text-green-600' : 'text-amber-600'}`}>
+                          {casaResult.verified ? '✓' : '⚠'} {casaResult.message}
+                        </span>
+                      )}
+                    </div>
+                    {casaResult?.matched && (
+                      <div className="mt-2 rounded-lg border border-gray-100 bg-gray-50 p-3 text-xs text-gray-600 dark:border-white/5 dark:bg-white/5 dark:text-gray-300">
+                        <span className="font-semibold">Matched source</span>
+                        {casaResult.matched.page ? ` · p.${casaResult.matched.page}` : ''}
+                        {casaResult.matched.chapter ? ` · ${casaResult.matched.chapter}` : ''}:
+                        <p className="mt-1 italic">&ldquo;{casaResult.matched.snippet}&hellip;&rdquo;</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-3 text-xs text-gray-400">Save the question first, then verify its citation against the NCERT corpus.</p>
+                )}
+              </CardContent>
+            </Card>
             {/* Basic Information */}
             <Card>
               <CardHeader>

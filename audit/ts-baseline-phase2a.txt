@@ -1,0 +1,953 @@
+.next/types/app/api/admin/pre-generated-answers/[id]/route.ts(205,7): error TS2344: Type '{ __tag__: "PUT"; __param_position__: "second"; __param_type__: { params: { id: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/admin/pre-generated-answers/[id]/route.ts(244,7): error TS2344: Type '{ __tag__: "DELETE"; __param_position__: "second"; __param_type__: { params: { id: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/admin/qdrant/books/[bookId]/route.ts(244,7): error TS2344: Type '{ __tag__: "DELETE"; __param_position__: "second"; __param_type__: { params: { bookId: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/admin/teacher-verification/view/[documentId]/route.ts(49,7): error TS2344: Type '{ __tag__: "GET"; __param_position__: "second"; __param_type__: { params: { documentId: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/admin/teachers/approve/[teacherId]/route.ts(166,7): error TS2344: Type '{ __tag__: "POST"; __param_position__: "second"; __param_type__: { params: { teacherId: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/admin/teachers/reject/[teacherId]/route.ts(166,7): error TS2344: Type '{ __tag__: "POST"; __param_position__: "second"; __param_type__: { params: { teacherId: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/admin/users/[userId]/route.ts(49,7): error TS2344: Type '{ __tag__: "GET"; __param_position__: "second"; __param_type__: { params: { userId: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/admin/users/[userId]/route.ts(205,7): error TS2344: Type '{ __tag__: "PUT"; __param_position__: "second"; __param_type__: { params: { userId: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/admin/users/[userId]/route.ts(244,7): error TS2344: Type '{ __tag__: "DELETE"; __param_position__: "second"; __param_type__: { params: { userId: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/analytics/canary-comparison/route.ts(49,7): error TS2344: Type '{ __tag__: "GET"; __param_position__: "second"; __param_type__: { params: Record<string, string>; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/analytics/rag-quality/route.ts(49,7): error TS2344: Type '{ __tag__: "GET"; __param_position__: "second"; __param_type__: { params: Record<string, string>; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/folders/[id]/route.ts(49,7): error TS2344: Type '{ __tag__: "GET"; __param_position__: "second"; __param_type__: { params: { id: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/folders/[id]/route.ts(205,7): error TS2344: Type '{ __tag__: "PUT"; __param_position__: "second"; __param_type__: { params: { id: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/folders/[id]/route.ts(244,7): error TS2344: Type '{ __tag__: "DELETE"; __param_position__: "second"; __param_type__: { params: { id: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/institution/classes/route.ts(49,7): error TS2344: Type '{ __tag__: "GET"; __param_position__: "second"; __param_type__: { params: Record<string, string>; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/institution/classes/route.ts(166,7): error TS2344: Type '{ __tag__: "POST"; __param_position__: "second"; __param_type__: { params: Record<string, string>; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/institution/classes/route.ts(244,7): error TS2344: Type '{ __tag__: "DELETE"; __param_position__: "second"; __param_type__: { params: Record<string, string>; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/institution/enrollments/route.ts(49,7): error TS2344: Type '{ __tag__: "GET"; __param_position__: "second"; __param_type__: { params: Record<string, string>; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/institution/enrollments/route.ts(166,7): error TS2344: Type '{ __tag__: "POST"; __param_position__: "second"; __param_type__: { params: Record<string, string>; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/institution/enrollments/route.ts(244,7): error TS2344: Type '{ __tag__: "DELETE"; __param_position__: "second"; __param_type__: { params: Record<string, string>; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/institution/invite/route.ts(166,7): error TS2344: Type '{ __tag__: "POST"; __param_position__: "second"; __param_type__: { params: Record<string, string>; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/institution/sections/route.ts(166,7): error TS2344: Type '{ __tag__: "POST"; __param_position__: "second"; __param_type__: { params: Record<string, string>; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/institution/sections/route.ts(244,7): error TS2344: Type '{ __tag__: "DELETE"; __param_position__: "second"; __param_type__: { params: Record<string, string>; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/materials/route.ts(49,7): error TS2344: Type '{ __tag__: "GET"; __param_position__: "second"; __param_type__: { params: Record<string, string>; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/materials/route.ts(166,7): error TS2344: Type '{ __tag__: "POST"; __param_position__: "second"; __param_type__: { params: Record<string, string>; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/notes/[id]/analyze/route.ts(49,7): error TS2344: Type '{ __tag__: "GET"; __param_position__: "second"; __param_type__: { params: { id: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/notes/[id]/analyze/route.ts(166,7): error TS2344: Type '{ __tag__: "POST"; __param_position__: "second"; __param_type__: { params: { id: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/notes/[id]/flashcards/route.ts(49,7): error TS2344: Type '{ __tag__: "GET"; __param_position__: "second"; __param_type__: { params: { id: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/notes/[id]/flashcards/route.ts(166,7): error TS2344: Type '{ __tag__: "POST"; __param_position__: "second"; __param_type__: { params: { id: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/notes/[id]/flashcards/route.ts(205,7): error TS2344: Type '{ __tag__: "PUT"; __param_position__: "second"; __param_type__: { params: { id: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/notes/[id]/route.ts(49,7): error TS2344: Type '{ __tag__: "GET"; __param_position__: "second"; __param_type__: { params: { id: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/notes/[id]/route.ts(205,7): error TS2344: Type '{ __tag__: "PUT"; __param_position__: "second"; __param_type__: { params: { id: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/notes/[id]/route.ts(244,7): error TS2344: Type '{ __tag__: "DELETE"; __param_position__: "second"; __param_type__: { params: { id: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/teacher/classes/[classId]/route.ts(49,7): error TS2344: Type '{ __tag__: "GET"; __param_position__: "second"; __param_type__: { params: { classId: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/teacher/classes/[classId]/route.ts(205,7): error TS2344: Type '{ __tag__: "PUT"; __param_position__: "second"; __param_type__: { params: { classId: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+.next/types/app/api/teacher/classes/[classId]/route.ts(244,7): error TS2344: Type '{ __tag__: "DELETE"; __param_position__: "second"; __param_type__: { params: { classId: string; }; }; }' does not satisfy the constraint 'ParamCheck<RouteContext>'.
+drizzle/schema.ts(102,14): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(128,19): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(129,16): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(218,12): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(252,24): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(268,15): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(302,12): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(323,23): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(390,12): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(459,12): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(479,12): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(496,10): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(539,18): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(540,23): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(541,15): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(574,18): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(578,22): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(579,20): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(580,15): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(581,26): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(584,12): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(585,12): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(639,10): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(756,12): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(757,14): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(786,12): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(818,17): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(830,23): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(876,14): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(877,14): error TS2304: Cannot find name 'tinyint'.
+drizzle/schema.ts(912,13): error TS2304: Cannot find name 'tinyint'.
+files/practest-queries.ts(16,10): error TS2459: Module '"@/lib/db/connection"' declares 'pool' locally, but it is not exported.
+files/route.ts(65,39): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { id?: string | SQL<unknown> | Placeholder<string, any> | undefined; createdAt?: SQL<unknown> | Date | Placeholder<string, any> | null | undefined; ... 4 more ...; details?: unknown; }): MySqlInsertBase<...>', gave the following error.
+  Overload 2 of 2, '(values: { id?: string | SQL<unknown> | Placeholder<string, any> | undefined; createdAt?: SQL<unknown> | Date | Placeholder<string, any> | null | undefined; ... 4 more ...; details?: unknown; }[]): MySqlInsertBase<...>', gave the following error.
+scripts/create-missing-indexes.ts(30,9): error TS2322: Type 'string' is not assignable to type 'Record<string, unknown> | "text" | "integer" | "float" | "keyword" | "geo" | "bool" | { type: "text"; tokenizer?: "word" | "prefix" | "whitespace" | "multilingual" | undefined; min_token_len?: number | ... 1 more ... | undefined; max_token_len?: number | ... 1 more ... | undefined; lowercase?: boolean | ... 1 more ....'.
+scripts/fed-jit-test.ts(175,45): error TS2345: Argument of type 'string' is not assignable to parameter of type 'VidyaverseClaims'.
+scripts/fed-jit-test.ts(176,50): error TS2367: This comparison appears to be unintentional because the types 'JitSyncResult' and 'boolean' have no overlap.
+scripts/fed-jit-test.ts(223,46): error TS2345: Argument of type 'string' is not assignable to parameter of type 'VidyaverseClaims'.
+scripts/fed-jit-test.ts(224,64): error TS2367: This comparison appears to be unintentional because the types 'JitSyncResult' and 'boolean' have no overlap.
+scripts/fed-jit-test.ts(244,30): error TS2345: Argument of type 'string' is not assignable to parameter of type 'VidyaverseClaims'.
+scripts/grant-trial-access.ts(11,29): error TS2307: Cannot find module '@clerk/nextjs/server' or its corresponding type declarations.
+scripts/grant-trial-access.ts(48,7): error TS7006: Parameter 'e' implicitly has an 'any' type.
+scripts/migrate-tenant-data.ts(67,25): error TS2551: Property 'users' does not exist on type 'typeof import("J:/Apps/DigiClassroomPro/src/db/schema")'. Did you mean 'user'?
+scripts/migrate-tenant-data.ts(79,54): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+scripts/search-specific-paragraphs.ts(65,5): error TS2322: Type 'string | number | Record<string, unknown> | null' is not assignable to type 'string | number | null'.
+scripts/seed-tenant.ts(15,22): error TS2307: Cannot find module 'postgres' or its corresponding type declarations.
+src/__tests__/agents/golden-exam-prep.test.ts(58,38): error TS2339: Property 'execute' does not exist on type 'ExamPreparationAgent'.
+src/__tests__/ai-tutor-integration.test.ts(8,21): error TS2307: Cannot find module 'supertest' or its corresponding type declarations.
+src/__tests__/ai-tutor-integration.test.ts(92,39): error TS2307: Cannot find module '../app/api/ai-tutor/chat/route' or its corresponding type declarations.
+src/__tests__/ai-tutor-integration.test.ts(165,39): error TS2307: Cannot find module '../app/api/ai-tutor/chat/route' or its corresponding type declarations.
+src/__tests__/ai-tutor-integration.test.ts(202,39): error TS2307: Cannot find module '../app/api/ai-tutor/chat/route' or its corresponding type declarations.
+src/__tests__/ai-tutor-integration.test.ts(248,37): error TS2307: Cannot find module '../app/api/ai-tutor/chat/route' or its corresponding type declarations.
+src/__tests__/ai-tutor-integration.test.ts(295,37): error TS2307: Cannot find module '../app/api/ai-tutor/chat/route' or its corresponding type declarations.
+src/__tests__/ai-tutor-integration.test.ts(330,37): error TS2307: Cannot find module '../app/api/ai-tutor/chat/route' or its corresponding type declarations.
+src/__tests__/ai-tutor-integration.test.ts(350,37): error TS2307: Cannot find module '../app/api/ai-tutor/chat/route' or its corresponding type declarations.
+src/__tests__/ai-tutor-integration.test.ts(372,37): error TS2307: Cannot find module '../app/api/ai-tutor/chat/route' or its corresponding type declarations.
+src/__tests__/end-to-end-pipeline.test.ts(12,10): error TS2724: '"../lib/ai/rag/qdrant-search"' has no exported member named 'QdrantSearch'. Did you mean 'qdrantSearch'?
+src/__tests__/end-to-end-pipeline.test.ts(328,7): error TS2322: Type 'boolean | undefined' is not assignable to type 'boolean'.
+src/__tests__/evaluation/agents/all-migrated-agents.test.ts(33,13): error TS2353: Object literal may only specify known properties, and 'type' does not exist in type 'AnyCitation'.
+src/__tests__/evaluation/ncert-golden-set.test.ts(418,52): error TS2339: Property 'executeAgent' does not exist on type 'AgentManager'.
+src/__tests__/full-stack.test.ts(19,46): error TS2345: Argument of type 'Error' is not assignable to parameter of type 'never'.
+src/__tests__/trpc/sarvagya-router.test.ts(84,13): error TS2322: Type 'unknown' is not assignable to type 'Request'.
+src/__tests__/trpc/sarvagya-router.test.ts(89,37): error TS2339: Property 'spaces' does not exist on type 'DecorateRouterRecord<DecorateCreateRouterOptions<{ listSpaces: QueryProcedure<{ input: void; output: { organizationId: string | null; id: string; userId: string; internalSpaceId: string; name: string; description: string | null; createdAt: Date | null; updatedAt: Date | null; }[]; meta: object; }>; ... 8 more ...; s...'.
+src/__tests__/trpc/sarvagya-router.test.ts(95,13): error TS2322: Type 'number' is not assignable to type 'string'.
+src/app/(auth)/forgot-password/page.tsx(31,27): error TS2339: Property 'message' does not exist on type '{}'.
+src/app/(auth)/reset-password/page.tsx(61,27): error TS2339: Property 'message' does not exist on type '{}'.
+src/app/api/admin/content/cancel/route.ts(11,56): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/app/api/admin/content/cancel/route.ts(12,21): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/app/api/admin/content/cancel/route.ts(13,19): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/app/api/admin/materials/google-drive/status/route.ts(53,22): error TS2352: Conversion of type '{ googleDriveConnected: false; databaseConnected: true; quotaStatus: "unknown"; lastSyncTime: string; pendingUploads: number; failedUploads: number; }' to type 'SystemHealthCheck' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/app/api/admin/materials/google-drive/status/route.ts(78,59): error TS18046: 'error' is of type 'unknown'.
+src/app/api/admin/materials/google-drive/status/route.ts(119,22): error TS2352: Conversion of type '{ googleDriveConnected: false; databaseConnected: true; quotaStatus: "unknown"; lastSyncTime: string; pendingUploads: number; failedUploads: number; }' to type 'SystemHealthCheck' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/app/api/admin/materials/google-drive/status/route.ts(138,22): error TS2352: Conversion of type '{ googleDriveConnected: false; databaseConnected: true; quotaStatus: "unknown"; lastSyncTime: string; pendingUploads: number; failedUploads: number; }' to type 'SystemHealthCheck' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/app/api/admin/materials/google-drive/status/route.ts(191,20): error TS2352: Conversion of type '{ googleDriveConnected: false; databaseConnected: true; quotaStatus: "unknown"; lastSyncTime: string; pendingUploads: number; failedUploads: number; }' to type 'SystemHealthCheck' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+src/app/api/admin/materials/google-drive/token-manager/route.ts(36,33): error TS2341: Property 'intervalId' is private and only accessible within class 'TokenManager'.
+src/app/api/admin/materials/route.ts(67,28): error TS2322: Type 'number' is not assignable to type 'string'.
+src/app/api/admin/materials/route.ts(68,27): error TS2322: Type 'number' is not assignable to type 'string'.
+src/app/api/admin/materials/route.ts(69,28): error TS2322: Type 'number' is not assignable to type 'string'.
+src/app/api/admin/pre-generated-answers/[id]/route.ts(36,7): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/app/api/admin/pre-generated-answers/[id]/route.ts(37,7): error TS2322: Type 'unknown' is not assignable to type 'string[] | undefined'.
+src/app/api/admin/pre-generated-answers/[id]/route.ts(38,7): error TS2322: Type 'unknown' is not assignable to type '"medium" | "hard" | "easy" | undefined'.
+src/app/api/admin/qdrant/books/[bookId]/route.ts(68,7): error TS2322: Type 'string | number | Record<string, unknown> | null' is not assignable to type 'string | number | null'.
+src/app/api/admin/qdrant/books/route.ts(60,7): error TS2322: Type 'string | number | Record<string, unknown> | null' is not assignable to type 'string | number | null'.
+src/app/api/admin/qdrant/clear/route.ts(65,39): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(value: { id?: string | SQL<unknown> | Placeholder<string, any> | undefined; createdAt?: SQL<unknown> | Date | Placeholder<string, any> | null | undefined; ... 4 more ...; details?: unknown; }): MySqlInsertBase<...>', gave the following error.
+  Overload 2 of 2, '(values: { id?: string | SQL<unknown> | Placeholder<string, any> | undefined; createdAt?: SQL<unknown> | Date | Placeholder<string, any> | null | undefined; ... 4 more ...; details?: unknown; }[]): MySqlInsertBase<...>', gave the following error.
+src/app/api/admin/queues/route.ts(29,13): error TS2339: Property 'sarvagyaIngestQueue' does not exist on type 'typeof import("J:/Apps/DigiClassroomPro/src/lib/queues/index")'.
+src/app/api/admin/queues/route.ts(30,13): error TS2339: Property 'sarvagyaCreditsQueue' does not exist on type 'typeof import("J:/Apps/DigiClassroomPro/src/lib/queues/index")'.
+src/app/api/admin/queues/route.ts(31,13): error TS2339: Property 'emailQueue' does not exist on type 'typeof import("J:/Apps/DigiClassroomPro/src/lib/queues/index")'.
+src/app/api/admin/queues/route.ts(32,13): error TS2339: Property 'analyticsQueue' does not exist on type 'typeof import("J:/Apps/DigiClassroomPro/src/lib/queues/index")'.
+src/app/api/admin/queues/route.ts(59,83): error TS18046: 'error' is of type 'unknown'.
+src/app/api/admin/teacher-verification/documents/route.ts(30,23): error TS2304: Cannot find name 'sessionClaims'.
+src/app/api/admin/teacher-verification/review/route.ts(30,23): error TS2304: Cannot find name 'sessionClaims'.
+src/app/api/admin/teachers/pending/route.ts(98,37): error TS2339: Property 'specialization' does not exist on type '{}'.
+src/app/api/admin/teachers/pending/route.ts(99,36): error TS2339: Property 'qualification' does not exist on type '{}'.
+src/app/api/admin/teachers/pending/route.ts(100,38): error TS2339: Property 'experienceYears' does not exist on type '{}'.
+src/app/api/admin/teachers/pending/route.ts(101,28): error TS2339: Property 'phone' does not exist on type '{}'.
+src/app/api/ai-writing/route.ts(35,53): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/app/api/ai-writing/route.ts(45,51): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/app/api/ai-writing/route.ts(49,53): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/app/api/ai-writing/route.ts(53,74): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/app/api/ai/chat/history/save/route.ts(61,9): error TS1117: An object literal cannot have multiple properties with the same name.
+src/app/api/ai/chat/route.new.ts(53,58): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/app/api/ai/chat/route.new.ts(62,53): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/app/api/ai/chat/route.new.ts(71,56): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/app/api/ai/chat/route.new.ts(81,7): error TS2322: Type '{}' is not assignable to type 'string'.
+src/app/api/ai/chat/route.new.ts(82,7): error TS2322: Type '{}' is not assignable to type 'string'.
+src/app/api/ai/chat/route.new.ts(83,7): error TS2322: Type '{}' is not assignable to type 'string'.
+src/app/api/ai/chat/route.new.ts(84,7): error TS2322: Type 'unknown' is not assignable to type 'string | undefined'.
+src/app/api/ai/chat/route.new.ts(85,7): error TS2322: Type '{}' is not assignable to type 'string'.
+src/app/api/ai/chat/route.new.ts(86,7): error TS2322: Type '{}' is not assignable to type 'string'.
+src/app/api/ai/chat/route.new.ts(87,7): error TS2322: Type 'unknown' is not assignable to type 'ConversationMessage[] | undefined'.
+src/app/api/ai/chat/route.new.ts(88,7): error TS2322: Type 'unknown' is not assignable to type 'boolean | undefined'.
+src/app/api/ai/chat/route.new.ts(96,38): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/app/api/ai/chat/route.new.ts(102,7): error TS2322: Type '{}' is not assignable to type 'string'.
+src/app/api/ai/chat/route.new.ts(121,57): error TS2339: Property 'stream' does not exist on type 'AgentResponse | StreamingAgentResponse'.
+src/app/api/ai/chat/route.new.ts(144,32): error TS2339: Property 'content' does not exist on type 'AgentResponse | StreamingAgentResponse'.
+src/app/api/ai/chat/route.ts(89,67): error TS2367: This comparison appears to be unintentional because the types 'MenuIntent | undefined' and '""' have no overlap.
+src/app/api/ai/chat/route.ts(421,13): error TS2353: Object literal may only specify known properties, and 'menuIntent' does not exist in type '{ classLevel?: string | undefined; subject?: string | undefined; board?: string | undefined; complexity: string; intent: string; }'.
+src/app/api/ai/enhanced-query/route.ts(35,21): error TS2339: Property 'substring' does not exist on type '{}'.
+src/app/api/ai/enhanced-query/route.ts(56,31): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/app/api/ai/enhanced-query/route.ts(64,77): error TS2345: Argument of type '{ query: {}; user_context: { grade_level: number; subject: {}; board_type: unknown; user_role: unknown; subscription_tier: unknown; }; }' is not assignable to parameter of type 'EnhancedQueryRequest'.
+src/app/api/ai/stream/route.ts(241,53): error TS2554: Expected 1 arguments, but got 0.
+src/app/api/analytics/canary-comparison/route.ts(12,26): error TS2305: Module '"@/lib/auth/with-org-context"' has no exported member 'OrgRouteContext'.
+src/app/api/analytics/rag-quality/route.ts(15,26): error TS2305: Module '"@/lib/auth/with-org-context"' has no exported member 'OrgRouteContext'.
+src/app/api/chat/stream/route.ts(10,10): error TS2305: Module '"@/lib/config/feature-flags"' has no exported member 'isFeatureEnabled'.
+src/app/api/debug/user/route.ts(29,22): error TS2304: Cannot find name 'sessionClaims'.
+src/app/api/debug/user/route.ts(30,17): error TS2304: Cannot find name 'sessionClaims'.
+src/app/api/dictionary/external-search/route.ts(428,5): error TS1117: An object literal cannot have multiple properties with the same name.
+src/app/api/dictionary/external-search/route.ts(429,5): error TS1117: An object literal cannot have multiple properties with the same name.
+src/app/api/dictionary/external-search/route.ts(430,5): error TS1117: An object literal cannot have multiple properties with the same name.
+src/app/api/dictionary/test-custom-endpoint/route.ts(35,26): error TS18048: 'endpoint' is possibly 'undefined'.
+src/app/api/dictionary/test-custom-endpoint/route.ts(43,7): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(input: string | Request | URL, init?: RequestInit | undefined): Promise<Response>', gave the following error.
+  Overload 2 of 2, '(input: URL | RequestInfo, init?: RequestInit | undefined): Promise<Response>', gave the following error.
+src/app/api/dictionary/test-custom-endpoint/route.ts(92,31): error TS18048: 'endpoint' is possibly 'undefined'.
+src/app/api/dictionary/test-custom-endpoint/route.ts(98,7): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(input: string | Request | URL, init?: RequestInit | undefined): Promise<Response>', gave the following error.
+  Overload 2 of 2, '(input: URL | RequestInfo, init?: RequestInit | undefined): Promise<Response>', gave the following error.
+src/app/api/dictionary/test-custom-endpoint/route.ts(107,9): error TS7034: Variable 'multipleTranslations' implicitly has type 'any[]' in some locations where its type cannot be determined.
+src/app/api/dictionary/test-custom-endpoint/route.ts(130,16): error TS7005: Variable 'multipleTranslations' implicitly has an 'any[]' type.
+src/app/api/feedback/stats/route.ts(59,55): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/api/feedback/stats/route.ts(187,50): error TS18048: 'params.limit' is possibly 'undefined'.
+src/app/api/feedback/stats/route.ts(213,9): error TS2322: Type 'string | undefined' is not assignable to type 'string'.
+src/app/api/feedback/stats/route.ts(216,9): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+src/app/api/feedback/stats/route.ts(217,9): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+src/app/api/institution/classes/route.ts(3,10): error TS2305: Module '"@/db/schema"' has no exported member 'institutionClasses'.
+src/app/api/institution/classes/route.ts(3,30): error TS2305: Module '"@/db/schema"' has no exported member 'institutionSections'.
+src/app/api/institution/classes/route.ts(4,26): error TS2305: Module '"@/lib/auth/with-org-context"' has no exported member 'OrgRouteContext'.
+src/app/api/institution/classes/route.ts(34,45): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/app/api/institution/classes/route.ts(57,44): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/app/api/institution/classes/route.ts(63,41): error TS2322: Type '"owner"' is not assignable to type 'Role'.
+src/app/api/institution/classes/route.ts(63,50): error TS2322: Type '"org_admin"' is not assignable to type 'Role'.
+src/app/api/institution/classes/route.ts(81,44): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/app/api/institution/classes/route.ts(84,41): error TS2322: Type '"owner"' is not assignable to type 'Role'.
+src/app/api/institution/classes/route.ts(84,50): error TS2322: Type '"org_admin"' is not assignable to type 'Role'.
+src/app/api/institution/create/route.ts(39,54): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/app/api/institution/enrollments/route.ts(3,10): error TS2305: Module '"@/db/schema"' has no exported member 'studentEnrollments'.
+src/app/api/institution/enrollments/route.ts(4,26): error TS2305: Module '"@/lib/auth/with-org-context"' has no exported member 'OrgRouteContext'.
+src/app/api/institution/enrollments/route.ts(52,49): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/app/api/institution/enrollments/route.ts(84,46): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/app/api/institution/enrollments/route.ts(90,41): error TS2322: Type '"owner"' is not assignable to type 'Role'.
+src/app/api/institution/enrollments/route.ts(90,50): error TS2322: Type '"org_admin"' is not assignable to type 'Role'.
+src/app/api/institution/enrollments/route.ts(107,49): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/app/api/institution/enrollments/route.ts(110,41): error TS2322: Type '"owner"' is not assignable to type 'Role'.
+src/app/api/institution/enrollments/route.ts(110,50): error TS2322: Type '"org_admin"' is not assignable to type 'Role'.
+src/app/api/institution/enrollments/route.ts(179,44): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/app/api/institution/invite/route.ts(4,26): error TS2305: Module '"@/lib/auth/with-org-context"' has no exported member 'OrgRouteContext'.
+src/app/api/institution/invite/route.ts(40,9): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+src/app/api/institution/invite/route.ts(68,41): error TS2322: Type '"owner"' is not assignable to type 'Role'.
+src/app/api/institution/invite/route.ts(68,50): error TS2322: Type '"org_admin"' is not assignable to type 'Role'.
+src/app/api/institution/invite/route.ts(86,13): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+src/app/api/institution/invite/route.ts(105,44): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/app/api/institution/sections/route.ts(3,10): error TS2305: Module '"@/db/schema"' has no exported member 'institutionSections'.
+src/app/api/institution/sections/route.ts(4,26): error TS2305: Module '"@/lib/auth/with-org-context"' has no exported member 'OrgRouteContext'.
+src/app/api/institution/sections/route.ts(32,46): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/app/api/institution/sections/route.ts(38,41): error TS2322: Type '"owner"' is not assignable to type 'Role'.
+src/app/api/institution/sections/route.ts(38,50): error TS2322: Type '"org_admin"' is not assignable to type 'Role'.
+src/app/api/institution/sections/route.ts(55,46): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/app/api/institution/sections/route.ts(58,41): error TS2322: Type '"owner"' is not assignable to type 'Role'.
+src/app/api/institution/sections/route.ts(58,50): error TS2322: Type '"org_admin"' is not assignable to type 'Role'.
+src/app/api/materials/route.ts(6,26): error TS2305: Module '"@/lib/auth/with-org-context"' has no exported member 'OrgRouteContext'.
+src/app/api/materials/route.ts(39,28): error TS2322: Type 'number' is not assignable to type 'string'.
+src/app/api/materials/route.ts(40,27): error TS2322: Type 'number' is not assignable to type 'string'.
+src/app/api/materials/route.ts(41,28): error TS2322: Type 'number' is not assignable to type 'string'.
+src/app/api/materials/route.ts(42,27): error TS2322: Type 'string[]' is not assignable to type 'string'.
+src/app/api/materials/route.ts(92,26): error TS2339: Property 'total' does not exist on type '{ items: MaterialItem[]; pagination: { page: number; limit: number; total: any; totalPages: number; }; }'.
+src/app/api/materials/route.ts(93,41): error TS2339: Property 'total' does not exist on type '{ items: MaterialItem[]; pagination: { page: number; limit: number; total: any; totalPages: number; }; }'.
+src/app/api/materials/route.ts(99,47): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/app/api/materials/route.ts(135,55): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/app/api/materials/route.ts(141,41): error TS2322: Type '"org_admin"' is not assignable to type 'Role'.
+src/app/api/materials/route.ts(141,54): error TS2322: Type '"owner"' is not assignable to type 'Role'.
+src/app/api/materials/route.ts(201,58): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/app/api/materials/route.ts(391,51): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/app/api/notes/[id]/analyze/route.ts(23,10): error TS2305: Module '"@/lib/config/feature-flags"' has no exported member 'isFeatureEnabled'.
+src/app/api/notes/[id]/flashcards/route.ts(16,10): error TS2305: Module '"@/lib/config/feature-flags"' has no exported member 'isFeatureEnabled'.
+src/app/api/notes/[id]/route.ts(74,42): error TS18046: 'error' is of type 'unknown'.
+src/app/api/notes/[id]/route.ts(76,16): error TS18046: 'error' is of type 'unknown'.
+src/app/api/notes/[id]/route.ts(202,42): error TS18046: 'error' is of type 'unknown'.
+src/app/api/notes/[id]/route.ts(204,16): error TS18046: 'error' is of type 'unknown'.
+src/app/api/notes/[id]/route.ts(244,45): error TS18046: 'error' is of type 'unknown'.
+src/app/api/notes/[id]/route.ts(246,16): error TS18046: 'error' is of type 'unknown'.
+src/app/api/notes/folders/route.ts(44,17): error TS18046: 'tableError' is of type 'unknown'.
+src/app/api/notes/folders/route.ts(93,27): error TS2339: Property 'trim' does not exist on type '{}'.
+src/app/api/notes/folders/route.ts(113,22): error TS2339: Property 'trim' does not exist on type '{}'.
+src/app/api/notes/folders/route.ts(129,32): error TS2339: Property 'trim' does not exist on type '{}'.
+src/app/api/notes/folders/route.ts(140,17): error TS18046: 'tableError' is of type 'unknown'.
+src/app/api/notes/folders/route.ts(145,45): error TS2339: Property 'toLowerCase' does not exist on type '{}'.
+src/app/api/notes/folders/route.ts(146,36): error TS2339: Property 'trim' does not exist on type '{}'.
+src/app/api/notes/route.ts(35,25): error TS2339: Property 'trim' does not exist on type '{}'.
+src/app/api/notes/route.ts(49,20): error TS2339: Property 'substring' does not exist on type '{}'.
+src/app/api/notes/route.ts(85,13): error TS2339: Property 'trim' does not exist on type '{}'.
+src/app/api/notes/route.ts(186,44): error TS18046: 'error' is of type 'unknown'.
+src/app/api/notes/route.ts(191,16): error TS18046: 'error' is of type 'unknown'.
+src/app/api/notes/route.ts(192,15): error TS18046: 'error' is of type 'unknown'.
+src/app/api/notes/route.ts(193,19): error TS18046: 'error' is of type 'unknown'.
+src/app/api/notes/route.ts(362,43): error TS18046: 'error' is of type 'unknown'.
+src/app/api/notes/route.ts(364,16): error TS18046: 'error' is of type 'unknown'.
+src/app/api/notes/route.ts(480,43): error TS18046: 'error' is of type 'unknown'.
+src/app/api/notes/route.ts(482,16): error TS18046: 'error' is of type 'unknown'.
+src/app/api/notes/route.ts(521,46): error TS18046: 'error' is of type 'unknown'.
+src/app/api/notes/route.ts(523,16): error TS18046: 'error' is of type 'unknown'.
+src/app/api/pdf-attachments/route.ts(125,42): error TS2304: Cannot find name 'NoteRow'.
+src/app/api/pdf-attachments/route.ts(139,44): error TS2304: Cannot find name 'PdfAttachmentRow'.
+src/app/api/practest/generate/route.ts(68,52): error TS2448: Block-scoped variable 'testMetadata' used before its declaration.
+src/app/api/practest/generate/route.ts(68,52): error TS2454: Variable 'testMetadata' is used before being assigned.
+src/app/api/practest/submit/route.ts(7,10): error TS2305: Module '"@/lib/db/practest-queries"' has no exported member 'PractestQuestionQueries'.
+src/app/api/practest/submit/route.ts(132,7): error TS2322: Type 'boolean | null' is not assignable to type 'boolean | undefined'.
+src/app/api/practest/submit/route.ts(170,21): error TS18047: 'testSession' is possibly 'null'.
+src/app/api/smart-detect/route.ts(49,68): error TS2345: Argument of type '{}' is not assignable to parameter of type 'string'.
+src/app/api/teacher/status/route.ts(77,37): error TS2339: Property 'specialization' does not exist on type '{}'.
+src/app/api/teacher/status/route.ts(78,36): error TS2339: Property 'qualification' does not exist on type '{}'.
+src/app/api/teacher/status/route.ts(79,38): error TS2339: Property 'experienceYears' does not exist on type '{}'.
+src/app/api/test-ocr/route.ts(11,11): error TS2304: Cannot find name 'worker'.
+src/app/api/test/advanced-components/route.ts(15,86): error TS18046: 'error' is of type 'unknown'.
+src/app/api/test/advanced-components/route.ts(22,81): error TS18046: 'error' is of type 'unknown'.
+src/app/api/test/advanced-components/route.ts(29,84): error TS18046: 'error' is of type 'unknown'.
+src/app/api/test/advanced-components/route.ts(36,86): error TS18046: 'error' is of type 'unknown'.
+src/app/api/test/advanced-components/route.ts(43,89): error TS18046: 'error' is of type 'unknown'.
+src/app/api/test/advanced-components/route.ts(50,88): error TS18046: 'error' is of type 'unknown'.
+src/app/api/test/advanced-components/route.ts(57,81): error TS18046: 'error' is of type 'unknown'.
+src/app/api/test/advanced-components/route.ts(64,87): error TS18046: 'error' is of type 'unknown'.
+src/app/api/test/advanced-components/route.ts(71,86): error TS18046: 'error' is of type 'unknown'.
+src/app/api/voice-notes/route.ts(135,42): error TS2304: Cannot find name 'NoteRow'.
+src/app/api/voice-notes/route.ts(149,43): error TS2304: Cannot find name 'VoiceRecordingRow'.
+src/app/api/webhook/clerk/route.ts(25,33): error TS2339: Property 'get' does not exist on type 'Promise<ReadonlyHeaders>'.
+src/app/api/webhook/clerk/route.ts(26,40): error TS2339: Property 'get' does not exist on type 'Promise<ReadonlyHeaders>'.
+src/app/api/webhook/clerk/route.ts(27,40): error TS2339: Property 'get' does not exist on type 'Promise<ReadonlyHeaders>'.
+src/app/api/webhooks/razorpay/route.ts(8,10): error TS2305: Module '"@/lib/sarvagya/credits"' has no exported member 'addCredits'.
+src/app/dashboard/admin/practest/page.tsx(145,24): error TS2339: Property 'role' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; email: string; emailVerified: boolean; name: string; image?: string | null | undefined; }'.
+src/app/dashboard/admin/teachers/pending/page.tsx(172,33): error TS2339: Property 'name' does not exist on type 'Teacher'.
+src/app/dashboard/admin/teachers/pending/page.tsx(172,64): error TS2339: Property 'name' does not exist on type 'Teacher'.
+src/app/dashboard/admin/teachers/pending/page.tsx(287,66): error TS2339: Property 'name' does not exist on type 'Teacher'.
+src/app/dashboard/admin/teachers/pending/page.tsx(287,105): error TS2339: Property 'name' does not exist on type 'Teacher'.
+src/app/dashboard/menu/page.tsx(27,24): error TS2304: Cannot find name 'sessionClaims'.
+src/app/dashboard/teacher/students/page.tsx(215,35): error TS2339: Property 'name' does not exist on type 'Student'.
+src/app/dashboard/teacher/students/page.tsx(215,68): error TS2339: Property 'name' does not exist on type 'Student'.
+src/app/dashboard/teacher/students/page.tsx(220,35): error TS2339: Property 'name' does not exist on type 'Student'.
+src/app/dashboard/teacher/students/page.tsx(220,66): error TS2339: Property 'name' does not exist on type 'Student'.
+src/app/dashboard/teacher/students/page.tsx(277,35): error TS2339: Property 'name' does not exist on type 'Student'.
+src/app/dashboard/teacher/students/page.tsx(277,66): error TS2339: Property 'name' does not exist on type 'Student'.
+src/app/dashboard/user/ai-tutor/_hooks/useAiTutor.tsx(22,35): error TS2307: Cannot find module '@/components/ai/core/VisualizationRenderer' or its corresponding type declarations.
+src/app/dashboard/user/ai-tutor/_hooks/useAiTutor.tsx(256,43): error TS18048: 'access.classes' is possibly 'undefined'.
+src/app/dashboard/user/ai-tutor/_hooks/useAiTutor.tsx(257,28): error TS18048: 'access.classes' is possibly 'undefined'.
+src/app/dashboard/user/ai-tutor/_hooks/useAiTutor.tsx(1910,45): error TS18048: 'access.classes' is possibly 'undefined'.
+src/app/dashboard/user/ai-tutor/_hooks/useAiTutor.tsx(1911,30): error TS18048: 'access.classes' is possibly 'undefined'.
+src/app/dashboard/user/ai-tutor/page.tsx(232,60): error TS18048: 'message.sources' is possibly 'undefined'.
+src/app/dashboard/user/ai-tutor/page.tsx(241,42): error TS18048: 'message.metadata' is possibly 'undefined'.
+src/app/dashboard/user/ai-tutor/page.tsx(241,85): error TS18048: 'message.metadata' is possibly 'undefined'.
+src/app/dashboard/user/ai-tutor/page.tsx(246,38): error TS18048: 'message.sources' is possibly 'undefined'.
+src/app/dashboard/user/ai-tutor/page.tsx(326,56): error TS18048: 'message.metadata' is possibly 'undefined'.
+src/app/dashboard/user/ai-tutor/page.tsx(329,60): error TS18048: 'message.metadata' is possibly 'undefined'.
+src/app/dashboard/user/ai-tutor/page.tsx(329,99): error TS18048: 'message.metadata' is possibly 'undefined'.
+src/app/dashboard/user/ai-tutor/page.tsx(362,102): error TS18048: 'message.quickReplies' is possibly 'undefined'.
+src/app/dashboard/user/ai-tutor/page.tsx(368,48): error TS18048: 'message.quickReplies' is possibly 'undefined'.
+src/app/dashboard/user/ai-tutor/page.tsx(519,64): error TS7006: Parameter 'viz' implicitly has an 'any' type.
+src/app/dashboard/user/ai-tutor/page.tsx(527,53): error TS7006: Parameter 'buttonType' implicitly has an 'any' type.
+src/app/dashboard/user/ai-tutor/page.tsx(527,65): error TS7006: Parameter 'metadata' implicitly has an 'any' type.
+src/app/dashboard/user/ai-tutor/page.tsx(695,9): error TS2322: Type '{ isOpen: boolean; onClose: () => void; onLoadConversation: (conversationId: string) => Promise<void>; }' is not assignable to type 'IntrinsicAttributes & ChatHistoryPanelProps'.
+src/app/dashboard/user/dictionary/page-new.tsx(91,51): error TS2561: Object literal may only specify known properties, but 'category' does not exist in type 'QuizConfig'. Did you mean to write 'categoryId'?
+src/app/dashboard/user/dictionary/page-new.tsx(100,51): error TS2561: Object literal may only specify known properties, but 'category' does not exist in type 'QuizConfig'. Did you mean to write 'categoryId'?
+src/app/dashboard/user/dictionary/page-new.tsx(323,24): error TS2345: Argument of type '{ id: number; word: string; hindiTranslation: string; englishDefinition: string; partOfSpeech: string; difficultyLevel: string; source: string; }[]' is not assignable to parameter of type 'SetStateAction<never[]>'.
+src/app/dashboard/user/dictionary/page.tsx(112,51): error TS2561: Object literal may only specify known properties, but 'category' does not exist in type 'QuizConfig'. Did you mean to write 'categoryId'?
+src/app/dashboard/user/dictionary/page.tsx(121,51): error TS2561: Object literal may only specify known properties, but 'category' does not exist in type 'QuizConfig'. Did you mean to write 'categoryId'?
+src/app/dashboard/user/dictionary/page.tsx(710,26): error TS2345: Argument of type 'any[]' is not assignable to parameter of type 'SetStateAction<never[]>'.
+src/app/dashboard/user/materials/page-new.tsx(268,11): error TS2353: Object literal may only specify known properties, and 'duration' does not exist in type '{ author?: string | undefined; publisher?: string | undefined; isbn?: string | undefined; edition?: string | undefined; language: string; pageCount?: number | undefined; difficulty: "medium" | ... 1 more ... | "easy"; }'.
+src/app/dashboard/user/materials/page.tsx(268,11): error TS2353: Object literal may only specify known properties, and 'duration' does not exist in type '{ author?: string | undefined; publisher?: string | undefined; isbn?: string | undefined; edition?: string | undefined; language: string; pageCount?: number | undefined; difficulty: "medium" | ... 1 more ... | "easy"; }'.
+src/app/dashboard/user/mitram/page.tsx(253,45): error TS2304: Cannot find name 'user'.
+src/app/dashboard/user/mitram/page.tsx(554,157): error TS2339: Property 'glowColor' does not exist on type 'AssessmentModule'.
+src/app/dashboard/user/mitram/page.tsx(581,44): error TS2339: Property 'ageRange' does not exist on type 'AssessmentModule'.
+src/app/dashboard/user/mitram/page.tsx(581,65): error TS2339: Property 'ageRange' does not exist on type 'AssessmentModule'.
+src/app/dashboard/user/mitram/page.tsx(592,44): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+src/app/dashboard/user/sanchika/[id]/page.tsx(546,33): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: {}, context?: any): string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | Promise<...> | Component<...> | null | undefined', gave the following error.
+  Overload 2 of 2, '(props: {}): string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | Promise<...> | Component<...> | null | undefined', gave the following error.
+src/app/dashboard/user/sanchika/[id]/page.tsx(554,13): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: {}, context?: any): string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | Promise<...> | Component<...> | null | undefined', gave the following error.
+  Overload 2 of 2, '(props: {}): string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | Promise<...> | Component<...> | null | undefined', gave the following error.
+src/app/dashboard/user/sanchika/[id]/page.tsx(609,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: RichTextEditorProps, context?: any): string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | ... 4 more ... | undefined', gave the following error.
+  Overload 2 of 2, '(props: RichTextEditorProps): string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | ... 4 more ... | undefined', gave the following error.
+src/app/dashboard/user/sanchika/[id]/page.tsx(620,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: {}, context?: any): string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | Promise<...> | Component<...> | null | undefined', gave the following error.
+  Overload 2 of 2, '(props: {}): string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | Promise<...> | Component<...> | null | undefined', gave the following error.
+src/app/dashboard/user/sanchika/[id]/page.tsx(621,34): error TS7006: Parameter 'imageData' implicitly has an 'any' type.
+src/app/dashboard/user/sanchika/[id]/page.tsx(621,45): error TS7006: Parameter 'ocrText' implicitly has an 'any' type.
+src/app/dashboard/user/sanchika/[id]/page.tsx(649,38): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: {}, context?: any): string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | Promise<...> | Component<...> | null | undefined', gave the following error.
+  Overload 2 of 2, '(props: {}): string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | Promise<...> | Component<...> | null | undefined', gave the following error.
+src/app/dashboard/user/sanchika/[id]/page.tsx(656,34): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: {}, context?: any): string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | Promise<...> | Component<...> | null | undefined', gave the following error.
+  Overload 2 of 2, '(props: {}): string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | Promise<...> | Component<...> | null | undefined', gave the following error.
+src/app/dashboard/user/sanchika/[id]/page.tsx(785,11): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: {}, context?: any): string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | Promise<...> | Component<...> | null | undefined', gave the following error.
+  Overload 2 of 2, '(props: {}): string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | Promise<...> | Component<...> | null | undefined', gave the following error.
+src/app/dashboard/user/sanchika/[id]/page.tsx(787,22): error TS7006: Parameter 'coverDesign' implicitly has an 'any' type.
+src/app/dashboard/user/sanchika/[id]/page.tsx(787,35): error TS7006: Parameter 'spineColor' implicitly has an 'any' type.
+src/app/dashboard/user/sanchika/page.tsx(570,15): error TS2322: Type '{ folders: { id: string; name: string; color: string; icon: string; note_count: number; parent_id: null; }[]; selectedFolderId: string | null; onSelectFolder: (folderId: any) => void; onCreateFolder: () => void; onManageFolders: () => void; }' is not assignable to type 'IntrinsicAttributes'.
+src/app/dashboard/user/sanchika/page.tsx(579,32): error TS7006: Parameter 'folderId' implicitly has an 'any' type.
+src/app/dashboard/user/sanchika/page.tsx(769,46): error TS2554: Expected 0 arguments, but got 1.
+src/app/dashboard/user/sanchika/page.tsx(976,11): error TS2322: Type '{ note: Note; folders: Folder[]; position: { x: number; y: number; }; onClose: () => void; onMoveToFolder: (noteId: string, folderId: string | null) => Promise<void>; onCopyToFolder: (noteId: string, folderId: string) => Promise<...>; onTogglePin: (note: Note) => Promise<...>; onToggleFavorite: (note: Note) => Promi...' is not assignable to type 'IntrinsicAttributes & { children: ReactNode; }'.
+src/app/dashboard/user/sanchika/page.tsx(984,20): error TS7006: Parameter 'noteId' implicitly has an 'any' type.
+src/app/dashboard/user/sanchika/page.tsx(1055,9): error TS2322: Type '{ isOpen: boolean; onClose: () => void; folders: Folder[]; onCreateFolder: (name: string, color: string, icon: string) => Promise<void>; onUpdateFolder: (id: string, name: string, color: string, icon: string) => Promise<...>; onDeleteFolder: (folderId: string) => Promise<...>; }' is not assignable to type 'IntrinsicAttributes'.
+src/auth/client.ts(17,5): error TS2339: Property 'forgetPassword' does not exist on type '{ useActiveOrganization: () => { data: Prettify<{ id: string; name: string; slug: string; createdAt: Date; logo?: string | null | undefined; metadata?: any; } & { members: { id: string; organizationId: string; role: "admin" | ... 1 more ... | "owner"; createdAt: Date; userId: string; user: { ...; }; }[]; invitations...'.
+src/auth/index.ts(151,52): error TS2345: Argument of type 'string' is not assignable to parameter of type 'VidyaverseClaims'.
+src/components/admin/AdminSidebar.tsx(87,22): error TS2339: Property 'name' does not exist on type '{ firstName?: string | null | undefined; lastName?: string | null | undefined; emailAddress?: string | null | undefined; }'.
+src/components/admin/AdminSidebar.tsx(88,21): error TS2339: Property 'name' does not exist on type '{ firstName?: string | null | undefined; lastName?: string | null | undefined; emailAddress?: string | null | undefined; }'.
+src/components/admin/core/PDFExtractKitMonitoring.tsx(223,75): error TS2339: Property 'pdfExtractKitUsed' does not exist on type 'ProcessingMetrics'.
+src/components/admin/core/users/UserModal.tsx(33,26): error TS2339: Property 'name' does not exist on type 'UserProfile'.
+src/components/admin/core/users/UserModal.tsx(34,25): error TS2339: Property 'name' does not exist on type 'UserProfile'.
+src/components/admin/core/users/UserModal.tsx(124,34): error TS2339: Property 'name' does not exist on type '{ firstName: string; lastName: string; email: string; role: any; status: any; }'.
+src/components/admin/core/users/UserModal.tsx(138,34): error TS2339: Property 'name' does not exist on type '{ firstName: string; lastName: string; email: string; role: any; status: any; }'.
+src/components/admin/PDFExtractKitMonitoring.tsx(223,75): error TS2339: Property 'pdfExtractKitUsed' does not exist on type 'ProcessingMetrics'.
+src/components/ai-tutor/MultiModalInput.tsx(299,20): error TS2304: Cannot find name 'Upload'.
+src/components/ai/core/FormattedContent.tsx(143,30): error TS1501: This regular expression flag is only available when targeting 'es2018' or later.
+src/components/ai/core/FormattedContent.tsx(157,33): error TS1501: This regular expression flag is only available when targeting 'es2018' or later.
+src/components/ai/FormattedContent.tsx(143,30): error TS1501: This regular expression flag is only available when targeting 'es2018' or later.
+src/components/ai/FormattedContent.tsx(157,33): error TS1501: This regular expression flag is only available when targeting 'es2018' or later.
+src/components/ai/tutor/MultiModalInput.tsx(299,20): error TS2304: Cannot find name 'Upload'.
+src/components/core/providers/theme-provider.tsx(5,41): error TS2307: Cannot find module 'next-themes/dist/types' or its corresponding type declarations.
+src/components/core/ui/enhanced-typography.tsx(216,9): error TS2322: Type 'ForwardedRef<HTMLElement>' is not assignable to type '(((((instance: HTMLElement | null) => void | (() => VoidOrUndefinedOnly)) | RefObject<HTMLElement | null>) & (((instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)) | RefObject<...>)) & ((((instance: HTMLParagraphElement | null) => void | (() => VoidOrUndefinedOnly)) | RefObject<...>) & ((((instan...'.
+src/components/core/ui/enhanced-typography.tsx(245,43): error TS2304: Cannot find name 'HTMLBlockquoteElement'.
+src/components/dictionary/AdvancedSearchFilters.tsx(12,24): error TS2307: Cannot find module '@/components/ui/slider' or its corresponding type declarations.
+src/components/dictionary/AdvancedSearchFilters.tsx(14,26): error TS2307: Cannot find module '@/components/ui/checkbox' or its corresponding type declarations.
+src/components/dictionary/AdvancedSearchFilters.tsx(312,39): error TS7006: Parameter 'checked' implicitly has an 'any' type.
+src/components/dictionary/AdvancedSearchFilters.tsx(323,39): error TS7006: Parameter 'checked' implicitly has an 'any' type.
+src/components/dictionary/AdvancedSearchFilters.tsx(339,35): error TS7006: Parameter 'value' implicitly has an 'any' type.
+src/components/dictionary/LearningAnalytics.tsx(134,36): error TS2339: Property 'timestamp' does not exist on type 'string'.
+src/components/dictionary/MobileSearchInterface.tsx(123,31): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/components/layout/AdminSidebarWrapper.tsx(15,24): error TS2339: Property 'primaryEmailAddress' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; email: string; emailVerified: boolean; name: string; image?: string | null | undefined; role: string | null | undefined; classId?: string | ... 1 more ... | undefined; }'.
+src/components/layout/UserSidebarWrapper.tsx(15,24): error TS2339: Property 'primaryEmailAddress' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; email: string; emailVerified: boolean; name: string; image?: string | null | undefined; role: string | null | undefined; classId?: string | ... 1 more ... | undefined; }'.
+src/components/layout/UserSidebarWrapper.tsx(16,19): error TS2339: Property 'publicMetadata' does not exist on type '{ id: string; createdAt: Date; updatedAt: Date; email: string; emailVerified: boolean; name: string; image?: string | null | undefined; role: string | null | undefined; classId?: string | ... 1 more ... | undefined; }'.
+src/components/learning/dictionary/AdvancedSearchFilters.tsx(12,24): error TS2307: Cannot find module '@/components/core/ui/slider' or its corresponding type declarations.
+src/components/learning/dictionary/AdvancedSearchFilters.tsx(14,26): error TS2307: Cannot find module '@/components/core/ui/checkbox' or its corresponding type declarations.
+src/components/learning/dictionary/AdvancedSearchFilters.tsx(312,39): error TS7006: Parameter 'checked' implicitly has an 'any' type.
+src/components/learning/dictionary/AdvancedSearchFilters.tsx(323,39): error TS7006: Parameter 'checked' implicitly has an 'any' type.
+src/components/learning/dictionary/AdvancedSearchFilters.tsx(339,35): error TS7006: Parameter 'value' implicitly has an 'any' type.
+src/components/learning/dictionary/LearningAnalytics.tsx(134,36): error TS2339: Property 'timestamp' does not exist on type 'string'.
+src/components/learning/dictionary/MobileSearchInterface.tsx(123,31): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/components/learning/lesson/LessonPlanContainer.tsx(38,34): error TS2741: Property 'title' is missing in type '{ markdown: string; }' but required in type 'LessonSectionProps'.
+src/components/learning/lesson/LessonPlanContainer.tsx(39,27): error TS2741: Property 'title' is missing in type '{ markdown: string; }' but required in type 'LessonSectionProps'.
+src/components/learning/lesson/LessonPlanContainer.tsx(40,34): error TS2741: Property 'title' is missing in type '{ markdown: string; }' but required in type 'LessonSectionProps'.
+src/components/learning/lesson/LessonPlanContainer.tsx(41,34): error TS2741: Property 'title' is missing in type '{ markdown: string; }' but required in type 'LessonSectionProps'.
+src/components/learning/practest/ActiveTestInterface.tsx(53,20): error TS2554: Expected 1 arguments, but got 0.
+src/components/learning/quiz/QuizReview.tsx(206,69): error TS2322: Type '{ children: string; variant: "outline"; size: string; }' is not assignable to type 'IntrinsicAttributes & BadgeProps'.
+src/components/learning/quiz/QuizReview.tsx(207,72): error TS2322: Type '{ children: string; variant: "outline"; size: string; className: string; }' is not assignable to type 'IntrinsicAttributes & BadgeProps'.
+src/components/lesson/LessonPlanContainer.tsx(38,34): error TS2741: Property 'title' is missing in type '{ markdown: string; }' but required in type 'LessonSectionProps'.
+src/components/lesson/LessonPlanContainer.tsx(39,27): error TS2741: Property 'title' is missing in type '{ markdown: string; }' but required in type 'LessonSectionProps'.
+src/components/lesson/LessonPlanContainer.tsx(40,34): error TS2741: Property 'title' is missing in type '{ markdown: string; }' but required in type 'LessonSectionProps'.
+src/components/lesson/LessonPlanContainer.tsx(41,34): error TS2741: Property 'title' is missing in type '{ markdown: string; }' but required in type 'LessonSectionProps'.
+src/components/practest/ActiveTestInterface.tsx(53,20): error TS2554: Expected 1 arguments, but got 0.
+src/components/productivity/CurricuTimer.tsx(394,19): error TS7006: Parameter 'prev' implicitly has an 'any' type.
+src/components/quiz/QuizReview.tsx(206,69): error TS2322: Type '{ children: string; variant: "outline"; size: string; }' is not assignable to type 'IntrinsicAttributes & BadgeProps'.
+src/components/quiz/QuizReview.tsx(207,72): error TS2322: Type '{ children: string; variant: "outline"; size: string; className: string; }' is not assignable to type 'IntrinsicAttributes & BadgeProps'.
+src/components/ui/enhanced-typography.tsx(216,9): error TS2322: Type 'ForwardedRef<HTMLElement>' is not assignable to type '(((((instance: HTMLElement | null) => void | (() => VoidOrUndefinedOnly)) | RefObject<HTMLElement | null>) & (((instance: HTMLDivElement | null) => void | (() => VoidOrUndefinedOnly)) | RefObject<...>)) & ((((instance: HTMLParagraphElement | null) => void | (() => VoidOrUndefinedOnly)) | RefObject<...>) & ((((instan...'.
+src/components/ui/enhanced-typography.tsx(245,43): error TS2304: Cannot find name 'HTMLBlockquoteElement'.
+src/components/user/profile/UserSidebar.tsx(118,22): error TS2339: Property 'name' does not exist on type '{ firstName?: string | null | undefined; lastName?: string | null | undefined; emailAddress?: string | null | undefined; persona?: string | undefined; }'.
+src/components/user/profile/UserSidebar.tsx(119,21): error TS2339: Property 'name' does not exist on type '{ firstName?: string | null | undefined; lastName?: string | null | undefined; emailAddress?: string | null | undefined; persona?: string | undefined; }'.
+src/components/workspace/productivity/CurricuTimer.tsx(394,19): error TS7006: Parameter 'prev' implicitly has an 'any' type.
+src/design-system/04-component-library.tsx(185,18): error TS2320: Interface 'EnhancedInputProps' cannot simultaneously extend types 'InputHTMLAttributes<HTMLInputElement>' and 'VariantProps<(props?: (ConfigVariants<{ variant: { default: string; educational: string; error: string; success: string; }; size: { sm: string; default: string; lg: string; }; }> & ClassProp) | undefined) => string>'.
+  Named property 'size' of types 'InputHTMLAttributes<HTMLInputElement>' and 'VariantProps<(props?: (ConfigVariants<{ variant: { default: string; educational: string; error: string; success: string; }; size: { sm: string; default: string; lg: string; }; }> & ClassProp) | undefined) => string>' are not identical.
+src/design-system/04-component-library.tsx(203,77): error TS2322: Type 'number | undefined' is not assignable to type '"default" | "sm" | "lg" | null | undefined'.
+src/hooks/useAgentStream.ts(162,30): error TS2678: Type '"chunk"' is not comparable to type '"error" | "token" | "citations" | "done" | "scope_violation" | "audio_job"'.
+src/hooks/useAgentStream.ts(202,30): error TS2678: Type '"complete"' is not comparable to type '"error" | "token" | "citations" | "done" | "scope_violation" | "audio_job"'.
+src/hooks/useAgentStream.ts(207,54): error TS2339: Property 'sources' does not exist on type 'never'.
+src/hooks/useAgentStream.ts(208,60): error TS2339: Property 'sources' does not exist on type 'never'.
+src/hooks/useAgentStream.ts(209,54): error TS2339: Property 'menu' does not exist on type 'never'.
+src/hooks/useAttentionTracker.ts(48,26): error TS2554: Expected 1 arguments, but got 0.
+src/hooks/useEngagementTracker.ts(36,24): error TS2554: Expected 1 arguments, but got 0.
+src/hooks/useEngagementTracker.ts(37,29): error TS2554: Expected 1 arguments, but got 0.
+src/lib/agents/agent_manager.ts(91,23): error TS2304: Cannot find name 'LLMService'.
+src/lib/agents/agent_manager.ts(333,32): error TS2339: Property 'content' does not exist on type 'ContentResult'.
+src/lib/agents/agent_manager.ts(334,32): error TS2339: Property 'payload' does not exist on type 'ContentResult'.
+src/lib/agents/agent_manager.ts(335,53): error TS2339: Property 'content' does not exist on type 'ContentResult'.
+src/lib/agents/agent_manager.ts(337,47): error TS2339: Property 'payload' does not exist on type 'ContentResult'.
+src/lib/agents/agent_manager.ts(341,47): error TS2339: Property 'content' does not exist on type 'ContentResult'.
+src/lib/agents/agent_manager.ts(341,65): error TS2339: Property 'payload' does not exist on type 'ContentResult'.
+src/lib/agents/agent_manager.ts(341,89): error TS2339: Property 'payload' does not exist on type 'ContentResult'.
+src/lib/agents/agent_manager.ts(344,54): error TS2339: Property 'payload' does not exist on type 'ContentResult'.
+src/lib/agents/agent_manager.ts(348,49): error TS2339: Property 'textbook' does not exist on type '{ subject: string; class_level: string; chapter?: string | undefined; page?: number | undefined; content_type: string; source: string; relevance_score: number; }'.
+src/lib/agents/agent_manager.ts(349,51): error TS2339: Property 'chapterNumber' does not exist on type '{ subject: string; class_level: string; chapter?: string | undefined; page?: number | undefined; content_type: string; source: string; relevance_score: number; }'.
+src/lib/agents/agent_manager.ts(350,45): error TS2339: Property 'pageNumber' does not exist on type '{ subject: string; class_level: string; chapter?: string | undefined; page?: number | undefined; content_type: string; source: string; relevance_score: number; }'.
+src/lib/agents/agent_manager.ts(351,56): error TS2339: Property 'section' does not exist on type '{ subject: string; class_level: string; chapter?: string | undefined; page?: number | undefined; content_type: string; source: string; relevance_score: number; }'.
+src/lib/agents/agent_manager.ts(369,9): error TS2322: Type 'string' is not assignable to type '"exam_prep" | "study_tips" | "doubt_clearing" | "topic_explanation" | "socratic_guidance"'.
+src/lib/agents/agent_manager.ts(429,7): error TS2322: Type 'string' is not assignable to type '"exam_prep" | "study_tips" | "doubt_clearing" | "topic_explanation" | "socratic_guidance"'.
+src/lib/agents/agent_manager.ts(435,9): error TS2353: Object literal may only specify known properties, and 'model_used' does not exist in type '{ cognitive_level: string; bloom_taxonomy_level: string; encouragement_level?: string | undefined; key_concepts?: string[] | undefined; practice_suggestions?: string[] | undefined; study_plan?: StudyPlan | undefined; ... 5 more ...; content_verified?: boolean | undefined; }'.
+src/lib/agents/agent_manager.ts(477,11): error TS2322: Type 'string' is not assignable to type '"exam_prep" | "study_tips" | "doubt_clearing" | "topic_explanation" | "socratic_guidance"'.
+src/lib/agents/agent_manager.ts(506,11): error TS2353: Object literal may only specify known properties, and 'content_verified' does not exist in type 'AgentResponse'.
+src/lib/agents/agent_manager.ts(518,9): error TS2353: Object literal may only specify known properties, and 'content_verified' does not exist in type 'AgentResponse'.
+src/lib/agents/agent_manager.ts(577,55): error TS2339: Property 'explain_topic' does not exist on type 'TopicExplanationAgent'.
+src/lib/agents/agent_manager.ts(627,9): error TS2353: Object literal may only specify known properties, and 'estimated_marks' does not exist in type '{ cognitive_level: string; bloom_taxonomy_level: string; encouragement_level?: string | undefined; key_concepts?: string[] | undefined; practice_suggestions?: string[] | undefined; study_plan?: StudyPlan | undefined; ... 5 more ...; content_verified?: boolean | undefined; }'.
+src/lib/agents/agent_manager.ts(801,55): error TS2339: Property 'explain_topic' does not exist on type 'TopicExplanationAgent'.
+src/lib/agents/agent_manager.ts(1098,17): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ definition: number; explanation: number; analysis: number; comparison: number; evaluation: number; }'.
+src/lib/agents/cbse-answer-formatter.legacy.ts(43,74): error TS2305: Module '"./core/base-agent"' has no exported member 'CoreAgentServices'.
+src/lib/agents/cbse-answer-formatter.legacy.ts(51,7): error TS2554: Expected 2 arguments, but got 3.
+src/lib/agents/cbse-answer-formatter.ts(376,29): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ definition: string[]; explanation: string[]; analysis: string[]; comparison: string[]; evaluation: string[]; }'.
+src/lib/agents/citation_agent.ts(233,26): error TS2339: Property 'extraction_method' does not exist on type '{ page_number?: number | undefined; textbook_title?: string | undefined; chapter?: string | undefined; subject?: string | undefined; class_level?: string | undefined; }'.
+src/lib/agents/citation_agent.ts(234,38): error TS2339: Property 'extraction_method' does not exist on type '{ page_number?: number | undefined; textbook_title?: string | undefined; chapter?: string | undefined; subject?: string | undefined; class_level?: string | undefined; }'.
+src/lib/agents/constrained_generation.ts(44,24): error TS2304: Cannot find name 'LLMService'.
+src/lib/agents/constrained_generation.ts(118,7): error TS2588: Cannot assign to 'constrained_prompt' because it is a constant.
+src/lib/agents/constrained_generation.ts(196,5): error TS2322: Type 'string | boolean | undefined' is not assignable to type 'boolean'.
+src/lib/agents/constrained_generation.ts(310,12): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ remember: string; understand: string; apply: string; analyze: string; evaluate: string; create: string; }'.
+src/lib/agents/conversational_learning_agent.ts(10,74): error TS2305: Module '"./core/base-agent"' has no exported member 'CoreAgentServices'.
+src/lib/agents/conversational_learning_agent.ts(45,7): error TS2554: Expected 2 arguments, but got 3.
+src/lib/agents/conversational_learning_agent.ts(113,20): error TS2345: Argument of type '{ err: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/agents/conversational_learning_agent.ts(120,25): error TS2339: Property 'services' does not exist on type 'ConversationalLearningAgent'.
+src/lib/agents/conversational_learning_agent.ts(129,20): error TS2345: Argument of type '{ err: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/agents/conversational_learning_agent.ts(187,17): error TS2339: Property 'length' does not exist on type '{}'.
+src/lib/agents/conversational_learning_agent.ts(189,15): error TS2339: Property 'slice' does not exist on type '{}'.
+src/lib/agents/conversational_learning_agent.ts(192,41): error TS2339: Property 'chapter' does not exist on type '{}'.
+src/lib/agents/conversational_learning_agent.ts(193,38): error TS2339: Property 'page' does not exist on type '{}'.
+src/lib/agents/core/base-agent.ts(116,17): error TS18046: 'meta' is of type 'unknown'.
+src/lib/agents/core/base-agent.ts(116,41): error TS18046: 'meta' is of type 'unknown'.
+src/lib/agents/core/base-agent.ts(116,63): error TS18046: 'meta' is of type 'unknown'.
+src/lib/agents/core/examples/homework-help.agent.ts(52,41): error TS2345: Argument of type 'VectorSearchResult[]' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/lib/agents/core/examples/homework-help.agent.ts(68,38): error TS2345: Argument of type 'VectorSearchResult[]' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/lib/agents/core/examples/homework-help.agent.ts(114,39): error TS2345: Argument of type 'VectorSearchResult[]' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/lib/agents/core/examples/homework-help.agent.ts(125,38): error TS2345: Argument of type 'VectorSearchResult[]' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/lib/agents/core/examples/selfstudy-buddy.agent.ts(52,41): error TS2345: Argument of type 'VectorSearchResult[]' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/lib/agents/core/examples/selfstudy-buddy.agent.ts(68,38): error TS2345: Argument of type 'VectorSearchResult[]' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/lib/agents/core/examples/selfstudy-buddy.agent.ts(114,39): error TS2345: Argument of type 'VectorSearchResult[]' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/lib/agents/core/examples/selfstudy-buddy.agent.ts(125,38): error TS2345: Argument of type 'VectorSearchResult[]' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/lib/agents/core/llm/anthropic-provider.ts(34,32): error TS2571: Object is of type 'unknown'.
+src/lib/agents/core/llm/anthropic-provider.ts(66,24): error TS2571: Object is of type 'unknown'.
+src/lib/agents/core/llm/gemini-provider.ts(25,26): error TS2571: Object is of type 'unknown'.
+src/lib/agents/core/llm/gemini-provider.ts(67,26): error TS2571: Object is of type 'unknown'.
+src/lib/agents/core/llm/gemini-provider.ts(98,32): error TS2571: Object is of type 'unknown'.
+src/lib/agents/core/llm/gemini-provider.ts(104,32): error TS2571: Object is of type 'unknown'.
+src/lib/agents/core/llm/llm-factory.ts(22,20): error TS2339: Property 'archMultiProviderLLM' does not exist on type 'FeatureFlags'.
+src/lib/agents/core/llm/llm-factory.ts(44,20): error TS2339: Property 'archMultiProviderLLM' does not exist on type 'FeatureFlags'.
+src/lib/agents/core/services/cache.service.ts(13,10): error TS2305: Module '"../../../config/feature-flags"' has no exported member 'isFeatureEnabled'.
+src/lib/agents/core/services/cache.service.ts(53,25): error TS2345: Argument of type '{ data: string; }' is not assignable to parameter of type 'string'.
+src/lib/agents/core/services/cache.service.ts(60,21): error TS2345: Argument of type '{ data: string; }' is not assignable to parameter of type 'string'.
+src/lib/agents/core/services/citation.service.ts(35,44): error TS2339: Property 'subject' does not exist on type '{}'.
+src/lib/agents/core/services/citation.service.ts(35,71): error TS2339: Property 'class_level' does not exist on type '{}'.
+src/lib/agents/core/services/citation.service.ts(35,102): error TS2339: Property 'chapter' does not exist on type '{}'.
+src/lib/agents/core/services/citation.service.ts(35,129): error TS2339: Property 'page' does not exist on type '{}'.
+src/lib/agents/core/services/citation.service.ts(40,46): error TS2339: Property 'subject' does not exist on type '{}'.
+src/lib/agents/core/services/citation.service.ts(41,50): error TS2339: Property 'class_level' does not exist on type '{}'.
+src/lib/agents/core/services/citation.service.ts(42,46): error TS2339: Property 'chapter' does not exist on type '{}'.
+src/lib/agents/core/services/citation.service.ts(43,43): error TS2339: Property 'page' does not exist on type '{}'.
+src/lib/agents/core/services/tracing.service.ts(17,10): error TS2305: Module '"../../../config/feature-flags"' has no exported member 'isFeatureEnabled'.
+src/lib/agents/core/services/tracing.service.ts(44,21): error TS2345: Argument of type '{ data: string; }' is not assignable to parameter of type 'string'.
+src/lib/agents/doubt_clearing_agent.ts(36,23): error TS2304: Cannot find name 'LLMService'.
+src/lib/agents/doubt_clearing_agent.ts(72,63): error TS2345: Argument of type 'SearchResponse' is not assignable to parameter of type 'Record<string, unknown>'.
+src/lib/agents/doubt_clearing_agent.ts(165,82): error TS2345: Argument of type 'ContentResult[]' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/lib/agents/doubt_clearing_agent.ts(180,9): error TS2353: Object literal may only specify known properties, and 'scope_validation' does not exist in type 'DoubtResolutionResponse'.
+src/lib/agents/doubt_clearing_agent.ts(196,71): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'ContentResult[]'.
+src/lib/agents/doubt_clearing_agent.ts(204,57): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/lib/agents/doubt_clearing_agent.ts(319,18): error TS18046: 'result.metadata' is of type 'unknown'.
+src/lib/agents/doubt_clearing_agent.ts(320,22): error TS18046: 'result.metadata' is of type 'unknown'.
+src/lib/agents/doubt_clearing_agent.ts(321,18): error TS18046: 'result.metadata' is of type 'unknown'.
+src/lib/agents/doubt_clearing_agent.ts(322,15): error TS18046: 'result.metadata' is of type 'unknown'.
+src/lib/agents/doubt_clearing_agent.ts(746,14): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ concise: { type: string; description: string; wordLimit: number; }; balanced: { type: string; description: string; wordLimit: number; }; detailed: { type: string; description: string; wordLimit: number; }; }'.
+src/lib/agents/doubt_clearing_agent.ts(931,13): error TS18046: 'chunk.text' is of type 'unknown'.
+src/lib/agents/doubt_clearing_agent.ts(967,11): error TS18046: 'chunk.text' is of type 'unknown'.
+src/lib/agents/doubt_clearing_agent.ts(990,13): error TS18046: 'chunk.text' is of type 'unknown'.
+src/lib/agents/enhanced_synthesis_agent.ts(87,38): error TS2339: Property 'choices' does not exist on type 'OpenAIChatResponse'.
+src/lib/agents/exam_preparation_agent.ts(41,23): error TS2304: Cannot find name 'LLMService'.
+src/lib/agents/exam_preparation_agent.ts(116,40): error TS2339: Property 'length' does not exist on type '{}'.
+src/lib/agents/exam_preparation_agent.ts(117,30): error TS2488: Type '{}' must have a '[Symbol.iterator]()' method that returns an iterator.
+src/lib/agents/exam_preparation_agent.ts(145,31): error TS18046: 'item.content' is of type 'unknown'.
+src/lib/agents/exam_preparation_agent.ts(145,57): error TS18046: 'item.content' is of type 'unknown'.
+src/lib/agents/graph/agents/CbseAnswerFormatterGraph.ts(10,40): error TS2345: Argument of type 'CompiledStateGraph<{ messages: BaseMessage<MessageStructure<MessageToolSet>, MessageType>[]; studentName: string; grade: number; subject: string; ... 21 more ...; fallbackLevel: 0 | ... 2 more ... | 3; }, ... 7 more ..., unknown>' is not assignable to parameter of type 'CompiledStateGraph<Record<string, unknown>, Record<string, unknown>, Record<string, unknown>, StateDefinition, StateDefinition, StateDefinition, unknown, unknown, unknown>'.
+src/lib/agents/graph/agents/ConstrainedGenerationGraph.ts(10,41): error TS2345: Argument of type 'CompiledStateGraph<{ messages: BaseMessage<MessageStructure<MessageToolSet>, MessageType>[]; studentName: string; grade: number; subject: string; ... 21 more ...; fallbackLevel: 0 | ... 2 more ... | 3; }, ... 7 more ..., unknown>' is not assignable to parameter of type 'CompiledStateGraph<Record<string, unknown>, Record<string, unknown>, Record<string, unknown>, StateDefinition, StateDefinition, StateDefinition, unknown, unknown, unknown>'.
+src/lib/agents/graph/agents/ConversationalLearningGraph.ts(10,42): error TS2345: Argument of type 'CompiledStateGraph<{ messages: BaseMessage<MessageStructure<MessageToolSet>, MessageType>[]; studentName: string; grade: number; subject: string; ... 21 more ...; fallbackLevel: 0 | ... 2 more ... | 3; }, ... 7 more ..., unknown>' is not assignable to parameter of type 'CompiledStateGraph<Record<string, unknown>, Record<string, unknown>, Record<string, unknown>, StateDefinition, StateDefinition, StateDefinition, unknown, unknown, unknown>'.
+src/lib/agents/graph/agents/DoubtClearingGraph.ts(10,33): error TS2345: Argument of type 'CompiledStateGraph<{ messages: BaseMessage<MessageStructure<MessageToolSet>, MessageType>[]; studentName: string; grade: number; subject: string; ... 21 more ...; fallbackLevel: 0 | ... 2 more ... | 3; }, ... 7 more ..., unknown>' is not assignable to parameter of type 'CompiledStateGraph<Record<string, unknown>, Record<string, unknown>, Record<string, unknown>, StateDefinition, StateDefinition, StateDefinition, unknown, unknown, unknown>'.
+src/lib/agents/graph/agents/EnhancedSynthesisGraph.ts(10,37): error TS2345: Argument of type 'CompiledStateGraph<{ messages: BaseMessage<MessageStructure<MessageToolSet>, MessageType>[]; studentName: string; grade: number; subject: string; ... 21 more ...; fallbackLevel: 0 | ... 2 more ... | 3; }, ... 7 more ..., unknown>' is not assignable to parameter of type 'CompiledStateGraph<Record<string, unknown>, Record<string, unknown>, Record<string, unknown>, StateDefinition, StateDefinition, StateDefinition, unknown, unknown, unknown>'.
+src/lib/agents/graph/agents/ExamPreparationGraph.ts(10,35): error TS2345: Argument of type 'CompiledStateGraph<{ messages: BaseMessage<MessageStructure<MessageToolSet>, MessageType>[]; studentName: string; grade: number; subject: string; ... 21 more ...; fallbackLevel: 0 | ... 2 more ... | 3; }, ... 7 more ..., unknown>' is not assignable to parameter of type 'CompiledStateGraph<Record<string, unknown>, Record<string, unknown>, Record<string, unknown>, StateDefinition, StateDefinition, StateDefinition, unknown, unknown, unknown>'.
+src/lib/agents/graph/agents/HomeworkHelpGraph.ts(10,32): error TS2345: Argument of type 'CompiledStateGraph<{ messages: BaseMessage<MessageStructure<MessageToolSet>, MessageType>[]; studentName: string; grade: number; subject: string; ... 21 more ...; fallbackLevel: 0 | ... 2 more ... | 3; }, ... 7 more ..., unknown>' is not assignable to parameter of type 'CompiledStateGraph<Record<string, unknown>, Record<string, unknown>, Record<string, unknown>, StateDefinition, StateDefinition, StateDefinition, unknown, unknown, unknown>'.
+src/lib/agents/graph/agents/SelfStudyBuddyGraph.ts(10,34): error TS2345: Argument of type 'CompiledStateGraph<{ messages: BaseMessage<MessageStructure<MessageToolSet>, MessageType>[]; studentName: string; grade: number; subject: string; ... 21 more ...; fallbackLevel: 0 | ... 2 more ... | 3; }, ... 7 more ..., unknown>' is not assignable to parameter of type 'CompiledStateGraph<Record<string, unknown>, Record<string, unknown>, Record<string, unknown>, StateDefinition, StateDefinition, StateDefinition, unknown, unknown, unknown>'.
+src/lib/agents/graph/agents/StudyTipsGraph.ts(7,10): error TS2305: Module '"./StudyTipsNode"' has no exported member 'studyTipsGenerationNode'.
+src/lib/agents/graph/agents/StudyTipsNode.ts(37,68): error TS2345: Argument of type 'ContentResult[]' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/lib/agents/graph/agents/TopicExplanationGraph.ts(10,36): error TS2345: Argument of type 'CompiledStateGraph<{ messages: BaseMessage<MessageStructure<MessageToolSet>, MessageType>[]; studentName: string; grade: number; subject: string; ... 21 more ...; fallbackLevel: 0 | ... 2 more ... | 3; }, ... 7 more ..., unknown>' is not assignable to parameter of type 'CompiledStateGraph<Record<string, unknown>, Record<string, unknown>, Record<string, unknown>, StateDefinition, StateDefinition, StateDefinition, unknown, unknown, unknown>'.
+src/lib/agents/graph/nodes/langfuse-trace-node.ts(10,10): error TS2305: Module '"@/lib/config/feature-flags"' has no exported member 'isFeatureEnabled'.
+src/lib/agents/graph/nodes/langfuse-trace-node.ts(56,29): error TS2345: Argument of type '{ data: string; }' is not assignable to parameter of type 'string'.
+src/lib/agents/graph/nodes/retrieval-node.ts(61,22): error TS2339: Property 'webContext' does not exist on type 'SearchResponse'.
+src/lib/agents/graph/registry.ts(17,5): error TS2322: Type '"archLangGraphStudyTips"' is not assignable to type 'keyof FeatureFlags'.
+src/lib/agents/graph/registry.ts(18,5): error TS2322: Type '"langGraphCbseAnswerFormatter"' is not assignable to type 'keyof FeatureFlags'.
+src/lib/agents/graph/registry.ts(19,5): error TS2322: Type '"langGraphConversationalLearning"' is not assignable to type 'keyof FeatureFlags'.
+src/lib/agents/graph/registry.ts(20,5): error TS2322: Type '"langGraphExamPreparation"' is not assignable to type 'keyof FeatureFlags'.
+src/lib/agents/graph/registry.ts(21,5): error TS2322: Type '"langGraphTopicExplanation"' is not assignable to type 'keyof FeatureFlags'.
+src/lib/agents/graph/registry.ts(22,5): error TS2322: Type '"langGraphSelfStudyBuddy"' is not assignable to type 'keyof FeatureFlags'.
+src/lib/agents/graph/registry.ts(23,5): error TS2322: Type '"langGraphDoubtClearing"' is not assignable to type 'keyof FeatureFlags'.
+src/lib/agents/graph/registry.ts(24,5): error TS2322: Type '"langGraphHomeworkHelp"' is not assignable to type 'keyof FeatureFlags'.
+src/lib/agents/graph/registry.ts(25,5): error TS2322: Type '"langGraphConstrainedGeneration"' is not assignable to type 'keyof FeatureFlags'.
+src/lib/agents/graph/registry.ts(26,5): error TS2322: Type '"langGraphEnhancedSynthesis"' is not assignable to type 'keyof FeatureFlags'.
+src/lib/agents/graph/registry.ts(30,107): error TS2344: Type 'Record<string, unknown>' does not satisfy the constraint 'string'.
+src/lib/agents/graph/registry.ts(34,73): error TS2344: Type 'Record<string, unknown>' does not satisfy the constraint 'string'.
+src/lib/agents/graph/registry.ts(48,81): error TS2344: Type 'Record<string, unknown>' does not satisfy the constraint 'string'.
+src/lib/agents/homework-help.agent.ts(50,41): error TS2345: Argument of type 'VectorSearchResult[]' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/lib/agents/homework-help.agent.ts(66,38): error TS2345: Argument of type 'VectorSearchResult[]' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/lib/agents/homework-help.agent.ts(112,39): error TS2345: Argument of type 'VectorSearchResult[]' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/lib/agents/homework-help.agent.ts(123,38): error TS2345: Argument of type 'VectorSearchResult[]' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/lib/agents/homework_help_agent.ts(40,23): error TS2304: Cannot find name 'LLMService'.
+src/lib/agents/homework_help_agent.ts(541,68): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'ContentResult[]'.
+src/lib/agents/selfstudy_buddy_agent.ts(8,74): error TS2305: Module '"./core/base-agent"' has no exported member 'CoreAgentServices'.
+src/lib/agents/selfstudy_buddy_agent.ts(53,7): error TS2554: Expected 2 arguments, but got 3.
+src/lib/agents/selfstudy_buddy_agent.ts(432,34): error TS2339: Property 'services' does not exist on type 'SocraticTutoringTool'.
+src/lib/agents/selfstudy_buddy_agent.ts(444,34): error TS2339: Property 'source' does not exist on type '{}'.
+src/lib/agents/selfstudy_buddy_agent.ts(445,35): error TS2339: Property 'chapter' does not exist on type '{}'.
+src/lib/agents/selfstudy_buddy_agent.ts(446,32): error TS2339: Property 'page' does not exist on type '{}'.
+src/lib/agents/selfstudy_buddy_agent.ts(447,35): error TS2339: Property 'content_type' does not exist on type '{}'.
+src/lib/agents/selfstudy_buddy_agent.ts(523,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/agents/selfstudy_buddy_agent.ts(1077,7): error TS2322: Type 'Record<string, unknown>' is not assignable to type '"CBSE" | "ICSE" | "State Board"'.
+src/lib/agents/selfstudy_buddy_agent.ts(1078,7): error TS2322: Type '{ role: unknown; content: unknown; }[] | undefined' is not assignable to type '{ role: string; content: string; }[] | undefined'.
+src/lib/agents/selfstudy_buddy_agent.ts(1078,62): error TS2345: Argument of type '(h: Record<string, unknown>) => { role: unknown; content: unknown; }' is not assignable to parameter of type '(value: ConversationMessage, index: number, array: ConversationMessage[]) => { role: unknown; content: unknown; }'.
+src/lib/agents/source_verification_agent.ts(189,23): error TS2304: Cannot find name 'LLMService'.
+src/lib/agents/study_tips_agent.ts(79,23): error TS2304: Cannot find name 'LLMService'.
+src/lib/agents/study_tips_agent.ts(158,18): error TS18046: 'result.metadata' is of type 'unknown'.
+src/lib/agents/study_tips_agent.ts(159,22): error TS18046: 'result.metadata' is of type 'unknown'.
+src/lib/agents/study_tips_agent.ts(160,18): error TS18046: 'result.metadata' is of type 'unknown'.
+src/lib/agents/study_tips_agent.ts(161,15): error TS18046: 'result.metadata' is of type 'unknown'.
+src/lib/agents/study_tips_agent.ts(178,53): error TS2345: Argument of type '{}' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/lib/agents/study_tips_agent.ts(179,57): error TS2345: Argument of type '{}' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/lib/agents/study_tips_agent.ts(319,50): error TS2339: Property 'substring' does not exist on type '{}'.
+src/lib/agents/topic_explanation_agent.ts(57,23): error TS2304: Cannot find name 'LLMService'.
+src/lib/agents/topic_explanation_agent.ts(85,72): error TS2345: Argument of type 'SearchResponse' is not assignable to parameter of type 'Record<string, unknown>'.
+src/lib/agents/topic_explanation_agent.ts(97,44): error TS2345: Argument of type 'SearchResponse' is not assignable to parameter of type 'Record<string, unknown>'.
+src/lib/agents/topic_explanation_agent.ts(126,31): error TS18046: 'context.results' is of type 'unknown'.
+src/lib/agents/topic_explanation_agent.ts(134,36): error TS2339: Property 'include_examples' does not exist on type 'TopicExplanationRequest'.
+src/lib/agents/topic_explanation_agent.ts(136,28): error TS2339: Property 'extractKeyConcepts' does not exist on type 'TopicExplanationTool'.
+src/lib/agents/topic_explanation_agent.ts(137,39): error TS2551: Property 'extractApplications' does not exist on type 'TopicExplanationTool'. Did you mean 'extractCitations'?
+src/lib/agents/topic_explanation_agent.ts(138,27): error TS2339: Property 'generateMemoryAids' does not exist on type 'TopicExplanationTool'.
+src/lib/agents/topic_explanation_agent.ts(139,31): error TS2339: Property 'identifyCommonMistakes' does not exist on type 'TopicExplanationTool'.
+src/lib/agents/topic_explanation_agent.ts(140,36): error TS2339: Property 'generatePracticeSuggestions' does not exist on type 'TopicExplanationTool'.
+src/lib/agents/topic_explanation_agent.ts(151,28): error TS2339: Property 'map' does not exist on type '{}'.
+src/lib/agents/topic_explanation_agent.ts(153,28): error TS2339: Property 'chapter' does not exist on type '{}'.
+src/lib/agents/topic_explanation_agent.ts(153,70): error TS2339: Property 'chapter' does not exist on type '{}'.
+src/lib/agents/topic_explanation_agent.ts(154,28): error TS2339: Property 'page' does not exist on type '{}'.
+src/lib/agents/topic_explanation_agent.ts(154,67): error TS2339: Property 'page' does not exist on type '{}'.
+src/lib/agents/topic_explanation_agent.ts(156,15): error TS7006: Parameter 'citation' implicitly has an 'any' type.
+src/lib/agents/topic_explanation_agent.ts(175,18): error TS18046: 'result.metadata' is of type 'unknown'.
+src/lib/agents/topic_explanation_agent.ts(176,22): error TS18046: 'result.metadata' is of type 'unknown'.
+src/lib/agents/topic_explanation_agent.ts(177,18): error TS18046: 'result.metadata' is of type 'unknown'.
+src/lib/agents/topic_explanation_agent.ts(178,15): error TS18046: 'result.metadata' is of type 'unknown'.
+src/lib/agents/topic_explanation_agent.ts(196,11): error TS18046: 'context.results' is of type 'unknown'.
+src/lib/agents/topic_explanation_agent.ts(202,37): error TS2339: Property 'buildFallbackPrompt' does not exist on type 'TopicExplanationTool'.
+src/lib/agents/topic_explanation_agent.ts(243,71): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'ContentResult[]'.
+src/lib/agents/topic_explanation_agent.ts(244,33): error TS2339: Property 'determineResponseLength' does not exist on type 'TopicExplanationTool'.
+src/lib/agents/topic_explanation_agent.ts(246,57): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'Record<string, unknown>[]'.
+src/lib/agents/topic_explanation_agent.ts(515,9): error TS2353: Object literal may only specify known properties, and 'cultural_context' does not exist in type 'TopicExplanationResponse'.
+src/lib/agents/topic_explanation_agent.ts(566,30): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ physics: string[]; chemistry: string[]; biology: string[]; mathematics: string[]; economics: string[]; history: string[]; geography: string[]; english: string[]; hindi: string[]; science: string[]; }'.
+src/lib/agents/topic_explanation_agent.ts(645,12): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ Physics: string[]; Chemistry: string[]; Biology: string[]; Mathematics: string[]; Economics: string[]; History: string[]; Geography: string[]; English: string[]; Science: string[]; }'.
+src/lib/ai/enhancement/adaptive-response-generator.ts(190,30): error TS7053: Element implicitly has an 'any' type because expression of type '"mixed" | "visual" | "auditory" | "kinesthetic" | "reading-writing"' can't be used to index type '{ visual: { enhancements: string[]; language: string[]; }; auditory: { enhancements: string[]; language: string[]; }; kinesthetic: { enhancements: string[]; language: string[]; }; 'reading-writing': { enhancements: string[]; language: string[]; }; }'.
+src/lib/ai/enhancement/adaptive-response-generator.ts(258,41): error TS2339: Property 'encouragement' does not exist on type '{ simplifications: string[]; encouragement: string[]; } | { enhancements: string[]; motivation: string[]; } | { extensions: string[]; challenges: string[]; } | { enrichments: string[]; extensions: string[]; }'.
+src/lib/ai/enhancement/adaptive-response-generator.ts(258,71): error TS7006: Parameter 'enc' implicitly has an 'any' type.
+src/lib/ai/enhancement/adaptive-response-generator.ts(310,30): error TS7053: Element implicitly has an 'any' type because expression of type '"mixed" | "visual" | "auditory" | "kinesthetic" | "reading-writing"' can't be used to index type '{ visual: { enhancements: string[]; language: string[]; }; auditory: { enhancements: string[]; language: string[]; }; kinesthetic: { enhancements: string[]; language: string[]; }; 'reading-writing': { enhancements: string[]; language: string[]; }; }'.
+src/lib/ai/enhancement/adaptive-response-generator.ts(361,30): error TS7053: Element implicitly has an 'any' type because expression of type '"mixed" | "visual" | "auditory" | "kinesthetic" | "reading-writing"' can't be used to index type '{ visual: { enhancements: string[]; language: string[]; }; auditory: { enhancements: string[]; language: string[]; }; kinesthetic: { enhancements: string[]; language: string[]; }; 'reading-writing': { enhancements: string[]; language: string[]; }; }'.
+src/lib/ai/enhancement/exam-strategy-integrator.ts(137,22): error TS7053: Element implicitly has an 'any' type because expression of type 'number' can't be used to index type '{ 1: number; 2: number; 3: number; 5: number; 6: number; 8: number; 10: number; }'.
+src/lib/ai/enhancement/exam-strategy-integrator.ts(275,22): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ Economics: string[]; Geography: string[]; History: string[]; 'Political Science': string[]; }'.
+src/lib/ai/enhancement/exam-strategy-integrator.ts(317,28): error TS7053: Element implicitly has an 'any' type because expression of type 'number' can't be used to index type '{ 1: number; 2: number; 3: number; 5: number; 6: number; 8: number; 10: number; }'.
+src/lib/ai/enhancement/memory-aid-generator.ts(123,28): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ Economics: { poverty: string; unemployment: string; development: string; resources: string; }; Geography: { climate: string; vegetation: string; population: string; landforms: string; }; History: { ...; }; 'Political Science': { ...; }; }'.
+src/lib/ai/enhancement/memory-aid-generator.ts(287,21): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ Economics: string[]; Geography: string[]; History: string[]; 'Political Science': string[]; }'.
+src/lib/ai/enhancement/response-enhancement-pipeline.ts(209,16): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ consequently: string; nevertheless: string; furthermore: string; }'.
+src/lib/ai/enhancement/response-enhancement-pipeline.ts(271,24): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ Economics: string[]; Geography: string[]; History: string[]; 'Political Science': string[]; }'.
+src/lib/ai/enhancement/response-enhancement-pipeline.ts(277,24): error TS7006: Parameter 'technique' implicitly has an 'any' type.
+src/lib/ai/formatting/chemistry-formatter.ts(114,11): error TS7034: Variable 'compounds' implicitly has type 'any[]' in some locations where its type cannot be determined.
+src/lib/ai/formatting/chemistry-formatter.ts(119,14): error TS7005: Variable 'compounds' implicitly has an 'any[]' type.
+src/lib/ai/formatting/chemistry-formatter.ts(161,12): error TS7005: Variable 'compounds' implicitly has an 'any[]' type.
+src/lib/ai/formatting/content-analyzer.ts(294,24): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ biology: string[]; physics: string[]; mathematics: string[]; geography: string[]; general: string[]; }'.
+src/lib/ai/formatting/content-analyzer.ts(379,22): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ biology: RegExp[]; physics: RegExp[]; }'.
+src/lib/ai/formatting/content-analyzer.ts(380,26): error TS7006: Parameter 'pattern' implicitly has an 'any' type.
+src/lib/ai/langgraph/nodes/generation.ts(164,27): error TS2339: Property 'grade' does not exist on type '{ board?: string | undefined; classLevel?: string | undefined; subject?: string | undefined; medium?: string | undefined; }'.
+src/lib/ai/langgraph/nodes/response-synthesis.ts(20,26): error TS2339: Property 'question' does not exist on type 'TutorGraphState'.
+src/lib/ai/langgraph/nodes/retrieval.ts(53,29): error TS2339: Property 'bookTitle' does not exist on type '{ class: string; subject: string; chapter?: string | undefined; section_title?: string | undefined; content_type: string; page: number; contains_equation: boolean; contains_table: boolean; ... 7 more ...; confidence_score: number; }'.
+src/lib/ai/menu/menu-router.ts(92,16): error TS2367: This comparison appears to be unintentional because the types 'MenuIntent | undefined' and '""' have no overlap.
+src/lib/ai/menu/menu-router.ts(242,43): error TS2339: Property 'create_exam_strategy' does not exist on type 'ExamStrategyTool'.
+src/lib/ai/question-analysis/answer-template-engine.ts(223,53): error TS2367: This comparison appears to be unintentional because the types '"table" | "paragraphs" | "steps"' and '"numbered_points"' have no overlap.
+src/lib/ai/rag/cross-encoder-reranker.ts(76,9): error TS2741: Property 'processor' is missing in type 'FeatureExtractionPipeline' but required in type 'Pipeline'.
+src/lib/ai/rag/educational-rag-tester.ts(157,22): error TS2339: Property 'success' does not exist on type 'EnhancedRAGResult'.
+src/lib/ai/rag/enhanced-contextual-pipeline.ts(42,14): error TS2415: Class 'EnhancedContextualRAGPipeline' incorrectly extends base class 'EnhancedRAGPipeline'.
+src/lib/ai/rag/enhanced-contextual-pipeline.ts(51,7): error TS2353: Object literal may only specify known properties, and 'checkCompatibility' does not exist in type 'QdrantClientParams'.
+src/lib/ai/rag/enhanced-contextual-pipeline.ts(132,42): error TS2339: Property 'searchRelevantContent' does not exist on type 'EnhancedRAGPipeline'.
+src/lib/ai/rag/enhanced-contextual-pipeline.ts(298,24): error TS2339: Property 'searchRelevantContent' does not exist on type 'EnhancedRAGPipeline'.
+src/lib/ai/rag/enhanced-rag-pipeline.ts(91,7): error TS2353: Object literal may only specify known properties, and 'checkCompatibility' does not exist in type 'QdrantClientParams'.
+src/lib/ai/rag/enhanced-rag-pipeline.ts(295,11): error TS2353: Object literal may only specify known properties, and 'is_relevant' does not exist in type 'ContentValidationResult'.
+src/lib/ai/rag/enhanced-rag-pipeline.ts(366,13): error TS2322: Type 'null' is not assignable to type 'Record<string, unknown> | undefined'.
+src/lib/ai/rag/enhanced-rag-pipeline.ts(416,67): error TS2345: Argument of type '{ sectionLevel: undefined; contentTypes: undefined; subjectFilter: null; topK: number; subject?: string; classLevel?: string; board?: string; medium?: string; enableHybridSearch?: boolean; requiresEquations?: boolean; requiresTables?: boolean; userId?: string; }' is not assignable to parameter of type 'QdrantSearchOptions'.
+src/lib/ai/rag/enhanced-rag-pipeline.ts(501,9): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+src/lib/ai/rag/enhanced-rag-pipeline.ts(931,45): error TS2304: Cannot find name 'DoclingChunk'.
+src/lib/ai/rag/multi-level-chunker.ts(111,11): error TS2564: Property 'qualityMetrics' has no initializer and is not definitely assigned in the constructor.
+src/lib/ai/rag/multi-level-chunker.ts(363,34): error TS2339: Property 'message' does not exist on type 'OpenAIChatResponse'.
+src/lib/ai/rag/qdrant-search.ts(135,39): error TS2551: Property 'total_results' does not exist on type 'QdrantSearchResponse'. Did you mean 'totalResults'?
+src/lib/ai/rag/qdrant-search.ts(256,39): error TS2551: Property 'total_results' does not exist on type 'QdrantSearchResponse'. Did you mean 'totalResults'?
+src/lib/ai/rag/query-decomposer.ts(38,19): error TS2304: Cannot find name 'OpenAI'.
+src/lib/ai/validation/question-premise-validator.ts(236,42): error TS2339: Property 'content' does not exist on type 'OpenAIChatResponse'.
+src/lib/ai/visualization/generators/echarts-generator.ts(129,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/generators/echarts-generator.ts(209,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/generators/echarts-generator.ts(296,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/key-terms-enhancer.ts(56,19): error TS2345: Argument of type '{ data: string[]; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/key-terms-enhancer.ts(88,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/key-terms-enhancer.ts(118,10): error TS2339: Property 'trim' does not exist on type 'OpenAIChatResponse'.
+src/lib/ai/visualization/key-terms-enhancer.ts(120,14): error TS7006: Parameter 't' implicitly has an 'any' type.
+src/lib/ai/visualization/key-terms-enhancer.ts(121,17): error TS7006: Parameter 't' implicitly has an 'any' type.
+src/lib/ai/visualization/key-terms-enhancer.ts(126,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/validators/mermaid-validator.ts(170,21): error TS2345: Argument of type '{ data: string[]; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/validators/mermaid-validator.ts(175,18): error TS2345: Argument of type '{ data: string[]; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/visualization-generator.ts(86,19): error TS2345: Argument of type '{ data: string[]; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/visualization-generator.ts(137,27): error TS2345: Argument of type '{ data: string[]; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/visualization-generator.ts(141,27): error TS2345: Argument of type '{ data: string[]; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/visualization-generator.ts(168,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/visualization-generator.ts(330,19): error TS2345: Argument of type '{ data: string; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/visualization-generator.ts(342,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/visualization-generator.ts(505,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/visualization-generator.ts(569,19): error TS2345: Argument of type '{ data: string; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/visualization-generator.ts(574,22): error TS2345: Argument of type '{ data: string; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/visualization-generator.ts(588,21): error TS2345: Argument of type '{ data: string[]; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/visualization-generator.ts(611,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/visualization-generator.ts(716,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/visualization-generator.ts(785,19): error TS2345: Argument of type '{ data: string; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/visualization-generator.ts(825,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/visualization-generator.ts(980,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/visualization-generator.ts(1008,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/ai/visualization/visualization-generator.ts(1036,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/attention/ScoringEngine.ts(151,5): error TS2322: Type 'number | boolean | undefined' is not assignable to type 'boolean'.
+src/lib/auth/auto-role-assignment.ts(3,23): error TS2307: Cannot find module '@/types/globals' or its corresponding type declarations.
+src/lib/auth/auto-role-assignment.ts(105,18): error TS2304: Cannot find name 'session'.
+src/lib/auth/auto-role-assignment.ts(180,18): error TS2304: Cannot find name 'session'.
+src/lib/auth/auto-role-assignment.ts(201,49): error TS7006: Parameter 'user' implicitly has an 'any' type.
+src/lib/auth/auto-role-assignment.ts(208,53): error TS7006: Parameter 'email' implicitly has an 'any' type.
+src/lib/citations/accurate-citation-generator.ts(293,28): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ 'Geography - NCERT Class 9': { title: string; author: string; publisher: string; chapters: { number: number; title: string; pageStart: number; pageEnd: number; }[]; }; 'History - NCERT Class 9': { title: string; author: string; publisher: string; chapters: { ...; }[]; }; }'.
+src/lib/citations/accurate-citation-generator.ts(297,58): error TS7006: Parameter 'ch' implicitly has an 'any' type.
+src/lib/citations/accurate-citation-generator.ts(306,72): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/lib/citations/accurate-citation-generator.ts(311,52): error TS7006: Parameter 'ch' implicitly has an 'any' type.
+src/lib/components/role-based-menu-system.ts(43,33): error TS2339: Property 'getMySQLConnection' does not exist on type 'ConnectionManager'.
+src/lib/config/env.ts(3,10): error TS2724: '"./env-validation"' has no exported member named 'env'. Did you mean 'Env'?
+src/lib/config/services-config.ts(93,94): error TS2339: Property 'openai' does not exist on type '{ googleCloud: { projectId: string | undefined; keyFile: string | undefined; }; aws: { accessKeyId: string | undefined; secretAccessKey: string | undefined; region: string; }; azure: { ...; }; assemblyAI: string | undefined; }'.
+src/lib/config/services-config.ts(134,82): error TS2339: Property 'openai' does not exist on type '{ googleCloud: { projectId: string | undefined; keyFile: string | undefined; }; aws: { accessKeyId: string | undefined; secretAccessKey: string | undefined; region: string; }; azure: { ...; }; assemblyAI: string | undefined; }'.
+src/lib/content/advanced-structure-parser.ts(175,52): error TS18046: 'error' is of type 'unknown'.
+src/lib/content/advanced-structure-parser.ts(186,47): error TS2554: Expected 3-4 arguments, but got 2.
+src/lib/content/advanced-structure-parser.ts(209,40): error TS2551: Property 'boundingBoxes' does not exist on type '{ class: string; subject: string; source: string; curriculum: string; page: number; section_level: number; section_title?: string | undefined; chapter?: string | undefined; content_type: "text" | ... 4 more ... | "figure"; bounding_box?: { ...; } | undefined; confidence: number; }'. Did you mean 'bounding_box'?
+src/lib/content/docling-pdf-processor.ts(128,21): error TS2339: Property 'stats' does not exist on type 'Omit<DoclingProcessingResult, "stats">'.
+src/lib/content/pdf-extract-kit-processor.ts(325,21): error TS2339: Property 'page_image_paths' does not exist on type 'PDFExtractKitResult'.
+src/lib/content/pdf-extract-kit-processor.ts(325,58): error TS2339: Property 'page_image_paths' does not exist on type 'PDFExtractKitResult'.
+src/lib/content/pdf-extract-kit-processor.ts(327,69): error TS2339: Property 'page_image_paths' does not exist on type 'PDFExtractKitResult'.
+src/lib/content/pdf-extract-kit-processor.ts(386,27): error TS2339: Property 'createChunksFromText' does not exist on type 'PDFExtractKitProcessor'.
+src/lib/content/pdf-extract-kit-processor.ts(404,9): error TS2353: Object literal may only specify known properties, and 'visual_elements' does not exist in type 'PDFExtractKitResult'.
+src/lib/content/pdf-extract-kit-processor.ts(404,45): error TS7006: Parameter 've' implicitly has an 'any' type.
+src/lib/content/pdf-extract-kit-processor.ts(416,62): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/lib/content/pdf-extract-kit-processor.ts(437,18): error TS18046: 'error' is of type 'unknown'.
+src/lib/content/pdf-extract-kit-processor.ts(501,11): error TS2393: Duplicate function implementation.
+src/lib/content/pdf-extract-kit-processor.ts(520,52): error TS2304: Cannot find name 'ProcessingResult'.
+src/lib/content/pdf-extract-kit-processor.ts(1232,13): error TS2322: Type '"map" | "text" | "list" | "header" | "table" | "equation" | "figure" | "flowchart"' is not assignable to type '"text" | "list" | "header" | "table" | "equation" | "figure"'.
+src/lib/content/pdf-extract-kit-processor.ts(1341,11): error TS2393: Duplicate function implementation.
+src/lib/db/practest-queries.ts(16,10): error TS2459: Module '"@/lib/db/connection"' declares 'pool' locally, but it is not exported.
+src/lib/db/scoped-queries.ts(28,48): error TS2339: Property 'institutionClasses' does not exist on type 'typeof import("J:/Apps/DigiClassroomPro/src/db/schema")'.
+src/lib/db/scoped-queries.ts(28,84): error TS2339: Property 'institutionClasses' does not exist on type 'typeof import("J:/Apps/DigiClassroomPro/src/db/schema")'.
+src/lib/db/scoped-queries.ts(29,49): error TS2339: Property 'institutionSections' does not exist on type 'typeof import("J:/Apps/DigiClassroomPro/src/db/schema")'.
+src/lib/db/scoped-queries.ts(29,86): error TS2339: Property 'institutionSections' does not exist on type 'typeof import("J:/Apps/DigiClassroomPro/src/db/schema")'.
+src/lib/db/scoped-queries.ts(30,52): error TS2339: Property 'studentEnrollments' does not exist on type 'typeof import("J:/Apps/DigiClassroomPro/src/db/schema")'.
+src/lib/db/scoped-queries.ts(30,88): error TS2339: Property 'studentEnrollments' does not exist on type 'typeof import("J:/Apps/DigiClassroomPro/src/db/schema")'.
+src/lib/experiments/embedding-ab-test.ts(44,17): error TS2367: This comparison appears to be unintentional because the types 'VariantAssignment' and 'string' have no overlap.
+src/lib/experiments/embedding-ab-test.ts(48,22): error TS2367: This comparison appears to be unintentional because the types 'VariantAssignment' and 'string' have no overlap.
+src/lib/experiments/embedding-ab-test.ts(67,7): error TS2322: Type 'VariantAssignment' is not assignable to type '"A" | "B"'.
+src/lib/experiments/embedding-ab-test.ts(102,17): error TS2367: This comparison appears to be unintentional because the types 'VariantAssignment' and 'string' have no overlap.
+src/lib/experiments/embedding-ab-test.ts(106,22): error TS2367: This comparison appears to be unintentional because the types 'VariantAssignment' and 'string' have no overlap.
+src/lib/experiments/embedding-ab-test.ts(131,7): error TS2322: Type 'VariantAssignment' is not assignable to type '"A" | "B"'.
+src/lib/generation/strict-textbook-generator.ts(11,38): error TS2440: Import declaration conflicts with local declaration of 'SentenceVerificationResult'.
+src/lib/generation/strict-textbook-generator.ts(233,37): error TS2339: Property 'choices' does not exist on type 'OpenAIChatResponse'.
+src/lib/generation/strict-textbook-generator.ts(275,52): error TS18046: 'error' is of type 'unknown'.
+src/lib/generation/strict-textbook-generator.ts(455,7): error TS2322: Type 'import("J:/Apps/DigiClassroomPro/src/lib/generation/strict-textbook-generator").SourceMapping[]' is not assignable to type 'import("J:/Apps/DigiClassroomPro/src/lib/verification/sentence-verification-engine").SourceMapping[]'.
+src/lib/generation/strict-textbook-generator.ts(458,7): error TS2322: Type 'number' is not assignable to type 'VerifiedSentence[]'.
+src/lib/generation/strict-textbook-generator.ts(482,7): error TS2741: Property 'citationSummary' is missing in type '{ response: string; sources: never[]; fidelityScore: number; generationMethod: "no_sources_available"; verificationDetails: SentenceVerificationResult; wordCount: number; responseType: ResponseFormat; }' but required in type 'StrictGenerationResult'.
+src/lib/generation/strict-textbook-generator.ts(514,35): error TS2339: Property 'choices' does not exist on type 'OpenAIChatResponse'.
+src/lib/generation/strict-textbook-generator.ts(789,7): error TS2322: Type '"no_content_available"' is not assignable to type '"strict_constrained" | "no_sources_available" | "regenerated_strict"'.
+src/lib/generation/strict-textbook-generator.ts(811,7): error TS2322: Type '"no_content_response"' is not assignable to type 'ResponseFormat'.
+src/lib/generation/strict-textbook-generator.ts(884,15): error TS2339: Property 'score' does not exist on type 'RankedChunk'.
+src/lib/generation/strict-textbook-generator.ts(884,30): error TS2339: Property 'score' does not exist on type 'RankedChunk'.
+src/lib/generation/strict-textbook-generator.ts(885,15): error TS2339: Property 'score' does not exist on type 'RankedChunk'.
+src/lib/generation/strict-textbook-generator.ts(885,30): error TS2339: Property 'score' does not exist on type 'RankedChunk'.
+src/lib/integration/enhanced-system-integration.ts(379,29): error TS18046: 'error' is of type 'unknown'.
+src/lib/integration/enhanced-system-integration.ts(382,56): error TS18046: 'error' is of type 'unknown'.
+src/lib/llm/LangChainModelFactory.ts(16,10): error TS2305: Module '"@/lib/config/feature-flags"' has no exported member 'isFeatureEnabled'.
+src/lib/mathjax-config.ts(122,14): error TS2304: Cannot find name 'MathJax'.
+src/lib/middleware/rate-limiter.ts(168,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/monitoring/init.ts(5,36): error TS2307: Cannot find module '../ai/optimization/performance-monitor' or its corresponding type declarations.
+src/lib/monitoring/init.ts(133,33): error TS2339: Property 'processingStart' does not exist on type 'PerformanceEntry'.
+src/lib/monitoring/init.ts(135,22): error TS2339: Property 'processingStart' does not exist on type 'PerformanceEntry'.
+src/lib/monitoring/startup-monitor.ts(234,20): error TS2683: 'this' implicitly has type 'any' because it does not have a type annotation.
+src/lib/practest/question-selection-engine.ts(10,10): error TS2305: Module '"@/lib/db/practest-queries"' has no exported member 'PractestQuestionQueries'.
+src/lib/quality/golden-set-validator.ts(227,46): error TS18046: 'error' is of type 'unknown'.
+src/lib/ragas/context-precision.ts(201,45): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/lib/ragas/context-recall.ts(218,43): error TS7006: Parameter 'r' implicitly has an 'any' type.
+src/lib/retrieval/hybrid-retrieval-engine.ts(204,11): error TS2322: Type 'ExactMatchResult[] | SemanticMatchResult[] | EntityMatchResult[] | StructuralMatchResult[]' is not assignable to type 'ExactMatchResult[]'.
+src/lib/retrieval/hybrid-retrieval-engine.ts(205,11): error TS2322: Type 'ExactMatchResult[] | SemanticMatchResult[] | EntityMatchResult[] | StructuralMatchResult[]' is not assignable to type 'SemanticMatchResult[]'.
+src/lib/retrieval/hybrid-retrieval-engine.ts(206,11): error TS2322: Type 'ExactMatchResult[] | SemanticMatchResult[] | EntityMatchResult[] | StructuralMatchResult[]' is not assignable to type 'EntityMatchResult[]'.
+src/lib/retrieval/hybrid-retrieval-engine.ts(207,11): error TS2322: Type 'ExactMatchResult[] | SemanticMatchResult[] | EntityMatchResult[] | StructuralMatchResult[]' is not assignable to type 'StructuralMatchResult[]'.
+src/lib/retrieval/hybrid-retrieval-engine.ts(219,51): error TS18046: 'error' is of type 'unknown'.
+src/lib/services/__tests__/services.test.ts(76,58): error TS2345: Argument of type '{ choices: { message: { content: string; }; finish_reason: string; }[]; usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number; }; model: string; }' is not assignable to parameter of type 'never'.
+src/lib/services/__tests__/services.test.ts(89,52): error TS2345: Argument of type '{ data: { embedding: any[]; }[]; }' is not assignable to parameter of type 'never'.
+src/lib/services/__tests__/services.test.ts(120,43): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+src/lib/services/__tests__/services.test.ts(138,47): error TS2345: Argument of type 'string' is not assignable to parameter of type 'never'.
+src/lib/services/__tests__/services.test.ts(139,47): error TS2345: Argument of type 'null' is not assignable to parameter of type 'never'.
+src/lib/services/absolute-fidelity-verification-service.ts(152,56): error TS18046: 'error' is of type 'unknown'.
+src/lib/services/AudioLessonService.ts(3,10): error TS2305: Module '"../config/feature-flags"' has no exported member 'isFeatureEnabled'.
+src/lib/services/AudioLessonService.ts(85,30): error TS2345: Argument of type '{ data: number; }' is not assignable to parameter of type 'string'.
+src/lib/services/AudioLessonService.ts(101,26): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/book-metadata-service.ts(80,21): error TS18046: 'payload' is of type 'unknown'.
+src/lib/services/book-metadata-service.ts(80,43): error TS18046: 'payload' is of type 'unknown'.
+src/lib/services/book-metadata-service.ts(81,17): error TS18046: 'payload' is of type 'unknown'.
+src/lib/services/book-metadata-service.ts(82,20): error TS18046: 'payload' is of type 'unknown'.
+src/lib/services/book-metadata-service.ts(83,22): error TS18046: 'payload' is of type 'unknown'.
+src/lib/services/book-metadata-service.ts(83,39): error TS18046: 'payload' is of type 'unknown'.
+src/lib/services/book-metadata-service.ts(84,18): error TS18046: 'payload' is of type 'unknown'.
+src/lib/services/book-metadata-service.ts(85,16): error TS18046: 'payload' is of type 'unknown'.
+src/lib/services/book-metadata-service.ts(85,33): error TS18046: 'payload' is of type 'unknown'.
+src/lib/services/book-metadata-service.ts(86,17): error TS18046: 'payload' is of type 'unknown'.
+src/lib/services/book-metadata-service.ts(86,35): error TS18046: 'payload' is of type 'unknown'.
+src/lib/services/book-metadata-service.ts(97,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/chat-history-service.ts(12,3): error TS2300: Duplicate identifier 'userId'.
+src/lib/services/chat-history-service.ts(13,3): error TS2300: Duplicate identifier 'userId'.
+src/lib/services/chat-history-service.ts(71,30): error TS2571: Object is of type 'unknown'.
+src/lib/services/chat-history-service.ts(77,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/chat-history-service.ts(111,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/chat-history-service.ts(161,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/chat-history-service.ts(181,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/chat-history-service.ts(211,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/chat-history-service.ts(250,24): error TS18046: 'stat' is of type 'unknown'.
+src/lib/services/chat-history-service.ts(250,39): error TS18046: 'stat' is of type 'unknown'.
+src/lib/services/chat-history-service.ts(260,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/content-quality-monitor.ts(168,47): error TS18046: 'error' is of type 'unknown'.
+src/lib/services/content-quality-monitor.ts(205,59): error TS2339: Property 'error' does not exist on type 'OCRResult'.
+src/lib/services/contextual-language-service.ts(67,44): error TS2339: Property 'languagePreference' does not exist on type 'UserContext'.
+src/lib/services/contextual-language-service.ts(164,11): error TS7034: Variable 'foundTerms' implicitly has type 'any[]' in some locations where its type cannot be determined.
+src/lib/services/contextual-language-service.ts(173,12): error TS7005: Variable 'foundTerms' implicitly has an 'any[]' type.
+src/lib/services/contextual-language-service.ts(405,36): error TS2339: Property 'languagePreference' does not exist on type 'UserContext'.
+src/lib/services/contextual-language-service.ts(406,12): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ english: string; hindi: string; mixed: string; }'.
+src/lib/services/contextual-language-service.ts(414,34): error TS2339: Property 'languagePreference' does not exist on type 'UserContext'.
+src/lib/services/contextual-language-service.ts(434,12): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ english: string; hindi: string; mixed: string; } | { english: string; hindi: string; mixed: string; } | { english: string; hindi: string; mixed: string; }'.
+src/lib/services/cost-monitor.ts(48,89): error TS18046: 'item' is of type 'unknown'.
+src/lib/services/cost-monitor.ts(65,25): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/elevenlabs.ts(24,13): error TS2561: Object literal may only specify known properties, but 'model_id' does not exist in type 'BodyTextToSpeechFull'. Did you mean to write 'modelId'?
+src/lib/services/elevenlabs.ts(30,35): error TS2504: Type 'ReadableStream<Uint8Array<ArrayBufferLike>>' must have a '[Symbol.asyncIterator]()' method that returns an async iterator.
+src/lib/services/enhanced-content-ingestion-service.ts(186,12): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ geography: string; history: string; 'political science': string; economics: string; mathematics: string; science: string; english: string; }'.
+src/lib/services/enhanced-content-ingestion-service.ts(194,12): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ cbse: string; icse: string; state: string; }'.
+src/lib/services/enhanced-content-ingestion-service.ts(202,12): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ '6': string; '7': string; '8': string; '9': string; '10': string; 'class 6': string; 'class 7': string; 'class 8': string; 'class 9': string; 'class 10': string; }'.
+src/lib/services/enhanced-content-ingestion-service.ts(265,36): error TS18046: 'error' is of type 'unknown'.
+src/lib/services/enhanced-content-ingestion-service.ts(326,25): error TS2538: Type '{}' cannot be used as an index type.
+src/lib/services/enhanced-content-ingestion-service.ts(326,59): error TS2538: Type '{}' cannot be used as an index type.
+src/lib/services/enhanced-content-ingestion-service.ts(359,48): error TS18046: 'error' is of type 'unknown'.
+src/lib/services/enhanced-fidelity-engine.ts(177,66): error TS18046: 'error' is of type 'unknown'.
+src/lib/services/enhanced-voice-service.ts(346,9): error TS2322: Type 'VoiceCommand | null' is not assignable to type 'VoiceCommand | undefined'.
+src/lib/services/fallback-profile-service.ts(53,13): error TS2322: Type '{ isTemporary: false; source: "database"; lastUpdated: Date; id?: string | undefined; user_id?: string | undefined; role?: UserRole | undefined; board_type?: BoardType | undefined; ... 16 more ...; updated_at?: Date | undefined; }' is not assignable to type 'EnhancedUserProfile'.
+src/lib/services/fallback-profile-service.ts(67,77): error TS18046: 'dbError' is of type 'unknown'.
+src/lib/services/fallback-profile-service.ts(94,7): error TS2353: Object literal may only specify known properties, and 'board' does not exist in type 'EnhancedUserProfile'.
+src/lib/services/fallback-profile-service.ts(124,7): error TS2353: Object literal may only specify known properties, and 'userId' does not exist in type 'UserContext'.
+src/lib/services/fallback-profile-service.ts(126,22): error TS2339: Property 'board' does not exist on type 'EnhancedUserProfile'.
+src/lib/services/fallback-profile-service.ts(127,22): error TS2339: Property 'grade' does not exist on type 'EnhancedUserProfile'.
+src/lib/services/fallback-profile-service.ts(129,30): error TS2551: Property 'learningStyle' does not exist on type 'EnhancedUserProfile'. Did you mean 'learning_style'?
+src/lib/services/fallback-profile-service.ts(130,28): error TS2339: Property 'preferences' does not exist on type 'EnhancedUserProfile'.
+src/lib/services/fallback-profile-service.ts(131,27): error TS2339: Property 'preferences' does not exist on type 'EnhancedUserProfile'.
+src/lib/services/fallback-profile-service.ts(141,38): error TS2339: Property 'preferences' does not exist on type 'UserProfile'.
+src/lib/services/fallback-profile-service.ts(145,37): error TS2339: Property 'updateUserPreferences' does not exist on type 'UserProfileService'.
+src/lib/services/fallback-profile-service.ts(151,23): error TS2339: Property 'preferences' does not exist on type 'EnhancedUserProfile'.
+src/lib/services/fallback-profile-service.ts(151,56): error TS2339: Property 'preferences' does not exist on type 'EnhancedUserProfile'.
+src/lib/services/fallback-profile-service.ts(156,71): error TS18046: 'error' is of type 'unknown'.
+src/lib/services/fallback-profile-service.ts(161,23): error TS2339: Property 'preferences' does not exist on type 'EnhancedUserProfile'.
+src/lib/services/fallback-profile-service.ts(161,56): error TS2339: Property 'preferences' does not exist on type 'EnhancedUserProfile'.
+src/lib/services/fallback-profile-service.ts(182,37): error TS2339: Property 'trackUserInteraction' does not exist on type 'UserProfileService'.
+src/lib/services/fallback-profile-service.ts(186,74): error TS18046: 'error' is of type 'unknown'.
+src/lib/services/fallback-profile-service.ts(191,23): error TS2339: Property 'analytics' does not exist on type 'EnhancedUserProfile'.
+src/lib/services/fallback-profile-service.ts(192,23): error TS2339: Property 'analytics' does not exist on type 'EnhancedUserProfile'.
+src/lib/services/fallback-profile-service.ts(195,28): error TS2339: Property 'analytics' does not exist on type 'EnhancedUserProfile'.
+src/lib/services/fallback-profile-service.ts(196,25): error TS2339: Property 'analytics' does not exist on type 'EnhancedUserProfile'.
+src/lib/services/implementations/openai-llm.service.ts(30,19): error TS2304: Cannot find name 'OpenAI'.
+src/lib/services/implementations/openai-llm.service.ts(123,32): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/lib/services/implementations/pre-generated-answers.service.ts(47,28): error TS2347: Untyped function calls may not accept type arguments.
+src/lib/services/implementations/pre-generated-answers.service.ts(130,28): error TS2347: Untyped function calls may not accept type arguments.
+src/lib/services/implementations/qdrant-vector-search.service.ts(119,9): error TS2322: Type 'number | { size: number; distance: "Cosine" | "Euclid" | "Dot" | "Manhattan"; hnsw_config?: Record<string, unknown> | { m?: number | null | undefined; ef_construct?: number | null | undefined; full_scan_threshold?: number | ... 1 more ... | undefined; max_indexing_threads?: number | ... 1 more ... | undefined; on_di...' is not assignable to type 'number'.
+src/lib/services/implementations/user.service.ts(56,32): error TS2347: Untyped function calls may not accept type arguments.
+src/lib/services/implementations/user.service.ts(68,31): error TS2347: Untyped function calls may not accept type arguments.
+src/lib/services/implementations/user.service.ts(76,33): error TS2347: Untyped function calls may not accept type arguments.
+src/lib/services/implementations/user.service.ts(156,32): error TS2347: Untyped function calls may not accept type arguments.
+src/lib/services/institution-service.ts(4,5): error TS2305: Module '"@/db/schema"' has no exported member 'institutionClasses'.
+src/lib/services/institution-service.ts(5,5): error TS2305: Module '"@/db/schema"' has no exported member 'institutionSections'.
+src/lib/services/institution-service.ts(6,5): error TS2305: Module '"@/db/schema"' has no exported member 'studentEnrollments'.
+src/lib/services/institution-service.ts(88,72): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/lib/services/institution-service.ts(106,70): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/lib/services/institution-service.ts(128,71): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'LogContext | undefined'.
+src/lib/services/institution-service.ts(154,21): error TS2769: No overload matches this call.
+  The last overload gave the following error.
+src/lib/services/intelligent-fidelity-service.ts(321,51): error TS2339: Property 'choices' does not exist on type 'OpenAIChatResponse'.
+src/lib/services/learning-analytics-service.ts(142,17): error TS2339: Property 'db' does not exist on type 'LearningAnalyticsService'.
+src/lib/services/learning-analytics-service.ts(179,17): error TS2339: Property 'db' does not exist on type 'LearningAnalyticsService'.
+src/lib/services/note-ai-service.ts(137,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/note-ai-service.ts(263,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/note-ai-service.ts(280,30): error TS2304: Cannot find name 'executeQuery'.
+src/lib/services/note-ai-service.ts(295,27): error TS2571: Object is of type 'unknown'.
+src/lib/services/note-ai-service.ts(297,22): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/note-ai-service.ts(313,29): error TS2304: Cannot find name 'executeQuery'.
+src/lib/services/note-ai-service.ts(335,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/note-ai-service.ts(350,13): error TS2304: Cannot find name 'executeQuery'.
+src/lib/services/note-ai-service.ts(358,13): error TS2304: Cannot find name 'executeQuery'.
+src/lib/services/note-ai-service.ts(373,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/note-ai-service.ts(381,19): error TS2339: Property 'createHash' does not exist on type 'Crypto'.
+src/lib/services/note-ai-service.ts(394,29): error TS2304: Cannot find name 'executeQuery'.
+src/lib/services/offline-dictionary.ts(298,28): error TS2339: Property 'onerror' does not exist on type 'MessagePort'.
+src/lib/services/offline-dictionary.ts(298,39): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/lib/services/quiz-engine.ts(115,27): error TS2339: Property 'addCulturalContext' does not exist on type 'QuizEngine'.
+src/lib/services/redis_cache_service.ts(61,53): error TS2345: Argument of type '{ error: any; }' is not assignable to parameter of type 'string'.
+src/lib/services/redis_cache_service.ts(69,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/redis_cache_service.ts(102,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/redis_cache_service.ts(121,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/redis_cache_service.ts(133,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/redis_cache_service.ts(157,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/redis_cache_service.ts(170,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/redis_cache_service.ts(223,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/role-aware-citation-service.ts(375,17): error TS2339: Property 'languagePreference' does not exist on type 'UserContext'.
+src/lib/services/role-aware-citation-service.ts(375,59): error TS2339: Property 'languagePreference' does not exist on type 'UserContext'.
+src/lib/services/ScopedWebSearchService.ts(4,10): error TS2305: Module '"../config/feature-flags"' has no exported member 'isFeatureEnabled'.
+src/lib/services/ScopedWebSearchService.ts(112,26): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/ScopedWebSearchService.ts(178,37): error TS2345: Argument of type '{ service: string; attempts: number; }' is not assignable to parameter of type 'string'.
+src/lib/services/ScopedWebSearchService.ts(190,37): error TS2345: Argument of type '{ err: string; }' is not assignable to parameter of type 'string'.
+src/lib/services/search-filter-debug-service.ts(119,37): error TS2339: Property 'subject' does not exist on type '{}'.
+src/lib/services/search-filter-debug-service.ts(192,36): error TS2345: Argument of type 'FilterDiagnostic' is not assignable to parameter of type 'never'.
+src/lib/services/search-filter-debug-service.ts(223,37): error TS2339: Property 'substring' does not exist on type '{}'.
+src/lib/services/search-filter-debug-service.ts(232,16): error TS18046: 'error' is of type 'unknown'.
+src/lib/services/search-filter-debug-service.ts(263,59): error TS7006: Parameter 'f' implicitly has an 'any' type.
+src/lib/services/smart-citation-engine.ts(43,11): error TS2564: Property 'chapterKeywords' has no initializer and is not definitely assigned in the constructor.
+src/lib/services/spaced-repetition.ts(25,7): error TS2322: Type 'number' is not assignable to type '0 | 1 | 2 | 5 | 3 | 4'.
+src/lib/services/spaced-repetition.ts(31,7): error TS2322: Type 'number' is not assignable to type '0 | 1 | 2 | 5 | 3 | 4'.
+src/lib/services/spaced-repetition.ts(36,7): error TS2322: Type 'number' is not assignable to type '0 | 1 | 2 | 5 | 3 | 4'.
+src/lib/services/speech-to-text-service.ts(26,24): error TS2304: Cannot find name 'SpeechRecognition'.
+src/lib/services/speech-to-text-service.ts(52,65): error TS2749: 'SpeechRecognition' refers to a value, but is being used as a type here. Did you mean 'typeof SpeechRecognition'?
+src/lib/services/speech-to-text-service.ts(66,29): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/lib/services/speech-to-text-service.ts(73,23): error TS18046: 'alt' is of type 'unknown'.
+src/lib/services/speech-to-text-service.ts(74,23): error TS18046: 'alt' is of type 'unknown'.
+src/lib/services/speech-to-text-service.ts(86,28): error TS7006: Parameter 'event' implicitly has an 'any' type.
+src/lib/services/speech-to-text-service.ts(295,37): error TS2304: Cannot find name 'SpeechRecognition'.
+src/lib/services/speech-to-text-service.ts(296,31): error TS2304: Cannot find name 'SpeechRecognition'.
+src/lib/services/streaming_service.ts(161,37): error TS2339: Property 'choices' does not exist on type 'OpenAIChatResponse'.
+src/lib/services/streaming_service.ts(320,13): error TS2353: Object literal may only specify known properties, and 'error' does not exist in type '{ total_sentences: number; verified_sentences: number; failed_sentences: number; similarity_method: string; source_chunks_used: number; overall_score: number; citations_found: number; verification_passed: boolean; }'.
+src/lib/services/streaming_service.ts(341,30): error TS2339: Property 'preserve_context' does not exist on type 'StreamingContext'.
+src/lib/services/streaming_service.ts(418,54): error TS2339: Property 'choices' does not exist on type 'OpenAIChatResponse'.
+src/lib/services/streaming_service.ts(437,46): error TS2339: Property 'processing_time' does not exist on type '{ text: any; model: string; }'.
+src/lib/services/student-rate-limiter.ts(13,49): error TS2345: Argument of type '{ error: any; }' is not assignable to parameter of type 'string'.
+src/lib/services/student-rate-limiter.ts(18,21): error TS2345: Argument of type '{ data: any; }' is not assignable to parameter of type 'string'.
+src/lib/services/student-rate-limiter.ts(111,22): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/services/syllabusParser.ts(71,23): error TS7053: Element implicitly has an 'any' type because expression of type 'string' can't be used to index type '{ CBSE: { grade9: { mathematics: { chapters: ({ id: string; title: string; topics: string[]; priority: "high"; estimatedHours: number; examDates: string[]; } | { id: string; title: string; topics: string[]; priority: "medium"; estimatedHours: number; examDates: string[]; })[]; }; science: { ...; }; }; grade10: { ......'.
+src/lib/services/token-manager.ts(150,42): error TS2551: Property 'refreshAccessToken' does not exist on type 'GoogleDriveService'. Did you mean 'refreshToken'?
+src/lib/services/vector-db-reconstruction-service.ts(48,7): error TS2353: Object literal may only specify known properties, and 'checkCompatibility' does not exist in type 'QdrantClientParams'.
+src/lib/services/vector-db-reconstruction-service.ts(124,73): error TS18046: 'error' is of type 'unknown'.
+src/lib/services/vector-db-reconstruction-service.ts(194,11): error TS2353: Object literal may only specify known properties, and 'field' does not exist in type '{ wait?: boolean | undefined; ordering?: "medium" | "weak" | "strong" | undefined; } & { field_name: string; field_schema?: Record<string, unknown> | "text" | "integer" | "float" | ... 5 more ... | undefined; }'.
+src/lib/services/vector-db-reconstruction-service.ts(199,71): error TS18046: 'error' is of type 'unknown'.
+src/lib/services/vector-db-reconstruction-service.ts(267,70): error TS18046: 'error' is of type 'unknown'.
+src/lib/services/vector-db-reconstruction-service.ts(389,75): error TS18046: 'error' is of type 'unknown'.
+src/lib/services/vector-db-reconstruction-service.ts(467,61): error TS18046: 'error' is of type 'unknown'.
+src/lib/services/vector-db-reconstruction-service.ts(468,56): error TS18046: 'error' is of type 'unknown'.
+src/lib/services/vector-db-reconstruction-service.ts(501,22): error TS18048: 'collectionInfo.config.params.vectors' is possibly 'undefined'.
+src/lib/services/vector-db-reconstruction-service.ts(502,19): error TS18048: 'collectionInfo.config.params.vectors' is possibly 'undefined'.
+src/lib/services/vector_store_service.ts(53,7): error TS2353: Object literal may only specify known properties, and 'checkCompatibility' does not exist in type 'QdrantClientParams'.
+src/lib/services/vector_store_service.ts(58,7): error TS2353: Object literal may only specify known properties, and 'host' does not exist in type 'RedisCacheServiceConfig'.
+src/lib/services/vector_store_service.ts(114,40): error TS2339: Property 'classLevel' does not exist on type '{ class: string; subject: string; chapter?: string | undefined; section_title?: string | undefined; content_type: string; page: number; contains_equation: boolean; contains_table: boolean; contains_figure: boolean; section_level: number; word_count: number; }'.
+src/lib/services/vector_store_service.ts(118,35): error TS2339: Property 'source' does not exist on type '{ class: string; subject: string; chapter?: string | undefined; section_title?: string | undefined; content_type: string; page: number; contains_equation: boolean; contains_table: boolean; contains_figure: boolean; section_level: number; word_count: number; }'.
+src/lib/services/vector_store_service.ts(277,13): error TS18049: 'point.payload' is possibly 'null' or 'undefined'.
+src/lib/services/vector_store_service.ts(278,24): error TS18049: 'point.payload' is possibly 'null' or 'undefined'.
+src/lib/trpc/client.ts(20,3): error TS2322: Type '() => { transformer: typeof SuperJSON; links: TRPCLink<BuiltRouter<{ ctx: { req: Request; userId: string | null; userRole: "student" | "teacher" | "parent" | "admin" | "user" | "super_admin"; tenantId: string; sessionClaims: { ...; } | null; }; meta: object; errorShape: { ...; }; transformer: true; }, DecorateCreate...' is not assignable to type '(info: { ctx?: NextPageContext | undefined; }) => WithTRPCConfig<BuiltRouter<{ ctx: { req: Request; userId: string | null; userRole: "student" | "teacher" | "parent" | "admin" | "user" | "super_admin"; tenantId: string; sessionClaims: { ...; } | null; }; meta: object; errorShape: { ...; }; transformer: true; }, Deco...'.
+  Type '{ transformer: typeof SuperJSON; links: TRPCLink<BuiltRouter<{ ctx: { req: Request; userId: string | null; userRole: "student" | "teacher" | "parent" | "admin" | "user" | "super_admin"; tenantId: string; sessionClaims: { ...; } | null; }; meta: object; errorShape: { ...; }; transformer: true; }, DecorateCreateRouter...' is not assignable to type 'WithTRPCConfig<BuiltRouter<{ ctx: { req: Request; userId: string | null; userRole: "student" | "teacher" | "parent" | "admin" | "user" | "super_admin"; tenantId: string; sessionClaims: { metadata: { ...; }; } | null; }; meta: object; errorShape: { ...; }; transformer: true; }, DecorateCreateRouterOptions<...>>>'.
+    Type '{ transformer: typeof SuperJSON; links: TRPCLink<BuiltRouter<{ ctx: { req: Request; userId: string | null; userRole: "student" | "teacher" | "parent" | "admin" | "user" | "super_admin"; tenantId: string; sessionClaims: { ...; } | null; }; meta: object; errorShape: { ...; }; transformer: true; }, DecorateCreateRouter...' is not assignable to type 'CreateTRPCClientOptions<BuiltRouter<{ ctx: { req: Request; userId: string | null; userRole: "student" | "teacher" | "parent" | "admin" | "user" | "super_admin"; tenantId: string; sessionClaims: { metadata: { ...; }; } | null; }; meta: object; errorShape: { ...; }; transformer: true; }, DecorateCreateRouterOptions<.....'.
+      Type '{ transformer: typeof SuperJSON; links: TRPCLink<BuiltRouter<{ ctx: { req: Request; userId: string | null; userRole: "student" | "teacher" | "parent" | "admin" | "user" | "super_admin"; tenantId: string; sessionClaims: { ...; } | null; }; meta: object; errorShape: { ...; }; transformer: true; }, DecorateCreateRouter...' is not assignable to type 'CreateTRPCClientOptions<BuiltRouter<{ ctx: { req: Request; userId: string | null; userRole: "student" | "teacher" | "parent" | "admin" | "user" | "super_admin"; tenantId: string; sessionClaims: { metadata: { ...; }; } | null; }; meta: object; errorShape: { ...; }; transformer: true; }, DecorateCreateRouterOptions<.....'.
+src/lib/trpc/client.ts(29,23): error TS2345: Argument of type '{ url: string; headers(): {}; }' is not assignable to parameter of type 'HTTPBatchLinkOptions<{ ctx: { req: Request; userId: string | null; userRole: "student" | "teacher" | "parent" | "admin" | "user" | "super_admin"; tenantId: string; sessionClaims: { metadata: { role: "student" | ... 4 more ... | "super_admin"; tenantId: string; }; } | null; }; meta: object; errorShape: { ...; }; tran...'.
+src/lib/trpc/client.ts(107,36): error TS2339: Property 'classes' does not exist on type 'TRPCContextPropsBase<BuiltRouter<{ ctx: { req: Request; userId: string | null; userRole: "student" | "teacher" | "parent" | "admin" | "user" | "super_admin"; tenantId: string; sessionClaims: { metadata: { ...; }; } | null; }; meta: object; errorShape: { ...; }; transformer: true; }, DecorateCreateRouterOptions<...>>...'.
+src/lib/trpc/client.ts(108,34): error TS2339: Property 'users' does not exist on type 'TRPCContextPropsBase<BuiltRouter<{ ctx: { req: Request; userId: string | null; userRole: "student" | "teacher" | "parent" | "admin" | "user" | "super_admin"; tenantId: string; sessionClaims: { metadata: { ...; }; } | null; }; meta: object; errorShape: { ...; }; transformer: true; }, DecorateCreateRouterOptions<...>>...'.
+src/lib/trpc/client.ts(118,13): error TS2339: Property 'progress' does not exist on type 'TRPCContextPropsBase<BuiltRouter<{ ctx: { req: Request; userId: string | null; userRole: "student" | "teacher" | "parent" | "admin" | "user" | "super_admin"; tenantId: string; sessionClaims: { metadata: { ...; }; } | null; }; meta: object; errorShape: { ...; }; transformer: true; }, DecorateCreateRouterOptions<...>>...'.
+src/lib/trpc/client.ts(118,70): error TS7006: Parameter 'old' implicitly has an 'any' type.
+src/lib/trpc/provider.tsx(24,13): error TS2353: Object literal may only specify known properties, and 'cacheTime' does not exist in type 'OmitKeyof<QueryObserverOptions<unknown, Error, unknown, unknown, readonly unknown[], never>, "suspense" | "queryKey", "strictly">'.
+src/lib/trpc/provider.tsx(43,7): error TS2322: Type 'typeof SuperJSON' is not assignable to type 'TypeError<"The transformer property has moved to httpLink/httpBatchLink/wsLink">'.
+src/lib/trpc/routers/content.ts(114,13): error TS2322: Type '{ indexedCount: number; validationStats: { validCount: number; invalidCount: number; validationRate: number; invalidChunks: { chunkId: string; error: string; }[]; }; }' is not assignable to type 'number'.
+src/lib/trpc/routers/content.ts(225,28): error TS2339: Property 'insertId' does not exist on type 'any[]'.
+src/lib/utils/jsonParse.ts(28,20): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/utils/jsonParse.ts(29,20): error TS2345: Argument of type '{ data: string; }' is not assignable to parameter of type 'string'.
+src/lib/utils/jsonParse.ts(35,15): error TS2345: Argument of type '{ data: "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function"; }' is not assignable to parameter of type 'string'.
+src/lib/utils/jsonParse.ts(53,18): error TS2345: Argument of type '{ error: unknown; }' is not assignable to parameter of type 'string'.
+src/lib/utils/offlineSync.ts(178,13): error TS2304: Cannot find name 'offlineDB'.
+src/lib/utils/offlineSync.ts(202,29): error TS2304: Cannot find name 'offlineDB'.
+src/lib/utils/offlineSync.ts(221,17): error TS2304: Cannot find name 'offlineDB'.
+src/lib/utils/offlineSync.ts(248,13): error TS2304: Cannot find name 'offlineDB'.
+src/lib/utils/offlineSync.ts(325,31): error TS2304: Cannot find name 'offlineDB'.
+src/lib/utils/offlineSync.ts(327,15): error TS2304: Cannot find name 'offlineDB'.
+src/lib/utils/offlineSync.ts(341,29): error TS2304: Cannot find name 'offlineDB'.
+src/lib/utils/offlineSync.ts(352,35): error TS7006: Parameter 'item' implicitly has an 'any' type.
+src/lib/utils/offlineSync.ts(361,28): error TS2304: Cannot find name 'serviceWorkerManager'.
+src/lib/utils/offlineSync.ts(399,9): error TS2304: Cannot find name 'serviceWorkerManager'.
+src/lib/utils/offlineSync.ts(419,11): error TS2304: Cannot find name 'serviceWorkerManager'.
+src/lib/utils/serviceWorker.ts(149,31): error TS2339: Property 'sync' does not exist on type 'ServiceWorkerRegistration'.
+src/lib/verification/sentence-verification-engine.ts(205,56): error TS18046: 'error' is of type 'unknown'.
+src/lib/verification/sentence-verification-engine.ts(369,11): error TS2322: Type '"exact_phrase"' is not assignable to type '"semantic_similarity" | "paraphrase_match" | "exact_substring" | "exact_sentence"'.
+src/lib/verification/sentence-verification-engine.ts(683,37): error TS2339: Property 'textbookTitle' does not exist on type 'ChunkMetadata'.
+src/middleware/role-auth.ts(9,26): error TS2307: Cannot find module '@/config/menu-config' or its corresponding type declarations.
+src/middleware/role-auth.ts(67,28): error TS2304: Cannot find name 'sessionClaims'.
+src/middleware/role-auth.ts(98,19): error TS2304: Cannot find name 'sessionClaims'.
+src/middleware/role-auth.ts(220,10): error TS7053: Element implicitly has an 'any' type because expression of type 'UserRole' can't be used to index type '{ student: number; parent: number; teacher: number; admin: number; }'.
+src/scripts/populate-golden-pages.ts(61,59): error TS18046: 'err' is of type 'unknown'.

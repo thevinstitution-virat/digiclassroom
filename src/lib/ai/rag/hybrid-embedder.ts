@@ -118,7 +118,8 @@ class BM25 {
    * Score a document against a query
    */
   score(query: string, documentIndex: number): number {
-    if (documentIndex >= this.documents.length) return 0;
+    if (documentIndex >= this.documents.length)
+  return 0;
 
     const queryTerms = this.tokenize(query);
     const documentTerms = this.tokenize(this.documents[documentIndex]);

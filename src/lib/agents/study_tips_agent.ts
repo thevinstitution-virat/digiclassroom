@@ -80,7 +80,7 @@ export class PersonalizedStudyCoach {
   private tipsRetrieval: StudyTipsRetrieval;
 
   constructor() {
-    this.llmService = OpenAIService.getInstance() as any; // Legacy compatibility
+    this.llmService = OpenAIService.getInstance() as unknown as Record<string, unknown>; // Legacy compatibility
     this.tipsRetrieval = new StudyTipsRetrieval();
   }
 
@@ -142,7 +142,7 @@ export class PersonalizedStudyCoach {
   /**
    * Extract textbook sources from context results for accurate citations
    */
-  private extractTextbookSources(results: any[]): Array<{
+  private extractTextbookSources(results: Record<string, unknown>[]): Array<{
     subject: string;
     class_level: string;
     chapter: string;
@@ -170,7 +170,7 @@ export class PersonalizedStudyCoach {
   private buildStudyGuidancePrompt(
     studentProfile: StudentProfile,
     studyChallenge: string | undefined,
-    tipsContent: any,
+    tipsContent: Record<string, unknown>,
     learningStyle: string,
     challenges: string[],
     studentName: string
@@ -309,7 +309,7 @@ Appropriate for Class ${studentProfile.grade_level}:
 Remember: The goal is to build sustainable study habits that reduce stress while improving learning effectiveness, all while honoring their Indian cultural context and family values.`;
   }
 
-  private formatStudyTipsContent(results: any[]): string {
+  private formatStudyTipsContent(results: Record<string, unknown>[]): string {
     if (results.length === 0) {
       return "General study principles and best practices will be applied.";
     }
@@ -323,10 +323,14 @@ Remember: The goal is to build sustainable study habits that reduce stress while
   }
 
   private determineCognitiveLevel(gradeLevel: number): string {
-    if (gradeLevel <= 3) return "remember_understand";
-    if (gradeLevel <= 6) return "understand_apply";
-    if (gradeLevel <= 8) return "apply_analyze";
-    if (gradeLevel <= 10) return "analyze_evaluate";
+    if (gradeLevel <= 3)
+  return "remember_understand";
+    if (gradeLevel <= 6)
+  return "understand_apply";
+    if (gradeLevel <= 8)
+  return "apply_analyze";
+    if (gradeLevel <= 10)
+  return "analyze_evaluate";
     return "evaluate_create";
   }
 

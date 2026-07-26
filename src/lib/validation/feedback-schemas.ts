@@ -27,13 +27,18 @@ export const BoardEnum = z.enum(['CBSE', 'ICSE', 'STATE_BOARD']);
 
 export const SubmitFeedbackRequestSchema = z.object({
   // Question & Answer (Required)
-  questionText: z.string().min(10, 'Question must be at least 10 characters'),
-  answerText: z.string().min(10, 'Answer must be at least 10 characters'),
+  questionText: z.string().min(1, 'Question is required'),
+  answerText: z.string().min(1, 'Answer is required'),
   answerId: z.string().optional(),
 
   // Educational Context (Required)
-  board: BoardEnum,
-  classLevel: z.number().int().min(1).max(12),
+  board: z.string().min(1).transform(v => {
+    const upper = v.toUpperCase().replace(/-/g, '_');
+    // Normalize to known values or keep as-is
+    if (['CBSE', 'ICSE', 'STATE_BOARD'].includes(upper)) return upper;
+    return upper || 'CBSE';
+  }),
+  classLevel: z.number().int().min(1).max(12).default(10),
   subject: z.string().min(1, 'Subject is required'),
   commandWord: z.string().optional(),
   marksAllocated: z.number().int().positive().optional(),
@@ -67,7 +72,8 @@ export const SubmitFeedbackRequestSchema = z.object({
   // User Information (Required)
   sessionId: z.string().optional(),
   userId: z.string().min(1, 'User ID is required'),
-  clerkId: z.string().min(1, 'Clerk ID is required'),
+  /** @deprecated Use userId instead — kept for backward DB column compat */
+  clerkId: z.string().optional(),
 }).refine(
   (data) => data.thumbsRating || data.starRating || data.feedbackText,
   {
@@ -104,7 +110,7 @@ export const GetFeedbackStatsRequestSchema = z.object({
   classLevel: z.number().int().min(1).max(12).optional(),
   subject: z.string().optional(),
   timeWindow: z.enum(['1h', '24h', '7d', '30d', 'all']).default('24h'),
-  
+
   // Pagination
   page: z.number().int().positive().default(1),
   limit: z.number().int().positive().max(100).default(20),
@@ -123,15 +129,15 @@ export const GetFeedbackStatsResponseSchema = z.object({
     totalFeedback: z.number(),
     averageRating: z.number(),
     thumbsUpPercentage: z.number(),
-    
+
     // Quality Metrics
     averageFaithfulness: z.number(),
     averageRelevance: z.number(),
-    
+
     // Performance Metrics
     averageResponseTime: z.number(),
     cacheHitRate: z.number(),
-    
+
     // Rating Distribution
     ratingDistribution: z.object({
       1: z.number(),
@@ -140,21 +146,21 @@ export const GetFeedbackStatsResponseSchema = z.object({
       4: z.number(),
       5: z.number(),
     }),
-    
+
     // Top Feedback Categories
     topCategories: z.array(z.object({
       category: z.string(),
       count: z.number(),
       percentage: z.number(),
     })),
-    
+
     // Subject Breakdown
     subjectBreakdown: z.array(z.object({
       subject: z.string(),
       count: z.number(),
       averageRating: z.number(),
     })),
-    
+
     // Cache Performance
     cacheBreakdown: z.object({
       semantic: z.number(),

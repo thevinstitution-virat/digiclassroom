@@ -3,7 +3,6 @@
 // VG Kosh Practest Engine - User Test Interface
 
 import React, { useState, useEffect } from 'react'
-import { useUser } from '@clerk/nextjs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -30,19 +29,21 @@ import { Board, GenerateTestRequest, TestSession } from '@/types/practest'
 import TestGeneratorForm from '@/components/practest/TestGeneratorForm'
 import ActiveTestInterface from '@/components/practest/ActiveTestInterface'
 import TestResultsView from '@/components/practest/TestResultsView'
+import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
+import { useUserProfile } from '@/hooks'
 
 type ViewState = 'generator' | 'active_test' | 'results' | 'history'
 
 interface PractestPageState {
   currentView: ViewState
-  activeSession: TestSession | null
+  activeSession: any | null
   testResults: any | null
   loading: boolean
   error: string | null
 }
 
 export default function PractestPage() {
-  const { user, isLoaded } = useUser()
+  const { user, isLoaded } = useBetterAuthUser()
   const [state, setState] = useState<PractestPageState>({
     currentView: 'generator',
     activeSession: null,
@@ -51,38 +52,67 @@ export default function PractestPage() {
     error: null
   })
 
-  // Check for active sessions on component mount
+  const [series, setSeries] = useState<any[]>([])
+  const [usage, setUsage] = useState<{ used: number; limit: number; remaining: number; isTrial: boolean; planName: string | null; needsUpgrade: boolean } | null>(null)
+  const { userClass } = useUserProfile()
+  // Only show series for the student's class (their profile drives accessibility).
+  const visibleSeries = series.filter((s) => !userClass || s.classLevel === userClass)
+
+  // Load published test series + today's usage on mount
   useEffect(() => {
     if (isLoaded && user) {
-      checkActiveSession()
+      loadSeries()
+      loadUsage()
     }
   }, [isLoaded, user])
 
-  const checkActiveSession = async () => {
+  const loadSeries = async () => {
     try {
-      const response = await fetch('/api/practest/generate')
-      const data = await response.json()
-      
-      if (data.success && data.active_sessions > 0) {
-        // User has active session, redirect to test interface
-        setState(prev => ({
-          ...prev,
-          currentView: 'active_test',
-          activeSession: data.sessions[0] // Get first active session
-        }))
-      }
+      const res = await fetch('/api/practest/configurations')
+      const data = await res.json()
+      if (data.success) setSeries(data.configurations || [])
     } catch (error) {
-      console.error('Failed to check active session:', error)
+      console.error('Failed to load test series:', error)
     }
   }
 
-  const handleTestGenerated = (session: TestSession) => {
+  const loadUsage = async () => {
+    try {
+      const res = await fetch('/api/practest/usage')
+      const data = await res.json()
+      if (data.success) setUsage(data)
+    } catch (error) {
+      console.error('Failed to load usage:', error)
+    }
+  }
+
+  const startSeries = async (configurationId: string) => {
+    setState(prev => ({ ...prev, loading: true, error: null }))
+    try {
+      const res = await fetch('/api/practest/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ configurationId }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        handleTestGenerated(data)
+      } else {
+        setState(prev => ({ ...prev, loading: false, error: data.error || 'Failed to start test series' }))
+      }
+    } catch {
+      setState(prev => ({ ...prev, loading: false, error: 'Failed to start test series' }))
+    }
+  }
+
+  const handleTestGenerated = (session: any) => {
     setState(prev => ({
       ...prev,
       currentView: 'active_test',
       activeSession: session,
       error: null
     }))
+    loadUsage() // a test was just created — refresh the daily count
   }
 
   const handleTestCompleted = (results: any) => {
@@ -199,6 +229,21 @@ export default function PractestPage() {
               History
             </Button>
           </div>
+
+          {usage && usage.limit > 0 && (
+            <div className="mt-5 flex justify-center">
+              <div className="inline-flex items-center gap-2 rounded-full border border-orange-200/50 bg-white/70 px-4 py-1.5 text-sm shadow-sm backdrop-blur-sm dark:border-gray-700/40 dark:bg-gray-800/60">
+                <span className="text-gray-600 dark:text-gray-300">Practice tests today:</span>
+                <span className="font-bold text-gray-900 dark:text-white">{usage.used} / {usage.limit}</span>
+                {usage.isTrial && (
+                  <span className="rounded-full bg-gradient-to-r from-orange-500 to-blue-600 px-2 py-0.5 text-xs font-semibold text-white">Trial</span>
+                )}
+                {usage.remaining <= 0 && (
+                  <span className="font-medium text-rose-600 dark:text-rose-400">· limit reached, resets tomorrow</span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Enhanced Error Alert */}
@@ -222,12 +267,53 @@ export default function PractestPage() {
         {/* Enhanced Main Content */}
         <div className="space-y-8">
           {state.currentView === 'generator' && (
-            <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/20 overflow-hidden">
-              <TestGeneratorForm
-                onTestGenerated={handleTestGenerated}
-                onError={(error) => setState(prev => ({ ...prev, error }))}
-                loading={state.loading}
-              />
+            <div className="space-y-8">
+              {/* Published test series */}
+              {visibleSeries.length > 0 && (
+                <div>
+                  <h2 className="mb-4 text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+                    Ready-made test series
+                  </h2>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {visibleSeries.map((s) => (
+                      <div
+                        key={s.id}
+                        className="flex flex-col rounded-2xl border border-white/30 bg-white/80 p-5 shadow-lg backdrop-blur-md transition-transform hover:-translate-y-1 dark:border-gray-700/40 dark:bg-gray-800/70"
+                      >
+                        <div className="mb-3 flex items-center gap-2">
+                          <span className="rounded-full bg-gradient-to-r from-orange-500 to-blue-600 px-2.5 py-0.5 text-xs font-semibold text-white">
+                            {s.subject}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">Class {s.classLevel}</span>
+                        </div>
+                        <h3 className="font-bold text-gray-900 dark:text-white">{s.name}</h3>
+                        {s.description && (
+                          <p className="mt-1 line-clamp-2 text-sm text-gray-600 dark:text-gray-400">{s.description}</p>
+                        )}
+                        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                          {s.totalQuestions} questions · {s.durationMinutes} min
+                        </p>
+                        <Button
+                          onClick={() => startSeries(s.id)}
+                          disabled={state.loading}
+                          className="mt-4 w-full bg-gradient-to-r from-orange-500 to-blue-600 text-white hover:from-orange-600 hover:to-blue-700"
+                        >
+                          <Play className="mr-2 h-4 w-4" /> Start series
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="overflow-hidden rounded-2xl border border-white/20 bg-white/90 shadow-xl backdrop-blur-xl dark:border-gray-700/20 dark:bg-gray-800/90">
+                <TestGeneratorForm
+                  onTestGenerated={handleTestGenerated}
+                  onError={(error) => setState(prev => ({ ...prev, error }))}
+                  loading={state.loading}
+                  usage={usage}
+                />
+              </div>
             </div>
           )}
 

@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Clock, CheckCircle, XCircle, Mail, Phone, Award } from 'lucide-react'
+import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 
 interface TeacherStatus {
   isTeacher: boolean
@@ -26,7 +26,7 @@ interface TeacherStatus {
 }
 
 export default function TeacherPendingApprovalPage() {
-  const { user, isLoaded } = useUser()
+  const { user, isLoaded } = useBetterAuthUser()
   const router = useRouter()
   const [status, setStatus] = useState<TeacherStatus | null>(null)
   const [loading, setLoading] = useState(true)

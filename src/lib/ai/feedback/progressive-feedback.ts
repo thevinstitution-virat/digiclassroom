@@ -238,7 +238,8 @@ export function calculateConfidence(
   queryComplexity: string
 ): number {
   
-  if (chunks.length === 0) return 0
+  if (chunks.length === 0)
+  return 0
   
   // Factor 1: Top chunk score (40% weight)
   const topScore = chunks[0]?.ranking?.finalScore || chunks[0]?.score || 0
@@ -284,7 +285,8 @@ export function calculateQualityScore(
   chunks: Array<{ ranking?: any; score?: number }>
 ): number {
   
-  if (chunks.length === 0) return 0
+  if (chunks.length === 0)
+  return 0
   
   // Average of top 3 chunks' final scores
   const top3 = chunks.slice(0, 3)

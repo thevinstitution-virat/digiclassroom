@@ -7,6 +7,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getPool } from '@/lib/db/connection';
+import { db } from '@/db';
+import { answerFeedback } from '@/db/schema';
 import {
   SubmitFeedbackRequestSchema,
   validateRequest,
@@ -26,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   try {
     // Parse and validate request body
-    const body = await req.json();
+    const body = await req.json() as Record<string, unknown>;
     console.log('📥 [API] Received feedback submission:', JSON.stringify(body, null, 2));
 
     const validation = validateRequest(SubmitFeedbackRequestSchema, body);
@@ -52,74 +54,21 @@ export async function POST(req: NextRequest) {
     const pool = getPool();
     connection = await pool.getConnection();
 
-    // Generate feedback ID
-    const feedbackId = uuidv4();
+    // Insert feedback into database using Drizzle
+    const [result] = await db.insert(answerFeedback).values({
+      userId: data.userId,
+      questionText: data.questionText,
+      answerText: data.answerText,
+      board: data.board,
+      classLevel: data.classLevel,
+      subject: data.subject,
+      starRating: data.starRating || null,
+      thumbsRating: data.thumbsRating || null,
+      feedbackText: data.feedbackText || null,
+    });
 
-    // Insert feedback into database
-    await connection.query(
-      `INSERT INTO answer_feedback (
-        id,
-        question_text,
-        answer_text,
-        answer_id,
-        board,
-        class_level,
-        subject,
-        command_word,
-        marks_allocated,
-        thumbs_rating,
-        star_rating,
-        feedback_category,
-        feedback_text,
-        faithfulness_score,
-        relevance_score,
-        context_precision_score,
-        context_recall_score,
-        response_time_ms,
-        cache_hit,
-        cache_type,
-        route_type,
-        complexity,
-        intent_type,
-        experiment_id,
-        experiment_variant,
-        session_id,
-        user_id,
-        clerk_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        feedbackId,
-        data.questionText,
-        data.answerText,
-        data.answerId || null,
-        data.board,
-        data.classLevel,
-        data.subject,
-        data.commandWord || null,
-        data.marksAllocated || null,
-        data.thumbsRating || null,
-        data.starRating || null,
-        data.feedbackCategory || null,
-        data.feedbackText || null,
-        data.faithfulnessScore || null,
-        data.relevanceScore || null,
-        data.contextPrecisionScore || null,
-        data.contextRecallScore || null,
-        data.responseTimeMs || null,
-        data.cacheHit || false,
-        data.cacheType || 'none',
-        data.routeType || null,
-        data.complexity || null,
-        data.intentType || null,
-        data.experimentId || null,
-        data.experimentVariant || null,
-        data.sessionId || null,
-        data.userId,
-        data.clerkId,
-      ]
-    );
-
-    console.log(`✅ Feedback submitted: ${feedbackId}`);
+    const feedbackId = result.insertId.toString();
+    console.log(`✅ Feedback submitted with ID: ${feedbackId}`);
 
     // Create quality alerts if needed
     const alertsCreated = await createQualityAlerts(

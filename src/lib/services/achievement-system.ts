@@ -310,10 +310,14 @@ export class AchievementSystem {
    * Get achievement type based on code
    */
   private getAchievementType(code: string): UserAchievement['achievementType'] {
-    if (code.includes('streak') || code.includes('consistent')) return 'streak'
-    if (code.includes('cultural') || code.includes('desi') || code.includes('festival')) return 'cultural'
-    if (code.includes('class') || code.includes('helpful')) return 'social'
-    if (code.includes('accuracy') || code.includes('speed') || code.includes('perfect')) return 'performance'
+    if (code.includes('streak') || code.includes('consistent'))
+  return 'streak'
+    if (code.includes('cultural') || code.includes('desi') || code.includes('festival'))
+  return 'cultural'
+    if (code.includes('class') || code.includes('helpful'))
+  return 'social'
+    if (code.includes('accuracy') || code.includes('speed') || code.includes('perfect'))
+  return 'performance'
     return 'milestone'
   }
   

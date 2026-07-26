@@ -46,27 +46,7 @@ def verify_setup():
     # 2. Check configuration files
     print("\n2️⃣  CHECKING CONFIGURATION FILES...")
     
-    # Check pdf-extract-kit config
-    pdf_extract_config = ROOT_DIR / 'config' / 'pdf-extract-kit' / 'config.yaml'
-    if pdf_extract_config.exists():
-        with open(pdf_extract_config, 'r') as f:
-            content = f.read()
-            gpu_enabled_count = content.count('device: cuda')
-            use_gpu_true = content.count('use_gpu: true')
-            total_gpu_settings = gpu_enabled_count + use_gpu_true
-            
-            print(f"   ✅ config/pdf-extract-kit/config.yaml exists")
-            print(f"   ✅ GPU enabled for {total_gpu_settings} tasks")
-            
-            if total_gpu_settings >= 4:
-                results["configurations_updated"] = True
-            else:
-                results["recommendations"].append("Update config/pdf-extract-kit/config.yaml to enable GPU")
-    else:
-        print(f"   ❌ config/pdf-extract-kit/config.yaml not found")
-        results["recommendations"].append("Create config/pdf-extract-kit/config.yaml")
-    
-    # Check doc-extract-engine config
+    # Check doc-extract-engine config (the active extraction pipeline)
     doc_extract_config = ROOT_DIR / 'config' / 'doc-extract-engine' / 'config.json'
     if doc_extract_config.exists():
         with open(doc_extract_config, 'r') as f:
@@ -74,11 +54,13 @@ def verify_setup():
             gpu_enabled = config.get('processing_options', {}).get('gpu_enabled', False)
             print(f"   ✅ config/doc-extract-engine/config.json exists")
             print(f"   {'✅' if gpu_enabled else '❌'} GPU enabled: {gpu_enabled}")
-            
+
+            results["configurations_updated"] = gpu_enabled
             if not gpu_enabled:
                 results["recommendations"].append("Set gpu_enabled: true in config/doc-extract-engine/config.json")
     else:
         print(f"   ❌ config/doc-extract-engine/config.json not found")
+        results["recommendations"].append("Create config/doc-extract-engine/config.json")
     
     # 3. Check model files
     print("\n3️⃣  CHECKING MODEL FILES...")

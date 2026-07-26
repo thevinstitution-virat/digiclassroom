@@ -1,5 +1,6 @@
+import { auth } from '@/auth';
+import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
 import { executeQuery, executeQuerySingle } from '@/lib/db/connection'
 import { TeacherRegistrationSchema } from '@/lib/validations'
 import { generateId } from '@/lib/utils'
@@ -11,8 +12,8 @@ import { generateId } from '@/lib/utils'
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const { userId } = await auth()
-    
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized. Please sign in first.' },
@@ -45,100 +46,62 @@ export async function POST(request: NextRequest) {
       phone 
     } = validationResult.data
 
-    // Get Clerk user
-    const client = await clerkClient()
-    const clerkUser = await client.users.getUser(userId)
-
-    // Check if user already exists in database
+    // Look up the existing Better Auth `user` row. After Phase 4.1 this is
+    // the only user table — sign-up already created the row; teacher
+    // registration UPDATEs it with the teacher role + pending approval.
     const existingUser = await executeQuerySingle<any>(
-      'SELECT id, role, approval_status FROM users WHERE clerk_id = ?',
+      'SELECT id, role, approval_status FROM `user` WHERE id = ?',
       [userId]
     )
 
-    if (existingUser) {
-      if (existingUser.role === 'teacher') {
-        return NextResponse.json(
-          { 
-            error: 'You are already registered as a teacher',
-            approvalStatus: existingUser.approval_status
-          },
-          { status: 400 }
-        )
-      } else {
-        return NextResponse.json(
-          { error: 'This account is already registered with a different role' },
-          { status: 400 }
-        )
-      }
-    }
-
-    // Get or create tenant (for now, use a default tenant)
-    let tenantId = 'default-tenant-id'
-    const tenant = await executeQuerySingle<any>(
-      'SELECT id FROM tenants LIMIT 1'
-    )
-    if (tenant) {
-      tenantId = tenant.id
-    } else {
-      // Create default tenant
-      tenantId = generateId()
-      await executeQuery(
-        `INSERT INTO tenants (id, name, domain, subscription_plan, subscription_status, settings)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [
-          tenantId,
-          'Default Educational Institute',
-          'default.digiclassroom.com',
-          'pro',
-          'active',
-          JSON.stringify({ features: ['ai_chat', 'teacher_validation'] })
-        ]
+    if (!existingUser) {
+      return NextResponse.json(
+        { error: 'User record missing. Please sign out and sign back in.' },
+        { status: 404 }
       )
     }
 
-    // Create user record with 'pending' approval status
-    const newUserId = generateId()
+    if (existingUser.role === 'teacher') {
+      return NextResponse.json(
+        {
+          error: 'You are already registered as a teacher',
+          approvalStatus: existingUser.approval_status
+        },
+        { status: 400 }
+      )
+    }
+
+    if (existingUser.role && existingUser.role !== 'student') {
+      return NextResponse.json(
+        { error: 'This account is already registered with a different role' },
+        { status: 400 }
+      )
+    }
+
+    // Promote the existing Better Auth user to teacher with pending approval.
     await executeQuery(
-      `INSERT INTO users (
-        id, tenant_id, clerk_id, email, role, approval_status,
-        first_name, last_name, preferences, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      `UPDATE \`user\`
+       SET role = ?, approval_status = ?, first_name = ?, last_name = ?, preferences = ?, updated_at = NOW()
+       WHERE id = ?`,
       [
-        newUserId,
-        tenantId,
-        userId,
-        email,
         'teacher',
         'pending',
         firstName,
         lastName,
-        JSON.stringify({
-          specialization,
-          qualification,
-          experienceYears,
-          phone
-        })
+        JSON.stringify({ specialization, qualification, experienceYears, phone }),
+        userId
       ]
     )
 
-    // Update Clerk metadata
-    await client.users.updateUser(userId, {
-      publicMetadata: {
-        role: 'teacher',
-        approvalStatus: 'pending',
-        tenantId,
-        userId: newUserId
-      }
-    })
-
-    // Log activity
+    // Log activity. (teacher_id is the Better Auth user.id — same value as
+    // session.user.id since Phase 4.1.)
     await executeQuery(
       `INSERT INTO teacher_activity_logs (
         id, teacher_id, activity_type, activity_description, created_at
       ) VALUES (?, ?, ?, ?, NOW())`,
       [
         generateId(),
-        newUserId,
+        userId,
         'profile_updated',
         'Teacher registration submitted for approval'
       ]
@@ -150,7 +113,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Teacher registration submitted successfully. Please wait for admin approval.',
       data: {
-        userId: newUserId,
+        userId,
         email,
         approvalStatus: 'pending',
         firstName,

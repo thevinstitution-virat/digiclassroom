@@ -137,7 +137,7 @@ export function MultiModalInput({
       medium: 'English'
     }))
 
-    const response = await fetch('/api/admin/content/upload', {
+    const response = await fetch('/api/super-admin/content/upload', {
       method: 'POST',
       body: formData
     })

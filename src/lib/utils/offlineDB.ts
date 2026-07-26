@@ -109,7 +109,8 @@ export class OfflineDB {
    * Store flashcard data
    */
   async storeFlashcard(flashcard: any): Promise<void> {
-    if (!this.db) await this.init()
+    if (!this.db)
+  await this.init()
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['flashcards'], 'readwrite')
@@ -133,7 +134,8 @@ export class OfflineDB {
    * Get all flashcards
    */
   async getFlashcards(): Promise<any[]> {
-    if (!this.db) await this.init()
+    if (!this.db)
+  await this.init()
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['flashcards'], 'readonly')
@@ -152,7 +154,8 @@ export class OfflineDB {
    * Store study session
    */
   async storeSession(session: any): Promise<void> {
-    if (!this.db) await this.init()
+    if (!this.db)
+  await this.init()
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['sessions'], 'readwrite')
@@ -176,7 +179,8 @@ export class OfflineDB {
    * Get user sessions
    */
   async getSessions(userId: string): Promise<any[]> {
-    if (!this.db) await this.init()
+    if (!this.db)
+  await this.init()
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['sessions'], 'readonly')
@@ -196,7 +200,8 @@ export class OfflineDB {
    * Store dictionary word
    */
   async storeDictionaryWord(word: string, data: any): Promise<void> {
-    if (!this.db) await this.init()
+    if (!this.db)
+  await this.init()
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['dictionary'], 'readwrite')
@@ -218,7 +223,8 @@ export class OfflineDB {
    * Get dictionary word
    */
   async getDictionaryWord(word: string): Promise<any | null> {
-    if (!this.db) await this.init()
+    if (!this.db)
+  await this.init()
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['dictionary'], 'readonly')
@@ -237,7 +243,8 @@ export class OfflineDB {
    * Add item to sync queue
    */
   async addToSyncQueue(item: Omit<SyncQueueItem, 'id' | 'timestamp' | 'retries'>): Promise<void> {
-    if (!this.db) await this.init()
+    if (!this.db)
+  await this.init()
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['syncQueue'], 'readwrite')
@@ -259,7 +266,8 @@ export class OfflineDB {
    * Get sync queue items
    */
   async getSyncQueue(): Promise<SyncQueueItem[]> {
-    if (!this.db) await this.init()
+    if (!this.db)
+  await this.init()
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['syncQueue'], 'readonly')
@@ -275,7 +283,8 @@ export class OfflineDB {
    * Remove item from sync queue
    */
   async removeFromSyncQueue(id: number): Promise<void> {
-    if (!this.db) await this.init()
+    if (!this.db)
+  await this.init()
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['syncQueue'], 'readwrite')
@@ -291,7 +300,8 @@ export class OfflineDB {
    * Store user setting
    */
   async storeSetting(key: string, value: any): Promise<void> {
-    if (!this.db) await this.init()
+    if (!this.db)
+  await this.init()
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['settings'], 'readwrite')
@@ -307,7 +317,8 @@ export class OfflineDB {
    * Get user setting
    */
   async getSetting(key: string): Promise<any | null> {
-    if (!this.db) await this.init()
+    if (!this.db)
+  await this.init()
 
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction(['settings'], 'readonly')
@@ -326,7 +337,8 @@ export class OfflineDB {
    * Get database size
    */
   async getDatabaseSize(): Promise<number> {
-    if (!this.db) await this.init()
+    if (!this.db)
+  await this.init()
 
     let totalSize = 0
     const storeNames = ['flashcards', 'sessions', 'dictionary', 'progress', 'syncQueue', 'settings']
@@ -361,7 +373,8 @@ export class OfflineDB {
    * Clear all data
    */
   async clearAllData(): Promise<void> {
-    if (!this.db) await this.init()
+    if (!this.db)
+  await this.init()
 
     const storeNames = ['flashcards', 'sessions', 'dictionary', 'progress', 'syncQueue', 'settings']
     
@@ -391,7 +404,8 @@ export class OfflineDB {
    * Export data for backup
    */
   async exportData(): Promise<any> {
-    if (!this.db) await this.init()
+    if (!this.db)
+  await this.init()
 
     const data: any = {}
     const storeNames = ['flashcards', 'sessions', 'dictionary', 'progress', 'settings']

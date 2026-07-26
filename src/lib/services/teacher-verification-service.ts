@@ -209,7 +209,7 @@ export async function autoVerifyTeacherByEmail(
   if (isEduDomain && userId) {
     try {
       await executeQuery(
-        `UPDATE users 
+        `UPDATE \`user\`
          SET verification_status = ?,
              verification_method = ?,
              verified_at = NOW(),

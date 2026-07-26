@@ -86,11 +86,16 @@ export class AttentionScoringEngine {
   calculatePercentileRank(score: number, testType: 'selective' | 'sustained' | 'switching', age: number): number {
     const thresholds = this.PERCENTILE_THRESHOLDS[testType]
     
-    if (score >= thresholds.p90) return 90
-    if (score >= thresholds.p75) return 75
-    if (score >= thresholds.p50) return 50
-    if (score >= thresholds.p25) return 25
-    if (score >= thresholds.p10) return 10
+    if (score >= thresholds.p90)
+  return 90
+    if (score >= thresholds.p75)
+  return 75
+    if (score >= thresholds.p50)
+  return 50
+    if (score >= thresholds.p25)
+  return 25
+    if (score >= thresholds.p10)
+  return 10
     return 5 // Below 10th percentile
   }
 

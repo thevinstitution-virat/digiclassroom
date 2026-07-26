@@ -4,8 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { useUser } from '@clerk/nextjs'
-
+import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 export interface FavoriteWord {
   id: string
   word: string
@@ -75,7 +74,7 @@ export interface UseFavoriteWordsReturn {
 }
 
 export const useFavoriteWords = (): UseFavoriteWordsReturn => {
-  const { user } = useUser()
+  const { user } = useBetterAuthUser()
   const [favoriteWords, setFavoriteWords] = useState<FavoriteWord[]>([])
   const [learningProgress, setLearningProgress] = useState<LearningProgress>({
     totalWords: 0,

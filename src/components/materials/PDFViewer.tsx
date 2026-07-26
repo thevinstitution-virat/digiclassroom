@@ -186,7 +186,8 @@ export default function PDFViewer({
     return () => document.removeEventListener('keydown', handleEscape)
   }, [isOpen, onClose])
 
-  if (!isOpen) return null
+  if (!isOpen)
+  return null
 
   return (
     <AnimatePresence>

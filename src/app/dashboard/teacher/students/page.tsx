@@ -212,12 +212,12 @@ export default function TeacherStudentsPage() {
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
                       <span className="text-blue-600 font-semibold">
-                        {student.firstName[0]}{student.lastName[0]}
+                        {student?.name?.split(' ')[0][0]}{student?.name?.split(' ').slice(1).join(' ')[0]}
                       </span>
                     </div>
                     <div>
                       <h4 className="font-medium text-gray-900">
-                        {student.firstName} {student.lastName}
+                        {student?.name?.split(' ')[0]} {student?.name?.split(' ').slice(1).join(' ')}
                       </h4>
                       <p className="text-sm text-gray-600">{student.email}</p>
                     </div>
@@ -274,7 +274,7 @@ export default function TeacherStudentsPage() {
                     <option value="">Select a student</option>
                     {students.map((student) => (
                       <option key={student.id} value={student.id}>
-                        {student.firstName} {student.lastName} ({student.email})
+                        {student?.name?.split(' ')[0]} {student?.name?.split(' ').slice(1).join(' ')} ({student.email})
                       </option>
                     ))}
                   </select>

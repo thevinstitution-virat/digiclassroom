@@ -490,7 +490,8 @@ export class AccurateCitationGenerator {
    * 🛡️ NEW: Sanitize individual fields to remove placeholders and invalid values
    */
   private sanitizeField(value: string | undefined | null, fallback: string): string {
-    if (!value || value.trim() === '') return fallback;
+    if (!value || value.trim() === '')
+  return fallback;
 
     const sanitized = value.trim();
 
@@ -619,15 +620,18 @@ export class AccurateCitationGenerator {
    */
   private buildTextbookTitle(metadata: any): string {
     // Try various metadata fields for textbook title
-    if (metadata.textbook?.title) return metadata.textbook.title;
-    if (metadata.title) return metadata.title;
+    if (metadata.textbook?.title)
+  return metadata.textbook.title;
+    if (metadata.title)
+  return metadata.title;
     if (metadata.curriculum?.subject && metadata.curriculum?.class) {
       return `${metadata.curriculum.subject} - NCERT Class ${metadata.curriculum.class}`;
     }
     if (metadata.subject && metadata.class) {
       return `${metadata.subject} - NCERT Class ${metadata.class}`;
     }
-    if (metadata.subject) return `${metadata.subject} - NCERT Textbook`;
+    if (metadata.subject)
+  return `${metadata.subject} - NCERT Textbook`;
 
     return 'NCERT Textbook';
   }
@@ -671,10 +675,12 @@ export class AccurateCitationGenerator {
                       metadata.structure?.chapter?.number ||
                       metadata.chapterNum;
 
-    if (typeof chapterNum === 'number' && chapterNum > 0) return chapterNum;
+    if (typeof chapterNum === 'number' && chapterNum > 0)
+  return chapterNum;
     if (typeof chapterNum === 'string') {
       const parsed = parseInt(chapterNum);
-      if (!isNaN(parsed) && parsed > 0) return parsed;
+      if (!isNaN(parsed) && parsed > 0)
+  return parsed;
     }
 
     return 1; // Default fallback
@@ -706,10 +712,12 @@ export class AccurateCitationGenerator {
                       metadata.page_start ||
                       metadata.page;
 
-    if (typeof pageStart === 'number' && pageStart > 0) return pageStart;
+    if (typeof pageStart === 'number' && pageStart > 0)
+  return pageStart;
     if (typeof pageStart === 'string') {
       const parsed = parseInt(pageStart);
-      if (!isNaN(parsed) && parsed > 0) return parsed;
+      if (!isNaN(parsed) && parsed > 0)
+  return parsed;
     }
 
     return 1; // Default fallback
@@ -743,10 +751,12 @@ export class AccurateCitationGenerator {
                  metadata.pageNumber ||
                  metadata.page_number;
 
-    if (typeof page === 'number' && page > 0) return page;
+    if (typeof page === 'number' && page > 0)
+  return page;
     if (typeof page === 'string') {
       const parsed = parseInt(page);
-      if (!isNaN(parsed) && parsed > 0) return parsed;
+      if (!isNaN(parsed) && parsed > 0)
+  return parsed;
     }
 
     return 1; // Default fallback
@@ -790,7 +800,8 @@ export class AccurateCitationGenerator {
    * Generate citation summary for multiple sources
    */
   generateCitationSummary(citations: VerifiedCitation[]): string {
-    if (citations.length === 0) return '';
+    if (citations.length === 0)
+  return '';
 
     const uniqueChapters = new Set(citations.map(c => c.chapter.number));
     const uniquePages = new Set(citations.map(c => c.location.exactPage));

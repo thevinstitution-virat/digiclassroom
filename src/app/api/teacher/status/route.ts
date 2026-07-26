@@ -1,5 +1,6 @@
+import { auth } from '@/auth';
+import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
 import { executeQuerySingle } from '@/lib/db/connection'
 
 /**
@@ -9,8 +10,8 @@ import { executeQuerySingle } from '@/lib/db/connection'
 export async function GET(request: NextRequest) {
   try {
     // Check authentication
-    const { userId, sessionClaims } = await auth()
-    
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -18,14 +19,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get user from database
+    // Get user from Better Auth `user` table (legacy `users` removed in Phase 4.1a).
     const user = await executeQuerySingle<any>(
-      `SELECT 
-        id, clerk_id, email, role, approval_status, 
+      `SELECT
+        id, email, role, approval_status,
         approved_by, approved_at, rejection_reason,
         first_name, last_name, preferences, created_at
-      FROM users 
-      WHERE clerk_id = ?`,
+      FROM \`user\`
+      WHERE id = ?`,
       [userId]
     )
 

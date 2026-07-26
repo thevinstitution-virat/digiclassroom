@@ -204,10 +204,14 @@ function getModuleDisplayName(module: string): string {
  * Interpret score based on module and grade norms
  */
 function interpretScore(score: number, module: string): string {
-  if (score >= 80) return 'Excellent'
-  if (score >= 70) return 'Good'
-  if (score >= 60) return 'Average'
-  if (score >= 50) return 'Below Average'
+  if (score >= 80)
+  return 'Excellent'
+  if (score >= 70)
+  return 'Good'
+  if (score >= 60)
+  return 'Average'
+  if (score >= 50)
+  return 'Below Average'
   return 'Needs Attention'
 }
 
@@ -219,14 +223,17 @@ function calculateImprovementTrend(allResults: any[], module: string): string {
     .filter((result: any) => result.module === module)
     .sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
   
-  if (moduleResults.length < 2) return 'Insufficient Data'
+  if (moduleResults.length < 2)
+  return 'Insufficient Data'
   
   const firstScore = moduleResults[0].score
   const lastScore = moduleResults[moduleResults.length - 1].score
   const improvement = lastScore - firstScore
   
-  if (improvement > 10) return 'Improving'
-  if (improvement < -10) return 'Declining'
+  if (improvement > 10)
+  return 'Improving'
+  if (improvement < -10)
+  return 'Declining'
   return 'Stable'
 }
 
@@ -286,7 +293,8 @@ function generateResultsSummary(results: any[]) {
  * Calculate overall improvement trend
  */
 function calculateOverallTrend(results: any[]): string {
-  if (results.length < 4) return 'Insufficient Data'
+  if (results.length < 4)
+  return 'Insufficient Data'
   
   const sortedResults = results.sort((a, b) => 
     new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -300,8 +308,10 @@ function calculateOverallTrend(results: any[]): string {
   
   const improvement = secondAvg - firstAvg
   
-  if (improvement > 5) return 'Improving'
-  if (improvement < -5) return 'Declining'
+  if (improvement > 5)
+  return 'Improving'
+  if (improvement < -5)
+  return 'Declining'
   return 'Stable'
 }
 

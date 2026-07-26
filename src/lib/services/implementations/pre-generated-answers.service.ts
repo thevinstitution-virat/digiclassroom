@@ -37,7 +37,8 @@ export class PreGeneratedAnswersService implements IPreGeneratedAnswersService {
   }
 
   async findAnswer(question: string, metadata?: Partial<AnswerMetadata>): Promise<string | null> {
-    if (!this.enabled) return null;
+    if (!this.enabled)
+  return null;
 
     try {
       const hash = this.generateHash(question);

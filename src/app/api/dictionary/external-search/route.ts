@@ -499,7 +499,9 @@ function transliterateToDevanagari(word: string): string {
 
 // Determine difficulty based on word length and complexity
 function determineDifficulty(word: string): 'beginner' | 'intermediate' | 'advanced' {
-  if (word.length <= 4) return 'beginner'
-  if (word.length <= 8) return 'intermediate'
+  if (word.length <= 4)
+  return 'beginner'
+  if (word.length <= 8)
+  return 'intermediate'
   return 'advanced'
 }

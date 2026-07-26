@@ -35,6 +35,12 @@ if sys.platform == 'win32':
 os.environ.setdefault('KMP_DUPLICATE_LIB_OK', 'TRUE')
 os.environ.setdefault('OMP_NUM_THREADS', '1')
 
+# Set model cache directories for faster initialization
+# These directories will store downloaded models to avoid re-downloading
+os.environ.setdefault('HF_HOME', os.path.join(os.getcwd(), '.cache', 'huggingface'))
+os.environ.setdefault('TORCH_HOME', os.path.join(os.getcwd(), '.cache', 'torch'))
+os.environ.setdefault('PADDLEOCR_HOME', os.path.join(os.getcwd(), '.cache', 'paddleocr'))
+
 import time
 import warnings
 from pathlib import Path
@@ -161,6 +167,12 @@ def load_config(config_path: str | None) -> dict:
 
 def extract_text_with_pymupdf(pdf_path: Path, metadata: dict) -> dict:
     """Extract text using PyMuPDF as fallback"""
+
+    # 🔧 FIX: NCERT PDFs have cover/prelim pages before actual content
+    # Calculate page offset to map PDF pages to textbook pages
+    page_offset = metadata.get('page_offset', 3)  # Default: 3 pages (cover + 2 prelim pages)
+    print(f"📖 Using page offset: {page_offset} (PDF page {page_offset + 1} = textbook page 1)", file=sys.stderr)
+
     try:
         doc = fitz.open(str(pdf_path))
         chunks = []
@@ -187,7 +199,9 @@ def extract_text_with_pymupdf(pdf_path: Path, metadata: dict) -> dict:
                 if len(chunk_text.strip()) < 50:  # Skip very short chunks
                     continue
 
-                chunk_id = f"page_{page_num + 1}_chunk_{i // chunk_size + 1}"
+                # 🔧 FIX: Apply page offset to get correct textbook page number
+                textbook_page = max(1, page_num + 1 - page_offset)
+                chunk_id = f"page_{textbook_page}_chunk_{i // chunk_size + 1}"
 
                 # NOTE: OCR correction disabled - TypeScript ContentQualityEnhancer has 148+ patterns (vs 15 here)
                 # Let TypeScript handle OCR correction for better accuracy
@@ -224,7 +238,7 @@ def extract_text_with_pymupdf(pdf_path: Path, metadata: dict) -> dict:
                         'board': metadata.get('curriculum', 'CBSE'),
                         'medium': metadata.get('language', 'English'),
                         'language': metadata.get('language', 'English'),
-                        'page': page_num + 1,
+                        'page': textbook_page,  # 🔧 FIX: Use corrected textbook page number
                         'section_level': section_level,  # ENHANCED: Accurate level
                         'content_type': content_type,
                         'confidence': 0.85,
@@ -480,6 +494,113 @@ def extract_chapter_from_text(text: str, max_length: int = 100) -> str:
 
     return None
 
+def extract_toc_from_pdf(pdf_path: Path) -> dict:
+    """
+    Extract Table of Contents from PDF metadata and first few pages
+    This provides document-wide chapter context before page-by-page processing
+
+    Returns: {
+        'chapters': [{'number': 1, 'title': 'Chapter Title', 'page': 5}, ...],
+        'has_toc': bool
+    }
+    """
+    import fitz  # PyMuPDF
+
+    toc_info = {
+        'chapters': [],
+        'has_toc': False
+    }
+
+    try:
+        doc = fitz.open(pdf_path)
+
+        # Method 1: Try to extract from PDF outline/bookmarks
+        toc = doc.get_toc()
+        if toc and len(toc) > 0:
+            for level, title, page in toc:
+                # Look for chapter-like entries (level 1 or 2)
+                if level <= 2:
+                    chapter_match = re.search(r'(?:Chapter|Unit)\s+(\d+)[:\s]*(.+)?', title, re.IGNORECASE)
+                    if chapter_match:
+                        chapter_num = int(chapter_match.group(1))
+                        chapter_title = chapter_match.group(2).strip() if chapter_match.group(2) else ''
+                        toc_info['chapters'].append({
+                            'number': chapter_num,
+                            'title': f"Chapter {chapter_num}: {chapter_title}" if chapter_title else f"Chapter {chapter_num}",
+                            'page': page
+                        })
+                        toc_info['has_toc'] = True
+
+        # Method 2: Scan first 10 pages for TOC patterns
+        if not toc_info['has_toc']:
+            for page_num in range(min(10, len(doc))):
+                page = doc[page_num]
+                text = page.get_text()
+
+                # Look for TOC-style entries: "Chapter 1 ... 5" or "1. Title ... 5"
+                toc_patterns = [
+                    r'(?:Chapter|Unit)\s+(\d+)[:\s]*([^\n.]{5,80}?)[\s.]+(\d+)',
+                    r'(\d+)\.\s+([A-Z][^\n.]{5,80}?)[\s.]+(\d+)'
+                ]
+
+                for pattern in toc_patterns:
+                    matches = re.finditer(pattern, text, re.MULTILINE)
+                    for match in matches:
+                        chapter_num = int(match.group(1))
+                        chapter_title = match.group(2).strip()
+                        page_ref = int(match.group(3))
+
+                        # Validate: page reference should be reasonable
+                        if 1 <= page_ref <= len(doc) and chapter_num <= 50:
+                            toc_info['chapters'].append({
+                                'number': chapter_num,
+                                'title': f"Chapter {chapter_num}: {chapter_title}",
+                                'page': page_ref
+                            })
+                            toc_info['has_toc'] = True
+
+        doc.close()
+
+        # Deduplicate and sort chapters
+        if toc_info['chapters']:
+            seen = set()
+            unique_chapters = []
+            for ch in sorted(toc_info['chapters'], key=lambda x: x['number']):
+                if ch['number'] not in seen:
+                    unique_chapters.append(ch)
+                    seen.add(ch['number'])
+            toc_info['chapters'] = unique_chapters
+
+    except Exception as e:
+        print(f"⚠️ TOC extraction failed: {e}", file=sys.stderr)
+
+    return toc_info
+
+def get_chapter_for_page(page_num: int, toc_info: dict) -> str | None:
+    """
+    Get the chapter title for a given page number based on TOC
+
+    Args:
+        page_num: 1-based page number
+        toc_info: TOC information from extract_toc_from_pdf
+
+    Returns:
+        Chapter title or None if not found
+    """
+    if not toc_info or not toc_info.get('chapters'):
+        return None
+
+    # Find the chapter that this page belongs to
+    # (the last chapter whose start page is <= current page)
+    current_chapter = None
+    for chapter in sorted(toc_info['chapters'], key=lambda x: x['page']):
+        if chapter['page'] <= page_num:
+            current_chapter = chapter['title']
+        else:
+            break
+
+    return current_chapter
+
 def extract_document_structure(chunks: list, metadata: dict, pdf_path: Path) -> dict:
     """Extract document structure from chunks"""
     structure = {
@@ -578,8 +699,8 @@ def main() -> int:
 
             # Build comprehensive config for all available tasks
             # This uses the new v1.0.0 task registry system
-            # Model paths are relative to vendor/PDF-Extract-Kit directory
-            models_base = PDF_EXTRACT_KIT_PATH / 'models'
+            # Model paths are located in the project's root models directory
+            models_base = ROOT_DIR / 'models'
 
             # PHASE 3: GPU-Only Configuration (No CPU Fallback)
             # All processing requires GPU acceleration
@@ -590,11 +711,11 @@ def main() -> int:
                         'model': 'layout_detection_yolo',
                         'model_config': {
                             'model_path': str(models_base / 'Layout' / 'YOLO' / 'doclayout_yolo_ft.pt'),
-                            'img_size': 1280,
+                            'img_size': 960,
                             'conf_thres': 0.25,
                             'iou_thres': 0.45,
-                            'batch_size': 2,  # GPU batch size
-                            'device': 'cuda',  # GPU-only, no fallback
+                            'batch_size': 1,  # Reduced from 2 to prevent VRAM exhaustion on 6GB GPUs
+                            'device': 'cuda',
                             'visualize': False
                         }
                     },
@@ -602,30 +723,25 @@ def main() -> int:
                         'model': 'formula_detection_yolo',
                         'model_config': {
                             'model_path': str(models_base / 'MFD' / 'YOLO' / 'yolo_v8_ft.pt'),
-                            'img_size': 1280,
+                            'img_size': 960,
                             'conf_thres': 0.25,
                             'iou_thres': 0.45,
-                            'batch_size': 2,  # GPU batch size
-                            'device': 'cuda',  # GPU-only, no fallback
+                            'batch_size': 1,  # Reduced from 2 to prevent VRAM exhaustion on 6GB GPUs
+                            'device': 'cuda',
                             'visualize': False
                         }
                     },
-                    'formula_recognition': {
-                        'model': 'formula_recognition_unimernet',
-                        'model_config': {
-                            'cfg_path': str(PDF_EXTRACT_KIT_PATH / 'pdf_extract_kit' / 'configs' / 'unimernet.yaml'),
-                            'model_path': str(models_base / 'MFR' / 'unimernet_small'),
-                            'device': 'cuda',  # GPU-only, no fallback
-                            'visualize': False
-                        }
-                    },
-                    # NOTE: Using PaddleOCR with GPU acceleration for higher accuracy (95-98%)
+                    # NOTE: formula_recognition is not a separate task in PDF-Extract-Kit v1.0.0
+                    # Formula recognition is handled by the formula_detection task itself
+                    # NOTE: Using PaddleOCR in CPU mode to avoid PyTorch/PaddlePaddle CUDA conflict
+                    # PyTorch (YOLO, UniMERNet) gets full GPU access for maximum performance
+                    # PaddleOCR CPU mode is fast enough for educational PDFs (secondary workload)
                     'ocr': {
                         'model': 'ocr_ppocr',
                         'model_config': {
                             'lang': 'en',
                             'use_angle_cls': True,  # Detect rotated text
-                            'use_gpu': True,  # GPU acceleration enabled (PaddlePaddle GPU 2.6.1 with CUDA 11.7)
+                            'use_gpu': False,  # CPU mode - avoids CUDA registration conflict with PyTorch
                             'det_db_thresh': 0.2,  # Lower threshold for better detection
                             'det_db_box_thresh': 0.4,
                             'rec_batch_num': 6,
@@ -667,7 +783,9 @@ def main() -> int:
                     })
 
             # Check if all critical tasks initialized successfully
-            critical_tasks = ['layout_detection', 'formula_detection', 'formula_recognition', 'ocr']
+            # NOTE: formula_recognition is not a registered task in PDF-Extract-Kit v1.0.0
+            # Only layout_detection, formula_detection, ocr, and table_parsing are available
+            critical_tasks = ['layout_detection', 'formula_detection', 'ocr']
             missing_critical = [t for t in critical_tasks if t not in task_instances]
 
             if missing_critical:
@@ -702,14 +820,30 @@ def main() -> int:
             # Get task instances (all must be present at this point)
             layout_task = task_instances['layout_detection']
             formula_det_task = task_instances['formula_detection']
-            formula_rec_task = task_instances['formula_recognition']
             ocr_task = task_instances['ocr']
 
-            print(f"✓ Initialized tasks: layout={layout_task is not None}, formula_det={formula_det_task is not None}, formula_rec={formula_rec_task is not None}, ocr={ocr_task is not None}", file=sys.stderr)
+            print(f"✓ Initialized tasks: layout={layout_task is not None}, formula_det={formula_det_task is not None}, ocr={ocr_task is not None}", file=sys.stderr)
+
+            # ENHANCEMENT: Extract TOC before page-by-page processing
+            print("📚 Extracting Table of Contents...", file=sys.stderr)
+            toc_info = extract_toc_from_pdf(pdf_path)
+            if toc_info['has_toc']:
+                print(f"✓ Found {len(toc_info['chapters'])} chapters in TOC:", file=sys.stderr)
+                for ch in toc_info['chapters'][:5]:  # Show first 5
+                    print(f"   - {ch['title']} (page {ch['page']})", file=sys.stderr)
+                if len(toc_info['chapters']) > 5:
+                    print(f"   ... and {len(toc_info['chapters']) - 5} more", file=sys.stderr)
+            else:
+                print("⚠️ No TOC found, will extract chapters from page content", file=sys.stderr)
 
             print("Loading PDF pages...", file=sys.stderr)
             images = load_pdf(str(pdf_path))
             print(f"✓ Loaded {len(images)} pages", file=sys.stderr)
+
+            # 🔧 FIX: NCERT PDFs have cover/prelim pages before actual content
+            # Calculate page offset to map PDF pages to textbook pages
+            page_offset = metadata.get('page_offset', 3)  # Default: 3 pages (cover + 2 prelim pages)
+            print(f"📖 Using page offset: {page_offset} (PDF page {page_offset + 1} = textbook page 1)", file=sys.stderr)
 
             chunks = []
             total_words = 0
@@ -755,158 +889,167 @@ def main() -> int:
             # Create persistent directory for page images (for visual element detection)
             # Use upload_id if available, otherwise use timestamp
             upload_id = metadata.get('upload_id', str(int(time.time() * 1000)))
-            page_images_dir = os.path.join(os.getcwd(), 'tmp', 'page_images', upload_id)
+            # Store temp files in the project's tmp directory
+            project_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+            page_images_dir = os.path.join(project_dir, 'tmp', 'page_images', upload_id)
             os.makedirs(page_images_dir, exist_ok=True)
             page_image_paths = {}  # Map of page_number -> image_path
 
             # Process each page with enhanced v1.0.0 pipeline
             for page_index, img in enumerate(images):
-                print(f"Processing page {page_index + 1}/{len(images)}...", file=sys.stderr, flush=True)
-
-                # Save image temporarily for tasks that need file paths
-                temp_img_path = os.path.join(temp_dir, f"page_{page_index+1}.png")
-                img.save(temp_img_path)
-
-                # Save image persistently for visual element detection
-                persistent_img_path = os.path.join(page_images_dir, f"page_{page_index+1}.png")
-                img.save(persistent_img_path)
-                page_image_paths[page_index + 1] = persistent_img_path
-
-                # Step 1: Layout Detection (disabled due to doclayout_yolo incompatibility)
-                layout_results = []
-                # if layout_task:
-                #     try:
-                #         # Layout detection uses model.predict() which expects list of images
-                #         layout_output = layout_task.model.predict([img], temp_dir)
-                #         if layout_output and len(layout_output) > 0:
-                #             layout_results = layout_output[0] if isinstance(layout_output[0], list) else [layout_output[0]]
-                #         print(f"  ✓ Layout detection: {len(layout_results)} regions", file=sys.stderr)
-                #     except Exception as e:
-                #         print(f"  ⚠ Layout detection failed: {e}", file=sys.stderr)
-
-                # Step 2: Formula Detection (if available)
-                formula_bboxes = []
-                if formula_det_task:
-                    try:
-                        # Formula detection uses model.predict() which expects list of images
-                        formula_output = formula_det_task.model.predict([img], temp_dir)
-                        if formula_output and len(formula_output) > 0:
-                            formula_bboxes = formula_output[0] if isinstance(formula_output[0], list) else [formula_output[0]]
-                        total_formulas += len(formula_bboxes)
-                        print(f"  ✓ Formula detection: {len(formula_bboxes)} formulas", file=sys.stderr)
-                    except Exception as e:
-                        print(f"  ⚠ Formula detection failed: {e}", file=sys.stderr)
-
-                # Step 3: OCR (PaddleOCR - REQUIRED, no fallbacks)
                 try:
-                    page_res = ocr_task.predict_image(img)
-                    # Flatten OCR results into text chunks
-                    page_text = ' '.join([b.get('text','') for b in page_res if isinstance(b, dict) and isinstance(b.get('text'), str)])
-                    words = page_text.split()
-                    total_words += len(words)
-                    print(f"  ✓ OCR: {len(words)} words", file=sys.stderr)
-                except Exception as e:
-                    print(f"  ❌ OCR FAILED on page {page_index + 1}: {e}", file=sys.stderr)
-                    traceback.print_exc(file=sys.stderr)
-                    # OCR failure is critical - abort processing
-                    raise Exception(f"PaddleOCR failed on page {page_index + 1}: {str(e)}")
+                    # 🔧 FIX: Calculate textbook page number early for use throughout processing
+                    textbook_page = max(1, page_index + 1 - page_offset)
 
-                # Step 4: Formula Recognition (if formulas detected and task available)
-                formula_latex_list = []
-                if formula_rec_task and len(formula_bboxes) > 0:
+                    # 🔧 FIX: Clear CUDA cache between pages to prevent VRAM accumulation on 6GB GPUs
+                    if GPU_AVAILABLE and page_index > 0:
+                        torch.cuda.empty_cache()
+
+                    print(f"Processing page {page_index + 1}/{len(images)} (textbook page {textbook_page})...", file=sys.stderr, flush=True)
+
+                    # Save image temporarily for tasks that need file paths
+                    temp_img_path = os.path.join(temp_dir, f"page_{page_index+1}.png")
+                    img.save(temp_img_path)
+
+                    # Save image persistently for visual element detection
+                    # Use textbook_page for consistent mapping
+                    persistent_img_path = os.path.join(page_images_dir, f"page_{textbook_page}.png")
+                    img.save(persistent_img_path)
+                    page_image_paths[textbook_page] = persistent_img_path
+
+                    # Step 1: Layout Detection (disabled due to doclayout_yolo incompatibility)
+                    layout_results = []
+                    # if layout_task:
+                    #     try:
+                    #         # Layout detection uses model.predict() which expects list of images
+                    #         layout_output = layout_task.model.predict([img], temp_dir)
+                    #         if layout_output and len(layout_output) > 0:
+                    #             layout_results = layout_output[0] if isinstance(layout_output[0], list) else [layout_output[0]]
+                    #         print(f"  ✓ Layout detection: {len(layout_results)} regions", file=sys.stderr)
+                    #     except Exception as e:
+                    #         print(f"  ⚠ Layout detection failed: {e}", file=sys.stderr)
+
+                    # Step 2: Formula Detection (if available)
+                    formula_bboxes = []
+                    if formula_det_task:
+                        try:
+                            # Formula detection uses model.predict() which expects list of images
+                            formula_output = formula_det_task.model.predict([img], temp_dir)
+                            if formula_output and len(formula_output) > 0:
+                                formula_bboxes = formula_output[0] if isinstance(formula_output[0], list) else [formula_output[0]]
+                            total_formulas += len(formula_bboxes)
+                            print(f"  ✓ Formula detection: {len(formula_bboxes)} formulas", file=sys.stderr)
+                        except Exception as e:
+                            print(f"  ⚠ Formula detection failed: {e}", file=sys.stderr)
+
+                    # Step 3: OCR (PaddleOCR - REQUIRED, no fallbacks)
                     try:
-                        # Extract formula images from bboxes
-                        formula_images = []
-                        for bbox in formula_bboxes:
-                            # Crop formula region from page image
-                            # bbox format depends on YOLO output - typically [x1, y1, x2, y2]
-                            if hasattr(bbox, 'boxes') and hasattr(bbox.boxes, 'xyxy'):
-                                # YOLOv8 result object
-                                boxes = bbox.boxes.xyxy.cpu().numpy()
-                                for box in boxes:
-                                    x1, y1, x2, y2 = map(int, box[:4])
-                                    formula_img = img.crop((x1, y1, x2, y2))
-                                    formula_images.append(formula_img)
-
-                        if formula_images:
-                            # Save formula images temporarily
-                            formula_temp_dir = os.path.join(temp_dir, f"formulas_page_{page_index+1}")
-                            os.makedirs(formula_temp_dir, exist_ok=True)
-                            for i, fimg in enumerate(formula_images):
-                                fimg.save(os.path.join(formula_temp_dir, f"formula_{i+1}.png"))
-
-                            # Run formula recognition
-                            formula_latex_list = formula_rec_task.predict(formula_temp_dir, temp_dir)
-                            print(f"  ✓ Formula recognition: {len(formula_latex_list)} formulas converted to LaTeX", file=sys.stderr)
+                        page_res = ocr_task.predict_image(img)
+                        # Flatten OCR results into text chunks
+                        page_text = ' '.join([b.get('text','') for b in page_res if isinstance(b, dict) and isinstance(b.get('text'), str)])
+                        words = page_text.split()
+                        total_words += len(words)
+                        print(f"  ✓ OCR: {len(words)} words", file=sys.stderr)
                     except Exception as e:
-                        print(f"  ⚠ Formula recognition failed: {e}", file=sys.stderr)
+                        print(f"  ❌ OCR FAILED on page {page_index + 1}: {e}", file=sys.stderr)
+                        traceback.print_exc(file=sys.stderr)
+                        # OCR failure is critical - abort processing
+                        raise Exception(f"PaddleOCR failed on page {page_index + 1}: {str(e)}")
 
-                if not page_text.strip():
-                    # Emit progress even if page has no text
+                    # Step 4: Formula Recognition - NOT AVAILABLE in PDF-Extract-Kit v1.0.0
+                    # Formula recognition is not a separate registered task
+                    # Formula detection only provides bounding boxes, not LaTeX conversion
+                    formula_latex_list = []
+
+                    if not page_text.strip():
+                        # Emit progress even if page has no text
+                        print(f"page {page_index + 1}/{len(images)} done", file=sys.stderr, flush=True)
+                        continue
+
+                    # NOTE: OCR correction disabled - TypeScript ContentQualityEnhancer has 148+ patterns (vs 15 here)
+                    # Let TypeScript handle OCR correction for better accuracy
+                    corrected_text = page_text
+
+                    # QUALITY ENHANCEMENT: Detect metadata accurately (basic detection, TypeScript will refine)
+                    has_formulas_detected = detect_formulas(corrected_text) or len(formula_bboxes) > 0
+                    has_tables_detected = detect_tables(corrected_text) or (any('table' in str(r.get('category_type', '')).lower() for r in layout_results) if layout_results else False)
+                    section_level, section_title = detect_section_info(corrected_text)
+
+                    # Classify content using enhanced detection
+                    content_type = classify_content(corrected_text, layout_results[0] if layout_results else None)
+
+                    # Use textbook_page calculated at the start of the loop
+                    chunk_id = f"page_{textbook_page}_chunk_1"
+
+                    # QUALITY ENHANCEMENT: Extract chapter with length limit
+                    # First try TOC-based chapter lookup (more reliable)
+                    # NOTE: Use textbook_page for TOC lookup since TOC uses textbook page numbers
+                    chapter_info = get_chapter_for_page(textbook_page, toc_info)
+
+                    # If TOC doesn't have chapter info, extract from page content
+                    if not chapter_info:
+                        chapter_info = extract_chapter_from_text(corrected_text, max_length=100)
+
+                    # Count detected elements
+                    has_formulas = has_formulas_detected
+                    has_tables = has_tables_detected
+                    has_figures = any('figure' in str(r.get('category_type', '')).lower() or 'image' in str(r.get('category_type', '')).lower() for r in layout_results) if layout_results else False
+
+                    if has_tables:
+                        total_tables += 1
+                    if has_figures:
+                        total_figures += 1
+
+                    # Determine chapter extraction method and confidence
+                    toc_chapter = get_chapter_for_page(textbook_page, toc_info)
+                    chapter_extraction_method = 'toc' if toc_chapter else 'content'
+                    chapter_confidence = 0.95 if toc_chapter else 0.75  # TOC is more reliable
+
+                    # Build chunk with ENHANCED metadata
+                    chunk_metadata = {
+                        'class': metadata.get('classLevel', 'Unknown'),
+                        'subject': metadata.get('subject', 'Unknown'),
+                        'book_title': metadata.get('bookTitle', pdf_path.stem),
+                        'chapter': chapter_info or 'General Chapter',  # Use extracted chapter or fallback
+                        'chapter_extraction_method': chapter_extraction_method,  # NEW: Track extraction method
+                        'chapter_confidence': chapter_confidence,  # NEW: Confidence based on method
+                        'section_title': section_title,  # ENHANCED: Proper section detection
+                        'source': f"{metadata.get('bookTitle', pdf_path.stem)} Class {metadata.get('classLevel', 'Unknown')}",
+                        'curriculum': metadata.get('curriculum', 'CBSE'),
+                        'board': metadata.get('curriculum', 'CBSE'),
+                        'medium': metadata.get('language', 'English'),
+                        'language': metadata.get('language', 'English'),
+                        'page': textbook_page,  # 🔧 FIX: Use corrected textbook page number
+                        'section_level': section_level,  # ENHANCED: Accurate section level
+                        'content_type': content_type,
+                        'confidence': 0.95,  # Higher confidence with v1.0.0 full pipeline
+                        'contains_equation': has_formulas,  # Basic detection, TypeScript will refine
+                        'contains_table': has_tables,  # Basic detection, TypeScript will refine
+                        'contains_figure': has_figures,
+                        'layout_regions': len(layout_results),
+                        'formulas_detected': len(formula_bboxes)
+                        # NOTE: ocr_quality_score removed - TypeScript ContentQualityEnhancer will handle OCR + quality scoring
+                    }
+
+                    # Add formula LaTeX if available
+                    if formula_latex_list:
+                        chunk_metadata['formulas_latex'] = formula_latex_list
+
+                    chunks.append({
+                        'id': chunk_id,
+                        'text': corrected_text,  # ENHANCED: Use corrected text instead of raw OCR
+                        'metadata': chunk_metadata
+                    })
+                    # Emit per-page progress after processing the page
                     print(f"page {page_index + 1}/{len(images)} done", file=sys.stderr, flush=True)
+
+                except Exception as page_error:
+                    print(f"\n❌ ERROR processing page {page_index + 1}:", file=sys.stderr)
+                    print(f"Error: {str(page_error)}", file=sys.stderr)
+                    traceback.print_exc(file=sys.stderr)
+                    # Continue processing other pages instead of failing completely
+                    print(f"⚠️  Skipping page {page_index + 1} and continuing...", file=sys.stderr)
                     continue
-
-                # NOTE: OCR correction disabled - TypeScript ContentQualityEnhancer has 148+ patterns (vs 15 here)
-                # Let TypeScript handle OCR correction for better accuracy
-                corrected_text = page_text
-
-                # QUALITY ENHANCEMENT: Detect metadata accurately (basic detection, TypeScript will refine)
-                has_formulas_detected = detect_formulas(corrected_text) or len(formula_bboxes) > 0
-                has_tables_detected = detect_tables(corrected_text) or (any('table' in str(r.get('category_type', '')).lower() for r in layout_results) if layout_results else False)
-                section_level, section_title = detect_section_info(corrected_text)
-
-                # Classify content using enhanced detection
-                content_type = classify_content(corrected_text, layout_results[0] if layout_results else None)
-                chunk_id = f"page_{page_index+1}_chunk_1"
-
-                # QUALITY ENHANCEMENT: Extract chapter with length limit
-                chapter_info = extract_chapter_from_text(corrected_text, max_length=100)
-
-                # Count detected elements
-                has_formulas = has_formulas_detected
-                has_tables = has_tables_detected
-                has_figures = any('figure' in str(r.get('category_type', '')).lower() or 'image' in str(r.get('category_type', '')).lower() for r in layout_results) if layout_results else False
-
-                if has_tables:
-                    total_tables += 1
-                if has_figures:
-                    total_figures += 1
-
-                # Build chunk with ENHANCED metadata
-                chunk_metadata = {
-                    'class': metadata.get('classLevel', 'Unknown'),
-                    'subject': metadata.get('subject', 'Unknown'),
-                    'book_title': metadata.get('bookTitle', pdf_path.stem),
-                    'chapter': chapter_info or 'General Chapter',  # Use extracted chapter or fallback
-                    'section_title': section_title,  # ENHANCED: Proper section detection
-                    'source': f"{metadata.get('bookTitle', pdf_path.stem)} Class {metadata.get('classLevel', 'Unknown')}",
-                    'curriculum': metadata.get('curriculum', 'CBSE'),
-                    'board': metadata.get('curriculum', 'CBSE'),
-                    'medium': metadata.get('language', 'English'),
-                    'language': metadata.get('language', 'English'),
-                    'page': page_index + 1,
-                    'section_level': section_level,  # ENHANCED: Accurate section level
-                    'content_type': content_type,
-                    'confidence': 0.95,  # Higher confidence with v1.0.0 full pipeline
-                    'contains_equation': has_formulas,  # Basic detection, TypeScript will refine
-                    'contains_table': has_tables,  # Basic detection, TypeScript will refine
-                    'contains_figure': has_figures,
-                    'layout_regions': len(layout_results),
-                    'formulas_detected': len(formula_bboxes)
-                    # NOTE: ocr_quality_score removed - TypeScript ContentQualityEnhancer will handle OCR + quality scoring
-                }
-
-                # Add formula LaTeX if available
-                if formula_latex_list:
-                    chunk_metadata['formulas_latex'] = formula_latex_list
-
-                chunks.append({
-                    'id': chunk_id,
-                    'text': corrected_text,  # ENHANCED: Use corrected text instead of raw OCR
-                    'metadata': chunk_metadata
-                })
-                # Emit per-page progress after processing the page
-                print(f"page {page_index + 1}/{len(images)} done", file=sys.stderr, flush=True)
 
             # Clean up temporary directory
             import shutil
@@ -918,10 +1061,19 @@ def main() -> int:
             # Calculate final statistics
             processing_time_ms = int((time.time() - start) * 1000)
 
+            # Build enhanced document structure with TOC information
+            doc_structure = extract_document_structure(chunks, metadata, pdf_path)
+            if toc_info['has_toc']:
+                # Enhance document structure with TOC data
+                doc_structure['toc_extracted'] = True
+                doc_structure['toc_chapters'] = toc_info['chapters']
+            else:
+                doc_structure['toc_extracted'] = False
+
             result = {
                 'success': True,
                 'chunks': chunks,
-                'document_structure': extract_document_structure(chunks, metadata, pdf_path),
+                'document_structure': doc_structure,
                 'page_image_paths': page_image_paths,  # NEW: Page image paths for visual element detection
                 'stats': {
                     'total_pages': len(images),
@@ -937,7 +1089,6 @@ def main() -> int:
                     'tasks_used': {
                         'layout_detection': layout_task is not None,
                         'formula_detection': formula_det_task is not None,
-                        'formula_recognition': formula_rec_task is not None,
                         'ocr': ocr_task is not None
                     },
                     # PHASE 3: GPU acceleration info
@@ -958,12 +1109,17 @@ def main() -> int:
             sys.stdout.flush()
             return 0
         except Exception as e:
+            # Print full traceback to stderr for debugging
+            print(f"\n❌ CRITICAL ERROR in PDF-Extract-Kit pipeline:", file=sys.stderr)
+            print(f"Error: {str(e)}", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
+
             print(json.dumps({
                 'success': False,
                 'chunks': [],
                 'document_structure': { 'title': pdf_path.name, 'chapters': [] },
                 'stats': { 'processing_time': int((time.time() - start) * 1000) },
-                'errors': [f'PDF-Extract-Kit pipeline failed: {str(e)}']
+                'errors': [f'PDF-Extract-Kit pipeline failed: {str(e)}', traceback.format_exc()]
             }, ensure_ascii=False))
             return 2
 

@@ -1,3 +1,4 @@
+﻿import { openrouter } from '@/lib/openrouter/client';
 /**
  * Query Decomposition Service for Enhanced RAG Pipeline
  * 
@@ -5,11 +6,11 @@
  * to improve retrieval accuracy for complex questions.
  * 
  * Examples:
- * - "Compare A with B" → ["What is A?", "What is B?", "How do A and B differ?"]
- * - "Explain X and how it affects Y" → ["What is X?", "What is Y?", "How does X affect Y?"]
+ * - "Compare A with B" â†’ ["What is A?", "What is B?", "How do A and B differ?"]
+ * - "Explain X and how it affects Y" â†’ ["What is X?", "What is Y?", "How does X affect Y?"]
  */
 
-import OpenAI from 'openai';
+
 
 export interface SubQuery {
   query: string;
@@ -39,9 +40,7 @@ export class QueryDecomposer {
   private complexityThreshold: number;
 
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
+    this.openai = openrouter;
     this.maxSubQueries = parseInt(process.env.MAX_SUB_QUERIES || '5');
     this.complexityThreshold = parseInt(process.env.QUERY_DECOMPOSITION_THRESHOLD || '15');
   }
@@ -134,12 +133,12 @@ export class QueryDecomposer {
    * Decompose query into sub-queries using GPT-4
    */
   async decomposeQuery(query: string): Promise<QueryDecomposition> {
-    console.log(`🔍 Analyzing query complexity: "${query}"`);
+    console.log(`ðŸ” Analyzing query complexity: "${query}"`);
 
     // Analyze complexity first
     const complexity = this.analyzeComplexity(query);
     
-    console.log(`📊 Complexity analysis:`, {
+    console.log(`ðŸ“Š Complexity analysis:`, {
       estimatedComplexity: complexity.estimatedComplexity,
       wordCount: complexity.wordCount,
       hasComparison: complexity.hasComparison,
@@ -150,7 +149,7 @@ export class QueryDecomposer {
 
     // If query is simple, don't decompose
     if (!this.shouldDecompose(query)) {
-      console.log(`✅ Query is simple, no decomposition needed`);
+      console.log(`âœ… Query is simple, no decomposition needed`);
       return {
         isComplex: false,
         originalQuery: query,
@@ -164,7 +163,7 @@ export class QueryDecomposer {
       };
     }
 
-    console.log(`🔄 Query is complex, decomposing into sub-queries...`);
+    console.log(`ðŸ”„ Query is complex, decomposing into sub-queries...`);
 
     // Use GPT-4 to decompose the query
     const systemPrompt = `You are a query decomposition expert for an educational RAG system. Your task is to break down complex student queries into simpler, atomic sub-queries that can be answered independently.
@@ -212,8 +211,8 @@ Context: This is for a Geography textbook (Class 9, NCERT). The query is about I
 
       const result = JSON.parse(response.choices[0].message.content || '{}');
       
-      console.log(`✅ Decomposed into ${result.subQueries?.length || 0} sub-queries`);
-      console.log(`📝 Reasoning: ${result.reasoning}`);
+      console.log(`âœ… Decomposed into ${result.subQueries?.length || 0} sub-queries`);
+      console.log(`ðŸ“ Reasoning: ${result.reasoning}`);
 
       return {
         isComplex: true,
@@ -224,7 +223,7 @@ Context: This is for a Geography textbook (Class 9, NCERT). The query is about I
       };
 
     } catch (error) {
-      console.error('❌ Query decomposition failed:', error);
+      console.error('âŒ Query decomposition failed:', error);
       
       // Fallback: return original query as single sub-query
       return {
@@ -254,4 +253,5 @@ Context: This is for a Geography textbook (Class 9, NCERT). The query is about I
 
 // Singleton instance
 export const queryDecomposer = new QueryDecomposer();
+
 

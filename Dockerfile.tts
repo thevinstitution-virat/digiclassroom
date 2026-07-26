@@ -1,0 +1,35 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# System dependencies for soundfile and espeak (phoneme fallback for Kokoro)
+RUN apt-get update && apt-get install -y \
+    libsndfile1 \
+    espeak-ng \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY src/python/tts_service.py .
+
+# Install CPU PyTorch FIRST so kokoro's torch dependency resolves to the small
+# CPU build. Otherwise `pip install kokoro` drags in a multi-GB CUDA torch the
+# container can't use (and the large download is failure-prone). Kokoro runs on
+# CPU at this scale.
+RUN pip install --no-cache-dir --timeout 180 --retries 10 torch --index-url https://download.pytorch.org/whl/cpu
+
+# Install Python deps — kokoro pulls its own model weights on first run
+RUN pip install --no-cache-dir \
+    kokoro \
+    soundfile \
+    numpy \
+    fastapi \
+    uvicorn \
+    pydantic
+
+# Health check — fails if service isn't up
+HEALTHCHECK --interval=60s --timeout=15s --retries=3 \
+  CMD curl -f http://localhost:8002/health || exit 1
+
+EXPOSE 8002
+
+CMD ["uvicorn", "tts_service:app", "--host", "0.0.0.0", "--port", "8002", "--log-level", "info"]

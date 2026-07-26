@@ -12,6 +12,7 @@ interface TutorHeaderProps {
     conversationPhase: string
     onOpenHistory: () => void
     onReset: () => void
+    userName?: string
 }
 
 export function TutorHeader({
@@ -21,6 +22,7 @@ export function TutorHeader({
     conversationPhase,
     onOpenHistory,
     onReset,
+    userName,
 }: TutorHeaderProps) {
     return (
         <Card className="mb-3 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-0 shadow-lg rounded-2xl overflow-hidden">
@@ -35,7 +37,7 @@ export function TutorHeader({
                                 Virat Gyankosh
                             </CardTitle>
                             <p className="text-gray-600 dark:text-gray-400 text-sm">
-                                Your intelligent educational companion with curriculum-aligned content
+                                {userName ? `Hi ${userName}! ` : ''}Your intelligent educational companion
                             </p>
                         </div>
                     </div>

@@ -1,11 +1,11 @@
 import { z } from "zod"
 
 // Simplified user role validation
-export const UserRole = z.enum(["admin", "user"])
+export const UserRole = z.enum(["super_admin", "admin", "teacher", "student", "parent", "user"])
 export type UserRole = z.infer<typeof UserRole>
 
 // Database user role (includes teacher, student, parent)
-export const DatabaseUserRole = z.enum(["admin", "teacher", "student", "parent"])
+export const DatabaseUserRole = z.enum(["super_admin", "admin", "teacher", "student", "parent"])
 export type DatabaseUserRole = z.infer<typeof DatabaseUserRole>
 
 // Teacher approval status

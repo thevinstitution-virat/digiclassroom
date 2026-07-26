@@ -1,5 +1,6 @@
+import { auth } from '@/auth';
+import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
 import { executeQuery, executeQuerySingle } from '@/lib/db/connection'
 import { generateId } from '@/lib/utils'
 
@@ -9,14 +10,14 @@ import { generateId } from '@/lib/utils'
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth()
-    
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const teacher = await executeQuerySingle<any>(
-      'SELECT id, role, approval_status FROM users WHERE clerk_id = ?',
+      'SELECT id, role, approval_status FROM `user` WHERE id = ?',
       [userId]
     )
 
@@ -30,10 +31,10 @@ export async function GET(request: NextRequest) {
 
     let query = `
       SELECT DISTINCT
-        u.id, u.clerk_id, u.email, u.first_name, u.last_name,
+        u.id, u.email, u.first_name, u.last_name,
         u.class_id, c.name as class_name, c.grade_level,
         u.created_at as enrolled_at
-      FROM users u
+      FROM \`user\` u
       LEFT JOIN classes c ON u.class_id = c.id
       INNER JOIN teacher_class_assignments tca ON c.id = tca.class_id
       WHERE u.role = 'student'
@@ -53,7 +54,6 @@ export async function GET(request: NextRequest) {
 
     const formattedStudents = students.map(student => ({
       id: student.id,
-      clerkId: student.clerk_id,
       email: student.email,
       firstName: student.first_name,
       lastName: student.last_name,

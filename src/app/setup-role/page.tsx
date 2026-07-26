@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState, Suspense } from 'react'
-import { useUser } from '@clerk/nextjs'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { UserRole, UserPersona } from '@/lib/validations'
+import { useSession } from '@/auth/client'
 import {
   AcademicCapIcon,
   UserGroupIcon,
@@ -13,7 +13,8 @@ import {
 } from '@heroicons/react/24/outline'
 
 function SetupRoleClient() {
-  const { user, isLoaded } = useUser()
+  const { data: session, isPending } = useSession()
+  const user = session?.user
   const router = useRouter()
   const searchParams = useSearchParams()
   const error = searchParams.get('error')
@@ -23,10 +24,10 @@ function SetupRoleClient() {
   const [assignmentError, setAssignmentError] = useState('')
 
   useEffect(() => {
-    if (isLoaded && !user) {
+    if (!isPending && !user) {
       router.replace('/sign-in')
     }
-  }, [isLoaded, user, router])
+  }, [isPending, user, router])
 
   // Users can only self-assign as 'user' - admin roles are assigned automatically or by existing admins
   const userRole: UserRole = 'user'
@@ -53,7 +54,7 @@ function SetupRoleClient() {
   ]
 
   const handleRoleAssignment = async () => {
-    if (!selectedPersona || !user) return
+    if (!selectedPersona || !user || isAssigning) return
 
     setIsAssigning(true)
     setAssignmentError('')
@@ -78,13 +79,11 @@ function SetupRoleClient() {
         throw new Error(result.message || 'Failed to assign role')
       }
 
-      // Wait for the update to propagate
-      await user.reload()
-
-      // Redirect to user dashboard (since admin role can't be self-assigned)
+      // No need to call user.reload() with BetterAuth, session updates automatically
+      // Redirect to user dashboard
       setTimeout(() => {
         router.replace('/dashboard/user')
-      }, 1000)
+      }, 500)
 
     } catch (error) {
       console.error('Manual role assignment failed:', error)
@@ -105,7 +104,7 @@ function SetupRoleClient() {
     }
   }
 
-  if (!isLoaded) {
+  if (isPending) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
@@ -167,31 +166,30 @@ function SetupRoleClient() {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
               2. Tell Us About Yourself
             </h2>
-              <div className="grid grid-cols-1 gap-3">
-                {personaOptions.map((persona) => (
-                  <button
-                    key={persona.value}
-                    onClick={() => setSelectedPersona(persona.value)}
-                    className={`p-4 rounded-xl border-2 transition-all text-left ${
-                      selectedPersona === persona.value
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+            <div className="grid grid-cols-1 gap-3">
+              {personaOptions.map((persona) => (
+                <button
+                  key={persona.value}
+                  onClick={() => setSelectedPersona(persona.value)}
+                  className={`p-4 rounded-xl border-2 transition-all text-left ${selectedPersona === persona.value
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                     }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-2xl">{persona.icon}</span>
-                      <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                          {persona.title}
-                        </h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
-                          {persona.description}
-                        </p>
-                      </div>
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{persona.icon}</span>
+                    <div>
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                        {persona.title}
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {persona.description}
+                      </p>
                     </div>
-                  </button>
-                ))}
-              </div>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Error Display */}
@@ -238,7 +236,7 @@ function SetupRoleClient() {
 
 }
 
-export default function SetupRolePage(): JSX.Element {
+export default function SetupRolePage() {
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div></div>}>
       <SetupRoleClient />

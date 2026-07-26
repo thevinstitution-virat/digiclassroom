@@ -206,7 +206,8 @@ export class FallbackProfileService {
    */
   private getCachedProfile(userId: string): EnhancedUserProfile | null {
     const cached = this.profileCache.get(userId);
-    if (!cached) return null;
+    if (!cached)
+  return null;
 
     // Check if cache is still valid
     const now = new Date();
@@ -246,7 +247,8 @@ export class FallbackProfileService {
    * Extract grade from class level string
    */
   private extractGrade(classLevel?: string): number | null {
-    if (!classLevel) return null;
+    if (!classLevel)
+  return null;
     
     const match = classLevel.match(/\d+/);
     return match ? parseInt(match[0]) : null;
@@ -285,8 +287,10 @@ export class FallbackProfileService {
    * Get complexity level based on grade
    */
   private getComplexityForGrade(grade: number): 'basic' | 'intermediate' | 'advanced' {
-    if (grade <= 7) return 'basic';
-    if (grade <= 9) return 'intermediate';
+    if (grade <= 7)
+  return 'basic';
+    if (grade <= 9)
+  return 'intermediate';
     return 'advanced';
   }
 

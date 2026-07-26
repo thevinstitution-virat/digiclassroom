@@ -58,7 +58,7 @@ export class TopicExplanationTool {
   private vectorService: VectorStoreService;
 
   constructor() {
-    this.llmService = OpenAIService.getInstance() as any; // Legacy compatibility
+    this.llmService = OpenAIService.getInstance() as unknown as Record<string, unknown>; // Legacy compatibility
     this.vectorService = new VectorStoreService();
   }
 
@@ -120,7 +120,7 @@ export class TopicExplanationTool {
    */
   private async generateBaseExplanation(
     request: TopicExplanationRequest,
-    context: any
+    context: Record<string, unknown>
   ): Promise<TopicExplanationResponse> {
 
       console.log(`📚 Found ${context.results.length} textbook references for ${request.topic}`);
@@ -144,10 +144,11 @@ export class TopicExplanationTool {
   /**
    * Extract citations from context for enhancement pipeline
    */
-  private extractCitations(context: any): string[] {
-    if (!context.results) return [];
+  private extractCitations(context: Record<string, unknown>): string[] {
+    if (!context.results)
+  return [];
 
-    return context.results.map((result: any) => {
+    return context.results.map((result: Record<string, unknown>) => {
       const parts: string[] = [];
       if (result.metadata?.chapter) parts.push(`Ch ${result.metadata.chapter}`);
       if (result.metadata?.page) parts.push(`Pg ${result.metadata.page}`);
@@ -158,7 +159,7 @@ export class TopicExplanationTool {
   /**
    * Extract textbook sources from context results for accurate citations
    */
-  private extractTextbookSources(results: any[]): Array<{
+  private extractTextbookSources(results: Record<string, unknown>[]): Array<{
     subject: string;
     class_level: string;
     chapter: string;
@@ -188,7 +189,7 @@ export class TopicExplanationTool {
    */
   private async generateExplanationFromContext(
     request: TopicExplanationRequest,
-    context: any
+    context: Record<string, unknown>
   ): Promise<string> {
     try {
       // Check if we have sufficient textbook content
@@ -236,7 +237,7 @@ export class TopicExplanationTool {
 
   private buildExplanationPrompt(
     request: TopicExplanationRequest,
-    context: any,
+    context: Record<string, unknown>,
     complexityLevel: string
   ): string {
     const contextText = this.vectorService.format_educational_context(context.results);
@@ -417,10 +418,14 @@ Provide a complete, professional explanation that students will find both inform
   }
 
   private determineCognitiveLevel(gradeLevel: number): string {
-    if (gradeLevel <= 3) return "remember_understand";
-    if (gradeLevel <= 6) return "understand_apply";
-    if (gradeLevel <= 8) return "apply_analyze";
-    if (gradeLevel <= 10) return "analyze_evaluate";
+    if (gradeLevel <= 3)
+  return "remember_understand";
+    if (gradeLevel <= 6)
+  return "understand_apply";
+    if (gradeLevel <= 8)
+  return "apply_analyze";
+    if (gradeLevel <= 10)
+  return "analyze_evaluate";
     return "evaluate_create";
   }
 
@@ -643,7 +648,7 @@ export class TopicExplanationAgent {
   /**
    * Build fallback prompt when no textbook content is available
    */
-  private buildFallbackPrompt(request: any): string {
+  private buildFallbackPrompt(request: Record<string, unknown>): string {
     return `You are Virat Gyankosh, an expert AI tutor for Indian students. A Class ${request.grade_level} student has asked about "${request.topic}" in ${request.subject}.
 
 Since I don't have specific textbook content available, please provide a comprehensive educational explanation that:

@@ -121,9 +121,12 @@ export class AdaptiveComplexityService {
     }
     
     // For teachers and parents
-    if (adjustedComplexity > 0.8) return 'expert';
-    if (adjustedComplexity > 0.6) return 'advanced';
-    if (adjustedComplexity > 0.4) return 'intermediate';
+    if (adjustedComplexity > 0.8)
+  return 'expert';
+    if (adjustedComplexity > 0.6)
+  return 'advanced';
+    if (adjustedComplexity > 0.4)
+  return 'intermediate';
     return 'elementary';
   }
 

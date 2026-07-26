@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
 import { z } from 'zod'
-import mysql from 'mysql2/promise'
 import { MaterialsFilter, MaterialItem } from '@/types/user-management'
 import type { EnhancedMaterial } from '@/types/google-drive'
 import { getConnection } from '@/lib/db/connection' // ✅ Use centralized connection pool
+import { withOrgContext, OrgRouteContext } from '@/lib/auth/with-org-context'
+import { logger } from '@/lib/logger'
 
 // Validation schema for materials request
 const MaterialsRequestSchema = z.object({
@@ -25,18 +25,11 @@ const MaterialsRequestSchema = z.object({
 
 /**
  * GET /api/materials
- * Fetch materials based on user profile and filters
+ * Fetch materials based on user profile and filters, scoped to the organization
  */
-export async function GET(request: NextRequest) {
+export const GET = withOrgContext(async (request: NextRequest, ctx: any, orgContext: OrgRouteContext) => {
   try {
-    // Check authentication
-    const { userId } = await auth()
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const { userId, orgId } = orgContext;
 
     // Parse query parameters
     const { searchParams } = new URL(request.url)
@@ -46,17 +39,17 @@ export async function GET(request: NextRequest) {
     if (queryParams.class) queryParams.class = parseInt(queryParams.class)
     if (queryParams.page) queryParams.page = parseInt(queryParams.page)
     if (queryParams.limit) queryParams.limit = parseInt(queryParams.limit)
-    if (queryParams.tags) queryParams.tags = queryParams.tags.split(',')
+    if (queryParams.tags) queryParams.tags = (queryParams.tags as string).split(',')
 
     // Validate request
     const validatedParams = MaterialsRequestSchema.parse(queryParams)
 
-    // Get user profile to apply default filters
-    let userProfile = await getUserProfile(userId)
+    // Get user profile to apply default filters (scoped to org)
+    let userProfile = await getUserProfile(userId, orgId)
     if (!userProfile) {
       // Create a default user profile for testing
-      console.log(`Creating default user profile for user: ${userId}`)
-      userProfile = await createDefaultUserProfile(userId)
+      logger.info(`Creating default user profile for user: ${userId} in org: ${orgId}`)
+      userProfile = await createDefaultUserProfile(userId, orgId)
 
       if (!userProfile) {
         return NextResponse.json(
@@ -79,16 +72,16 @@ export async function GET(request: NextRequest) {
       difficulty: validatedParams.difficulty
     }
 
-    // Fetch materials from database
+    // Fetch materials from database scoped by orgId
     const materials = await getMaterials(filter, {
       page: validatedParams.page,
       limit: validatedParams.limit,
       sortBy: validatedParams.sortBy,
       sortOrder: validatedParams.sortOrder
-    })
+    }, orgId)
 
     // Log access for analytics
-    await logMaterialAccess(userId, 'browse', filter)
+    await logMaterialAccess(userId, 'browse', filter, orgId)
 
     return NextResponse.json({
       success: true,
@@ -103,7 +96,7 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error fetching materials:', error)
+    logger.error('Error fetching materials:', error)
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -117,38 +110,21 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     )
   }
-}
+}, { requireOrg: true });
 
 /**
  * POST /api/materials
  * Create or update material (admin only)
  */
-export async function POST(request: NextRequest) {
+export const POST = withOrgContext(async (request: NextRequest, ctx: any, orgContext: OrgRouteContext) => {
   try {
-    // Check authentication and admin role
-    const { userId, sessionClaims } = await auth()
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-
-    const userRole = sessionClaims?.metadata?.role
-    if (userRole !== 'admin') {
-      return NextResponse.json(
-        { error: 'Forbidden. Admin access required.' },
-        { status: 403 }
-      )
-    }
-
     const body = await request.json()
     
     // Validate material data
     const materialData = validateMaterialData(body)
     
-    // Create or update material
-    const material = await createOrUpdateMaterial(materialData)
+    // Create or update material scoped to org
+    const material = await createOrUpdateMaterial({ ...materialData, organizationId: orgContext.orgId })
     
     return NextResponse.json({
       success: true,
@@ -156,26 +132,33 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error creating/updating material:', error)
+    logger.error('Error creating/updating material:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     )
   }
-}
+}, { requireOrg: true, roles: ['admin', 'org_admin', 'owner'] });
 
 // Helper functions (these would typically be in separate service files)
 
-async function getUserProfile(userId: string) {
+async function getUserProfile(userId: string, orgId: string) {
   const connection = await getConnection()
 
   try {
     const [rows] = await connection.execute(
-      'SELECT board, medium, class, stream, is_onboarding_complete FROM user_profiles WHERE user_id = ?',
-      [userId]
+      'SELECT board, medium, class, stream, is_onboarding_complete FROM user_profiles WHERE user_id = ? AND organization_id = ?',
+      [userId, orgId]
     ) as any[]
 
     if (rows.length === 0) {
+      // Fallback to legacy global profiles if no org-specific profile exists
+      const [legacyRows] = await connection.execute(
+        'SELECT board, medium, class, stream, is_onboarding_complete FROM user_profiles WHERE user_id = ?',
+        [userId]
+      ) as any[]
+
+      if (legacyRows.length > 0) return legacyRows[0]
       return null
     }
 
@@ -193,17 +176,17 @@ async function getUserProfile(userId: string) {
   }
 }
 
-async function createDefaultUserProfile(userId: string) {
+async function createDefaultUserProfile(userId: string, orgId: string) {
   const connection = await getConnection()
 
   try {
     // Create a default profile for testing
     await connection.execute(`
-      INSERT INTO user_profiles (id, user_id, board, medium, class, stream, is_onboarding_complete)
-      VALUES (UUID(), ?, 'CBSE', 'ENGLISH', 10, NULL, TRUE)
-    `, [userId])
+      INSERT INTO user_profiles (id, user_id, organization_id, board, medium, class, stream, is_onboarding_complete)
+      VALUES (UUID(), ?, ?, 'CBSE', 'ENGLISH', 10, NULL, TRUE)
+    `, [userId, orgId])
 
-    console.log(`Default user profile created for user: ${userId}`)
+    logger.info(`Default user profile created for user: ${userId} in org: ${orgId}`)
 
     // Return the created profile
     return {
@@ -215,7 +198,7 @@ async function createDefaultUserProfile(userId: string) {
       isOnboardingComplete: true
     }
   } catch (error) {
-    console.error('Error creating default user profile:', error)
+    logger.error('Error creating default user profile:', error)
     return null
   } finally {
     connection.release() // ✅ Release connection back to pool
@@ -229,7 +212,8 @@ async function getMaterials(
     limit: number
     sortBy: string
     sortOrder: string
-  }
+  },
+  orgId: string
 ) {
   const connection = await getConnection()
 
@@ -237,6 +221,10 @@ async function getMaterials(
     // Build WHERE clause based on filters
     const whereConditions: string[] = []
     const queryValues: any[] = []
+
+    // 🔒 Tenant Isolation: strictly filter by organizationId
+    whereConditions.push('m.organization_id = ?')
+    queryValues.push(orgId)
 
     // Only show approved and active materials to users
     whereConditions.push('m.status = ? AND m.is_active = TRUE')
@@ -279,38 +267,38 @@ async function getMaterials(
 
     if (filter.searchQuery) {
       whereConditions.push('(m.title LIKE ? OR m.description LIKE ? OR m.subject LIKE ?)')
-      const searchTerm = `%${filter.searchQuery}%`
+      const searchTerm = `%\${filter.searchQuery}%`
       queryValues.push(searchTerm, searchTerm, searchTerm)
     }
 
     if (filter.tags && filter.tags.length > 0) {
       const tagConditions = filter.tags.map(() => 'JSON_CONTAINS(m.tags, ?)').join(' OR ')
-      whereConditions.push(`(${tagConditions})`)
+      whereConditions.push(`(\${tagConditions})`)
       filter.tags.forEach(tag => {
         queryValues.push(JSON.stringify(tag))
       })
     }
 
-    const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''
+    const whereClause = whereConditions.length > 0 ? `WHERE \${whereConditions.join(' AND ')}` : ''
 
     // Build ORDER BY clause
     let orderByClause = ''
     switch (pagination.sortBy) {
       case 'title':
-        orderByClause = `ORDER BY m.title ${pagination.sortOrder.toUpperCase()}`
+        orderByClause = `ORDER BY m.title \${pagination.sortOrder.toUpperCase()}`
         break
       case 'date':
-        orderByClause = `ORDER BY m.created_at ${pagination.sortOrder.toUpperCase()}`
+        orderByClause = `ORDER BY m.created_at \${pagination.sortOrder.toUpperCase()}`
         break
       case 'downloads':
-        orderByClause = `ORDER BY m.download_count ${pagination.sortOrder.toUpperCase()}`
+        orderByClause = `ORDER BY m.download_count \${pagination.sortOrder.toUpperCase()}`
         break
       default:
-        orderByClause = `ORDER BY m.created_at ${pagination.sortOrder.toUpperCase()}`
+        orderByClause = `ORDER BY m.created_at \${pagination.sortOrder.toUpperCase()}`
     }
 
     // Get total count for pagination
-    const countQuery = `SELECT COUNT(*) as total FROM materials m ${whereClause}`
+    const countQuery = `SELECT COUNT(*) as total FROM materials m \${whereClause}`
     const [countResult] = await connection.execute(countQuery, queryValues) as any[]
     const total = countResult[0]?.total || 0
 
@@ -327,8 +315,8 @@ async function getMaterials(
         m.download_count as downloadCount, m.tags, m.difficulty, m.metadata,
         m.created_at as createdAt, m.updated_at as updatedAt
       FROM materials m
-      ${whereClause}
-      ${orderByClause}
+      \${whereClause}
+      \${orderByClause}
       LIMIT ? OFFSET ?
     `
 
@@ -382,36 +370,34 @@ async function getMaterials(
 async function logMaterialAccess(
   userId: string,
   accessType: string,
-  filter: MaterialsFilter
+  filter: MaterialsFilter,
+  orgId: string
 ) {
   const connection = await getConnection()
 
   try {
     await connection.execute(`
-      INSERT INTO user_material_access (user_id, access_type, filter_data, ip_address, user_agent, created_at)
-      VALUES (?, ?, ?, ?, ?, NOW())
+      INSERT INTO user_material_access (user_id, organization_id, access_type, filter_data, ip_address, user_agent, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, NOW())
     `, [
       userId,
+      orgId,
       accessType,
       JSON.stringify(filter),
       'unknown', // In real implementation, get from request headers
       'unknown'  // In real implementation, get from request headers
     ])
   } catch (error) {
-    console.warn('Failed to log material access:', error)
+    logger.warn('Failed to log material access:', error)
   } finally {
     connection.release() // ✅ Release connection back to pool
   }
 }
 
 function validateMaterialData(data: any) {
-  // Validate material creation/update data
-  // This would use Zod or similar validation
   return data
 }
 
 async function createOrUpdateMaterial(data: any) {
-  // Create or update material in database
-  // This would interact with your database
   return data
 }

@@ -30,7 +30,8 @@ export function ContextSelector({
     subscriptionData,
     onValueChange,
 }: ContextSelectorProps) {
-    if (!visible) return null
+    if (!visible)
+  return null
 
     const unlockedOptions = options.filter(opt => !opt.isLocked)
     const lockedOptions = options.filter(opt => opt.isLocked)

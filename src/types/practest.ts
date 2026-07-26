@@ -67,6 +67,13 @@ export interface PractestQuestion {
   content_hash: string
   validation_status: ValidationStatus
   rejection_reason?: string
+
+  // CASA — page-level citation (edition-pinned, anchor-resolved against the NCERT corpus)
+  casa_book?: string
+  casa_edition?: string
+  casa_page?: number | null
+  casa_anchor?: string
+  casa_verified?: boolean
   
   // Authorship
   created_by: string

@@ -102,7 +102,7 @@ def download_model():
         print("✅ DOWNLOAD COMPLETE!")
         print("="*70)
         print(f"\nModel location: {MODEL_DIR}")
-        print(f"Configuration: config/pdf-extract-kit/config.yaml")
+        print(f"Configuration: config/doc-extract-engine/config.json")
         print(f"GPU Status: Enabled (required for this model)")
         print("\nThe model is now ready to use for table recognition!")
         print("="*70 + "\n")

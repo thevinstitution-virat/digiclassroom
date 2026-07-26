@@ -175,7 +175,8 @@ export class SmartCitationEngine {
    */
   private inferChapterFromKeywords(content: string, subject: string): ChapterInfo | null {
     const subjectKeywords = this.chapterKeywords[subject];
-    if (!subjectKeywords) return null;
+    if (!subjectKeywords)
+  return null;
 
     const contentLower = content.toLowerCase();
     let bestMatch = { chapter: '', score: 0, page: 'Multiple Pages' };
@@ -277,7 +278,8 @@ export class SmartCitationEngine {
   private createContentSnippet(content: string): string {
     // Clean and truncate content for snippet
     const cleaned = content.replace(/\s+/g, ' ').trim();
-    if (cleaned.length <= 150) return cleaned;
+    if (cleaned.length <= 150)
+  return cleaned;
     
     // Find a good breaking point near 150 characters
     const truncated = cleaned.substring(0, 150);

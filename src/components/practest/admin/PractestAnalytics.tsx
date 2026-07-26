@@ -72,49 +72,13 @@ export default function PractestAnalytics() {
     try {
       setLoading(true)
       
-      // Mock data - in production, this would fetch from API
-      const mockData: AnalyticsData = {
-        overview: {
-          totalTests: 8920,
-          totalQuestions: 15420,
-          activeUsers: 1250,
-          averageScore: 73.5,
-          testCompletionRate: 87.3
-        },
-        questionPerformance: Array.from({ length: 10 }, (_, i) => ({
-          questionId: `q${i + 1}`,
-          questionText: `Sample question ${i + 1} about mathematical concepts...`,
-          subject: ['Mathematics', 'Science', 'English'][i % 3],
-          difficulty: ['EASY', 'MEDIUM', 'HARD'][i % 3],
-          usageCount: Math.floor(Math.random() * 500) + 100,
-          correctRate: Math.random() * 40 + 50, // 50-90%
-          averageTime: Math.floor(Math.random() * 120) + 60, // 60-180 seconds
-          discriminationIndex: Math.random() * 0.6 + 0.2 // 0.2-0.8
-        })),
-        userPerformance: {
-          totalUsers: 1250,
-          averageTestsPerUser: 7.2,
-          topPerformers: Array.from({ length: 5 }, (_, i) => ({
-            userId: `user${i + 1}`,
-            userName: `Student ${i + 1}`,
-            averageScore: 95 - i * 2,
-            testsCompleted: 15 - i
-          })),
-          performanceByClass: Array.from({ length: 12 }, (_, i) => ({
-            class: i + 1,
-            averageScore: Math.random() * 20 + 70, // 70-90%
-            testsCompleted: Math.floor(Math.random() * 100) + 50
-          }))
-        },
-        systemMetrics: {
-          apiResponseTime: 145, // ms
-          databasePerformance: 98.5, // %
-          errorRate: 0.2, // %
-          uptime: 99.9 // %
-        }
+      const res = await fetch(`/api/super-admin/practest/analytics?range=${selectedTimeRange}`)
+      const data = await res.json()
+      if (data.success) {
+        setAnalyticsData(data.data as AnalyticsData)
+      } else {
+        console.error('Failed to load analytics:', data.error)
       }
-      
-      setAnalyticsData(mockData)
     } catch (error) {
       console.error('Failed to load analytics data:', error)
     } finally {

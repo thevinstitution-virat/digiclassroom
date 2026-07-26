@@ -64,7 +64,8 @@ export class PractestSessionQueries {
       )
       
       const sessions = rows as any[]
-      if (sessions.length === 0) return null
+      if (sessions.length === 0)
+  return null
 
       return this.mapRowToSession(sessions[0])
     } finally {

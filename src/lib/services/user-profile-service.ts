@@ -7,6 +7,7 @@
 import { getPool, executeQuery, executeQuerySingle } from '@/lib/db/connection';
 import { z } from 'zod';
 import { ServiceLifecycleManager, cacheUserContext, getCachedUserContext } from './service-lifecycle-manager';
+import { ResultSetHeader } from 'mysql2';
 
 export type UserRole = 'student' | 'teacher' | 'parent_guardian';
 export type BoardType = 'CBSE' | 'ICSE' | 'State';
@@ -79,33 +80,33 @@ export interface UserProfile {
   id: string;
   user_id: string;
   role: UserRole;
-  
+
   // Educational Context
   board_type: BoardType;
   grade_level?: number;
   subjects?: string[];
   learning_style: LearningStyle;
-  
+
   // Student-specific
-  performance_metrics?: any;
+  performance_metrics?: Record<string, unknown>;
   learning_pace: LearningPace;
-  difficulty_preferences?: any;
-  
+  difficulty_preferences?: Record<string, unknown>;
+
   // Teacher-specific
   teaching_experience_years?: number;
   specialization_subjects?: string[];
   classroom_size_preference?: number;
-  
+
   // Parent-specific
   child_grade_levels?: number[];
   involvement_level?: InvolvementLevel;
-  support_preferences?: any;
-  
+  support_preferences?: Record<string, unknown>;
+
   // Behavioral Patterns
-  interaction_history?: any;
+  interaction_history?: Record<string, unknown>;
   preferred_explanation_complexity: ComplexityLevel;
   language_preference: 'english' | 'hindi' | 'mixed';
-  
+
   created_at: Date;
   updated_at: Date;
 }
@@ -195,10 +196,7 @@ export class UserProfileService {
    */
   async getUserProfile(userId: string): Promise<UserProfile | null> {
     try {
-      if (!this.db) {
-        console.error('❌ CRITICAL: Database connection not available - failing fast');
-        throw new Error('Database connection required for profile operations');
-      }
+      // Database connection handled by imported query helpers
 
       const query = 'SELECT * FROM enhanced_user_profiles WHERE user_id = ? LIMIT 1';
       const rows = await executeQuery(query, [userId]);
@@ -206,13 +204,13 @@ export class UserProfileService {
       if (rows && rows.length > 0) {
         const rawProfile = rows[0];
 
-        // Parse JSON fields with error handling
+        // Parse JSON fields with error handling (handle string or pre-parsed object)
         try {
-          rawProfile.subjects = rawProfile.subjects ? JSON.parse(rawProfile.subjects) : [];
-          rawProfile.performance_metrics = rawProfile.performance_metrics ? JSON.parse(rawProfile.performance_metrics) : null;
-          rawProfile.difficulty_preferences = rawProfile.difficulty_preferences ? JSON.parse(rawProfile.difficulty_preferences) : null;
-          rawProfile.specialization_subjects = rawProfile.specialization_subjects ? JSON.parse(rawProfile.specialization_subjects) : null;
-          rawProfile.child_grade_levels = rawProfile.child_grade_levels ? JSON.parse(rawProfile.child_grade_levels) : null;
+          rawProfile.subjects = typeof rawProfile.subjects === 'string' ? JSON.parse(rawProfile.subjects) : (rawProfile.subjects || []);
+          rawProfile.performance_metrics = typeof rawProfile.performance_metrics === 'string' ? JSON.parse(rawProfile.performance_metrics) : (rawProfile.performance_metrics || null);
+          rawProfile.difficulty_preferences = typeof rawProfile.difficulty_preferences === 'string' ? JSON.parse(rawProfile.difficulty_preferences) : (rawProfile.difficulty_preferences || null);
+          rawProfile.specialization_subjects = typeof rawProfile.specialization_subjects === 'string' ? JSON.parse(rawProfile.specialization_subjects) : (rawProfile.specialization_subjects || null);
+          rawProfile.child_grade_levels = typeof rawProfile.child_grade_levels === 'string' ? JSON.parse(rawProfile.child_grade_levels) : (rawProfile.child_grade_levels || null);
         } catch (parseError) {
           console.error('❌ Profile JSON parsing failed:', parseError);
           return null;
@@ -233,12 +231,8 @@ export class UserProfileService {
         });
 
         return validatedProfile;
-        profile.support_preferences = profile.support_preferences ? JSON.parse(profile.support_preferences) : null;
-        profile.interaction_history = profile.interaction_history ? JSON.parse(profile.interaction_history) : null;
-        
-        return profile as UserProfile;
       }
-      
+
       return null;
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -259,7 +253,7 @@ export class UserProfileService {
           child_grade_levels, involvement_level, support_preferences
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
-      
+
       const values = [
         profileData.user_id,
         profileData.role || 'student',
@@ -280,7 +274,7 @@ export class UserProfileService {
 
       const pool = getPool();
       const [result] = await pool.execute(query, values);
-      return (result as any).insertId.toString();
+      return (result as ResultSetHeader).insertId.toString();
     } catch (error) {
       console.error('Error creating user profile:', error);
       throw error;
@@ -292,15 +286,15 @@ export class UserProfileService {
    */
   async updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<boolean> {
     try {
-      const setClause = [];
-      const values = [];
+      const setClause: string[] = [];
+      const values: unknown[] = [];
 
       // Build dynamic update query
       Object.entries(updates).forEach(([key, value]) => {
         if (key !== 'id' && key !== 'user_id' && key !== 'created_at') {
-          if (['subjects', 'performance_metrics', 'difficulty_preferences', 
-               'specialization_subjects', 'child_grade_levels', 'support_preferences', 
-               'interaction_history'].includes(key)) {
+          if (['subjects', 'performance_metrics', 'difficulty_preferences',
+            'specialization_subjects', 'child_grade_levels', 'support_preferences',
+            'interaction_history'].includes(key)) {
             setClause.push(`${key} = ?`);
             values.push(JSON.stringify(value));
           } else {
@@ -310,14 +304,15 @@ export class UserProfileService {
         }
       });
 
-      if (setClause.length === 0) return false;
+      if (setClause.length === 0)
+        return false;
 
       const query = `UPDATE enhanced_user_profiles SET ${setClause.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?`;
       values.push(userId);
 
       const pool = getPool();
       const [result] = await pool.execute(query, values);
-      return (result as any).affectedRows > 0;
+      return (result as ResultSetHeader).affectedRows > 0;
     } catch (error) {
       console.error('Error updating user profile:', error);
       return false;
@@ -340,11 +335,13 @@ export class UserProfileService {
         return cachedContext;
       }
 
-      const profile = await this.getOrCreateUserProfile(userId);
+      // DO NOT use getOrCreateUserProfile here because it bypasses the onboarding modal
+      // by saving a default profile to the DB before the user fills out the form.
+      const profile = await this.getUserProfile(userId);
 
       // 🔧 CRITICAL FIX: Validate profile structure before use
       if (!profile) {
-        console.error('❌ Profile is null, using default context');
+        console.log('⚠️ Profile not found in analyzeUserContext, returning default context');
         return this.getDefaultUserContext(userId);
       }
 
@@ -370,7 +367,7 @@ export class UserProfileService {
         // 🛡️ ENHANCED: Cache the validated context for future use
         cacheUserContext(userId, validationResult.data);
 
-        return validationResult.data;
+        return validationResult.data as unknown as UserContext;
       } else {
         console.warn('⚠️ User context validation failed, using defaults:', validationResult.error.issues);
         const defaultContext = this.getDefaultUserContext(userId);
@@ -498,7 +495,7 @@ export class UserProfileService {
   /**
    * 🛡️ NEW: Build user context with comprehensive defensive defaults
    */
-  private buildUserContextWithDefaults(profile: UserProfile, interactionHistory: any[] = []): UserContext {
+  private buildUserContextWithDefaults(profile: UserProfile, interactionHistory: Record<string, unknown>[] = []): UserContext {
     return {
       role: profile.role || DEFENSIVE_DEFAULTS.ROLE,
       educationalLevel: this.determineEducationalLevelWithDefaults(profile),
@@ -546,7 +543,7 @@ export class UserProfileService {
   /**
    * 🔧 CRITICAL: Strict profile schema validation
    */
-  private validateProfileSchema(rawProfile: any): UserProfile | null {
+  private validateProfileSchema(rawProfile: Record<string, unknown> | null): UserProfile | null {
     if (!rawProfile) {
       console.error('❌ Profile is null or undefined');
       return null;
@@ -563,23 +560,26 @@ export class UserProfileService {
 
     // Validate role enum
     const validRoles = ['student', 'teacher', 'parent_guardian'];
-    if (!validRoles.includes(rawProfile.role)) {
-      console.error(`❌ Invalid role: ${rawProfile.role}`);
+    if (!rawProfile.role || !validRoles.includes(rawProfile.role as string)) {
+      console.error(`❌ Invalid role: ${String(rawProfile.role)}`);
       return null;
     }
 
     // Validate and set defaults for critical fields
     const validatedProfile: UserProfile = {
-      ...rawProfile,
-      board_type: rawProfile.board_type || 'CBSE',
-      grade_level: rawProfile.grade_level || 9,
+      ...(rawProfile as unknown as Partial<UserProfile>),
+      id: (rawProfile.id as string) || '', // explicitly map 
+      user_id: rawProfile.user_id as string,
+      role: rawProfile.role as UserRole,
+      board_type: (rawProfile.board_type as BoardType) || 'CBSE',
+      grade_level: Number(rawProfile.grade_level) || 9,
       subjects: Array.isArray(rawProfile.subjects) ? rawProfile.subjects : ['Geography', 'History'],
-      learning_style: rawProfile.learning_style || 'mixed',
-      learning_pace: rawProfile.learning_pace || 'average',
-      preferred_explanation_complexity: rawProfile.preferred_explanation_complexity || 'intermediate',
-      language_preference: rawProfile.language_preference || 'english',
-      created_at: rawProfile.created_at || new Date(),
-      updated_at: rawProfile.updated_at || new Date()
+      learning_style: (rawProfile.learning_style as LearningStyle) || 'mixed',
+      learning_pace: (rawProfile.learning_pace as LearningPace) || 'average',
+      preferred_explanation_complexity: (rawProfile.preferred_explanation_complexity as ComplexityLevel) || 'intermediate',
+      language_preference: (rawProfile.language_preference as 'english' | 'hindi' | 'mixed') || 'english',
+      created_at: (rawProfile.created_at as Date) || new Date(),
+      updated_at: (rawProfile.updated_at as Date) || new Date()
     };
 
     // Log validation success
@@ -587,7 +587,7 @@ export class UserProfileService {
       userId: validatedProfile.user_id,
       role: validatedProfile.role,
       complexity: validatedProfile.preferred_explanation_complexity,
-      subjects: validatedProfile.subjects.length
+      subjects: validatedProfile.subjects?.length || 0
     });
 
     return validatedProfile;
@@ -596,9 +596,9 @@ export class UserProfileService {
   /**
    * Get interaction history for analysis
    */
-  async getInteractionHistory(userId: string, days: number = 30): Promise<any[]> {
+  async getInteractionHistory(userId: string, days: number = 30): Promise<Array<{ engagement_score?: number;[key: string]: unknown }>> {
     try {
-      if (!this.db) return [];
+      // Database connection handled by imported query helpers
 
       const query = `
         SELECT * FROM learning_analytics 
@@ -606,7 +606,7 @@ export class UserProfileService {
         ORDER BY created_at DESC
         LIMIT 100
       `;
-      
+
       const rows = await executeQuery(query, [userId, days]);
       return rows || [];
     } catch (error) {
@@ -638,7 +638,7 @@ export class UserProfileService {
   /**
    * 🛡️ ENHANCED: Analyze learning preferences with defensive defaults
    */
-  private analyzeLearningPreferencesWithDefaults(profile: UserProfile, history: any[]): LearningPreferences {
+  private analyzeLearningPreferencesWithDefaults(profile: UserProfile, history: Record<string, unknown>[]): LearningPreferences {
     const primaryStyle = profile.learning_style || DEFENSIVE_DEFAULTS.LEARNING_STYLE;
     const pace = profile.learning_pace || DEFENSIVE_DEFAULTS.LEARNING_PACE;
     const complexity = profile.preferred_explanation_complexity || DEFENSIVE_DEFAULTS.EXPLANATION_COMPLEXITY;
@@ -657,14 +657,14 @@ export class UserProfileService {
   /**
    * Legacy method for backward compatibility
    */
-  private analyzeLearningPreferences(profile: UserProfile, history: any[]): LearningPreferences {
+  private analyzeLearningPreferences(profile: UserProfile, history: Record<string, unknown>[]): LearningPreferences {
     return this.analyzeLearningPreferencesWithDefaults(profile, history);
   }
 
   /**
    * 🛡️ ENHANCED: Calculate optimal complexity with defensive defaults
    */
-  private calculateOptimalComplexityWithDefaults(profile: UserProfile, history: any[]): ComplexityLevel {
+  private calculateOptimalComplexityWithDefaults(profile: UserProfile, history: Array<{ engagement_score?: number;[key: string]: unknown }>): ComplexityLevel {
     // Start with user preference or defensive default
     let complexity: ComplexityLevel = profile.preferred_explanation_complexity || DEFENSIVE_DEFAULTS.EXPLANATION_COMPLEXITY;
 
@@ -692,7 +692,7 @@ export class UserProfileService {
   /**
    * Legacy method for backward compatibility
    */
-  private calculateOptimalComplexity(profile: UserProfile, history: any[]): ComplexityLevel {
+  private calculateOptimalComplexity(profile: UserProfile, history: Array<{ engagement_score?: number;[key: string]: unknown }>): ComplexityLevel {
     return this.calculateOptimalComplexityWithDefaults(profile, history);
   }
 
@@ -760,11 +760,11 @@ export class UserProfileService {
   private buildProfessionalLevel(profile: UserProfile) {
     const experience = profile.teaching_experience_years || 0;
     let experienceLevel = 'novice';
-    
+
     if (experience >= 10) experienceLevel = 'expert';
     else if (experience >= 5) experienceLevel = 'experienced';
     else if (experience >= 2) experienceLevel = 'intermediate';
-    
+
     return {
       experience: experienceLevel,
       specializations: profile.specialization_subjects || []

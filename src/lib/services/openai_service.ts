@@ -1,5 +1,8 @@
-import OpenAI, { ChatCompletionMessageParam } from 'openai'
+import OpenAI from 'openai'
+type ChatCompletionMessageParam = OpenAI.Chat.ChatCompletionMessageParam
 import { ServiceLifecycleManager } from './service-lifecycle-manager'
+import { openrouter } from '@/lib/openrouter/client'
+import { ModelRouter } from '@/lib/openrouter/router'
 
 export interface OpenAIChatRequest {
   messages: ChatCompletionMessageParam[]
@@ -19,9 +22,10 @@ export interface OpenAIChatResponse {
 }
 
 export class OpenAIService {
-  private client: OpenAI
+  private client: OpenAI            // OpenRouter — chat completions
+  private embeddingClient: OpenAI   // Direct OpenAI — embeddings (uses OPENAI_API_KEY)
   private static readonly CHAT_MODEL = 'gpt-4o-mini'  // Changed from gpt-4o for 10x faster responses
-  private static readonly EMBEDDING_MODEL = 'text-embedding-3-large'  // Upgraded from text-embedding-3-small for better RAG quality (3072 dims)
+  private static readonly EMBEDDING_MODEL = 'text-embedding-3-large'  // Direct OpenAI, 3072 dims — matches the ncert-books-enhanced collection
 
   static getInstance(): OpenAIService {
     return ServiceLifecycleManager.getInstance('OpenAIService', () => new OpenAIService())
@@ -33,14 +37,21 @@ export class OpenAIService {
       throw new Error('OPENAI_API_KEY environment variable is required but not set')
     }
 
-    console.log(`🔧 OpenAI Embedding Model: ${OpenAIService.EMBEDDING_MODEL} (3072 dimensions)`)
+    console.log(`🔧 OpenAI Embedding Model: ${OpenAIService.EMBEDDING_MODEL} (3072 dimensions, direct OpenAI)`)
 
-    this.client = new OpenAI({ apiKey })
+    // Chat completions route through OpenRouter (ModelRouter selects the tier).
+    this.client = openrouter
+    // Embeddings go DIRECT to OpenAI so OPENAI_API_KEY is actually used and we get
+    // text-embedding-3-large (3072 dims) with proper semantics, matching the collection.
+    this.embeddingClient = new OpenAI({ apiKey })
   }
 
   async generateChatCompletion(request: OpenAIChatRequest): Promise<OpenAIChatResponse> {
+    const targetModel = ModelRouter.routeCurrentQuery(request.messages);
+    console.log(`[ModelRouter] Selected tier: ${targetModel}`);
+
     const response = await this.client.chat.completions.create({
-      model: OpenAIService.CHAT_MODEL,
+      model: targetModel,
       messages: request.messages,
       temperature: request.temperature ?? 0,
       max_tokens: request.maxTokens ?? 3000  // Increased from 1200 to allow comprehensive, detailed answers
@@ -59,11 +70,11 @@ export class OpenAIService {
       model: response.model ?? OpenAIService.CHAT_MODEL,
       usage: response.usage
         ? {
-            promptTokens: response.usage.prompt_tokens ?? 0,
-            completionTokens: response.usage.completion_tokens ?? 0,
-            totalTokens: response.usage.total_tokens ?? 0,
-            cachedTokens: cachedTokens
-          }
+          promptTokens: response.usage.prompt_tokens ?? 0,
+          completionTokens: response.usage.completion_tokens ?? 0,
+          totalTokens: response.usage.total_tokens ?? 0,
+          cachedTokens: cachedTokens
+        }
         : undefined
     }
   }
@@ -71,8 +82,11 @@ export class OpenAIService {
   async *generateChatCompletionStream(
     request: OpenAIChatRequest
   ): AsyncGenerator<string, void, unknown> {
+    const targetModel = ModelRouter.routeCurrentQuery(request.messages);
+    console.log(`[ModelRouter] Selected tier (streaming): ${targetModel}`);
+
     const stream = await this.client.chat.completions.create({
-      model: OpenAIService.CHAT_MODEL,
+      model: targetModel,
       messages: request.messages,
       temperature: request.temperature ?? 0,
       max_tokens: request.maxTokens ?? 3000,
@@ -88,7 +102,7 @@ export class OpenAIService {
   }
 
   async generateEmbedding(text: string): Promise<number[]> {
-    const embeddingResponse = await this.client.embeddings.create({
+    const embeddingResponse = await this.embeddingClient.embeddings.create({
       model: OpenAIService.EMBEDDING_MODEL,
       input: text
     })
@@ -106,7 +120,7 @@ export class OpenAIService {
       return []
     }
 
-    const embeddingResponse = await this.client.embeddings.create({
+    const embeddingResponse = await this.embeddingClient.embeddings.create({
       model: OpenAIService.EMBEDDING_MODEL,
       input: texts
     })
@@ -127,7 +141,7 @@ export class OpenAIService {
    * Get the raw OpenAI client for advanced use cases (e.g., A/B testing)
    */
   getClient(): OpenAI {
-    return this.client
+    return this.embeddingClient
   }
 }
 

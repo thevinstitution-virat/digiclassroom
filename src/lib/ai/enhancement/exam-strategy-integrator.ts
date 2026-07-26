@@ -160,7 +160,8 @@ export class ExamStrategyIntegrator {
       `Spend ${timeBreakdown.reading} minute(s) reading and understanding the question`,
       `Use ${timeBreakdown.planning} minute(s) to plan your answer structure`,
       `Write for ${timeBreakdown.writing} minutes with focus on key points`,
-      `Reserve ${timeBreakdown.review} minute(s) for final review and corrections`
+      `Reserve ${timeBreakdown.review} minute(s)
+  for final review and corrections`
     ];
 
     // Add subject-specific tips

@@ -9,6 +9,9 @@ import {
 } from 'lucide-react'
 import { LoadingButton } from '@/components/ui/loading-button'
 import { Navbar } from '@/components/navigation/navbar'
+import { HeroProductMockup } from '@/components/landing/sections/HeroProductMockup'
+import { AiTutorDeepDive } from '@/components/landing/sections/AiTutorDeepDive'
+import { ProductivitySuite } from '@/components/landing/sections/ProductivitySuite'
 
 export const EnhancedLandingPage: React.FC = () => {
   const router = useRouter()
@@ -22,10 +25,12 @@ export const EnhancedLandingPage: React.FC = () => {
   const featuresRef = useRef<HTMLDivElement>(null)
   const countersRef = useRef<HTMLDivElement>(null)
 
+  // Pre-launch: value props voiced through learner personas from our design-partner
+  // interviews — not fabricated named students. Honest founding-cohort framing.
   const testimonials = [
-    { id: 1, name: "Priya Sharma", grade: "Class 10", quote: "The AI tutor helped me understand complex math concepts in minutes. My grades improved from C to A+ in just 3 months!" },
-    { id: 2, name: "Arjun Patel", grade: "Class 12", quote: "Practest's adaptive testing prepared me perfectly for boards. The personalized question bank was a game-changer!" },
-    { id: 3, name: "Sneha Reddy", grade: "Class 9", quote: "Finally, a platform that understands how I learn! The visual content and interactive features made studying fun." }
+    { id: 1, name: "Class 10 learner", grade: "Design-partner persona", quote: "What I want from an AI tutor: explain a hard concept in minutes — and show me the exact textbook page it came from so I can trust it." },
+    { id: 2, name: "Class 12 learner", grade: "Design-partner persona", quote: "Adaptive testing that gets harder as I improve, mapped to the actual board pattern — that's what would prepare me for exams." },
+    { id: 3, name: "Class 9 learner", grade: "Design-partner persona", quote: "A platform that adapts to how I learn and keeps me focused — flashcards, streaks, and offline access — would make studying feel less like a chore." }
   ]
 
   const faqCategories = {
@@ -72,7 +77,7 @@ export const EnhancedLandingPage: React.FC = () => {
   }, [])
 
   const animateCounters = () => {
-    const targets = { students: 100000, satisfaction: 98, courses: 500, teachers: 1200 }
+    const targets = { students: 6, satisfaction: 100, courses: 7, teachers: 7 }
     const duration = 2000, steps = 60
     let step = 0
     const interval = setInterval(() => {
@@ -165,9 +170,9 @@ export const EnhancedLandingPage: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 max-w-4xl mx-auto">
             {[
               { label: 'AI Models', value: '5+', icon: Brain, color: 'text-purple-500' },
-              { label: 'Question Bank', value: '50K+', icon: Database, color: 'text-blue-500' },
-              { label: 'Success Rate', value: '98%', icon: Target, color: 'text-green-500' },
-              { label: 'Learning Paths', value: '1000+', icon: TrendingUp, color: 'text-orange-500' }
+              { label: 'NCERT-Cited', value: '100%', icon: Database, color: 'text-blue-500' },
+              { label: 'Classes 6–12', value: 'CBSE·ICSE', icon: Target, color: 'text-green-500' },
+              { label: 'Productivity Tools', value: '7', icon: TrendingUp, color: 'text-orange-500' }
             ].map((stat, index) => (
               <div key={index} className="text-center p-4 bg-white/20 dark:bg-gray-800/20 backdrop-blur-md rounded-xl border border-white/30 dark:border-gray-700/30 hover:bg-white/30 dark:hover:bg-gray-800/30 transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
                 <stat.icon className={`h-8 w-8 mx-auto mb-2 ${stat.color} animate-pulse`} />
@@ -176,6 +181,9 @@ export const EnhancedLandingPage: React.FC = () => {
               </div>
             ))}
           </div>
+
+          {/* Product mockup — shows what Digi Classroom actually is, above the fold */}
+          <HeroProductMockup />
         </div>
 
         <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
@@ -216,6 +224,12 @@ export const EnhancedLandingPage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* AI Tutor (Sarvagya RAG) + Practest deep-dive */}
+      <AiTutorDeepDive />
+
+      {/* The Productivity Suite — real branded student tools */}
+      <ProductivitySuite />
 
       {/* Plans Preview Section */}
       <section id="plans" className="py-20 bg-white dark:bg-gray-900">
@@ -374,20 +388,23 @@ export const EnhancedLandingPage: React.FC = () => {
       <section id="about" ref={countersRef} className="py-20 bg-gradient-to-br from-orange-500 to-blue-600">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
+            <span className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white/15 border border-white/25 text-white font-bold text-sm mb-6 backdrop-blur-sm">
+              <Sparkles className="w-4 h-4" /> Launching 2026 · Founding learners onboarding now
+            </span>
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-              Trusted by Thousands
+              Built for Every CBSE &amp; ICSE Learner
             </h2>
             <p className="text-xl text-white/90 max-w-3xl mx-auto">
-              Join our growing community of learners, educators, and institutions
+              Not vanity metrics — the real capabilities students get from day one.
             </p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {[
-              { label: 'Students', value: counters.students.toLocaleString(), icon: Users, suffix: '+' },
-              { label: 'Success Rate', value: counters.satisfaction, icon: Target, suffix: '%' },
-              { label: 'Courses', value: counters.courses, icon: BookOpen, suffix: '+' },
-              { label: 'Teachers', value: counters.teachers, icon: GraduationCap, suffix: '+' }
+              { label: 'AI Models', value: counters.students, icon: Brain, suffix: '+' },
+              { label: 'NCERT-Cited', value: counters.satisfaction, icon: Target, suffix: '%' },
+              { label: 'Classes (6–12)', value: counters.courses, icon: BookOpen, suffix: '' },
+              { label: 'Productivity Tools', value: counters.teachers, icon: Zap, suffix: '' }
             ].map((stat, index) => (
               <div key={index} className="text-center p-6 bg-white/10 backdrop-blur-md rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-300">
                 <stat.icon className="h-12 w-12 mx-auto mb-4 text-white" />
@@ -406,10 +423,14 @@ export const EnhancedLandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
-              Student <span className="bg-gradient-to-r from-orange-500 to-blue-600 bg-clip-text text-transparent">Success Stories</span>
+              Designed With <span className="dc-gradient-text">Real Learners</span>
             </h2>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              Hear from students who transformed their learning journey with Digi Classroom
+              We&apos;re building Digi Classroom alongside students. These are the needs they voiced —
+              the product is built to meet them.
+            </p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-3 italic">
+              Illustrative voices from design-partner interviews · launching 2026
             </p>
           </div>
 
@@ -557,8 +578,19 @@ export const EnhancedLandingPage: React.FC = () => {
                 <span className="text-2xl font-bold">Digi Classroom</span>
               </div>
               <p className="text-gray-300 mb-6 max-w-md">
-                Revolutionizing education with AI-powered learning experiences. Join thousands of students and educators in transforming the future of learning.
+                Revolutionizing education with AI-powered, NCERT-grounded learning. Launching 2026 —
+                join the founding cohort shaping the future of CBSE &amp; ICSE study.
               </p>
+              {/* Ecosystem badge — part of the Vidyaverse trio (federation is the long-term link) */}
+              <a
+                href="https://vgraphics.in"
+                className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/5 border border-white/10 hover:border-white/25 transition-colors duration-300 mb-2"
+              >
+                <span className="w-2 h-2 rounded-full" style={{ background: 'var(--dc-grad)' }} />
+                <span className="text-xs font-semibold text-gray-300">
+                  Part of the <span className="dc-gradient-text font-bold">Vidyaverse</span> ecosystem — one login across Campus OS, Library &amp; Tutor
+                </span>
+              </a>
               <div className="flex space-x-4">
                 {[Facebook, Twitter, Instagram, Linkedin, Youtube].map((Icon, index) => (
                   <a key={index} href="#" className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-gradient-to-br hover:from-orange-500 hover:to-blue-600 transition-all duration-300">
@@ -604,7 +636,7 @@ export const EnhancedLandingPage: React.FC = () => {
           <div className="border-t border-gray-800 pt-8">
             <div className="flex flex-col md:flex-row justify-between items-center">
               <p className="text-gray-400 mb-4 md:mb-0">
-                © 2024 Digi Classroom. All rights reserved.
+                © {new Date().getFullYear()} Digi Classroom. All rights reserved.
               </p>
               <div className="flex space-x-6">
                 <a href="#" className="text-gray-400 hover:text-white transition-colors duration-300">Privacy Policy</a>

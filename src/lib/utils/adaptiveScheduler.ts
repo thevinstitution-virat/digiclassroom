@@ -55,12 +55,18 @@ export class AdaptiveScheduler {
    * Get base adjustment based on engagement score
    */
   private static getBaseAdjustment(engagementScore: number): number {
-    if (engagementScore >= 90) return 3 // Excellent engagement - increase duration
-    if (engagementScore >= 80) return 2 // Good engagement - slight increase
-    if (engagementScore >= 70) return 1 // Fair engagement - minimal increase
-    if (engagementScore >= 60) return 0 // Average engagement - no change
-    if (engagementScore >= 50) return -1 // Below average - slight decrease
-    if (engagementScore >= 40) return -2 // Poor engagement - decrease
+    if (engagementScore >= 90)
+  return 3 // Excellent engagement - increase duration
+    if (engagementScore >= 80)
+  return 2 // Good engagement - slight increase
+    if (engagementScore >= 70)
+  return 1 // Fair engagement - minimal increase
+    if (engagementScore >= 60)
+  return 0 // Average engagement - no change
+    if (engagementScore >= 50)
+  return -1 // Below average - slight decrease
+    if (engagementScore >= 40)
+  return -2 // Poor engagement - decrease
     return -3 // Very poor engagement - significant decrease
   }
 

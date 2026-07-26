@@ -496,7 +496,8 @@ export class GoldenSetValidator {
   }
 
   private calculateCosineSimilarity(embedding1: number[], embedding2: number[]): number {
-    if (embedding1.length !== embedding2.length) return 0;
+    if (embedding1.length !== embedding2.length)
+  return 0;
 
     let dotProduct = 0;
     let norm1 = 0;
@@ -607,7 +608,8 @@ export class GoldenSetValidator {
   }
 
   private calculateOverallQuality(issues: QualityIssue[]): number {
-    if (issues.length === 0) return 1.0;
+    if (issues.length === 0)
+  return 1.0;
     
     const severityWeights = { low: 0.1, medium: 0.3, high: 0.6, critical: 1.0 };
     const totalPenalty = issues.reduce((sum, issue) => sum + severityWeights[issue.severity], 0);

@@ -7,10 +7,10 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useUser } from '@clerk/nextjs';
 import { ThumbsUp, ThumbsDown, Star, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNotification } from '@/lib/store';
+import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 
 // ============================================================================
 // Types
@@ -55,7 +55,7 @@ export interface FeedbackWidgetProps {
 // ============================================================================
 
 export function FeedbackWidget(props: FeedbackWidgetProps) {
-  const { user } = useUser();
+  const { user } = useBetterAuthUser()
   const { addNotification } = useNotification();
 
   // State

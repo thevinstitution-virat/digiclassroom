@@ -6,15 +6,16 @@ export async function initializeDatabase() {
   try {
     console.log('Initializing database...')
 
-    // Create sample tenant
+    // Create sample organization (Phase 4.1: legacy `tenants` table dropped;
+    // Better Auth `organization` is the unified table).
     const tenantId = generateId()
     await executeQuery(
-      `INSERT INTO tenants (id, name, domain, subscription_plan, subscription_status, settings)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO \`organization\` (id, name, slug, subscription_plan, subscription_status, settings, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
       [
         tenantId,
         'Demo Educational Institute',
-        'demo.viratgyankosh.com',
+        'demo-educational-institute',
         'pro',
         'active',
         JSON.stringify({
@@ -51,7 +52,7 @@ export async function initializeDatabase() {
 
     for (const classData of classes) {
       await executeQuery(
-        `INSERT INTO classes (id, tenant_id, name, description, grade_level, pinecone_namespace, subjects, settings)
+        `INSERT INTO classes (id, organization_id, name, description, grade_level, qdrant_namespace, subjects, settings)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           classData.id,
@@ -59,7 +60,7 @@ export async function initializeDatabase() {
           classData.name,
           classData.description,
           classData.gradeLevel,
-          `tenant_${tenantId}_class_${classData.id}`,
+          `org_${tenantId}_class_${classData.id}`,
           JSON.stringify(classData.subjects),
           JSON.stringify({})
         ]
@@ -228,8 +229,8 @@ export async function getSampleTenant() {
       subscription_plan: string
       subscription_status: string
     }>(
-      `SELECT id, name, subscription_plan, subscription_status 
-       FROM tenants 
+      `SELECT id, name, subscription_plan, subscription_status
+       FROM \`organization\`
        WHERE name = 'Demo Educational Institute'
        LIMIT 1`
     )
@@ -261,16 +262,18 @@ export async function createSampleUser(
     let classId = null
     if (role === 'student') {
       const sampleClass = await executeQuerySingle<{ id: string }>(
-        `SELECT id FROM classes WHERE tenant_id = ? LIMIT 1`,
-        [tenant.id]
+        'SELECT id FROM classes LIMIT 1'
       )
       classId = sampleClass?.id || null
     }
 
+    // Phase 4.1: Better Auth `user` table. The Better Auth user.id is the
+    // canonical user identity (the clerkId param is now used as the user.id
+    // for back-compat in test fixtures).
     await executeQuery(
-      `INSERT INTO users (id, tenant_id, clerk_id, email, role, first_name, last_name, class_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [userId, tenant.id, clerkId, email, role, firstName, lastName, classId]
+      `INSERT INTO \`user\` (id, email, name, role, first_name, last_name, class_id, email_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      [clerkId, email, firstName + ' ' + lastName, role, firstName, lastName, classId, true]
     )
 
     console.log(`Created sample user: ${firstName} ${lastName} (${role})`)
@@ -317,9 +320,9 @@ export async function resetDatabase() {
     await executeQuery('DELETE FROM chat_sessions')
     await executeQuery('DELETE FROM vector_embeddings')
     await executeQuery('DELETE FROM content')
-    await executeQuery('DELETE FROM users')
+    await executeQuery('DELETE FROM `user`')
     await executeQuery('DELETE FROM classes')
-    await executeQuery('DELETE FROM tenants')
+    await executeQuery('DELETE FROM `organization`')
 
     console.log('Database reset successfully!')
     

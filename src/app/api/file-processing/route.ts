@@ -114,7 +114,7 @@ async function processPDF(file: File, options: any): Promise<ProcessingResult> {
   // Endpoint deprecated during migration to doc-extract-engine
   return {
     success: false,
-    error: 'PDF processing via /api/file-processing is deprecated. Use /api/admin/content/upload for doc-extract-engine processing.'
+    error: 'PDF processing via /api/file-processing is deprecated. Use /api/super-admin/content/upload for doc-extract-engine processing.'
   }
 }
 

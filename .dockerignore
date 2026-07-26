@@ -1,0 +1,119 @@
+# ============================================================================
+# Docker Ignore File
+# ============================================================================
+# Files and directories to exclude from Docker build context
+# This speeds up builds and reduces image size
+# ============================================================================
+
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Next.js
+.next
+out
+build
+dist
+
+# Testing
+coverage
+.nyc_output
+test-results
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Documentation
+*.md
+!README.md
+docs
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary files
+tmp
+temp
+*.tmp
+.cache
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+.Python
+.venv
+.venv310
+*.pyc
+*.pyo
+*.pyd
+
+# Uploads and user data
+uploads
+qdrant_data
+mysql
+
+# Backups
+*.backup
+*.bak
+*.sql
+DigiClassroom-Transfer-*
+
+# OS files
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Large vendor files
+vendor
+models/pdf-extract-kit
+
+# Build artifacts
+*.tsbuildinfo
+next-env.d.ts
+
+# Monitoring
+monitoring
+k8s
+
+# Scripts (not needed in container)
+scripts/*.bat
+scripts/*.ps1
+*.bat
+*.ps1
+!setup-on-laptop.bat
+

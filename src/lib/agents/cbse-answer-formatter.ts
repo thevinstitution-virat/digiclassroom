@@ -156,12 +156,18 @@ export class CBSEAnswerFormatter {
     }
 
     // Find closest template
-    if (marks <= 1) return this.CBSE_TEMPLATES['1-mark'];
-    if (marks <= 2) return this.CBSE_TEMPLATES['2-mark'];
-    if (marks <= 3) return this.CBSE_TEMPLATES['3-mark'];
-    if (marks <= 5) return this.CBSE_TEMPLATES['5-mark'];
-    if (marks <= 6) return this.CBSE_TEMPLATES['6-mark'];
-    if (marks <= 8) return this.CBSE_TEMPLATES['8-mark'];
+    if (marks <= 1)
+  return this.CBSE_TEMPLATES['1-mark'];
+    if (marks <= 2)
+  return this.CBSE_TEMPLATES['2-mark'];
+    if (marks <= 3)
+  return this.CBSE_TEMPLATES['3-mark'];
+    if (marks <= 5)
+  return this.CBSE_TEMPLATES['5-mark'];
+    if (marks <= 6)
+  return this.CBSE_TEMPLATES['6-mark'];
+    if (marks <= 8)
+  return this.CBSE_TEMPLATES['8-mark'];
     
     return this.CBSE_TEMPLATES['10-mark'];
   }

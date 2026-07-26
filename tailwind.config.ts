@@ -11,10 +11,49 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: 'var(--background)',
-        foreground: 'var(--foreground)',
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
         'apple-blue': 'var(--apple-blue)',
         'apple-blue-dark': 'var(--apple-blue-dark)',
+        // shadcn/ui semantic tokens (now wired so bg-card / bg-primary / border-border work)
+        card: { DEFAULT: 'hsl(var(--card))', foreground: 'hsl(var(--card-foreground))' },
+        popover: { DEFAULT: 'hsl(var(--popover))', foreground: 'hsl(var(--popover-foreground))' },
+        primary: { DEFAULT: 'hsl(var(--primary))', foreground: 'hsl(var(--primary-foreground))' },
+        secondary: { DEFAULT: 'hsl(var(--secondary))', foreground: 'hsl(var(--secondary-foreground))' },
+        muted: { DEFAULT: 'hsl(var(--muted))', foreground: 'hsl(var(--muted-foreground))' },
+        accent: { DEFAULT: 'hsl(var(--accent))', foreground: 'hsl(var(--accent-foreground))' },
+        destructive: { DEFAULT: 'hsl(var(--destructive))', foreground: 'hsl(var(--destructive-foreground))' },
+        border: 'hsl(var(--border))',
+        input: 'hsl(var(--input))',
+        ring: 'hsl(var(--ring))',
+        chart: {
+          '1': 'hsl(var(--chart-1))',
+          '2': 'hsl(var(--chart-2))',
+          '3': 'hsl(var(--chart-3))',
+          '4': 'hsl(var(--chart-4))',
+          '5': 'hsl(var(--chart-5))',
+        },
+        sidebar: {
+          DEFAULT: 'hsl(var(--sidebar-background))',
+          foreground: 'hsl(var(--sidebar-foreground))',
+          primary: 'hsl(var(--sidebar-primary))',
+          'primary-foreground': 'hsl(var(--sidebar-primary-foreground))',
+          accent: 'hsl(var(--sidebar-accent))',
+          'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
+          border: 'hsl(var(--sidebar-border))',
+          ring: 'hsl(var(--sidebar-ring))',
+        },
+        // DigiClassroom brand palette (orange → indigo → blue)
+        brand: {
+          orange: 'var(--dc-orange)',
+          'orange-light': 'var(--dc-orange-light)',
+          'orange-deep': 'var(--dc-orange-deep)',
+          blue: 'var(--dc-blue)',
+          'blue-deep': 'var(--dc-blue-deep)',
+          indigo: 'var(--dc-indigo)',
+          violet: 'var(--dc-violet)',
+          cyan: 'var(--dc-cyan)',
+        },
         // VG Educational Color System
         'vg-primary': {
           50: 'var(--vg-primary-50)',
@@ -112,6 +151,21 @@ const config: Config = {
         'vg-lg': 'var(--box-shadow-vg-lg)',
         'vg-xl': 'var(--box-shadow-vg-xl)',
         'vg-2xl': 'var(--box-shadow-vg-2xl)',
+        // Premium layered elevation (inset highlight + soft ambient)
+        'elev-1': 'var(--elev-1)',
+        'elev-2': 'var(--elev-2)',
+        'elev-3': 'var(--elev-3)',
+        'elev-4': 'var(--elev-4)',
+        premium: 'var(--elev-2)',
+        'premium-lg': 'var(--elev-3)',
+        'glow-brand': 'var(--glow-brand)',
+        'glow-amber': 'var(--glow-amber)',
+      },
+      backgroundImage: {
+        'dc-grad': 'var(--dc-grad)',
+        'dc-grad-br': 'var(--dc-grad-br)',
+        'dc-grad-cool': 'var(--dc-grad-cool)',
+        'dc-grad-warm': 'var(--dc-grad-warm)',
       },
       borderRadius: {
         'vg-sm': 'var(--border-radius-vg-sm)',
@@ -123,12 +177,20 @@ const config: Config = {
       },
       animation: {
         'fade-in': 'var(--animation-vg-fade-in)',
+        'fadeIn': 'fadeIn 0.6s ease-out forwards',
         'scale-in': 'var(--animation-vg-scale-in)',
         'slide-in-right': 'var(--animation-vg-slide-in-right)',
         'slide-in-left': 'var(--animation-vg-slide-in-left)',
         'educational-pulse': 'var(--animation-vg-educational-pulse)',
         'cultural-glow': 'var(--animation-vg-cultural-glow)',
         'float': 'var(--animation-vg-float)',
+        // Futuristic motion
+        'rise': 'rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) both',
+        'aurora': 'aurora 18s ease-in-out infinite',
+        'shimmer': 'shimmer 2.2s linear infinite',
+        'glow-pulse': 'glow-pulse 3s ease-in-out infinite',
+        'float-slow': 'float-slow 7s ease-in-out infinite',
+        'gradient-x': 'gradient-x 6s ease infinite',
       },
       backdropBlur: {
         'vg-sm': 'var(--backdrop-blur-vg-sm)',
@@ -164,6 +226,31 @@ const config: Config = {
         'vg-float': {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-10px)' },
+        },
+        rise: {
+          '0%': { opacity: '0', transform: 'translateY(16px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        aurora: {
+          '0%, 100%': { transform: 'translate(0, 0) scale(1)', opacity: '0.85' },
+          '33%': { transform: 'translate(3%, -3%) scale(1.06)', opacity: '1' },
+          '66%': { transform: 'translate(-3%, 2%) scale(0.96)', opacity: '0.8' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+        'glow-pulse': {
+          '0%, 100%': { opacity: '0.55', transform: 'scale(1)' },
+          '50%': { opacity: '0.9', transform: 'scale(1.04)' },
+        },
+        'float-slow': {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-14px)' },
+        },
+        'gradient-x': {
+          '0%, 100%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
         },
       },
     },

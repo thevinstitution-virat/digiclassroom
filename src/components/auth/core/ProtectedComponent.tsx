@@ -1,0 +1,35 @@
+import { auth } from '@/auth'
+import { headers } from 'next/headers'
+import { UserRole } from '@/lib/validations'
+
+interface ProtectedComponentProps {
+  children: React.ReactNode
+  roles?: UserRole[]
+  fallback?: React.ReactNode
+}
+
+export async function ProtectedComponent({
+  children,
+  roles = [],
+  fallback = null,
+}: ProtectedComponentProps) {
+  const session = await auth.api.getSession({ headers: await headers() })
+  const user = session?.user
+  const userRole = (user as any)?.role as UserRole
+  const userId = user?.id
+
+  // Check role-based access.
+  // Normalize roles for the coarse 'user' | 'admin' gate used by dashboard layouts:
+  //   super_admin + admin → 'admin'; everyone else → 'user'.
+  // (Finer tiers — institution-admin / teacher / parent — are gated by their own
+  // server layouts via getOrgContext, not by this coarse check.)
+  void userId
+  let hasAccess = true
+  if (roles.length > 0) {
+    const normalizedRole: string =
+      userRole === 'admin' || userRole === 'super_admin' ? 'admin' : 'user'
+    hasAccess = roles.includes(normalizedRole as UserRole)
+  }
+
+  return hasAccess ? <>{children}</> : <>{fallback}</>
+}

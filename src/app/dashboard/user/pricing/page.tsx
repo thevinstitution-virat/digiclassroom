@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useUser } from '@clerk/nextjs'
 import { useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
@@ -24,6 +23,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 
 interface PricingPlan {
   id: string
@@ -43,12 +43,40 @@ interface PricingPlan {
   badge?: string
 }
 
+// Map a DB plan (/api/plans, defined by super_admin) to the card shape used here.
+const PLAN_ICONS: Record<string, React.ElementType> = { FREE_TRIAL: Sparkles, BASIC: BookOpen, CLASSIC: MessageSquare, PRO: Crown }
+const PLAN_GRADIENTS: Record<string, string> = { FREE_TRIAL: 'from-gray-500 to-gray-600', BASIC: 'from-blue-500 to-cyan-500', CLASSIC: 'from-green-500 to-emerald-500', PRO: 'from-orange-500 to-blue-600' }
+
+function mapDbPlan(p: any): PricingPlan {
+  const code = String(p.plan_code || '')
+  return {
+    id: code.toLowerCase() || p.id,
+    name: p.name,
+    planCode: code,
+    price: p.price,
+    period: p.period,
+    description: p.description,
+    dailyQuestions: code === 'FREE_TRIAL' ? `${p.daily_questions} total` : p.daily_questions,
+    boardAccess: p.board_access,
+    classAccess: p.class_access,
+    features: p.features || [],
+    highlighted: code === 'PRO',
+    popular: !!p.is_featured,
+    icon: PLAN_ICONS[code] || Sparkles,
+    gradient: PLAN_GRADIENTS[code] || 'from-gray-500 to-gray-600',
+    badge: p.highlight || undefined,
+  }
+}
+
 export default function AITutorPricingPage() {
-  const { user } = useUser()
+  const { user } = useBetterAuthUser()
   const searchParams = useSearchParams()
   const [selectedPlan, setSelectedPlan] = useState<string>('classic')
   const [currentSubscription, setCurrentSubscription] = useState<any>(null)
+  const [userProfile, setUserProfile] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(true)
+  // Plans defined by super_admin (/api/plans). Falls back to the static set below.
+  const [dbPlans, setDbPlans] = useState<PricingPlan[] | null>(null)
 
   // Get context from URL params (board/class that triggered upgrade)
   const suggestedBoard = searchParams.get('board')
@@ -56,21 +84,38 @@ export default function AITutorPricingPage() {
 
   useEffect(() => {
     // Fetch current subscription
-    const fetchSubscription = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch('/api/user/subscription')
-        if (response.ok) {
-          const data = await response.json()
-          setCurrentSubscription(data.data)
+        const [subRes, profRes] = await Promise.all([
+          fetch('/api/user/subscription'),
+          fetch('/api/user/profile')
+        ])
+        if (subRes.ok) {
+          const subData = await subRes.json()
+          setCurrentSubscription(subData.data)
+        }
+        if (profRes.ok) {
+          const profData = await profRes.json()
+          if (profData.success) {
+            setUserProfile(profData.data)
+          }
+        }
+        // Single source of truth: plans come from the DB (super_admin-managed).
+        const planRes = await fetch('/api/plans')
+        if (planRes.ok) {
+          const pd = await planRes.json()
+          if (pd.success && Array.isArray(pd.plans) && pd.plans.length) {
+            setDbPlans(pd.plans.map(mapDbPlan))
+          }
         }
       } catch (error) {
-        console.error('Failed to fetch subscription:', error)
+        console.error('Failed to fetch data:', error)
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchSubscription()
+    fetchData()
   }, [])
 
   const pricingPlans: PricingPlan[] = [
@@ -82,12 +127,12 @@ export default function AITutorPricingPage() {
       period: '7 days',
       description: 'Try all features with limited questions',
       dailyQuestions: '15 total',
-      boardAccess: 'All boards',
-      classAccess: 'All classes',
+      boardAccess: userProfile?.board || 'All boards',
+      classAccess: userProfile?.class ? `Class ${userProfile.class}` : 'All classes',
       features: [
         '15 questions total (not daily)',
-        'Access to all boards (CBSE, ICSE, State)',
-        'Access to all classes (1-12)',
+        `Access to ${userProfile?.board || 'all boards'}`,
+        `Access to ${userProfile?.class ? `Class ${userProfile.class}` : 'all classes'}`,
         'All subjects included',
         'Valid for 7 days',
         'No credit card required'
@@ -172,18 +217,32 @@ export default function AITutorPricingPage() {
     setSelectedPlan(planId)
   }
 
-  const handleSubscribe = (plan: PricingPlan) => {
+  const handleSubscribe = async (plan: PricingPlan) => {
+    if (plan.planCode === 'FREE_TRIAL') {
+      try {
+        setIsLoading(true)
+        const res = await fetch('/api/user/subscription/create-trial', { method: 'POST' })
+        const data = await res.json()
+        if (data.success) {
+          alert('Free Trial activated successfully!')
+          window.location.reload()
+        } else {
+          alert(data.message || 'Failed to activate free trial')
+        }
+      } catch (err) {
+        console.error('Trial activation error:', err)
+        alert('An error occurred during trial activation.')
+      } finally {
+        setIsLoading(false)
+      }
+      return
+    }
+
     // TODO: Integrate with Razorpay/Stripe payment gateway
     console.log('Subscribe to plan:', plan.planCode)
-    
-    // For now, show alert
+
+    // For now, show alert for paid plans
     alert(`Payment integration coming soon!\n\nSelected Plan: ${plan.name}\nPrice: ₹${plan.price}/${plan.period}\n\nThis will redirect to Razorpay payment gateway.`)
-    
-    // Future implementation:
-    // 1. Create Razorpay order via API
-    // 2. Open Razorpay checkout
-    // 3. Handle payment success/failure
-    // 4. Create subscription via API
   }
 
   const isCurrentPlan = (planCode: string) => {
@@ -191,7 +250,8 @@ export default function AITutorPricingPage() {
   }
 
   const canUpgrade = (planPrice: number) => {
-    if (!currentSubscription) return true
+    if (!currentSubscription)
+      return true
     const currentPrice = currentSubscription.subscription?.monthly_price || 0
     return planPrice > currentPrice
   }
@@ -227,7 +287,7 @@ export default function AITutorPricingPage() {
             <Alert className="mt-6 max-w-2xl mx-auto bg-gradient-to-r from-orange-50 to-blue-50 border-2 border-orange-200">
               <AlertCircle className="h-4 w-4 text-orange-600" />
               <AlertDescription className="text-gray-700">
-                You're trying to access <span className="font-semibold">{suggestedBoard} {suggestedClass}</span>. 
+                You're trying to access <span className="font-semibold">{suggestedBoard} {suggestedClass}</span>.
                 Choose a plan below to unlock this content and more!
               </AlertDescription>
             </Alert>
@@ -251,7 +311,7 @@ export default function AITutorPricingPage() {
 
         {/* Pricing Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {pricingPlans.map((plan, index) => (
+          {(dbPlans && dbPlans.length ? dbPlans : pricingPlans).map((plan, index) => (
             <motion.div
               key={plan.id}
               initial={{ opacity: 0, y: 20 }}
@@ -259,11 +319,10 @@ export default function AITutorPricingPage() {
               transition={{ duration: 0.5, delay: index * 0.1 }}
               className={`relative ${plan.highlighted ? 'lg:scale-105 z-10' : ''}`}
             >
-              <Card className={`h-full border-2 transition-all duration-300 hover:shadow-xl ${
-                plan.highlighted 
-                  ? 'border-orange-300 shadow-lg' 
-                  : 'border-gray-200 hover:border-orange-200'
-              } ${selectedPlan === plan.id ? 'ring-2 ring-orange-500' : ''}`}>
+              <Card className={`h-full border-2 transition-all duration-300 hover:shadow-xl ${plan.highlighted
+                ? 'border-orange-300 shadow-lg'
+                : 'border-gray-200 hover:border-orange-200'
+                } ${selectedPlan === plan.id ? 'ring-2 ring-orange-500' : ''}`}>
                 <CardHeader>
                   {/* Badge */}
                   {plan.badge && (
@@ -329,11 +388,10 @@ export default function AITutorPricingPage() {
                   <Button
                     onClick={() => handleSubscribe(plan)}
                     disabled={isCurrentPlan(plan.planCode) || (!canUpgrade(plan.price) && plan.price > 0)}
-                    className={`w-full ${
-                      plan.highlighted
-                        ? 'bg-gradient-to-r from-orange-500 to-blue-600 hover:from-orange-600 hover:to-blue-700 text-white'
-                        : 'bg-white border-2 border-gray-300 hover:border-orange-400 text-gray-800'
-                    } font-semibold transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
+                    className={`w-full ${plan.highlighted
+                      ? 'bg-gradient-to-r from-orange-500 to-blue-600 hover:from-orange-600 hover:to-blue-700 text-white'
+                      : 'bg-white border-2 border-gray-300 hover:border-orange-400 text-gray-800'
+                      } font-semibold transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
                   >
                     {isCurrentPlan(plan.planCode) ? (
                       <>Current Plan</>

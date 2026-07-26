@@ -113,7 +113,7 @@ export default function MaterialsUploadSection({ onUploadComplete }: MaterialsUp
         formData.append('file', file)
         formData.append('metadata', JSON.stringify(file.uploadData))
 
-        const response = await fetch('/api/admin/materials/upload', {
+        const response = await fetch('/api/super-admin/materials/upload', {
           method: 'POST',
           body: formData
         })
@@ -127,7 +127,7 @@ export default function MaterialsUploadSection({ onUploadComplete }: MaterialsUp
         // Handle specific error types
         if (result.needsReauth || result.error?.includes('Google Drive not connected')) {
           // Redirect to Google Drive setup
-          window.location.href = '/dashboard/admin/materials?tab=settings'
+          window.location.href = '/dashboard/super-admin/materials?tab=settings'
           return { success: false, error: 'Google Drive authentication required' }
         }
 

@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useUser } from '@clerk/nextjs'
 import {
   Search,
   Filter,
@@ -28,6 +27,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import OnboardingModal from '@/components/onboarding/OnboardingModal'
 import PDFViewer from '@/components/materials/PDFViewer'
 import { MaterialItem, MaterialsFilter, OnboardingFormData, EnhancedUserProfile } from '@/types/user-management'
+import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 
 // Dashboard State Interface
 interface DashboardState {
@@ -203,7 +203,7 @@ function MaterialCard({
 }
 
 export default function MaterialsPage() {
-  const { user } = useUser()
+  const { user } = useBetterAuthUser()
   const [userProfile, setUserProfile] = useState<EnhancedUserProfile | null>(null)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showPDFViewer, setShowPDFViewer] = useState(false)

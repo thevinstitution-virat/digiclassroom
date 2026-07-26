@@ -71,45 +71,20 @@ export default function QuestionBankManager({ onQuestionEdit, onError }: Questio
     try {
       setLoading(true)
       
-      // Mock data - in production, this would fetch from API
-      const mockQuestions: PractestQuestion[] = Array.from({ length: 20 }, (_, i) => ({
-        id: `q${i + 1}`,
-        question_text: `Sample question ${i + 1} for ${['Mathematics', 'Science', 'English'][i % 3]} subject.`,
-        question_type: ['MCQ', 'SUBJECTIVE', 'FILL_BLANK'][i % 3] as any,
-        option_a: 'Option A',
-        option_b: 'Option B',
-        option_c: 'Option C',
-        option_d: 'Option D',
-        correct_option: ['A', 'B', 'C', 'D'][i % 4] as any,
-        explanation: 'This is the explanation for the correct answer.',
-        max_marks: 1,
-        time_limit_seconds: 120,
-        has_math_content: i % 3 === 0,
-        has_chemical_formulas: i % 5 === 0,
-        has_diagrams: i % 4 === 0,
-        board: ['CBSE', 'ICSE', 'STATE_UP'][i % 3] as Board,
-        class_level: (i % 12) + 1,
-        subject: ['Mathematics', 'Science', 'English'][i % 3],
-        chapter: `Chapter ${(i % 5) + 1}`,
-        topic: `Topic ${(i % 3) + 1}`,
-        difficulty_level: ['EASY', 'MEDIUM', 'HARD'][i % 3] as DifficultyLevel,
-        bloom_level: ['REMEMBER', 'UNDERSTAND', 'APPLY'][i % 3] as any,
-        cognitive_load: 'MEDIUM' as any,
-        usage_count: Math.floor(Math.random() * 100),
-        correct_attempts: Math.floor(Math.random() * 80),
-        total_attempts: Math.floor(Math.random() * 100) + 20,
-        average_time_seconds: Math.floor(Math.random() * 180) + 60,
-        discrimination_index: Math.random(),
-        difficulty_index: Math.random(),
-        content_hash: `hash${i}`,
-        validation_status: ['APPROVED', 'PENDING_REVIEW', 'DRAFT'][i % 3] as ValidationStatus,
-        created_by: 'admin',
-        created_at: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
-        updated_at: new Date()
-      }))
+      const sp = new URLSearchParams({ page: String(pagination.page), limit: String(pagination.limit) })
+      if (filters.search) sp.set('search', filters.search)
+      if (filters.board !== 'ALL') sp.set('board', String(filters.board))
+      if (filters.classLevel !== 'ALL') sp.set('class', String(filters.classLevel))
+      if (filters.subject) sp.set('subject', filters.subject)
+      if (filters.validationStatus !== 'ALL') sp.set('status', String(filters.validationStatus))
+      if (filters.difficultyLevel !== 'ALL') sp.set('difficulty', String(filters.difficultyLevel))
 
-      setQuestions(mockQuestions)
-      setPagination(prev => ({ ...prev, total: 500 })) // Mock total
+      const res = await fetch(`/api/super-admin/practest/questions?${sp.toString()}`)
+      const data = await res.json()
+      if (!data.success) { onError(data.error || 'Failed to load questions'); return }
+
+      setQuestions(data.questions as PractestQuestion[])
+      setPagination(prev => ({ ...prev, total: data.total }))
     } catch (error) {
       console.error('Failed to load questions:', error)
       onError('Failed to load questions')
@@ -147,13 +122,14 @@ export default function QuestionBankManager({ onQuestionEdit, onError }: Questio
     if (selectedQuestions.size === 0) return
 
     try {
-      // In production, this would make API calls
-      console.log(`Bulk ${action} for questions:`, Array.from(selectedQuestions))
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Refresh questions
+      await Promise.all(Array.from(selectedQuestions).map((id) =>
+        action === 'delete'
+          ? fetch(`/api/super-admin/practest/questions/${id}`, { method: 'DELETE' })
+          : fetch(`/api/super-admin/practest/questions/${id}`, {
+              method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ validation_status: action === 'approve' ? 'APPROVED' : 'REJECTED' }),
+            })
+      ))
       await loadQuestions()
       setSelectedQuestions(new Set())
     } catch (error) {
@@ -164,13 +140,14 @@ export default function QuestionBankManager({ onQuestionEdit, onError }: Questio
 
   const handleQuestionAction = async (questionId: string, action: 'approve' | 'reject' | 'delete') => {
     try {
-      // In production, this would make API calls
-      console.log(`${action} question:`, questionId)
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      // Refresh questions
+      if (action === 'delete') {
+        await fetch(`/api/super-admin/practest/questions/${questionId}`, { method: 'DELETE' })
+      } else {
+        await fetch(`/api/super-admin/practest/questions/${questionId}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ validation_status: action === 'approve' ? 'APPROVED' : 'REJECTED' }),
+        })
+      }
       await loadQuestions()
     } catch (error) {
       console.error(`Failed to ${action} question:`, error)
@@ -403,6 +380,11 @@ export default function QuestionBankManager({ onQuestionEdit, onError }: Questio
                                 Diagram
                               </Badge>
                             )}
+                            {question.casa_verified ? (
+                              <Badge variant="outline" className="text-xs bg-green-100 text-green-700">📖 Verified</Badge>
+                            ) : (question.casa_page || question.casa_anchor) ? (
+                              <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-700">📖 Cited</Badge>
+                            ) : null}
                           </div>
                         </div>
                       </TableCell>

@@ -10,13 +10,9 @@ const envSchema = z.object({
   // Node Environment
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
-  // Clerk Authentication (Required)
-  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1, 'Clerk publishable key is required'),
-  CLERK_SECRET_KEY: z.string().min(1, 'Clerk secret key is required'),
-  NEXT_PUBLIC_CLERK_SIGN_IN_URL: z.string().default('/sign-in'),
-  NEXT_PUBLIC_CLERK_SIGN_UP_URL: z.string().default('/sign-up'),
-  NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL: z.string().default('/dashboard'),
-  NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL: z.string().default('/dashboard'),
+  // Better Auth Authentication
+  BETTER_AUTH_SECRET: z.string().optional(),
+  BETTER_AUTH_URL: z.string().optional(),
 
   // Database (Required)
   DATABASE_URL: z.string().min(1, 'Database URL is required'),
@@ -28,6 +24,7 @@ const envSchema = z.object({
 
   // AI Services (Required)
   OPENAI_API_KEY: z.string().min(1, 'OpenAI API key is required for answer generation and embeddings'),
+  OPENROUTER_API_KEY: z.string().optional(),
 
   // Vector Database - Qdrant (Required)
   QDRANT_URL: z.string().default('http://localhost:6333'),
@@ -145,7 +142,7 @@ export function logEnvConfig(): void {
   console.log(`  QDRANT_URL: ${process.env.QDRANT_URL}`)
   console.log(`  QDRANT_COLLECTION: ${process.env.QDRANT_COLLECTION_NAME}`)
   console.log(`  OPENAI_API_KEY: ${process.env.OPENAI_API_KEY ? '✅ Set' : '❌ Missing'}`)
-  console.log(`  CLERK_SECRET_KEY: ${process.env.CLERK_SECRET_KEY ? '✅ Set' : '❌ Missing'}`)
+  console.log(`  BETTER_AUTH_SECRET: ${process.env.BETTER_AUTH_SECRET ? '✅ Set' : '❌ Missing'}`)
   console.log(`  DATABASE_URL: ${process.env.DATABASE_URL ? '✅ Set' : '❌ Missing'}`)
   console.log(`  USE_AGENT_SYSTEM: ${isFeatureEnabled('USE_AGENT_SYSTEM') ? '✅ Enabled' : '❌ Disabled'}`)
   console.log(`  USE_ENHANCED_RAG: ${isFeatureEnabled('USE_ENHANCED_RAG') ? '✅ Enabled' : '❌ Disabled'}`)

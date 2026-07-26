@@ -112,17 +112,17 @@ export class MenuMigrationManager {
   static async seedMenuData(): Promise<void> {
     console.log('🌱 Seeding initial menu data...')
 
-    // Insert default user preferences for existing users
+    // Insert default user preferences for existing users.
+    // Phase 4.1: legacy `users` table dropped; Better Auth `user` is the source.
     await executeQuery(`
       INSERT IGNORE INTO user_preferences (user_id, clerk_user_id, preferred_language, learning_style, difficulty_preference)
-      SELECT 
+      SELECT
         CONCAT('user_', id) as user_id,
-        clerk_id as clerk_user_id,
+        id as clerk_user_id,
         'en' as preferred_language,
         'adaptive' as learning_style,
         'adaptive' as difficulty_preference
-      FROM users 
-      WHERE clerk_id IS NOT NULL
+      FROM \`user\`
     `)
 
     // Insert sample analytics events for testing

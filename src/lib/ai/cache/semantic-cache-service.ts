@@ -234,7 +234,8 @@ export class SemanticCacheService {
     board?: string
   }): Promise<string[]> {
     
-    if (!this.redis) return []
+    if (!this.redis)
+  return []
     
     try {
       // Build context key
@@ -255,11 +256,13 @@ export class SemanticCacheService {
    * Get cached entry by key
    */
   private async getCachedEntry(key: string): Promise<CachedAnswer | null> {
-    if (!this.redis) return null
+    if (!this.redis)
+  return null
     
     try {
       const data = await this.redis.get(`${this.CACHE_KEY_PREFIX}${key}`)
-      if (!data) return null
+      if (!data)
+  return null
       
       return JSON.parse(data) as CachedAnswer
     } catch (error) {
@@ -344,7 +347,8 @@ export class SemanticCacheService {
    * Calculate cosine similarity between two embeddings
    */
   private cosineSimilarity(a: number[], b: number[]): number {
-    if (a.length !== b.length) return 0
+    if (a.length !== b.length)
+  return 0
     
     let dotProduct = 0
     let normA = 0

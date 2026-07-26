@@ -1,25 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
+import { getOrgContextOrNull } from '@/lib/auth/get-org-context'
+import { db } from '@/db'
+import { user as userTable } from '@/db/schema'
+import { eq } from 'drizzle-orm'
 import { UserRole, UserPersona } from '@/lib/validations'
+import { isDesignatedSuperAdmin, sanitizeRole } from '@/lib/auth/super-admin-guard'
 
-// Simplified role assignment logic - only admin/user roles
 const DEFAULT_ROLE: UserRole = 'user'
-
-const ADMIN_EMAILS = [
-  'thevinstitution@gmail.com',  // Only admin account
-  'admin@viratgyankosh.com',
-]
-
-// Specific role assignments (highest priority)
-const SPECIFIC_ROLE_ASSIGNMENTS: Record<string, { role: UserRole; persona: UserPersona }> = {
-  'thevinstitution@gmail.com': { role: 'admin', persona: 'teacher' },  // Only admin account
-  'bhaarat2050@gmail.com': { role: 'user', persona: 'student' },       // Normal user account, not admin
-}
-
-const ADMIN_DOMAIN_MAPPING: Record<string, boolean> = {
-  'viratgyankosh.com': true,
-  'admin.viratgyankosh.com': true,
-}
 
 const TEACHER_EMAIL_PATTERNS = [
   /teacher\./i,
@@ -38,64 +25,54 @@ const PARENT_EMAIL_PATTERNS = [
 function determineUserRoleAndPersona(email: string): { role: UserRole; persona: UserPersona } {
   const emailLower = email.toLowerCase()
 
-  // Check for specific role assignments first (highest priority)
-  if (SPECIFIC_ROLE_ASSIGNMENTS[emailLower]) {
-    return SPECIFIC_ROLE_ASSIGNMENTS[emailLower]
+  // SECURITY: super_admin is ONLY ever the configured platform owner. The old
+  // email-allowlist and `@viratgyankosh.com` domain grants were privilege-
+  // escalation shortcuts (anyone on that domain became super_admin) — removed.
+  if (isDesignatedSuperAdmin(email)) {
+    return { role: 'super_admin', persona: 'teacher' }
   }
 
-  // Check for admin emails (legacy support)
-  if (ADMIN_EMAILS.includes(emailLower)) {
-    return { role: 'admin', persona: 'teacher' } // Admins get teacher persona for AI responses
-  }
-
-  // Check domain-based admin mapping
-  const domain = email.split('@')[1]?.toLowerCase()
-  if (domain && ADMIN_DOMAIN_MAPPING[domain]) {
-    return { role: 'admin', persona: 'teacher' }
-  }
-
-  // For all other users, assign 'user' role with appropriate persona
-  // Check email patterns for teachers
   if (TEACHER_EMAIL_PATTERNS.some(pattern => pattern.test(emailLower))) {
     return { role: 'user', persona: 'teacher' }
   }
 
-  // Check email patterns for parents/guardians
   if (PARENT_EMAIL_PATTERNS.some(pattern => pattern.test(emailLower))) {
     return { role: 'user', persona: 'guardian' }
   }
 
-  // Default to user with student persona
   return { role: 'user', persona: 'student' }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth()
+    const ctx = await getOrgContextOrNull()
 
-    if (!userId) {
+    if (!ctx) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       )
     }
 
-    // Parse request body for manual assignments
+    const { userId } = ctx;
+
     const body = await request.json().catch(() => ({}))
     const { role: manualRole, persona: manualPersona, manualAssignment } = body
 
-    // Get user from Clerk
-    const client = await clerkClient()
-    const user = await client.users.getUser(userId)
+    // Fetch user from DB
+    const users = await db.select().from(userTable).where(eq(userTable.id, userId)).limit(1)
+    if (users.length === 0) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+    const user = users[0]
 
-    // Check if user already has a role (unless it's a manual assignment)
-    const existingRole = user.publicMetadata.role as UserRole
+    const existingRole = user.role as UserRole
     if (existingRole && !manualAssignment) {
       return NextResponse.json({
         success: true,
         role: existingRole,
-        persona: user.publicMetadata.persona || 'student',
-        message: `User already has role: ${existingRole}`
+        persona: 'student', // default persona
+        message: `User already has role: \${existingRole}`
       })
     }
 
@@ -103,15 +80,10 @@ export async function POST(request: NextRequest) {
     let assignedPersona: UserPersona
 
     if (manualAssignment && manualRole && manualPersona) {
-      // Manual assignment from setup page
       assignedRole = manualRole
       assignedPersona = manualPersona
-      console.log(`Manual role assignment: ${assignedRole} with persona ${assignedPersona} for user ${userId}`)
     } else {
-      // Automatic assignment based on email
-      const primaryEmail = user.emailAddresses.find(
-        email => email.id === user.primaryEmailAddressId
-      )
+      const primaryEmail = user.email
 
       if (!primaryEmail) {
         return NextResponse.json(
@@ -120,35 +92,27 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      // Determine appropriate role and persona
-      const result = determineUserRoleAndPersona(primaryEmail.emailAddress)
+      const result = determineUserRoleAndPersona(primaryEmail)
       assignedRole = result.role
       assignedPersona = result.persona
-      console.log(`Auto-assigned role "${assignedRole}" with persona "${assignedPersona}" to user ${userId} (${primaryEmail.emailAddress})`)
     }
 
-    // Assign default tenant
-    const defaultTenantId = 'demo-tenant-001'
+    // SECURITY: never allow self-assignment of super_admin via this route, even if
+    // the request body (manualAssignment) asks for it. Clamp to the owner-gated value.
+    assignedRole = sanitizeRole(assignedRole, user.email, DEFAULT_ROLE) as UserRole
 
-    // Update user metadata with both role and persona
-    await client.users.updateUserMetadata(userId, {
-      publicMetadata: {
-        role: assignedRole,
-        persona: assignedPersona,
-        tenantId: defaultTenantId,
-        autoAssigned: !manualAssignment,
-        manuallyAssigned: !!manualAssignment,
-        assignedAt: new Date().toISOString(),
-      }
-    })
+    await db.update(userTable).set({
+      role: assignedRole,
+      updatedAt: new Date(),
+    }).where(eq(userTable.id, userId))
 
     return NextResponse.json({
       success: true,
       role: assignedRole,
       persona: assignedPersona,
       message: manualAssignment 
-        ? `Manually assigned role: ${assignedRole} with persona: ${assignedPersona}`
-        : `Automatically assigned role: ${assignedRole} with persona: ${assignedPersona}`
+        ? `Manually assigned role: \${assignedRole} with persona: \${assignedPersona}`
+        : `Automatically assigned role: \${assignedRole} with persona: \${assignedPersona}`
     })
 
   } catch (error) {
@@ -157,8 +121,8 @@ export async function POST(request: NextRequest) {
       {
         success: false,
         message: error instanceof Error ? error.message : 'Unknown error',
-        role: 'user', // fallback
-        persona: 'student' // fallback
+        role: 'user',
+        persona: 'student'
       },
       { status: 500 }
     )

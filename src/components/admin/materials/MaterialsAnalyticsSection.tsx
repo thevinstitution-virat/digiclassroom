@@ -81,7 +81,8 @@ export default function MaterialsAnalyticsSection({ stats }: MaterialsAnalyticsS
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D']
 
   const formatNumber = (num: number | undefined | null) => {
-    if (!num || isNaN(num)) return '0'
+    if (!num || isNaN(num))
+  return '0'
     if (num >= 1000000) {
       return (num / 1000000).toFixed(1) + 'M'
     }

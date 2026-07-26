@@ -72,7 +72,7 @@ export default function MaterialsListSection({ className }: MaterialsListSection
         )
       })
 
-      const response = await fetch(`/api/admin/materials?${params}`)
+      const response = await fetch(`/api/super-admin/materials?${params}`)
       const result = await response.json()
 
       if (result.success) {
@@ -128,7 +128,7 @@ export default function MaterialsListSection({ className }: MaterialsListSection
 
   const handleApproval = async (materialId: string, action: 'approve' | 'reject') => {
     try {
-      const response = await fetch('/api/admin/materials/approval', {
+      const response = await fetch('/api/super-admin/materials/approval', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ materialId, action })
@@ -150,7 +150,7 @@ export default function MaterialsListSection({ className }: MaterialsListSection
     if (!confirm('Are you sure you want to delete this material?')) return
 
     try {
-      const response = await fetch(`/api/admin/materials/${materialId}`, {
+      const response = await fetch(`/api/super-admin/materials/${materialId}`, {
         method: 'DELETE'
       })
 
@@ -184,7 +184,8 @@ export default function MaterialsListSection({ className }: MaterialsListSection
 
   const formatFileSize = (bytes: number) => {
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    if (bytes === 0) return '0 Bytes'
+    if (bytes === 0)
+  return '0 Bytes'
     const i = Math.floor(Math.log(bytes) / Math.log(1024))
     return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i]
   }

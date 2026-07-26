@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import { ClerkProvider } from '@clerk/nextjs'
+import Script from "next/script";
+
 import { TRPCProvider } from '@/lib/trpc/provider'
 import { ThemeProvider } from '@/components/providers/theme-provider'
 import { NotificationProvider } from '@/components/providers/notification-provider'
@@ -35,21 +36,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="en" suppressHydrationWarning>
-        <head>
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          {/* Google Fonts - Inter */}
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-          <link
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
-            rel="stylesheet"
-          />
-          {/* Perplexity-Level MathJax Configuration for VG Kosh */}
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {/* Google Fonts - Inter */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+          rel="stylesheet"
+        />
+        {/* Perplexity-Level MathJax Configuration for VG Kosh */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
                 window.MathJax = {
                   tex: {
                     // Perplexity-style delimiter configuration
@@ -184,30 +184,29 @@ export default function RootLayout({
                   }
                 };
               `
-            }}
-          />
-          <script src="https://cdn.jsdelivr.net/npm/es6-promise@4/dist/es6-promise.auto.min.js" />
-          <script
-            id="MathJax-script"
-            async
-            src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
-          />
-        </head>
-        <body className={inter.className}>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <TRPCProvider>
-              <NotificationProvider>
-                {children}
-              </NotificationProvider>
-            </TRPCProvider>
-          </ThemeProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+          }}
+        />
+        <Script src="https://cdn.jsdelivr.net/npm/es6-promise@4/dist/es6-promise.auto.min.js" strategy="beforeInteractive" />
+        <Script
+          id="MathJax-script"
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"
+          strategy="lazyOnload"
+        />
+      </head>
+      <body className={inter.className}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <TRPCProvider>
+            <NotificationProvider>
+              {children}
+            </NotificationProvider>
+          </TRPCProvider>
+        </ThemeProvider>
+      </body>
+    </html>
   );
 }

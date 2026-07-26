@@ -27,18 +27,19 @@ export class SubscriptionManagementService {
   // FREE TRIAL MANAGEMENT
   // ============================================================================
 
-  /**
-   * Create a free trial for a new user
-   */
   async createFreeTrial(request: CreateFreeTrialRequest): Promise<FreeTrial | null> {
     try {
       const { user_id, clerk_id, trial_questions_limit = 10, trial_days_limit = 7 } = request
+      const { db } = await import('@/db')
+      const { freeTrials } = await import('@/db/schema')
+      const { eq } = await import('drizzle-orm')
 
       // Check if user already has a trial
-      const existingTrial = await executeQuerySingle<any>(
-        'SELECT id FROM free_trials WHERE user_id = ?',
-        [user_id]
-      )
+      const [existingTrial] = await db
+        .select({ id: freeTrials.id })
+        .from(freeTrials)
+        .where(eq(freeTrials.userId, user_id))
+        .limit(1)
 
       if (existingTrial) {
         console.log(`⚠️ User ${user_id} already has a trial`)
@@ -51,23 +52,44 @@ export class SubscriptionManagementService {
       trialEndDate.setDate(trialEndDate.getDate() + trial_days_limit)
 
       // Create trial
-      const result = await executeQuery(
-        `INSERT INTO free_trials (
-          user_id, clerk_id, trial_type, trial_questions_limit, trial_questions_used,
-          trial_days_limit, trial_start_date, trial_end_date, trial_status
-        ) VALUES (?, ?, 'hybrid', ?, 0, ?, ?, ?, 'active')`,
-        [user_id, clerk_id, trial_questions_limit, trial_days_limit, trialStartDate, trialEndDate]
-      )
+      await db.insert(freeTrials).values({
+        userId: user_id,
+        trialStart: trialStartDate,
+        trialEnd: trialEndDate,
+        isConverted: false
+      })
 
       console.log(`✅ Created free trial for user ${user_id}: ${trial_questions_limit} questions, ${trial_days_limit} days`)
 
       // Fetch and return the created trial
-      const trial = await executeQuerySingle<any>(
-        'SELECT * FROM free_trials WHERE user_id = ?',
-        [user_id]
-      )
+      const [trial] = await db
+        .select()
+        .from(freeTrials)
+        .where(eq(freeTrials.userId, user_id))
+        .limit(1)
 
-      return trial ? this.mapFreeTrialFromDb(trial) : null
+      if (!trial) return null
+
+      return {
+        id: trial.id,
+        user_id: trial.userId,
+        clerk_id: clerk_id,
+        trial_type: 'hybrid',
+        trial_questions_limit,
+        trial_questions_used: 0,
+        trial_days_limit,
+        trial_start_date: trial.trialStart || new Date(),
+        trial_end_date: trial.trialEnd || new Date(),
+        trial_status: 'active',
+        converted_to_paid: trial.isConverted || false,
+        conversion_date: null,
+        converted_plan_code: null,
+        first_question_at: null,
+        last_question_at: null,
+        total_sessions: 0,
+        created_at: trial.createdAt || new Date(),
+        updated_at: trial.createdAt || new Date()
+      }
 
     } catch (error) {
       console.error('Error creating free trial:', error)

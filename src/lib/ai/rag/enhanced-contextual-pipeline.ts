@@ -161,7 +161,8 @@ export class EnhancedContextualRAGPipeline extends EnhancedRAGPipeline {
    * Create grade-level filter with role-aware flexibility
    */
   private createGradeFilter(grade: number | undefined, role: UserRole): QdrantFilter {
-    if (!grade) return {};
+    if (!grade)
+  return {};
     
     const gradeVariations = [
       `Class ${grade}`,
@@ -196,7 +197,8 @@ export class EnhancedContextualRAGPipeline extends EnhancedRAGPipeline {
    * Create subject-specific filter
    */
   private createSubjectFilter(subjects: string[], role: UserRole): QdrantFilter {
-    if (!subjects || subjects.length === 0) return {};
+    if (!subjects || subjects.length === 0)
+  return {};
     
     const subjectFilters = subjects.map(subject => ({
       key: 'subject',
@@ -503,7 +505,8 @@ export class EnhancedContextualRAGPipeline extends EnhancedRAGPipeline {
     const contentComplexity = result.metadata?.complexity_level || 'intermediate';
     const targetComplexity = userContext.complexityLevel;
     
-    if (contentComplexity === targetComplexity) return 1.0;
+    if (contentComplexity === targetComplexity)
+  return 1.0;
     
     // Partial matches
     const complexityOrder = ['basic', 'intermediate', 'advanced'];

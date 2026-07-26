@@ -319,11 +319,13 @@ export class MetadataDiagnosticService {
   private chooseCanonicalForm(variations: string[]): string {
     // Prefer title case versions
     const titleCase = variations.find(v => v[0] === v[0].toUpperCase() && v.slice(1) === v.slice(1).toLowerCase());
-    if (titleCase) return titleCase;
+    if (titleCase)
+  return titleCase;
 
     // Prefer versions that match expected subjects
     const expected = variations.find(v => this.EXPECTED_SUBJECTS.includes(v));
-    if (expected) return expected;
+    if (expected)
+  return expected;
 
     // Default to first variation
     return variations[0];

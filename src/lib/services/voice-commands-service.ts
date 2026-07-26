@@ -243,18 +243,22 @@ export class VoiceCommandsService {
     const patternWords = pattern.split(/\s+/)
     
     // Exact match
-    if (text === pattern) return 1.0
+    if (text === pattern)
+  return 1.0
     
     // Contains pattern
-    if (text.includes(pattern)) return 0.9
+    if (text.includes(pattern))
+  return 0.9
     
     // Word overlap
     const overlap = patternWords.filter(word => textWords.includes(word)).length
     const overlapRatio = overlap / patternWords.length
     
     // Fuzzy matching for common variations
-    if (overlapRatio >= 0.8) return 0.85
-    if (overlapRatio >= 0.6) return 0.75
+    if (overlapRatio >= 0.8)
+  return 0.85
+    if (overlapRatio >= 0.6)
+  return 0.75
     
     return 0
   }
@@ -263,8 +267,10 @@ export class VoiceCommandsService {
    * Check if required context is available
    */
   private hasRequiredContext(command: VoiceCommand, context?: any): boolean {
-    if (!command.requiresContext) return true
-    if (!context) return false
+    if (!command.requiresContext)
+  return true
+    if (!context)
+  return false
 
     switch (command.action) {
       case 'explain':
@@ -330,7 +336,8 @@ export class VoiceCommandsService {
    */
   getAvailableCommands(context?: any): VoiceCommand[] {
     return this.commands.filter(command => {
-      if (!command.requiresContext) return true
+      if (!command.requiresContext)
+  return true
       return this.hasRequiredContext(command, context)
     })
   }

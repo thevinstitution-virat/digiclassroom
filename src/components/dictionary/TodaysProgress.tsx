@@ -82,18 +82,26 @@ export default function TodaysProgress({ onStartQuiz, onViewStats }: TodaysProgr
   }
 
   const getProgressColor = () => {
-    if (todayProgress.percentage >= 100) return "text-green-600"
-    if (todayProgress.percentage >= 75) return "text-blue-600"
-    if (todayProgress.percentage >= 50) return "text-yellow-600"
-    if (todayProgress.percentage >= 25) return "text-orange-600"
+    if (todayProgress.percentage >= 100)
+  return "text-green-600"
+    if (todayProgress.percentage >= 75)
+  return "text-blue-600"
+    if (todayProgress.percentage >= 50)
+  return "text-yellow-600"
+    if (todayProgress.percentage >= 25)
+  return "text-orange-600"
     return "text-gray-600"
   }
 
   const getProgressBgColor = () => {
-    if (todayProgress.percentage >= 100) return "from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800"
-    if (todayProgress.percentage >= 75) return "from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800"
-    if (todayProgress.percentage >= 50) return "from-yellow-50 to-amber-50 dark:from-yellow-950 dark:to-amber-950 border-yellow-200 dark:border-yellow-800"
-    if (todayProgress.percentage >= 25) return "from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950 border-orange-200 dark:border-orange-800"
+    if (todayProgress.percentage >= 100)
+  return "from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200 dark:border-green-800"
+    if (todayProgress.percentage >= 75)
+  return "from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 border-blue-200 dark:border-blue-800"
+    if (todayProgress.percentage >= 50)
+  return "from-yellow-50 to-amber-50 dark:from-yellow-950 dark:to-amber-950 border-yellow-200 dark:border-yellow-800"
+    if (todayProgress.percentage >= 25)
+  return "from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950 border-orange-200 dark:border-orange-800"
     return "from-gray-50 to-slate-50 dark:from-gray-950 dark:to-slate-950 border-gray-200 dark:border-gray-800"
   }
 

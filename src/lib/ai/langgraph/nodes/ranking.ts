@@ -90,7 +90,8 @@ export async function rankingNode(state: TutorGraphState): Promise<TutorGraphSta
 }
 
 function normalize(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined
+  if (typeof value !== 'string')
+  return undefined
   return value.trim().toLowerCase()
 }
 

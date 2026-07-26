@@ -402,7 +402,8 @@ export async function generationNode(state: TutorGraphState): Promise<TutorGraph
 }
 
 function parseGenerationJson(response: string): GenerationJSON | null {
-  if (!response) return null
+  if (!response)
+  return null
   let candidate = response.trim()
 
   const fencedMatch = candidate.match(/```json\s*([\s\S]*?)```/)

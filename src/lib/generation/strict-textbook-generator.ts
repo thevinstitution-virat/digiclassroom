@@ -845,14 +845,17 @@ Response (use direct quotes only):`;
     const trimmed = content.trim();
 
     // Must have reasonable length
-    if (trimmed.length < 20) return false;
+    if (trimmed.length < 20)
+  return false;
 
     // Must contain some alphabetic characters
-    if (!/[a-zA-Z]/.test(trimmed)) return false;
+    if (!/[a-zA-Z]/.test(trimmed))
+  return false;
 
     // Must not be mostly special characters or numbers
     const alphaRatio = (trimmed.match(/[a-zA-Z]/g) || []).length / trimmed.length;
-    if (alphaRatio < 0.3) return false;
+    if (alphaRatio < 0.3)
+  return false;
 
     return true;
   }

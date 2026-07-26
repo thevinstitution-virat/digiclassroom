@@ -207,13 +207,20 @@ export class VisualContentAnalysisService {
    * Determine content type from text patterns
    */
   private determineContentType(text: string): VisualAnalysisResult['contentType'] {
-    if (/\b(?:table|data|statistics|values)\b/i.test(text)) return 'table';
-    if (/\b(?:map|geography|location|coordinates)\b/i.test(text)) return 'map';
-    if (/\b(?:flowchart|process|algorithm|steps)\b/i.test(text)) return 'flowchart';
-    if (/\b(?:equation|formula|mathematical)\b/i.test(text)) return 'equation';
-    if (/\b(?:chart|graph|plot|data)\b/i.test(text)) return 'chart';
-    if (/\b(?:diagram|figure|illustration)\b/i.test(text)) return 'diagram';
-    if (/\b(?:figure|table|equation|diagram)\b/i.test(text)) return 'mixed';
+    if (/\b(?:table|data|statistics|values)\b/i.test(text))
+  return 'table';
+    if (/\b(?:map|geography|location|coordinates)\b/i.test(text))
+  return 'map';
+    if (/\b(?:flowchart|process|algorithm|steps)\b/i.test(text))
+  return 'flowchart';
+    if (/\b(?:equation|formula|mathematical)\b/i.test(text))
+  return 'equation';
+    if (/\b(?:chart|graph|plot|data)\b/i.test(text))
+  return 'chart';
+    if (/\b(?:diagram|figure|illustration)\b/i.test(text))
+  return 'diagram';
+    if (/\b(?:figure|table|equation|diagram)\b/i.test(text))
+  return 'mixed';
     return 'text';
   }
 
@@ -254,12 +261,18 @@ export class VisualContentAnalysisService {
    * Detect subject from text patterns
    */
   private detectSubject(text: string): string {
-    if (/\b(?:cell|organism|biology|photosynthesis|respiration)\b/i.test(text)) return 'Biology';
-    if (/\b(?:force|energy|physics|velocity|acceleration)\b/i.test(text)) return 'Physics';
-    if (/\b(?:chemical|reaction|chemistry|molecule|compound)\b/i.test(text)) return 'Chemistry';
-    if (/\b(?:equation|algebra|geometry|mathematics|theorem)\b/i.test(text)) return 'Mathematics';
-    if (/\b(?:history|geography|social|political|economic)\b/i.test(text)) return 'Social Science';
-    if (/\b(?:language|grammar|literature|poetry|prose)\b/i.test(text)) return 'Language';
+    if (/\b(?:cell|organism|biology|photosynthesis|respiration)\b/i.test(text))
+  return 'Biology';
+    if (/\b(?:force|energy|physics|velocity|acceleration)\b/i.test(text))
+  return 'Physics';
+    if (/\b(?:chemical|reaction|chemistry|molecule|compound)\b/i.test(text))
+  return 'Chemistry';
+    if (/\b(?:equation|algebra|geometry|mathematics|theorem)\b/i.test(text))
+  return 'Mathematics';
+    if (/\b(?:history|geography|social|political|economic)\b/i.test(text))
+  return 'Social Science';
+    if (/\b(?:language|grammar|literature|poetry|prose)\b/i.test(text))
+  return 'Language';
     return 'General';
   }
 
@@ -298,8 +311,10 @@ export class VisualContentAnalysisService {
     const complexWords = text.match(/\b(?:phenomenon|hypothesis|theoretical|analytical|synthesis|comprehensive|sophisticated|intricate)\b/gi);
     const simpleWords = text.match(/\b(?:basic|simple|easy|fundamental|elementary|introduction)\b/gi);
     
-    if (complexWords && complexWords.length > 3) return 'advanced';
-    if (simpleWords && simpleWords.length > 2) return 'basic';
+    if (complexWords && complexWords.length > 3)
+  return 'advanced';
+    if (simpleWords && simpleWords.length > 2)
+  return 'basic';
     return 'intermediate';
   }
 

@@ -1,5 +1,6 @@
+import { auth } from '@/auth';
+import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
 import { executeQuery, executeQuerySingle } from '@/lib/db/connection'
 import { StudentAssignmentSchema } from '@/lib/validations'
 import { generateId } from '@/lib/utils'
@@ -10,14 +11,14 @@ import { generateId } from '@/lib/utils'
  */
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth()
-    
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const teacher = await executeQuerySingle<any>(
-      'SELECT id, role, approval_status FROM users WHERE clerk_id = ?',
+      'SELECT id, role, approval_status FROM `user` WHERE id = ?',
       [userId]
     )
 
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     // Verify student exists and is a student
     const student = await executeQuerySingle<any>(
-      'SELECT id, email, first_name, last_name, role, class_id FROM users WHERE id = ?',
+      'SELECT id, email, first_name, last_name, role, class_id FROM `user` WHERE id = ?',
       [studentId]
     )
 
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
 
     // Assign student to class
     await executeQuery(
-      'UPDATE users SET class_id = ?, updated_at = NOW() WHERE id = ?',
+      'UPDATE `user` SET class_id = ?, updated_at = NOW() WHERE id = ?',
       [classId, studentId]
     )
 

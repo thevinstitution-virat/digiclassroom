@@ -449,7 +449,8 @@ export class AnswerPostProcessor {
   private static getPreviousNonEmptyLine(lines: string[], currentIndex: number): string | null {
     for (let i = currentIndex - 1; i >= 0; i--) {
       const trimmed = lines[i].trim()
-      if (trimmed) return trimmed
+      if (trimmed)
+  return trimmed
     }
     return null
   }

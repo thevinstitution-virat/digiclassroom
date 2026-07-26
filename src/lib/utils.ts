@@ -36,7 +36,8 @@ export function slugify(text: string): string {
 }
 
 export function truncate(text: string, length: number): string {
-  if (text.length <= length) return text
+  if (text.length <= length)
+  return text
   return text.substring(0, length) + "..."
 }
 

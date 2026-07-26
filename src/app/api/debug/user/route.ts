@@ -1,6 +1,6 @@
+import { auth } from '@/auth';
+import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-
 /**
  * GET /api/debug/user
  * Debug endpoint to check current user authentication
@@ -20,8 +20,8 @@ export async function GET(request: NextRequest) {
 
   try {
     // Check authentication
-    const { userId, sessionClaims } = await auth()
-
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     return NextResponse.json({
       success: true,
       authenticated: !!userId,

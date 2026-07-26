@@ -150,7 +150,8 @@ export class ContentVerificationTool {
     const sentenceWords = new Set(sentence.toLowerCase().split(/\W+/).filter(w => w.length > 2));
     const chunkWords = new Set(chunkText.toLowerCase().split(/\W+/).filter(w => w.length > 2));
     
-    if (sentenceWords.size === 0) return 0;
+    if (sentenceWords.size === 0)
+  return 0;
     
     const intersection = new Set([...sentenceWords].filter(w => chunkWords.has(w)));
     const union = new Set([...sentenceWords, ...chunkWords]);
@@ -166,7 +167,8 @@ export class ContentVerificationTool {
     const sentenceWords = new Set(sentence.toLowerCase().split(/\W+/).filter(w => w.length > 2));
     const chunkWords = new Set(chunkText.toLowerCase().split(/\W+/).filter(w => w.length > 2));
     
-    if (sentenceWords.size === 0) return 0;
+    if (sentenceWords.size === 0)
+  return 0;
     
     const overlap = [...sentenceWords].filter(w => chunkWords.has(w)).length;
     return overlap / sentenceWords.size;

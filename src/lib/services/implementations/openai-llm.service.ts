@@ -1,3 +1,4 @@
+﻿import { openrouter } from '@/lib/openrouter/client';
 /**
  * OpenAI LLM Service Implementation
  * Wraps existing OpenAI functionality with enterprise features:
@@ -8,7 +9,7 @@
  * - Streaming support
  */
 
-import OpenAI from 'openai';
+
 import type {
   ILLMService,
   LLMGenerationOptions,
@@ -40,13 +41,9 @@ export class OpenAILLMService implements ILLMService {
     this.generationModel = config?.generationModel || APP_CONFIG.openai.generation.model;
     this.maxRetries = config?.maxRetries || APP_CONFIG.openai.generation.maxRetries;
 
-    this.client = new OpenAI({
-      apiKey: config?.apiKey || APP_CONFIG.openai.apiKey,
-      maxRetries: this.maxRetries,
-      timeout: config?.timeout || APP_CONFIG.openai.generation.timeout
-    });
+    this.client = openrouter;
 
-    console.log(`✅ OpenAI LLM Service initialized (${this.generationModel}, ${this.dimensions}D embeddings)`);
+    console.log(`âœ… OpenAI LLM Service initialized (${this.generationModel}, ${this.dimensions}D embeddings)`);
   }
 
   async generateResponse(prompt: string, options?: LLMGenerationOptions): Promise<LLMResponse> {
@@ -150,7 +147,7 @@ export class OpenAILLMService implements ILLMService {
 
         if (i < this.maxRetries - 1) {
           const delay = Math.pow(2, i) * 1000; // 1s, 2s, 4s
-          console.warn(`⚠️ OpenAI request failed, retry ${i + 1}/${this.maxRetries} after ${delay}ms`);
+          console.warn(`âš ï¸ OpenAI request failed, retry ${i + 1}/${this.maxRetries} after ${delay}ms`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
@@ -171,11 +168,12 @@ export class OpenAILLMService implements ILLMService {
     if (this.requestTimestamps.length >= this.requestsPerMinute) {
       const oldestTimestamp = this.requestTimestamps[0];
       const waitTime = 60000 - (now - oldestTimestamp) + 100; // +100ms buffer
-      console.warn(`⚠️ Rate limit reached, waiting ${waitTime}ms`);
+      console.warn(`âš ï¸ Rate limit reached, waiting ${waitTime}ms`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
 
     this.requestTimestamps.push(now);
   }
 }
+
 

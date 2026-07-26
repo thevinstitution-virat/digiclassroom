@@ -14,7 +14,7 @@ export interface SocraticGuidanceRequest {
   subject: string;
   board_type: 'CBSE' | 'ICSE' | 'State Board';
   previous_responses?: string[];
-  conversation_history?: Array<{role: string, content: string}>;
+  conversation_history?: Array<{ role: string, content: string }>;
 }
 
 export interface SocraticGuidanceResponse {
@@ -44,7 +44,7 @@ export class SocraticTutoringTool {
   private textbookConstrainedGenerator: TextbookConstrainedGenerator;
 
   constructor() {
-    this.llmService = OpenAIService.getInstance() as any; // Legacy compatibility
+    this.llmService = OpenAIService.getInstance() as unknown as Record<string, unknown>; // Legacy compatibility
     this.vectorService = new VectorStoreService();
 
     // Initialize verification tools
@@ -67,7 +67,7 @@ export class SocraticTutoringTool {
    *
    * Triggers: "define", "explain", "please tell me", "please help", "just tell me"
    */
-  private detectExplicitRequest(question: string, conversationHistory: Array<{role: string, content: string}>): boolean {
+  private detectExplicitRequest(question: string, conversationHistory: Array<{ role: string, content: string }>): boolean {
     const text = question.toLowerCase();
     const turns = this.countConversationTurns(conversationHistory, question);
 
@@ -127,7 +127,7 @@ export class SocraticTutoringTool {
    * Assess student's knowledge level from their response
    * Returns: 'zero', 'minimal', 'partial', 'good'
    */
-  private assessKnowledgeLevel(conversationHistory: Array<{role: string, content: string}>): 'zero' | 'minimal' | 'partial' | 'good' {
+  private assessKnowledgeLevel(conversationHistory: Array<{ role: string, content: string }>): 'zero' | 'minimal' | 'partial' | 'good' {
     if (conversationHistory.length === 0) {
       return 'zero'; // First interaction
     }
@@ -181,7 +181,7 @@ export class SocraticTutoringTool {
    * Detect if student is showing frustration
    * Indicators: short repetitive answers, frustrated language
    */
-  private detectFrustration(conversationHistory: Array<{role: string, content: string}>): boolean {
+  private detectFrustration(conversationHistory: Array<{ role: string, content: string }>): boolean {
     if (conversationHistory.length < 2) {
       return false;
     }
@@ -221,15 +221,17 @@ export class SocraticTutoringTool {
    * CRITICAL FIX: Welcome/greeting messages from agent should NOT count as conversation turns
    */
   private countConversationTurns(
-    conversationHistory: Array<{role: string, content: string}>,
+    conversationHistory: Array<{ role: string, content: string }>,
     currentQuestion: string
   ): number {
-    if (conversationHistory.length === 0) return 0;
+    if (conversationHistory.length === 0)
+      return 0;
 
     // Get all student messages
     const studentMessages = conversationHistory.filter(msg => msg.role === 'student' || msg.role === 'user');
 
-    if (studentMessages.length === 0) return 0;
+    if (studentMessages.length === 0)
+      return 0;
 
     // Get the last message in history (could be student or agent)
     const lastMessage = conversationHistory[conversationHistory.length - 1];
@@ -509,10 +511,10 @@ export class SocraticTutoringTool {
         adaptive_mode: adaptiveDecision.mode,
         trigger_reason: adaptiveDecision.reason
       };
-      
+
     } catch (error) {
       console.error('❌ Socratic Tutoring Error:', error);
-      
+
       // Fallback response
       return {
         guidance: "I'm happy to help. Let me ask you a question to help you think through this problem. What do you already know about this topic from your textbook?",
@@ -531,14 +533,14 @@ export class SocraticTutoringTool {
   }
 
   private buildSocraticPrompt(
-    request: SocraticGuidanceRequest, 
-    context: any, 
-    cognitiveLevel: string, 
+    request: SocraticGuidanceRequest,
+    context: Record<string, unknown>,
+    cognitiveLevel: string,
     encouragementLevel: string
   ): string {
     const contextText = this.vectorService.format_socratic_context(context.results);
     const conversationHistory = this.formatConversationHistory(request.conversation_history || []);
-    
+
     return `You are a patient, encouraging Socratic tutor helping a Class ${request.grade_level} student with their homework. Use the Socratic method - NEVER give direct answers.
 
 🎯 CORE PRINCIPLE: Guide through questions, don't provide solutions!
@@ -629,7 +631,7 @@ Provide your response as a caring, wise tutor would - with one clear guiding que
     }
   }
 
-  private formatConversationHistory(history: Array<{role: string, content: string}>): string {
+  private formatConversationHistory(history: Array<{ role: string, content: string }>): string {
     if (history.length === 0) {
       return "Previous Conversation: This is the first interaction.";
     }
@@ -651,8 +653,8 @@ Provide your response as a caring, wise tutor would - with one clear guiding que
     bloomLevel: string,
     adaptiveDecision: { mode: 'questioning' | 'explaining' | 'scaffolding', reason: string },
     currentPrompt: string
-  ): Array<{role: 'system' | 'user' | 'assistant', content: string}> {
-    const messages: Array<{role: 'system' | 'user' | 'assistant', content: string}> = [];
+  ): Array<{ role: 'system' | 'user' | 'assistant', content: string }> {
+    const messages: Array<{ role: 'system' | 'user' | 'assistant', content: string }> = [];
 
     // 1. System prompt (always first)
     messages.push({
@@ -1132,10 +1134,10 @@ export class HomeworkHelpAgent {
       board_type: 'CBSE' | 'ICSE' | 'State Board';
       name?: string;
     },
-    conversationHistory: Array<{role: string, content: string}> = []
+    conversationHistory: Array<{ role: string, content: string }> = []
   ): Promise<SocraticGuidanceResponse> {
     console.log(`📚 Homework Help Request: ${question.substring(0, 50)}... for Class ${studentContext.grade_level} ${studentContext.subject}`);
-    
+
     const request: SocraticGuidanceRequest = {
       student_question: question,
       grade_level: studentContext.grade_level,

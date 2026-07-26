@@ -106,7 +106,7 @@ export class SearchCapability {
     return results;
   }
 
-  private generateCacheKey(agentName: string, context: any): string {
+  private generateCacheKey(agentName: string, context: Record<string, unknown>): string {
     const parts = [
       agentName,
       context.query,

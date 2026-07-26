@@ -22,6 +22,15 @@ export interface QdrantSearchOptions {
   requiresEquations?: boolean;
   requiresTables?: boolean;
   userId?: string; // For A/B testing
+  subjectFilter?: Record<string, unknown>;
+  /**
+   * Batch 2b — per-org vector isolation. Mirrors the practest-queries tenancy convention.
+   *   - string    → caller's org: returns org-owned vectors PLUS global (untagged) ones
+   *   - null      → platform bypass (super_admin/admin): no org filter, sees everything
+   *   - undefined → fail-closed default: only global/untagged (NCERT base) vectors
+   * NCERT base content is ingested untagged, so `organization_id` is absent on those points.
+   */
+  organizationId?: string | null;
 }
 
 export interface QdrantSearchResult {
@@ -44,11 +53,16 @@ export interface QdrantSearchResult {
 }
 
 export interface QdrantSearchResponse {
+  success?: boolean;
   results: QdrantSearchResult[];
-  total_found: number;
-  search_strategy: 'vector' | 'hybrid' | 'keyword';
-  processing_time: number;
-  debug_info?: any;
+  total_found?: number;
+  totalResults?: number;
+  search_strategy?: string;
+  searchMethod?: string;
+  processing_time?: number;
+  processingTime?: number;
+  debug_info?: Record<string, unknown>;
+  debugInfo?: Record<string, unknown>;
 }
 
 export class QdrantRAGSearch {
@@ -83,8 +97,8 @@ export class QdrantRAGSearch {
       console.warn('âš ï¸ No OpenAI embedding provider available - will use keyword-based search');
     }
 
-    this.collectionName = process.env.QDRANT_COLLECTION_NAME || 'digiclassroom';
-    this.embeddingModel = 'text-embedding-3-small';
+    this.collectionName = process.env.QDRANT_COLLECTION_NAME || 'ncert-books-enhanced';
+    this.embeddingModel = 'text-embedding-3-large';
 
     // Debug collection configuration
     console.log(`ðŸ” Qdrant Search initialized with collection: ${this.collectionName}`);
@@ -203,9 +217,14 @@ export class QdrantRAGSearch {
       if (searchResults.length === 0) {
         console.log('ðŸ”„ Still no results, trying emergency search with no filters...');
 
+        // 🛡️ Batch 2b: drop educational filters but NEVER the org boundary — keep the
+        // org/global isolation condition so emergency broadening can't leak other orgs' vectors.
+        const orgOnlyCondition = this.buildOrgFilterCondition(enhancedOptions);
+        const emergencyFilter = orgOnlyCondition ? { must: [orgOnlyCondition] } : {};
+
         searchResults = await this.performVectorSearch(
           embedding,
-          {}, // No filters
+          emergencyFilter, // No educational filters, org isolation preserved
           (options.topK || 5) * 2 // Double the results
         );
 
@@ -387,8 +406,50 @@ export class QdrantRAGSearch {
   /**
    * ðŸ›¡ï¸ ENHANCED: Build advanced educational filter with comprehensive debugging
    */
+  /**
+   * 🛡️ Batch 2b: Build the per-org isolation condition for a Qdrant `must` clause.
+   *
+   * Tenancy convention (mirrors src/lib/db/practest-queries.ts):
+   *   - organizationId is a non-empty string → org sees its OWN vectors + global/untagged ones
+   *     → { should: [ org match, organization_id is_empty ] }
+   *   - organizationId === null → platform bypass (super_admin/admin): NO org filter (sees all)
+   *     → returns null (caller adds nothing)
+   *   - organizationId === undefined → fail-closed default: global/untagged (NCERT) only
+   *     → { is_empty: organization_id }
+   *
+   * `is_empty` matches points where the key is missing, null, or []. NCERT base content is
+   * ingested without an organization_id, so it is always reachable as global content.
+   */
+  private buildOrgFilterCondition(options: QdrantSearchOptions): Record<string, unknown> | null {
+    const orgId = options.organizationId;
+
+    // null → super_admin / platform bypass: no org constraint at all.
+    if (orgId === null) {
+      return null;
+    }
+
+    // undefined (not supplied) → fail closed: only global/untagged vectors.
+    if (orgId === undefined || orgId === '') {
+      return { is_empty: { key: 'organization_id' } };
+    }
+
+    // Concrete org → own vectors OR global/untagged vectors.
+    return {
+      should: [
+        { key: 'organization_id', match: { value: orgId } },
+        { is_empty: { key: 'organization_id' } },
+      ],
+    };
+  }
+
   private buildEducationalFilter(options: QdrantSearchOptions): any {
     const mustConditions = [];
+
+    // 🛡️ Batch 2b: per-org isolation. MUST come first so it survives every fallback path.
+    const orgCondition = this.buildOrgFilterCondition(options);
+    if (orgCondition) {
+      mustConditions.push(orgCondition);
+    }
 
     console.log('ðŸ” FILTER DEBUG: Building educational filter with options:', {
       subject: options.subject,
@@ -431,7 +492,7 @@ export class QdrantRAGSearch {
       console.log(`ðŸŽ“ FILTER DEBUG: Adding class filter - Original: "${options.classLevel}", Normalized: "${normalizedClass}"`);
       console.log(`ðŸ” FILTER DEBUG: Class variations: ${JSON.stringify(classVariations)}`);
 
-      const shouldConditions = [];
+      const shouldConditions: Record<string, unknown>[] = [];
 
       // Add variations for different field names and formats (support both old and new structures)
       classVariations.forEach(variation => {
@@ -525,25 +586,25 @@ export class QdrantRAGSearch {
   ): QdrantSearchResult[] {
     return searchResults.map(result => {
       const payload = result.payload;
-      
+
       // Calculate educational relevance score
       let relevanceBoost = 0;
-      
+
       // Boost for subject match
       if (options.subject && payload.subject === options.subject) {
         relevanceBoost += 0.1;
       }
-      
+
       // Boost for class level match (support both old and new metadata structures)
       if (options.classLevel && (payload.class === options.classLevel || payload.classLevel === options.classLevel)) {
         relevanceBoost += 0.1;
       }
-      
+
       // Boost for content with equations (for STEM subjects)
       if (payload.contains_equation && this.isSTEMSubject(payload.subject)) {
         relevanceBoost += 0.05;
       }
-      
+
       // Boost for appropriate section level
       if (payload.section_level <= 2) {
         relevanceBoost += 0.03;
@@ -624,7 +685,7 @@ export class QdrantRAGSearch {
   private async performKeywordSearch(
     query: string,
     options: QdrantSearchOptions
-  ): Promise<QdrantSearchResult> {
+  ): Promise<QdrantSearchResponse> {
     console.log('ðŸ” Using keyword-based fallback search');
 
     try {
@@ -632,11 +693,15 @@ export class QdrantRAGSearch {
       const keywords = this.extractKeywords(query);
       console.log('ðŸ”‘ Keywords extracted:', keywords);
 
-      // Perform scroll search to get all documents and filter by keywords
+      // Perform scroll search to get all documents and filter by keywords.
+      // 🛡️ Batch 2b: scope the scroll to the caller's org + global content so the
+      // keyword fallback can't surface other orgs' private vectors.
+      const orgCondition = this.buildOrgFilterCondition(options);
       const scrollResult = await this.client.scroll(this.collectionName, {
         limit: 100,
         with_payload: true,
-        with_vector: false
+        with_vector: false,
+        ...(orgCondition ? { filter: { must: [orgCondition] } } : {})
       });
 
       const results: any[] = [];
@@ -675,7 +740,7 @@ export class QdrantRAGSearch {
 
       return {
         results: this.processSearchResults(topResults, options),
-        total_results: topResults.length,
+        totalResults: topResults.length,
         search_strategy: 'keyword',
         processing_time: 0,
         debug_info: {
@@ -691,7 +756,7 @@ export class QdrantRAGSearch {
       // Return empty results if everything fails
       return {
         results: [],
-        total_results: 0,
+        totalResults: 0,
         search_strategy: 'keyword',
         processing_time: 0,
         debug_info: { error: error instanceof Error ? error.message : 'Unknown error' }
@@ -785,7 +850,7 @@ export class QdrantRAGSearch {
    */
   private detectSubjectFromQuery(query: string): string | undefined {
     const queryLower = query.toLowerCase();
-    
+
     const subjectKeywords = {
       'Science': ['photosynthesis', 'cell', 'atom', 'molecule', 'biology', 'chemistry', 'physics', 'experiment'],
       'Mathematics': ['equation', 'algebra', 'geometry', 'trigonometry', 'calculus', 'theorem', 'proof'],
@@ -929,7 +994,7 @@ export class QdrantRAGSearch {
       try {
         await this.client.createPayloadIndex(this.collectionName, {
           field_name: index.field,
-          field_schema: index.type
+          field_schema: index.type as 'keyword' | 'integer' | 'float' | 'bool' | 'geo'
         });
         console.log(`âœ… Created index for ${index.field}`);
       } catch (error) {
@@ -991,7 +1056,8 @@ export class QdrantRAGSearch {
    * ðŸ›¡ï¸ CRITICAL FIX: Normalize class names to match database format (Arabic numbers)
    */
   private normalizeClassName(className: string): string {
-    if (!className) return className;
+    if (!className)
+  return className;
 
     const normalized = className.toLowerCase().trim();
 
@@ -1220,18 +1286,20 @@ export class QdrantRAGSearch {
 
         // Compare with requested filters
         if (options.subject) {
-          const hasRequestedSubject = Array.from(subjects).some(s =>
-            s.toString().toLowerCase().includes(options.subject!.toLowerCase()) ||
-            options.subject!.toLowerCase().includes(s.toString().toLowerCase())
-          );
+          const hasRequestedSubject = Array.from(subjects).some(s => {
+            const subjectStr = String(s).toLowerCase();
+            const optionStr = options.subject!.toLowerCase();
+            return subjectStr.includes(optionStr) || optionStr.includes(subjectStr);
+          });
           console.log(`ðŸŽ¯ EMPTY RESULTS DEBUG: Requested subject "${options.subject}" ${hasRequestedSubject ? 'FOUND' : 'NOT FOUND'} in database`);
         }
 
         if (options.classLevel) {
-          const hasRequestedClass = Array.from(classes).some(c =>
-            c.toString().toLowerCase().includes(options.classLevel!.toLowerCase()) ||
-            options.classLevel!.toLowerCase().includes(c.toString().toLowerCase())
-          );
+          const hasRequestedClass = Array.from(classes).some(c => {
+            const classStr = String(c).toLowerCase();
+            const optionStr = options.classLevel!.toLowerCase();
+            return classStr.includes(optionStr) || optionStr.includes(classStr);
+          });
           console.log(`ðŸŽ“ EMPTY RESULTS DEBUG: Requested class "${options.classLevel}" ${hasRequestedClass ? 'FOUND' : 'NOT FOUND'} in database`);
         }
       }
@@ -1239,7 +1307,7 @@ export class QdrantRAGSearch {
       // Test search without filters
       console.log('ðŸ” EMPTY RESULTS DEBUG: Testing unfiltered search...');
       const unfilteredResults = await this.client.search(this.collectionName, {
-        vector: Array(1536).fill(0.1), // Dummy vector (1536 dimensions for text-embedding-3-small)
+        vector: Array(3072).fill(0.1), // Dummy vector (3072 dimensions for text-embedding-3-large)
         limit: 5,
         with_payload: true
       });
@@ -1357,7 +1425,8 @@ export class QdrantRAGSearch {
         with_payload: true
       });
 
-      if (response.length === 0) return null;
+      if (response.length === 0)
+  return null;
 
       const point = response[0];
       return {

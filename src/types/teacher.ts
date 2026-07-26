@@ -2,7 +2,7 @@
 
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected'
 
-export type ActivityType = 
+export type ActivityType =
   | 'class_created'
   | 'class_updated'
   | 'class_deleted'
@@ -21,7 +21,8 @@ export type ContentType = 'ai_answer' | 'quiz_question' | 'explanation' | 'summa
 export interface TeacherProfile {
   id: string
   userId: string
-  clerkId: string
+  /** @deprecated Use userId instead */
+  clerkId: string  // kept for backward DB compat, maps to userId
   email: string
   firstName: string
   lastName: string
@@ -99,7 +100,8 @@ export interface ContentValidationItem {
 
 export interface TeacherStatistics {
   teacherId: string
-  clerkId: string
+  /** @deprecated Use teacherId instead */
+  clerkId: string  // kept for backward DB compat
   email: string
   teacherName: string
   approvalStatus: ApprovalStatus
@@ -114,7 +116,8 @@ export interface TeacherStatistics {
 
 export interface StudentInfo {
   id: string
-  clerkId: string
+  /** @deprecated Use id instead */
+  clerkId: string  // kept for backward DB compat
   email: string
   firstName: string
   lastName: string

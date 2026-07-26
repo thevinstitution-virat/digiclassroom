@@ -13,19 +13,16 @@ const handler = (req: NextRequest) =>
     endpoint: '/api/trpc',
     req,
     router: appRouter,
-    createContext: async () => {
-      return await createTRPCContext({
-        req: req as any,
-        res: undefined as any
-      })
+    createContext: async (opts) => {
+      return await createTRPCContext(opts)
     },
     onError:
       process.env.NODE_ENV === 'development'
         ? ({ path, error }) => {
-            console.error(
-              `❌ tRPC failed on ${path ?? '<no-path>'}: ${error.message}`
-            )
-          }
+          console.error(
+            `❌ tRPC failed on ${path ?? '<no-path>'}: ${error.message}`
+          )
+        }
         : undefined,
   })
 

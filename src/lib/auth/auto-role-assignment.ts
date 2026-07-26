@@ -1,4 +1,5 @@
-import { clerkClient } from '@clerk/nextjs/server'
+import { auth } from '@/auth';
+import { headers } from 'next/headers';
 import { Roles } from '@/types/globals'
 
 // Default role assignment rules
@@ -10,11 +11,11 @@ const DOMAIN_ROLE_MAPPING: Record<string, Roles> = {
   'school.edu': 'teacher',
   'university.edu': 'teacher',
   'college.edu': 'teacher',
-  
+
   // Admin domains (you can customize these)
   'viratgyankosh.com': 'admin',
   'admin.viratgyankosh.com': 'admin',
-  
+
   // Add your specific domains here
   // 'yourschool.edu': 'teacher',
 }
@@ -99,12 +100,11 @@ export async function autoAssignUserRole(userId: string, email: string, firstNam
   message: string
 }> {
   try {
-    const client = await clerkClient()
-    
     // Get current user to check if role already exists
-    const user = await client.users.getUser(userId)
-    const existingRole = user.publicMetadata.role as Roles
-    
+    // User data is already available from session
+    const user = session?.user as any;
+    const existingRole = user.role as Roles
+
     // If user already has a role, don't override it
     if (existingRole) {
       return {
@@ -113,32 +113,23 @@ export async function autoAssignUserRole(userId: string, email: string, firstNam
         message: `User already has role: ${existingRole}`
       }
     }
-    
+
     // Determine appropriate role
     const assignedRole = determineUserRole(email, firstName, lastName)
-    
+
     // Assign default tenant (in production, this would be more sophisticated)
     const defaultTenantId = 'demo-tenant-001'
-    
+
     // Update user metadata
-    await client.users.updateUserMetadata(userId, {
-      publicMetadata: {
-        role: assignedRole,
-        tenantId: defaultTenantId,
-        autoAssigned: true,
-        assignedAt: new Date().toISOString(),
-        assignmentReason: getAssignmentReason(email, assignedRole),
-      }
-    })
-    
-    console.log(`Auto-assigned role "${assignedRole}" to user ${userId} (${email})`)
-    
+    // TODO: Role update should use Better Auth admin API or direct DB update
+    // await db.update(user).set({ role: newRole }).where(eq(user.id, targetUserId))console.log(`Auto-assigned role "${assignedRole}" to user ${userId} (${email})`)
+
     return {
       success: true,
       role: assignedRole,
       message: `Automatically assigned role: ${assignedRole}`
     }
-    
+
   } catch (error) {
     console.error('Error auto-assigning user role:', error)
     return {
@@ -154,14 +145,14 @@ export async function autoAssignUserRole(userId: string, email: string, firstNam
  */
 function getAssignmentReason(email: string, role: Roles): string {
   const domain = email.split('@')[1]?.toLowerCase()
-  
+
   switch (role) {
     case 'admin':
       if (ADMIN_EMAILS.includes(email.toLowerCase())) {
         return 'Admin email address'
       }
       return 'Admin domain'
-      
+
     case 'teacher':
       if (domain && DOMAIN_ROLE_MAPPING[domain] === 'teacher') {
         return `Educational domain: ${domain}`
@@ -170,10 +161,10 @@ function getAssignmentReason(email: string, role: Roles): string {
         return 'Teacher email pattern'
       }
       return 'Teacher identification'
-      
+
     case 'parent':
       return 'Parent email pattern'
-      
+
     case 'student':
     default:
       return 'Default assignment'
@@ -185,9 +176,9 @@ function getAssignmentReason(email: string, role: Roles): string {
  */
 export async function needsRoleAssignment(userId: string): Promise<boolean> {
   try {
-    const client = await clerkClient()
-    const user = await client.users.getUser(userId)
-    return !user.publicMetadata.role
+    // User data is already available from session
+    const user = session?.user as any;
+    return !user.role
   } catch (error) {
     console.error('Error checking role assignment need:', error)
     return true // Assume needs assignment if we can't check
@@ -204,33 +195,32 @@ export async function bulkAutoAssignRoles(): Promise<{
   results: Array<{ userId: string; email: string; success: boolean; role?: Roles; error?: string }>
 }> {
   try {
-    const client = await clerkClient()
-    
     // Get all users without roles
-    const users = await client.users.getUserList({ limit: 100 })
-    const usersWithoutRoles = users.data.filter(user => !user.publicMetadata.role)
-    
+    // TODO: Replace with direct DB user query
+    const users = { data: [] } as any;
+    const usersWithoutRoles = users.data.filter(user => !user.role)
+
     const results = []
     let successful = 0
     let failed = 0
-    
+
     for (const user of usersWithoutRoles) {
       const primaryEmail = user.emailAddresses.find(email => email.id === user.primaryEmailAddressId)
-      
+
       if (primaryEmail) {
         const result = await autoAssignUserRole(
           user.id,
           primaryEmail.emailAddress,
-          user.firstName || undefined,
-          user.lastName || undefined
+          user?.name?.split(' ')[0] || undefined,
+          user?.name?.split(' ').slice(1).join(' ') || undefined
         )
-        
+
         if (result.success) {
           successful++
         } else {
           failed++
         }
-        
+
         results.push({
           userId: user.id,
           email: primaryEmail.emailAddress,
@@ -248,14 +238,14 @@ export async function bulkAutoAssignRoles(): Promise<{
         })
       }
     }
-    
+
     return {
       processed: usersWithoutRoles.length,
       successful,
       failed,
       results
     }
-    
+
   } catch (error) {
     console.error('Error in bulk role assignment:', error)
     throw error

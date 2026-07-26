@@ -1,5 +1,6 @@
+import { auth } from '@/auth';
+import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
 // Legacy dependency removed: tesseract.js
 
 export const runtime = 'nodejs'
@@ -46,7 +47,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   try {
     // Authentication check
-    const { userId } = await auth()
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -135,8 +137,8 @@ async function processWithTesseract(
 // Health check endpoint
 export async function GET(): Promise<NextResponse> {
   try {
-    const { userId } = await auth()
-    
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     return NextResponse.json({
       status: 'healthy',
       message: 'OCR API is running',

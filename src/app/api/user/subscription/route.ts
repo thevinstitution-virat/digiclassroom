@@ -7,8 +7,9 @@
  * - Used by frontend to display subscription status and remaining questions
  */
 
+import { auth } from '@/auth';
+import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
 import { subscriptionValidationService } from '@/lib/services/subscription-validation-service';
 
 /**
@@ -17,42 +18,43 @@ import { subscriptionValidationService } from '@/lib/services/subscription-valid
  */
 export async function GET(request: NextRequest) {
   try {
-    // Authentication check
-    const { userId: clerkId } = await auth();
-    
-    if (!clerkId) {
+    // Authentication check using BetterAuth
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
+
+    if (!userId) {
       return NextResponse.json(
-        { 
+        {
           error: 'AUTHENTICATION_REQUIRED',
           message: 'Please sign in to view your subscription'
         },
         { status: 401 }
       );
     }
-    
-    console.log(`📊 Fetching subscription for user ${clerkId}`);
-    
+
+    console.log(`📊 Fetching subscription for user ${userId}`);
+
     // Get user subscription
-    const subscription = await subscriptionValidationService.getUserSubscription(clerkId);
-    
+    const subscription = await subscriptionValidationService.getUserSubscription(userId);
+
     if (!subscription) {
       return NextResponse.json(
         {
-          success: false,
-          error: 'NO_SUBSCRIPTION',
+          success: true,
+          status: 'NO_SUBSCRIPTION',
           message: 'No active subscription or trial found. Please start your free trial.',
           data: null
         },
-        { status: 404 }
+        { status: 200 }
       );
     }
-    
+
     // Get daily quota status
-    const quotaCheck = await subscriptionValidationService.canAskQuestion(clerkId);
-    
+    const quotaCheck = await subscriptionValidationService.canAskQuestion(userId);
+
     // Get available content based on subscription
-    const availableBoards = await subscriptionValidationService.getAvailableBoards(clerkId);
-    
+    const availableBoards = await subscriptionValidationService.getAvailableBoards(userId);
+
     // Build response
     const response = {
       success: true,
@@ -64,27 +66,27 @@ export async function GET(request: NextRequest) {
           plan_code: subscription.plan_code,
           subscription_type: subscription.subscription_type,
           subscription_status: subscription.subscription_status,
-          
+
           // Access Details
           purchased_board: subscription.purchased_board,
           purchased_class: subscription.purchased_class,
           class_access_type: subscription.class_access_type,
           purchased_subjects: subscription.purchased_subjects,
-          
+
           // Pricing
           monthly_price: subscription.monthly_price,
           billing_cycle: subscription.billing_cycle,
-          
+
           // Dates
           start_date: subscription.start_date,
           expiry_date: subscription.expiry_date,
           next_billing_date: subscription.next_billing_date,
-          
+
           // Payment
           payment_status: subscription.payment_status,
           auto_renew: subscription.auto_renew,
         },
-        
+
         // Quota Information
         quota: {
           daily_limit: quotaCheck.limit,
@@ -92,11 +94,11 @@ export async function GET(request: NextRequest) {
           questions_remaining: quotaCheck.remaining,
           can_ask_question: quotaCheck.allowed,
           message: quotaCheck.message,
-          
+
           // Percentage used (for progress bars)
           percentage_used: Math.round(((quotaCheck.limit - quotaCheck.remaining) / quotaCheck.limit) * 100)
         },
-        
+
         // Available Content
         access: {
           boards: availableBoards,
@@ -104,7 +106,7 @@ export async function GET(request: NextRequest) {
           has_all_classes: subscription.class_access_type === 'all',
           has_all_subjects: !subscription.purchased_subjects || subscription.purchased_subjects.length === 0
         },
-        
+
         // Status Flags
         is_trial: subscription.subscription_status === 'trial',
         is_active: subscription.subscription_status === 'active',
@@ -112,11 +114,11 @@ export async function GET(request: NextRequest) {
         needs_upgrade: !quotaCheck.allowed || subscription.subscription_status === 'expired'
       }
     };
-    
+
     console.log(`✅ Subscription fetched: ${subscription.plan_name} (${quotaCheck.remaining}/${quotaCheck.limit} remaining)`);
-    
+
     return NextResponse.json(response);
-    
+
   } catch (error) {
     console.error('❌ Error fetching subscription:', error);
     return NextResponse.json(
@@ -138,52 +140,53 @@ export async function GET(request: NextRequest) {
  */
 export async function OPTIONS(request: NextRequest) {
   try {
-    // Authentication check
-    const { userId: clerkId } = await auth();
-    
-    if (!clerkId) {
+    // Authentication check using BetterAuth
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
+
+    if (!userId) {
       return NextResponse.json(
-        { 
+        {
           error: 'AUTHENTICATION_REQUIRED',
           message: 'Please sign in to view available content'
         },
         { status: 401 }
       );
     }
-    
+
     // Get query parameters
     const { searchParams } = new URL(request.url);
     const board = searchParams.get('board');
     const classLevel = searchParams.get('class');
-    
-    console.log(`📚 Fetching available content for user ${clerkId}: board=${board}, class=${classLevel}`);
-    
+
+    console.log(`📚 Fetching available content for user ${userId}: board=${board}, class=${classLevel}`);
+
     // Get available boards
-    const availableBoards = await subscriptionValidationService.getAvailableBoards(clerkId);
-    
+    const availableBoards = await subscriptionValidationService.getAvailableBoards(userId);
+
     // Get available classes (if board is specified)
     let availableClasses: number[] = [];
     if (board) {
-      availableClasses = await subscriptionValidationService.getAvailableClasses(clerkId, board);
+      availableClasses = await subscriptionValidationService.getAvailableClasses(userId, board);
     }
-    
+
     // Get available subjects (if board and class are specified)
     let availableSubjects: string[] = [];
     if (board && classLevel) {
       availableSubjects = await subscriptionValidationService.getAvailableSubjects(
-        clerkId,
+        userId,
         board,
         parseInt(classLevel)
       );
     }
-    
+
     const response = {
       success: true,
       data: {
         boards: availableBoards,
         classes: availableClasses,
         subjects: availableSubjects,
-        
+
         // Metadata
         filters: {
           board: board || null,
@@ -191,11 +194,11 @@ export async function OPTIONS(request: NextRequest) {
         }
       }
     };
-    
+
     console.log(`✅ Available content: ${availableBoards.length} boards, ${availableClasses.length} classes, ${availableSubjects.length} subjects`);
-    
+
     return NextResponse.json(response);
-    
+
   } catch (error) {
     console.error('❌ Error fetching available content:', error);
     return NextResponse.json(
@@ -209,4 +212,5 @@ export async function OPTIONS(request: NextRequest) {
     );
   }
 }
+
 

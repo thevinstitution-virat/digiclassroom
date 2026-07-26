@@ -2,12 +2,13 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { 
-  UserProfile, 
-  getUserDisplayName, 
-  getUserRoleColor, 
-  getUserStatusColor, 
-  formatDate 
+import {
+  UserProfile,
+  getUserDisplayName,
+  getUserRoleColor,
+  getUserRoleLabel,
+  getUserStatusColor,
+  formatDate
 } from '@/types/user-management'
 
 interface UserTableProps {
@@ -113,6 +114,9 @@ export default function UserTable({
                 </div>
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Institution
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
               </th>
               <th 
@@ -186,8 +190,11 @@ export default function UserTable({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getUserRoleColor(user.role)}`}>
-                    {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                    {getUserRoleLabel(user.role)}
                   </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                  {user.institution ?? <span className="text-gray-400">—</span>}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getUserStatusColor(user.status)}`}>
@@ -208,12 +215,15 @@ export default function UserTable({
                     >
                       Edit
                     </button>
-                    <button
-                      onClick={() => onUserDelete(user.id)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Delete
-                    </button>
+                    {/* The super_admin (platform owner) account can never be deleted. */}
+                    {user.role !== 'super_admin' && (
+                      <button
+                        onClick={() => onUserDelete(user.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

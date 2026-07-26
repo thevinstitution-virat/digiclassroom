@@ -237,7 +237,8 @@ export class ServiceWorkerManager {
    * Unregister service worker
    */
   async unregister(): Promise<boolean> {
-    if (!this.registration) return false
+    if (!this.registration)
+  return false
 
     try {
       const result = await this.registration.unregister()
@@ -281,7 +282,8 @@ export class ServiceWorkerManager {
    */
   isSlowConnection(): boolean {
     const connection = this.getConnectionInfo()
-    if (!connection) return false
+    if (!connection)
+  return false
 
     // Consider 2G or slow 3G as slow
     return connection.effectiveType === '2g' || 

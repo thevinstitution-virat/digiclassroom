@@ -214,7 +214,8 @@ export class EducationalRAGTester {
   }
 
   private calculateRelevanceScore(result: any, testQuery: TestQuery): number {
-    if (!result.results || result.results.length === 0) return 0
+    if (!result.results || result.results.length === 0)
+  return 0
     
     // Check for expected keywords in retrieved content
     const content = result.results.map((r: any) => r.content || '').join(' ').toLowerCase()
@@ -226,7 +227,8 @@ export class EducationalRAGTester {
   }
 
   private calculateCompletenessScore(result: any, testQuery: TestQuery): number {
-    if (!result.results || result.results.length === 0) return 0
+    if (!result.results || result.results.length === 0)
+  return 0
     
     // Basic completeness based on content length and structure
     const totalContent = result.results.map((r: any) => r.content || '').join(' ')
@@ -242,7 +244,8 @@ export class EducationalRAGTester {
   }
 
   private calculateCurriculumAlignment(result: any, testQuery: TestQuery): number {
-    if (!result.results || result.results.length === 0) return 0
+    if (!result.results || result.results.length === 0)
+  return 0
     
     let alignmentScore = 0
     const totalResults = result.results.length

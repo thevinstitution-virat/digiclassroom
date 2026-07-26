@@ -7,7 +7,7 @@ import { Badge } from '@/components/core/ui/badge'
 import FormattedContent from '@/components/ai/core/FormattedContent'
 import LessonPlanContainer from '@/components/learning/lesson/LessonPlanContainer'
 import { FeedbackWidget } from '@/components/user/profile/feedback/FeedbackWidget'
-import AnswerActionButtons from '@/components/ai/core/AnswerActionButtons'
+import AnswerActionButtons from '@/components/ai/AnswerActionButtons'
 import { User, Bot, BookOpen, FileText, Loader2, X, Zap } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MultiModalInput } from '@/components/ai/tutor/MultiModalInput'
@@ -16,6 +16,8 @@ import { StreamingChatMessage } from '@/components/ai/chat/StreamingChatMessage'
 import { ChatErrorBoundary } from '@/components/core/common/ChatErrorBoundary'
 import { useAiTutor } from './_hooks/useAiTutor'
 import { TutorHeader, UpgradeModal, ContextSelector } from './_components'
+import { formatContextHeader } from '@/lib/context-labels'
+import QuickReplies from '@/components/ai/tutor/QuickReplyCard'
 import type { Message } from './_types'
 
 export default function AITutorPage() {
@@ -94,6 +96,17 @@ export default function AITutorPage() {
           onReset={resetConversation}
         />
 
+        {/* Global Context Selector */}
+        <div className="mb-4">
+          <ContextSelector
+            visible={shouldShowContextSelector()}
+            currentValue={getCurrentContextValue()}
+            options={generateContextOptions()}
+            subscriptionData={subscriptionData}
+            onValueChange={handleContextChange}
+          />
+        </div>
+
         {/* Subscription Loading/Error Display */}
         {isLoadingSubscription && (
           <Card className="mb-3 bg-blue-50/90 dark:bg-blue-900/20 backdrop-blur-md border-blue-200 dark:border-blue-800 shadow-lg rounded-2xl">
@@ -130,7 +143,7 @@ export default function AITutorPage() {
             {/* Messages Area */}
             <div className="h-[calc(100vh-280px)] min-h-[400px] max-h-[600px] overflow-y-auto overflow-x-hidden p-6 space-y-6 bg-gradient-to-b from-gray-50/30 to-white/50 dark:from-gray-800/30 dark:to-gray-900/50">
               <AnimatePresence>
-                {messages.map((message) => (
+                {messages.filter(msg => msg.role === 'user' || msg.content?.trim() || (msg.messageType && msg.messageType !== 'text')).map((message) => (
                   <motion.div
                     key={message.id}
                     initial={{ opacity: 0, y: 20 }}
@@ -166,7 +179,7 @@ export default function AITutorPage() {
                                   {message.agentType && (
                                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center">
                                       <Bot className="h-3 w-3 mr-1" />
-                                      Agent System Response: {message.agentType} with cultural context
+                                      Agent System Response: {formatContextHeader(message.agentType)}
                                     </div>
                                   )}
                                 </div>
@@ -211,9 +224,10 @@ export default function AITutorPage() {
                                     <span className="font-medium">Sources:</span>
                                     <span>
                                       {message.sources.slice(0, 3).map((source, index) => (
-                                        <span key={source.id}>
+                                        <span key={source.id || index}>
                                           {index > 0 && ', '}
                                           {source.title}
+                                          {source.page && source.page !== 'Unknown Page' && ` (Pg. ${source.page})`}
                                         </span>
                                       ))}
                                       {message.sources.length > 3 && ` +${message.sources.length - 3} more`}
@@ -334,97 +348,14 @@ export default function AITutorPage() {
                               {/* Quick Replies */}
                               {message.quickReplies && message.quickReplies.length > 0 && (
                                 <div className="mt-4">
-                                  {/* 🚀 PRIORITY 4: Visual Menu Action Cards for menu_selection */}
-                                  {message.id === 'menu_selection' && conversationState.selectedRole ? (
-                                    renderMenuActionCards(conversationState.selectedRole)
-                                  ) : (
-                                    <>
-                                      {message.messageType === 'options' && (
-                                        <div className={`grid gap-3 ${message.quickReplies.length <= 3
-                                          ? 'grid-cols-1 sm:grid-cols-3' // Single row for role/board selection (3 buttons)
-                                          : message.quickReplies.length === 12
-                                            ? 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-6' // 6×2 grid for class selection (12 buttons)
-                                            : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' // Default grid layout
-                                          }`}>
-                                          {message.quickReplies.map((quickReply) => (
-                                            <Button
-                                              key={quickReply.id}
-                                              variant="outline"
-                                              size="lg"
-                                              onClick={() => handleQuickReply(quickReply)}
-                                              className={`group relative h-auto w-full mx-auto transition-all duration-300 shadow-sm hover:shadow-lg
-                                            bg-white/90 backdrop-blur-sm border-2 border-orange-200/60
-                                            hover:border-blue-400/80 text-gray-700 hover:text-blue-800
-                                            rounded-xl hover:rounded-2xl transform hover:scale-[1.02]
-                                            hover:bg-gradient-to-r hover:from-orange-50/80 hover:to-blue-50/80
-                                            active:scale-[0.98] active:shadow-sm
-                                            focus:ring-2 focus:ring-blue-500/20 focus:outline-none ${message.quickReplies.length === 12
-                                                  ? 'min-h-[44px] p-2 text-xs' // Compact size for class selection (6×2 grid)
-                                                  : 'min-h-[36px] max-w-[200px] p-3' // Standard size for role/board selection
-                                                }`}
-                                              disabled={isLoading}
-                                            >
-                                              {message.quickReplies.length === 12 ? (
-                                                // Simplified layout for class selection (6×2 grid)
-                                                <div className="flex items-center justify-center w-full">
-                                                  <div className="font-semibold text-center leading-tight dark:text-gray-100">
-                                                    {quickReply.text}
-                                                  </div>
-                                                </div>
-                                              ) : (
-                                                // Standard layout for role/board selection
-                                                <div className="flex items-center justify-start w-full space-x-3">
-                                                  {quickReply.icon && (
-                                                    <div className="flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
-                                                      {renderIcon(quickReply.icon, "h-5 w-5")}
-                                                    </div>
-                                                  )}
-                                                  <div className="text-left flex-1 min-w-0">
-                                                    <div className="font-semibold text-sm leading-tight truncate dark:text-gray-100">
-                                                      {quickReply.text}
-                                                    </div>
-                                                    {getQuickReplyDescription(quickReply.id) && (
-                                                      <div className="text-xs text-gray-600 dark:text-gray-400 mt-1 opacity-80 leading-tight line-clamp-2">
-                                                        {getQuickReplyDescription(quickReply.id)}
-                                                      </div>
-                                                    )}
-                                                  </div>
-                                                </div>
-                                              )}
-                                            </Button>
-                                          ))}
-                                        </div>
-                                      )}
-
-                                      {message.messageType !== 'options' && (
-                                        <div className="flex flex-wrap gap-2">
-                                          {message.quickReplies.map((quickReply) => (
-                                            <Button
-                                              key={quickReply.id}
-                                              variant="outline"
-                                              size="sm"
-                                              onClick={() => handleQuickReply(quickReply)}
-                                              className="group min-h-[32px] px-2 py-1.5
-                                            bg-white/90 backdrop-blur-sm border border-orange-200/60
-                                            hover:border-blue-400/80 text-gray-700 hover:text-blue-800
-                                            transition-all duration-200 shadow-sm hover:shadow-md
-                                            rounded-xl hover:rounded-2xl transform hover:scale-105
-                                            hover:bg-gradient-to-r hover:from-orange-50/60 hover:to-blue-50/60
-                                            active:scale-95 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
-                                              disabled={isLoading}
-                                            >
-                                              {quickReply.icon && (
-                                                <div className="mr-2 group-hover:scale-110 transition-transform duration-200">
-                                                  {renderIcon(quickReply.icon, "h-4 w-4")}
-                                                </div>
-                                              )}
-                                              <span className="text-sm font-medium">{quickReply.text}</span>
-                                            </Button>
-                                          ))}
-                                        </div>
-                                      )}
-                                    </>
-                                  )}
+                                  <QuickReplies
+                                    replies={message.quickReplies}
+                                    onSelect={(val) => {
+                                      const q = message.quickReplies!.find(r => r.value === val || r.text === val)
+                                      if (q) handleQuickReply(q)
+                                    }}
+                                    disabled={isLoading}
+                                  />
                                 </div>
                               )}
 
@@ -496,7 +427,6 @@ export default function AITutorPage() {
                                 message.content &&
                                 !message.isAgentResponse &&
                                 !message.quickReplies &&
-                                conversationState.phase === 'chatting' &&
                                 // Exclude system/greeting messages by ID
                                 message.id !== 'initial_greeting' &&
                                 message.id !== 'board_selection' &&
@@ -560,6 +490,16 @@ export default function AITutorPage() {
                                     }}
                                   />
                                 )}
+
+                              {/* Feedback Widget - Show for all assistant messages that have an ID */}
+                              {message.role === 'assistant' && message.id && message.id !== 'initial_greeting' && (
+                                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                                  <FeedbackWidget 
+                                    messageId={message.id}
+                                    sessionId={sessionId}
+                                  />
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <p className="text-sm leading-relaxed">{message.content}</p>
@@ -573,55 +513,18 @@ export default function AITutorPage() {
 
               {/* Active Stream / Loading Indicator */}
               <ChatErrorBoundary onReset={cancelMessage}>
-                {(agentStreamState.status !== 'idle' && agentStreamState.status !== 'complete') ? (
+                {(agentStreamState.status !== 'idle' && agentStreamState.status !== 'complete') && (
                   <div className="flex justify-start my-4">
                     <StreamingChatMessage
                       streamState={agentStreamState}
                       studentName={conversationState.context.userName}
+                      onStop={() => {
+                        cancelMessage();
+                        resetStream();
+                      }}
                     />
-                    {agentStreamState.status === 'connecting' && (
-                      <div className="ml-2 mt-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            cancelMessage(); // Custom cleanup
-                            resetStream();
-                          }}
-                          className="h-6 w-6 p-0 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400"
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    )}
                   </div>
-                ) : isLoading ? (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex justify-start"
-                  >
-                    <div className="flex items-start space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 flex items-center justify-center">
-                        <Bot className="h-4 w-4 text-white" />
-                      </div>
-                      <div className="bg-gray-100 dark:bg-gray-700 rounded-2xl px-4 py-3 mr-3">
-                        <div className="flex items-center space-x-2">
-                          <Loader2 className="h-4 w-4 animate-spin text-gray-600 dark:text-gray-300" />
-                          <span className="text-sm text-gray-600 dark:text-gray-300">Thinking...</span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={cancelMessage}
-                            className="h-6 w-6 p-0 text-gray-500 dark:text-gray-400 hover:text-red-500 dark:hover:text-red-400"
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ) : null}
+                )}
               </ChatErrorBoundary>
 
               <div ref={messagesEndRef} />
@@ -650,14 +553,6 @@ export default function AITutorPage() {
                 </div>
               )}
 
-              {/* Context Selector */}
-              <ContextSelector
-                visible={shouldShowContextSelector()}
-                currentValue={getCurrentContextValue()}
-                options={generateContextOptions()}
-                subscriptionData={subscriptionData}
-                onValueChange={handleContextChange}
-              />
 
               {/* Multi-Modal Input Component */}
               <MultiModalInput

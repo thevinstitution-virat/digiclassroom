@@ -1,9 +1,15 @@
 /**
  * Jest Setup for DigiClassroom AI Tutor Tests
  * Global test configuration and mocks
+ *
+ * Guards browser-only setup (DOM matchers, WebSocket, etc.) so that
+ * tests running in the 'node' environment are not affected.
  */
 
-import '@testing-library/jest-dom';
+// Only import DOM matchers when running in jsdom environment
+if (typeof window !== 'undefined') {
+  require('@testing-library/jest-dom');
+}
 
 // Mock environment variables
 process.env.NODE_ENV = 'test';
@@ -26,7 +32,7 @@ const originalConsoleError = console.error;
 
 console.log = jest.fn((...args) => {
   // Only log in verbose mode or for important messages
-  if (process.env.JEST_VERBOSE === 'true' || args[0]?.includes('❌') || args[0]?.includes('✅')) {
+  if (process.env.JEST_VERBOSE === 'true' || args[0]?.includes?.('❌') || args[0]?.includes?.('✅')) {
     originalConsoleLog(...args);
   }
 });
@@ -146,7 +152,7 @@ global.testUtils = {
   })
 };
 
-// Mock fetch for API calls
+// Mock fetch for API calls (available in both node and jsdom)
 global.fetch = jest.fn(() =>
   Promise.resolve({
     ok: true,
@@ -156,36 +162,39 @@ global.fetch = jest.fn(() =>
   })
 );
 
-// Mock WebSocket for streaming tests
-global.WebSocket = jest.fn(() => ({
-  send: jest.fn(),
-  close: jest.fn(),
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
-  readyState: 1, // OPEN
-}));
+// Browser-only global mocks — only set up in jsdom environment
+if (typeof window !== 'undefined') {
+  // Mock WebSocket for streaming tests
+  global.WebSocket = jest.fn(() => ({
+    send: jest.fn(),
+    close: jest.fn(),
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    readyState: 1, // OPEN
+  }));
 
-// Mock EventSource for Server-Sent Events
-global.EventSource = jest.fn(() => ({
-  addEventListener: jest.fn(),
-  removeEventListener: jest.fn(),
-  close: jest.fn(),
-  readyState: 1, // OPEN
-}));
+  // Mock EventSource for Server-Sent Events
+  global.EventSource = jest.fn(() => ({
+    addEventListener: jest.fn(),
+    removeEventListener: jest.fn(),
+    close: jest.fn(),
+    readyState: 1, // OPEN
+  }));
 
-// Mock IntersectionObserver
-global.IntersectionObserver = jest.fn(() => ({
-  observe: jest.fn(),
-  unobserve: jest.fn(),
-  disconnect: jest.fn(),
-}));
+  // Mock IntersectionObserver
+  global.IntersectionObserver = jest.fn(() => ({
+    observe: jest.fn(),
+    unobserve: jest.fn(),
+    disconnect: jest.fn(),
+  }));
 
-// Mock ResizeObserver
-global.ResizeObserver = jest.fn(() => ({
-  observe: jest.fn(),
-  unobserve: jest.fn(),
-  disconnect: jest.fn(),
-}));
+  // Mock ResizeObserver
+  global.ResizeObserver = jest.fn(() => ({
+    observe: jest.fn(),
+    unobserve: jest.fn(),
+    disconnect: jest.fn(),
+  }));
+}
 
 // Mock crypto for UUID generation
 Object.defineProperty(global, 'crypto', {
@@ -215,22 +224,23 @@ Object.defineProperty(global, 'performance', {
 beforeEach(() => {
   // Clear all mocks before each test
   jest.clearAllMocks();
-  
+
   // Reset console mocks
   console.log.mockClear();
   console.warn.mockClear();
   console.error.mockClear();
-  
+
   // Reset fetch mock
   fetch.mockClear();
 });
 
 afterEach(() => {
-  // Clean up any timers
-  jest.clearAllTimers();
-  
-  // Clean up any pending promises
-  jest.runOnlyPendingTimers();
+  // Only clean up timers if fake timers are in use
+  try {
+    jest.clearAllTimers();
+  } catch (_) {
+    // No fake timers active — nothing to clear
+  }
 });
 
 // Global error handler for unhandled promise rejections
@@ -241,7 +251,7 @@ process.on('unhandledRejection', (reason, promise) => {
 // Increase timeout for integration tests
 jest.setTimeout(30000);
 
-// Mock Next.js router
+// Mock Next.js router (Pages Router — legacy)
 jest.mock('next/router', () => ({
   useRouter: () => ({
     push: jest.fn(),
@@ -253,15 +263,5 @@ jest.mock('next/router', () => ({
   }),
 }));
 
-// Mock Next.js navigation
-jest.mock('next/navigation', () => ({
-  useRouter: () => ({
-    push: jest.fn(),
-    replace: jest.fn(),
-    back: jest.fn(),
-    pathname: '/test',
-    searchParams: new URLSearchParams(),
-  }),
-  usePathname: () => '/test',
-  useSearchParams: () => new URLSearchParams(),
-}));
+// Note: next/navigation is mocked via moduleNameMapper in jest.config.js
+// pointing to src/__mocks__/next-navigation.ts

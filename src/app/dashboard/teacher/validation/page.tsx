@@ -134,9 +134,12 @@ export default function TeacherValidationPage() {
   }
 
   const getRatingColor = (rating: number | null) => {
-    if (!rating) return 'text-gray-400'
-    if (rating >= 4) return 'text-green-600'
-    if (rating >= 3) return 'text-yellow-600'
+    if (!rating)
+  return 'text-gray-400'
+    if (rating >= 4)
+  return 'text-green-600'
+    if (rating >= 3)
+  return 'text-yellow-600'
     return 'text-red-600'
   }
 

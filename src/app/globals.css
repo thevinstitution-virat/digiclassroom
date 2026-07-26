@@ -5,30 +5,257 @@
 /* Note: additional global CSS files are imported from app/layout.tsx to avoid @import issues in some builds */
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --apple-blue: #0071e3;
-  --apple-blue-dark: #005bb5;
+  /* ===== Base surface ===== */
+  --background: 210 40% 99%;        /* cool near-white page base */
+  --foreground: 222 32% 13%;        /* rich ink — never pure black */
+  --apple-blue: #2563eb;
+  --apple-blue-dark: #1d4ed8;
 
-  /* shadcn/ui theme variables */
+  /* ===== shadcn/ui tokens — DigiClassroom branded (light) ===== */
   --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
+  --card-foreground: 222 32% 13%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 222.2 47.4% 11.2%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222.2 84% 4.9%;
-  --muted: 210 40% 96%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222.2 84% 4.9%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 222.2 84% 4.9%;
-  --radius: 0.5rem;
+  --popover-foreground: 222 32% 13%;
+  --primary: 221 83% 53%;           /* brand blue #2563EB */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 214 32% 95%;
+  --secondary-foreground: 222 30% 20%;
+  --muted: 214 32% 96%;
+  --muted-foreground: 215 16% 46%;
+  --accent: 213 100% 96%;           /* brand-tinted hover wash */
+  --accent-foreground: 221 83% 45%;
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 214 32% 91%;
+  --input: 214 30% 89%;
+  --ring: 221 83% 53%;
+  --radius: 0.75rem;
+
+  /* Sidebar tokens (used by shadcn-style sidebar utilities) */
+  --sidebar-background: 210 40% 99%;
+  --sidebar-foreground: 222 18% 32%;
+  --sidebar-primary: 221 83% 53%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 213 100% 96%;
+  --sidebar-accent-foreground: 221 83% 45%;
+  --sidebar-border: 214 32% 91%;
+  --sidebar-ring: 221 83% 53%;
+
+  /* Chart palette */
+  --chart-1: 221 83% 53%;
+  --chart-2: 24 95% 53%;
+  --chart-3: 243 75% 59%;
+  --chart-4: 173 80% 40%;
+  --chart-5: 271 76% 53%;
+
+  /* ===== DigiClassroom brand identity (orange → indigo → blue) ===== */
+  --dc-orange: #f97316;
+  --dc-orange-light: #fb923c;
+  --dc-orange-deep: #ea580c;
+  --dc-blue: #2563eb;
+  --dc-blue-deep: #1d4ed8;
+  --dc-indigo: #6366f1;
+  --dc-violet: #7c3aed;
+  --dc-cyan: #06b6d4;               /* electric highlight — used sparingly */
+  --dc-grad: linear-gradient(90deg, var(--dc-orange), var(--dc-blue));
+  --dc-grad-br: linear-gradient(135deg, var(--dc-orange) 0%, var(--dc-indigo) 52%, var(--dc-blue) 100%);
+  --dc-grad-cool: linear-gradient(135deg, var(--dc-indigo), var(--dc-blue));
+  --dc-grad-warm: linear-gradient(135deg, var(--dc-orange-light), var(--dc-orange-deep));
+
+  /* ===== Premium elevation — layered depth + inset highlight ===== */
+  --shadow-color: 222 47% 30%;
+  --elev-1: 0 1px 2px -1px hsl(var(--shadow-color) / 0.10), 0 1px 3px hsl(var(--shadow-color) / 0.06);
+  --elev-2: 0 1px 0 0 hsl(0 0% 100% / 0.65) inset, 0 2px 4px -2px hsl(var(--shadow-color) / 0.10), 0 8px 18px -8px hsl(var(--shadow-color) / 0.14);
+  --elev-3: 0 1px 0 0 hsl(0 0% 100% / 0.75) inset, 0 6px 12px -6px hsl(var(--shadow-color) / 0.12), 0 18px 36px -14px hsl(var(--shadow-color) / 0.20);
+  --elev-4: 0 1px 0 0 hsl(0 0% 100% / 0.8) inset, 0 28px 60px -22px hsl(var(--shadow-color) / 0.32), 0 10px 20px -10px hsl(var(--shadow-color) / 0.18);
+  --glow-brand: 0 12px 32px -10px hsl(221 83% 53% / 0.45);
+  --glow-amber: 0 12px 32px -10px hsl(24 95% 53% / 0.42);
+
+  /* Real font definitions (the @theme block below is inert in Tailwind v3) */
+  --font-sf-pro: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-vg-primary: 'Inter', system-ui, sans-serif;
+  --font-vg-cultural: 'Noto Sans Devanagari', serif;
+}
+
+/* ===== Dark mode — class-based (next-themes toggles `.dark`) ===== */
+.dark {
+  --background: 222 47% 6%;
+  --foreground: 210 40% 98%;
+  --card: 222 40% 9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222 44% 8%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 217 91% 60%;
+  --primary-foreground: 222 47% 8%;
+  --secondary: 217 33% 16%;
+  --secondary-foreground: 210 40% 96%;
+  --muted: 217 33% 15%;
+  --muted-foreground: 215 20% 65%;
+  --accent: 217 48% 18%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 63% 46%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 217 33% 18%;
+  --input: 217 33% 20%;
+  --ring: 217 91% 60%;
+
+  --sidebar-background: 222 47% 7%;
+  --sidebar-foreground: 215 20% 72%;
+  --sidebar-primary: 217 91% 60%;
+  --sidebar-primary-foreground: 222 47% 8%;
+  --sidebar-accent: 217 40% 16%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-border: 217 33% 16%;
+  --sidebar-ring: 217 91% 60%;
+
+  --shadow-color: 222 70% 2%;
+  --elev-1: 0 1px 2px -1px hsl(var(--shadow-color) / 0.6), 0 1px 3px hsl(var(--shadow-color) / 0.5);
+  --elev-2: 0 1px 0 0 hsl(210 40% 98% / 0.05) inset, 0 2px 4px -2px hsl(var(--shadow-color) / 0.6), 0 8px 18px -8px hsl(var(--shadow-color) / 0.7);
+  --elev-3: 0 1px 0 0 hsl(210 40% 98% / 0.06) inset, 0 6px 12px -6px hsl(var(--shadow-color) / 0.6), 0 18px 36px -14px hsl(var(--shadow-color) / 0.85);
+  --elev-4: 0 1px 0 0 hsl(210 40% 98% / 0.07) inset, 0 28px 60px -22px hsl(var(--shadow-color) / 0.95), 0 10px 20px -10px hsl(var(--shadow-color) / 0.8);
+  --glow-brand: 0 14px 40px -10px hsl(217 91% 60% / 0.55);
+  --glow-amber: 0 14px 40px -10px hsl(24 95% 53% / 0.42);
+}
+
+/* ====================================================================
+   DIGICLASSROOM DESIGN SYSTEM — premium surfaces, glass, depth, motion
+   ==================================================================== */
+
+/* Reusable brand gradient text (orange → indigo → blue). */
+.dc-gradient-text {
+  background-image: var(--dc-grad-br);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.dc-gradient-text-cool { background-image: var(--dc-grad-cool); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.dc-gradient-text-warm { background-image: var(--dc-grad-warm); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+@layer components {
+  /* The default premium content surface. */
+  .dc-surface {
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--border) / 0.85);
+    border-radius: var(--radius);
+    box-shadow: var(--elev-2);
+  }
+
+  /* Frosted-glass surface for floating panels / overlays. */
+  .dc-glass-card,
+  .dc-glass {
+    background: hsl(0 0% 100% / 0.72);
+    backdrop-filter: blur(18px) saturate(170%);
+    -webkit-backdrop-filter: blur(18px) saturate(170%);
+    border: 1px solid hsl(0 0% 100% / 0.6);
+    box-shadow: var(--elev-2);
+  }
+  .dark .dc-glass-card,
+  .dark .dc-glass {
+    background: hsl(222 40% 11% / 0.62);
+    border-color: hsl(210 40% 98% / 0.08);
+  }
+
+  /* Premium tile with a subtle gradient hairline border. */
+  .dc-gradient-border {
+    position: relative;
+    background-color: hsl(var(--card));
+    border-radius: var(--radius);
+    box-shadow: var(--elev-2);
+  }
+  .dc-gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, hsl(var(--border)) 0%, hsl(var(--border)) 38%, hsl(221 83% 53% / 0.45) 78%, hsl(24 95% 53% / 0.4) 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Section eyebrow / pill label. */
+  .dc-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: hsl(221 83% 45%);
+    background: hsl(213 100% 96%);
+    border: 1px solid hsl(221 83% 53% / 0.18);
+  }
+  .dark .dc-eyebrow { color: hsl(213 96% 78%); background: hsl(221 60% 60% / 0.12); border-color: hsl(221 83% 60% / 0.28); }
+}
+
+/* App background: soft brand auras over the base surface. */
+.dc-app-bg { position: relative; background-color: hsl(var(--background)); }
+.dc-app-bg::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(58rem 58rem at 6% -12%, hsl(24 95% 53% / 0.10), transparent 60%),
+    radial-gradient(52rem 52rem at 102% 4%, hsl(221 83% 53% / 0.12), transparent 56%),
+    radial-gradient(46rem 46rem at 50% 118%, hsl(243 75% 59% / 0.08), transparent 60%);
+}
+.dark .dc-app-bg::before {
+  background:
+    radial-gradient(58rem 58rem at 6% -12%, hsl(24 95% 53% / 0.10), transparent 58%),
+    radial-gradient(52rem 52rem at 102% 4%, hsl(221 83% 60% / 0.16), transparent 56%),
+    radial-gradient(46rem 46rem at 50% 118%, hsl(243 75% 59% / 0.12), transparent 60%);
+}
+
+/* Faint blueprint grid, masked to fade out — adds the "futuristic" texture. */
+.dc-grid::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(hsl(222 47% 30% / 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(222 47% 30% / 0.045) 1px, transparent 1px);
+  background-size: 46px 46px;
+  -webkit-mask-image: radial-gradient(78% 56% at 50% -4%, #000 0%, transparent 82%);
+          mask-image: radial-gradient(78% 56% at 50% -4%, #000 0%, transparent 82%);
+}
+.dark .dc-grid::after {
+  background-image:
+    linear-gradient(hsl(210 40% 98% / 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, hsl(210 40% 98% / 0.05) 1px, transparent 1px);
+}
+
+@layer utilities {
+  /* Smooth, touch-safe hover lift used by cards/tiles. */
+  .dc-hover-lift { transition: transform .28s cubic-bezier(.16,1,.3,1), box-shadow .28s cubic-bezier(.16,1,.3,1); }
+  @media (hover: hover) and (pointer: fine) {
+    .dc-hover-lift:hover { transform: translateY(-3px); box-shadow: var(--elev-3); }
+  }
+  .dc-ring-brand { box-shadow: 0 0 0 1px hsl(221 83% 53% / 0.22), var(--elev-2); }
+  .text-balance { text-wrap: balance; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .dc-animate-rise { animation: dc-rise .6s cubic-bezier(.16,1,.3,1) both; }
+}
+
+@keyframes dc-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+
+/* Respect reduced-motion across the landing (the page uses many transition/
+   animate utilities + JS counters; this disables the decorative ones). */
+@media (prefers-reduced-motion: reduce) {
+  .dc-anim,
+  .animate-pulse,
+  .animate-bounce {
+    animation: none !important;
+  }
 }
 
 @theme inline {
@@ -160,37 +387,20 @@
   --backdrop-blur-vg-xl: blur(var(--vg-blur-xl));
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-
-    /* shadcn/ui dark theme variables */
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-  }
-}
+/* Dark theme is class-based above (.dark). prefers-color-scheme is no longer
+   used for tokens so the next-themes toggle controls the full palette. */
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
   font-family: var(--font-sf-pro);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
+
+::selection { background: hsl(221 83% 53% / 0.18); }
+.dark ::selection { background: hsl(217 91% 60% / 0.30); }
 
 /* Apple-inspired animations */
 @keyframes fadeIn {
@@ -384,36 +594,34 @@ html {
   font-family: 'Courier New', monospace;
 }
 
-/* Dark mode support for educational formatting */
-@media (prefers-color-scheme: dark) {
-  .highlight-definition {
-    color: #4da6ff;
-    background-color: rgba(77, 166, 255, 0.15);
-  }
+/* Dark mode support for educational formatting (class-based) */
+.dark .highlight-definition {
+  color: #4da6ff;
+  background-color: rgba(77, 166, 255, 0.15);
+}
 
-  .highlight-key-point {
-    color: #5cb85c;
-    background-color: rgba(92, 184, 92, 0.15);
-  }
+.dark .highlight-key-point {
+  color: #5cb85c;
+  background-color: rgba(92, 184, 92, 0.15);
+}
 
-  .highlight-alert {
-    color: #f56565;
-    background-color: rgba(245, 101, 101, 0.15);
-  }
+.dark .highlight-alert {
+  color: #f56565;
+  background-color: rgba(245, 101, 101, 0.15);
+}
 
-  .chat-message em {
-    color: #4da6ff;
-  }
+.dark .chat-message em {
+  color: #4da6ff;
+}
 
-  .chat-message u {
-    text-decoration-color: #4da6ff;
-  }
+.dark .chat-message u {
+  text-decoration-color: #4da6ff;
+}
 
-  .page-citation {
-    background-color: #1a237e;
-    color: #90caf9;
-    border-color: #3949ab;
-  }
+.dark .page-citation {
+  background-color: #1a237e;
+  color: #90caf9;
+  border-color: #3949ab;
 }
 
 /* Enhanced Mathematical Formula Display Styles for VG Kosh */
@@ -783,12 +991,10 @@ mjx-container[display="true"] {
 .prose tbody tr:nth-child(odd) { background: #fcfcfd; }
 .prose tbody tr:nth-child(even) { background: #f9fafb; }
 
-@media (prefers-color-scheme: dark) {
-  .prose thead th { background: #0f172a; border-color: #334155; }
-  .prose tbody td { border-color: #334155; }
-  .prose tbody tr:nth-child(odd) { background: #0b1220; }
-  .prose tbody tr:nth-child(even) { background: #0a0f1a; }
-}
+.dark .prose thead th { background: #0f172a; border-color: #334155; }
+.dark .prose tbody td { border-color: #334155; }
+.dark .prose tbody tr:nth-child(odd) { background: #0b1220; }
+.dark .prose tbody tr:nth-child(even) { background: #0a0f1a; }
 
 /* Print-friendly layout */
 @media print {

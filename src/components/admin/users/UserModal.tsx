@@ -30,8 +30,8 @@ export default function UserModal({
   useEffect(() => {
     if (user) {
       setFormData({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
+        firstName: (user as any)?.name?.split(' ')[0] || user?.fullName?.split(' ')[0] || '',
+        lastName: (user as any)?.name?.split(' ').slice(1).join(' ') || user?.fullName?.split(' ').slice(1).join(' ') || '',
         email: user.email,
         role: user.role,
         status: user.status

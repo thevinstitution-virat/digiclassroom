@@ -187,10 +187,14 @@ export class SyllabusParser {
   private static determineExamType(examText: string): ExamDate['type'] {
     const text = examText.toLowerCase()
     
-    if (text.includes('board') || text.includes('final')) return 'board_exam'
-    if (text.includes('mid') || text.includes('semester')) return 'mid_term'
-    if (text.includes('unit') || text.includes('chapter')) return 'unit_test'
-    if (text.includes('competitive') || text.includes('entrance')) return 'competitive'
+    if (text.includes('board') || text.includes('final'))
+  return 'board_exam'
+    if (text.includes('mid') || text.includes('semester'))
+  return 'mid_term'
+    if (text.includes('unit') || text.includes('chapter'))
+  return 'unit_test'
+    if (text.includes('competitive') || text.includes('entrance'))
+  return 'competitive'
     
     return 'unit_test'
   }
@@ -410,7 +414,8 @@ export class SyllabusParser {
    */
   static getUpcomingTopics(syllabus: SyllabusData, currentChapter: string): SyllabusChapter[] {
     const currentIndex = syllabus.chapters.findIndex(ch => ch.id === currentChapter)
-    if (currentIndex === -1) return syllabus.chapters.slice(0, 3)
+    if (currentIndex === -1)
+  return syllabus.chapters.slice(0, 3)
     
     return syllabus.chapters.slice(currentIndex + 1, currentIndex + 4)
   }
@@ -422,7 +427,8 @@ export class SyllabusParser {
     const now = new Date()
     const upcomingExams = examDates.filter(exam => exam.date > now)
     
-    if (upcomingExams.length === 0) return 'medium'
+    if (upcomingExams.length === 0)
+  return 'medium'
     
     const nearestExam = upcomingExams.reduce((nearest, exam) => 
       exam.date < nearest.date ? exam : nearest
@@ -430,8 +436,10 @@ export class SyllabusParser {
     
     const daysUntilExam = Math.ceil((nearestExam.date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
     
-    if (daysUntilExam <= 7) return 'high'
-    if (daysUntilExam <= 21) return 'medium'
+    if (daysUntilExam <= 7)
+  return 'high'
+    if (daysUntilExam <= 21)
+  return 'medium'
     return 'low'
   }
 }

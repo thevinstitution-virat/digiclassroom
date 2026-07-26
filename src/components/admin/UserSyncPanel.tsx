@@ -64,7 +64,7 @@ export default function UserSyncPanel() {
 
   const fetchSyncStats = async () => {
     try {
-      const response = await fetch('/api/admin/sync-users')
+      const response = await fetch('/api/super-admin/sync-users')
       const data = await response.json()
       
       if (data.success) {
@@ -82,7 +82,7 @@ export default function UserSyncPanel() {
     setSyncResult(null)
     
     try {
-      const response = await fetch('/api/admin/sync-users', {
+      const response = await fetch('/api/super-admin/sync-users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -476,7 +476,7 @@ export default function UserSyncPanel() {
           </Button>
 
           <Button
-            onClick={() => window.open('/dashboard/admin/users', '_blank')}
+            onClick={() => window.open('/dashboard/super-admin/users', '_blank')}
             className="h-16 border-blue-200 hover:border-blue-400 hover:bg-blue-50 text-blue-600 font-semibold rounded-xl transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center justify-center"
             variant="outline"
           >

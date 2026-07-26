@@ -159,7 +159,8 @@ function calculateEngagementScore(metrics: any): number {
   const { activeTime, idleTime, interactions, focusEvents } = metrics
   const totalTime = activeTime + idleTime
   
-  if (totalTime === 0) return 0
+  if (totalTime === 0)
+  return 0
 
   const activeRatio = activeTime / totalTime
   const interactionDensity = totalTime > 0 ? interactions / (totalTime / 60) : 0 // per minute

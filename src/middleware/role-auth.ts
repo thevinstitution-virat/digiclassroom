@@ -3,8 +3,9 @@
  * Enforces Clerk-based role authentication and injects role into requests
  */
 
+import { auth } from '@/auth';
+import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
 import { UserRole } from '@/config/menu-config'
 
 export interface AuthenticatedRequest extends NextRequest {
@@ -40,9 +41,8 @@ export function withRoleAuth(options: RoleAuthOptions = {}) {
   ): Promise<NextResponse> {
     try {
       // Get authentication info from Clerk
-      const { userId, sessionClaims } = await auth()
-
-      // Check if authentication is required
+      const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id// Check if authentication is required
       if (requireAuth && !userId) {
         return NextResponse.json(
           { error: 'Authentication required', code: 'UNAUTHORIZED' },
@@ -56,8 +56,9 @@ export function withRoleAuth(options: RoleAuthOptions = {}) {
       }
 
       // Get user details from Clerk
-      const user = await clerkClient.users.getUser(userId)
-      const userEmail = user.emailAddresses[0]?.emailAddress
+      // User data is already available from session
+    const user = session?.user as any;
+    const userEmail = user?.email
 
       // Determine user role
       let userRole: UserRole = 'student' // default role
@@ -92,8 +93,8 @@ export function withRoleAuth(options: RoleAuthOptions = {}) {
         id: userId,
         role: userRole,
         email: userEmail || '',
-        firstName: user.firstName || undefined,
-        lastName: user.lastName || undefined,
+        firstName: user?.name?.split(' ')[0] || undefined,
+        lastName: user?.name?.split(' ').slice(1).join(' ') || undefined,
         metadata: sessionClaims?.metadata
       }
 
@@ -223,7 +224,8 @@ export function getRoleLevel(role: UserRole): number {
  * Check if user has sufficient role level
  */
 export function hasMinimumRoleLevel(request: AuthenticatedRequest, minimumRole: UserRole): boolean {
-  if (!request.user) return false
+  if (!request.user)
+  return false
   
   const userLevel = getRoleLevel(request.user.role)
   const requiredLevel = getRoleLevel(minimumRole)

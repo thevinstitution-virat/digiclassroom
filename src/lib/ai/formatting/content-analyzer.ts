@@ -263,7 +263,8 @@ export class ContentAnalyzer {
    * Check if content has chemical context indicators
    */
   private static hasChemicalContext(content: string, classLevel?: string): boolean {
-    if (classLevel?.toLowerCase().includes('chemistry')) return true
+    if (classLevel?.toLowerCase().includes('chemistry'))
+  return true
 
     const lowerContent = content.toLowerCase()
     return this.CHEMICAL_INDICATORS.some(indicator => lowerContent.includes(indicator))
@@ -319,17 +320,23 @@ export class ContentAnalyzer {
   private static inferSubjectFromContent(content: string, classLevel?: string): string {
     const lowerContent = content.toLowerCase()
 
-    if (classLevel?.toLowerCase().includes('chemistry')) return 'chemistry'
-    if (classLevel?.toLowerCase().includes('biology')) return 'biology'
-    if (classLevel?.toLowerCase().includes('physics')) return 'physics'
-    if (classLevel?.toLowerCase().includes('math')) return 'mathematics'
+    if (classLevel?.toLowerCase().includes('chemistry'))
+  return 'chemistry'
+    if (classLevel?.toLowerCase().includes('biology'))
+  return 'biology'
+    if (classLevel?.toLowerCase().includes('physics'))
+  return 'physics'
+    if (classLevel?.toLowerCase().includes('math'))
+  return 'mathematics'
 
     // Infer from content
     const biologicalCount = this.BIOLOGICAL_INDICATORS.filter(ind => lowerContent.includes(ind)).length
     const chemicalCount = this.CHEMICAL_INDICATORS.filter(ind => lowerContent.includes(ind)).length
 
-    if (biologicalCount > chemicalCount) return 'biology'
-    if (chemicalCount > 0) return 'chemistry'
+    if (biologicalCount > chemicalCount)
+  return 'biology'
+    if (chemicalCount > 0)
+  return 'chemistry'
 
     return 'general'
   }
@@ -372,7 +379,8 @@ export class ContentAnalyzer {
     const patterns = falsePositivePatterns[subject] || []
     return patterns.some(pattern => {
       const match = pattern.exec(content)
-      if (!match) return false
+      if (!match)
+  return false
 
       const matchStart = match.index
       const matchEnd = match.index + match[0].length
@@ -544,7 +552,8 @@ export class ContentAnalyzer {
 
     // Must start with a valid element
     const hasValidElement = elements.includes(firstTwoChars) || elements.includes(firstChar)
-    if (!hasValidElement) return false
+    if (!hasValidElement)
+  return false
 
     // Must have numbers (subscripts) or multiple capital letters to be a formula
     const hasNumbers = /\d/.test(text)

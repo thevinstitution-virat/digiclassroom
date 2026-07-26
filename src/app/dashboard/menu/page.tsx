@@ -3,8 +3,9 @@
  * Main interface for role-based menu interactions
  */
 
+import { auth } from '@/auth';
+import { headers } from 'next/headers';
 import { Metadata } from 'next'
-import { auth } from '@clerk/nextjs/server'
 import { redirect } from 'next/navigation'
 import MenuDashboard from '@/components/dashboard/MenuDashboard'
 
@@ -15,9 +16,9 @@ export const metadata: Metadata = {
 
 export default async function MenuDashboardPage() {
   // Check authentication
-  const { userId, sessionClaims } = await auth()
-
-  if (!userId) {
+  const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
+    if (!userId) {
     redirect('/sign-in')
   }
 

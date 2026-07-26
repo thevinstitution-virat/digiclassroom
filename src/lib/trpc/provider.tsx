@@ -2,13 +2,15 @@
 
 import { useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { httpBatchLink } from '@trpc/client'
+import { httpLink } from '@trpc/client'
 import { api } from './client'
 import superjson from 'superjson'
 
 function getBaseUrl() {
-  if (typeof window !== 'undefined') return ''
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
+  if (typeof window !== 'undefined')
+    return ''
+  if (process.env.VERCEL_URL)
+    return `https://${process.env.VERCEL_URL}`
   return `http://localhost:${process.env.PORT ?? 3000}`
 }
 
@@ -40,8 +42,9 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
     api.createClient({
       transformer: superjson,
       links: [
-        httpBatchLink({
+        httpLink({
           url: `${getBaseUrl()}/api/trpc`,
+          transformer: superjson,
           headers() {
             return {}
           },

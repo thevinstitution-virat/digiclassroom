@@ -140,7 +140,8 @@ export class ContentVerificationEngine {
   }
 
   private verifySentenceAgainstSources(sentence: string, source_chunks: SourceChunk[]): number {
-    if (source_chunks.length === 0) return 0.0;
+    if (source_chunks.length === 0)
+  return 0.0;
     
     let max_similarity = 0.0;
     
@@ -187,7 +188,8 @@ export class ContentVerificationEngine {
     const words1 = extractKeywords(text1);
     const words2 = extractKeywords(text2);
     
-    if (words1.size === 0 || words2.size === 0) return 0.0;
+    if (words1.size === 0 || words2.size === 0)
+  return 0.0;
     
     const intersection = new Set([...words1].filter(x => words2.has(x)));
     const union = new Set([...words1, ...words2]);

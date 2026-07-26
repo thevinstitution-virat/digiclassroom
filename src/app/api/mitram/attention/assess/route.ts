@@ -3,8 +3,9 @@
  * Processes assessment results and generates recommendations
  */
 
+import { auth } from '@/auth';
+import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
 import { AttentionScoringEngine } from '@/lib/attention/ScoringEngine'
 
 // Type definitions for API
@@ -30,8 +31,8 @@ interface BehaviorMetrics {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth()
-
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     if (!userId) {
       console.log('❌ Unauthorized access attempt')
       return NextResponse.json(
@@ -232,8 +233,8 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth()
-    
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },

@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
-import { useUser } from '@clerk/nextjs'
 import { api } from '@/lib/trpc/client'
 import {
   Search,
@@ -49,6 +48,7 @@ import { useUserStats } from '@/hooks/useUserStats'
 import { useOfflineDictionary } from '@/hooks/useOfflineDictionary'
 import { useDictionaryCache } from '@/hooks/useDictionaryCache'
 import { useFavoriteWords } from '@/hooks/useFavoriteWords'
+import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 
 // Enhanced Quiz Tab Component
 function QuizTab() {
@@ -436,7 +436,7 @@ const getFrequencyColor = (frequency: string) => {
 }
 
 export default function DictionaryPage() {
-  const { user } = useUser()
+  const { user } = useBetterAuthUser()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [isSearching, setIsSearching] = useState(false)

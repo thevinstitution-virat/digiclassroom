@@ -143,8 +143,9 @@ Rules:
         validationMethod: 'gpt4'
       };
 
-    } catch (error) {
-      console.error('❌ Chapter validation error:', error);
+    } catch (error: any) {
+      const msg = error?.status === 402 || error?.message?.includes('402') ? '402 Insufficient Balance' : (error?.message || String(error));
+      console.warn(`⚠️ Chapter validation fallback triggered: ${msg}`);
       return this.getFallbackResult(input);
     }
   }

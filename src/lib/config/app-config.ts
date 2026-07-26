@@ -20,6 +20,9 @@ export const APP_CONFIG = {
     apiKey: process.env.OPENAI_API_KEY!,
 
     // Embedding configuration
+    // MUST match what the Qdrant collection was built with AND what OpenAIService
+    // generates (text-embedding-3-large, 3072 dims). The ncert-books-enhanced
+    // collection is 3072-dim, so the whole system standardizes on 3-large.
     embedding: {
       model: 'text-embedding-3-large',
       dimensions: 3072,
@@ -42,7 +45,7 @@ export const APP_CONFIG = {
   qdrant: {
     url: process.env.QDRANT_URL || 'http://localhost:6333',
     apiKey: process.env.QDRANT_API_KEY,
-    collectionName: process.env.QDRANT_COLLECTION_NAME || 'digiclassroom',
+    collectionName: process.env.QDRANT_COLLECTION_NAME || 'ncert-books-enhanced',
 
     search: {
       defaultTopK: 5,

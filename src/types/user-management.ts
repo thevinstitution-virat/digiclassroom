@@ -1,6 +1,6 @@
 // User Management Types for Virat Gyankosh Platform
 
-export type UserRole = 'admin' | 'teacher' | 'student' | 'parent' | 'guardian'
+export type UserRole = 'super_admin' | 'admin' | 'teacher' | 'student' | 'parent' | 'guardian'
 export type UserStatus = 'active' | 'suspended' | 'pending' | 'inactive'
 export type EducationBoard = 'CBSE' | 'ICSE' | 'STATE_BOARD'
 export type Medium = 'ENGLISH' | 'HINDI'
@@ -20,6 +20,8 @@ export interface UserProfile {
   lastSignInAt: Date | null
   emailVerified: boolean
   phoneNumber: string | null
+  /** Name of the institution this user belongs to (org membership), or null for direct B2C / platform users. */
+  institution?: string | null
   metadata: {
     role?: UserRole
     department?: string
@@ -32,7 +34,8 @@ export interface UserProfile {
 // Enhanced User Profile for Materials Dashboard
 export interface EnhancedUserProfile {
   userId: string
-  clerkId: string
+  /** @deprecated Use userId instead */
+  clerkId: string  // kept for backward DB/API compat
   role: UserRole
   board: EducationBoard
   medium: Medium
@@ -56,12 +59,16 @@ export interface EnhancedUserProfile {
 
 // Onboarding Form Data
 export interface OnboardingFormData {
+  firstName: string
+  lastName: string
   role: UserRole
   board: EducationBoard
   medium: Medium
   class: number
   stream?: Stream
   subjects?: string[]
+  /** B2B2C: chosen institution to request to join, or null for an independent (B2C) student. */
+  institutionId?: string | null
 }
 
 // Material Item
@@ -228,10 +235,18 @@ export interface BulkActionsProps {
 
 // Constants
 export const USER_ROLES: { value: UserRole; label: string; description: string }[] = [
-  { value: 'admin', label: 'Administrator', description: 'Full system access and management' },
-  { value: 'teacher', label: 'Teacher', description: 'Content creation and student management' },
-  { value: 'student', label: 'Student', description: 'Learning access and progress tracking' }
+  { value: 'super_admin', label: 'Super Admin', description: 'Platform owner — full control across all institutions' },
+  { value: 'admin', label: 'Institution Admin', description: 'Administers a single institution' },
+  { value: 'teacher', label: 'Teacher', description: 'Teaches & manages students within an institution' },
+  { value: 'student', label: 'Student', description: 'Learning access and progress tracking' },
+  { value: 'parent', label: 'Parent', description: "Views their child's progress & reports" },
 ]
+
+/** Human label for a role value (handles snake_case roles like super_admin). */
+export function getUserRoleLabel(role: UserRole | string): string {
+  return USER_ROLES.find((r) => r.value === role)?.label
+    ?? String(role).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
 
 export const USER_STATUSES: { value: UserStatus; label: string; color: string }[] = [
   { value: 'active', label: 'Active', color: 'green' },
@@ -253,6 +268,7 @@ export function getUserDisplayName(user: UserProfile): string {
   if (user.firstName && user.lastName) {
     return `${user.firstName} ${user.lastName}`
   }
+  if (user.fullName) return user.fullName
   if (user.firstName) return user.firstName
   if (user.lastName) return user.lastName
   return user.email.split('@')[0]
@@ -260,9 +276,11 @@ export function getUserDisplayName(user: UserProfile): string {
 
 export function getUserRoleColor(role: UserRole): string {
   switch (role) {
+    case 'super_admin': return 'bg-purple-100 text-purple-800'
     case 'admin': return 'bg-red-100 text-red-800'
     case 'teacher': return 'bg-blue-100 text-blue-800'
     case 'student': return 'bg-green-100 text-green-800'
+    case 'parent': return 'bg-amber-100 text-amber-800'
     default: return 'bg-gray-100 text-gray-800'
   }
 }
@@ -277,13 +295,17 @@ export function getUserStatusColor(status: UserStatus): string {
   }
 }
 
-export function formatDate(date: Date | null): string {
+export function formatDate(date: Date | string | number | null | undefined): string {
   if (!date) return 'Never'
+  // Dates arrive as ISO strings over JSON — coerce, and guard against invalid values
+  // (Intl.DateTimeFormat.format throws "Invalid time value" on a non-date).
+  const d = date instanceof Date ? date : new Date(date)
+  if (isNaN(d.getTime())) return 'Never'
   return new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit'
-  }).format(date)
+  }).format(d)
 }

@@ -271,7 +271,8 @@ export class MemoryAidGenerator {
    * Create memorable sentence for terms
    */
   private static createMemorableSentence(terms: string[], subject: string): string {
-    if (terms.length < 3) return '';
+    if (terms.length < 3)
+  return '';
 
     const firstLetters = terms.map(term => term.charAt(0).toUpperCase());
     
@@ -320,7 +321,8 @@ export class MemoryAidGenerator {
    * Generate list mnemonic
    */
   private static generateListMnemonic(terms: string[]): string {
-    if (terms.length < 3) return '';
+    if (terms.length < 3)
+  return '';
     
     const firstLetters = terms.map(t => t.charAt(0).toUpperCase()).join('');
     return `**List Memory:** "${firstLetters}" = ${terms.join(' → ')}`;
@@ -330,7 +332,8 @@ export class MemoryAidGenerator {
    * Generate process mnemonic
    */
   private static generateProcessMnemonic(terms: string[]): string {
-    if (terms.length < 3) return '';
+    if (terms.length < 3)
+  return '';
     
     return `**Process Chain:** ${terms.join(' leads to ')} (remember the logical flow)`;
   }

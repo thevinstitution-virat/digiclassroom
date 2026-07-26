@@ -80,7 +80,7 @@ export default function GoogleDriveSetupSection({
 
   const loadCredentials = async () => {
     try {
-      const response = await fetch('/api/admin/materials/google-drive/credentials')
+      const response = await fetch('/api/super-admin/materials/google-drive/credentials')
       const result = await response.json()
       
       if (result.success) {
@@ -96,7 +96,7 @@ export default function GoogleDriveSetupSection({
 
   const fetchQuotaInfo = async () => {
     try {
-      const response = await fetch('/api/admin/materials/google-drive/quota')
+      const response = await fetch('/api/super-admin/materials/google-drive/quota')
       const result = await response.json()
       
       if (result.success) {
@@ -112,7 +112,7 @@ export default function GoogleDriveSetupSection({
 
   const fetchFolderStructure = async () => {
     try {
-      const response = await fetch('/api/admin/materials/google-drive/folders')
+      const response = await fetch('/api/super-admin/materials/google-drive/folders')
       const result = await response.json()
       
       if (result.success) {
@@ -130,7 +130,7 @@ export default function GoogleDriveSetupSection({
     try {
       setState(prev => ({ ...prev, loading: true, error: undefined }))
       
-      const response = await fetch('/api/admin/materials/google-drive/credentials', {
+      const response = await fetch('/api/super-admin/materials/google-drive/credentials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(state.credentials)
@@ -170,7 +170,7 @@ export default function GoogleDriveSetupSection({
     try {
       setState(prev => ({ ...prev, loading: true, error: undefined }))
 
-      const response = await fetch('/api/admin/materials/google-drive/auth', {
+      const response = await fetch('/api/super-admin/materials/google-drive/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code: codeToUse })
@@ -215,7 +215,7 @@ export default function GoogleDriveSetupSection({
     try {
       setState(prev => ({ ...prev, loading: true, error: undefined }))
       
-      const response = await fetch('/api/admin/materials/google-drive/folders/create-structure', {
+      const response = await fetch('/api/super-admin/materials/google-drive/folders/create-structure', {
         method: 'POST'
       })
       
@@ -246,7 +246,7 @@ export default function GoogleDriveSetupSection({
     try {
       setState(prev => ({ ...prev, loading: true, error: undefined }))
       
-      const response = await fetch('/api/admin/materials/google-drive/disconnect', {
+      const response = await fetch('/api/super-admin/materials/google-drive/disconnect', {
         method: 'POST'
       })
       
@@ -274,7 +274,8 @@ export default function GoogleDriveSetupSection({
   const formatBytes = (bytes: string) => {
     const num = parseInt(bytes)
     const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
-    if (num === 0) return '0 Bytes'
+    if (num === 0)
+  return '0 Bytes'
     const i = Math.floor(Math.log(num) / Math.log(1024))
     return Math.round(num / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i]
   }

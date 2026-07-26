@@ -1,6 +1,6 @@
+import { auth } from '@/auth';
+import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-
 // Note: Speech-to-text functionality disabled - OpenAI Whisper removed
 // Alternative: Use browser's built-in Web Speech API or other speech services
 
@@ -38,7 +38,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     console.log('🎤 Speech-to-text API called - Feature disabled')
 
     // Authentication check
-    const { userId } = await auth()
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -101,8 +102,8 @@ function validateAudioFile(file: File): { valid: boolean; error?: string } {
 // Health check endpoint
 export async function GET(): Promise<NextResponse> {
   try {
-    const { userId } = await auth()
-    
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     return NextResponse.json({
       status: 'healthy',
       message: 'Speech-to-Text API is running',

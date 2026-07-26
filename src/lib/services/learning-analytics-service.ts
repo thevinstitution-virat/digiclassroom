@@ -176,7 +176,8 @@ export class LearningAnalyticsService {
    */
   private async getInteractionHistory(userId: string, days: number): Promise<InteractionRecord[]> {
     try {
-      if (!this.db) return [];
+      if (!this.db)
+  return [];
 
       const query = `
         SELECT * FROM learning_analytics 
@@ -197,7 +198,8 @@ export class LearningAnalyticsService {
    * Calculate learning velocity
    */
   private calculateLearningVelocity(interactions: InteractionRecord[]): number {
-    if (interactions.length < 2) return 0.5;
+    if (interactions.length < 2)
+  return 0.5;
 
     // Calculate improvement over time
     const recentInteractions = interactions.slice(0, 10);
@@ -392,9 +394,12 @@ export class LearningAnalyticsService {
     const avgMastery = Object.values(conceptMastery).reduce((sum, mastery) => sum + mastery, 0) / Object.values(conceptMastery).length || 0.5;
     
     if (role === 'student') {
-      if (avgMastery < 0.4 || currentDifficulty > 0.8) return 'high';
-      if (avgMastery < 0.6 || currentDifficulty > 0.6) return 'moderate';
-      if (avgMastery > 0.8 && currentDifficulty < 0.4) return 'minimal';
+      if (avgMastery < 0.4 || currentDifficulty > 0.8)
+  return 'high';
+      if (avgMastery < 0.6 || currentDifficulty > 0.6)
+  return 'moderate';
+      if (avgMastery > 0.8 && currentDifficulty < 0.4)
+  return 'minimal';
       return 'low';
     }
     

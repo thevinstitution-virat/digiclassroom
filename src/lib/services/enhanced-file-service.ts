@@ -296,7 +296,7 @@ export class EnhancedFileService {
         medium: 'English'
       }))
 
-      const response = await fetch('/api/admin/content/upload', {
+      const response = await fetch('/api/super-admin/content/upload', {
         method: 'POST',
         body: formData
       })
@@ -423,7 +423,8 @@ export class EnhancedFileService {
 
   // Utility functions
   formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 Bytes'
+    if (bytes === 0)
+  return '0 Bytes'
     
     const k = 1024
     const sizes = ['Bytes', 'KB', 'MB', 'GB']

@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { EnhancedLandingPage } from '@/components/landing/EnhancedLandingPage'
+import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 
 export default function Home() {
-  const { user, isLoaded } = useUser()
+  const { user, isLoaded } = useBetterAuthUser()
   const router = useRouter()
 
   useEffect(() => {

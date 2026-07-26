@@ -1,0 +1,306 @@
+# ============================================================================
+# DigiClassroom Pro - Docker Compose (v2 — Phase 3: TTS + Web Search)
+# ============================================================================
+# Services: app, mysql, qdrant, redis, sarvagya, minio, tts-service
+# Unified database architecture using MySQL exclusively.
+# Usage: docker compose up -d
+# ============================================================================
+
+services:
+  # ============================================================================
+  # Next.js Application
+  # ============================================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: dcp-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_TELEMETRY_DISABLED=1
+
+      # MySQL (primary database via Drizzle)
+      - DATABASE_URL=mysql://root:rootpassword123@mysql:3306/virat_gyankosh
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=rootpassword123
+      - MYSQL_DATABASE=virat_gyankosh
+
+      # Qdrant Vector Database
+      - QDRANT_URL=http://qdrant:6333
+      - QDRANT_COLLECTION_NAME=ncert-books-enhanced
+
+      # Redis Cache + BullMQ
+      - REDIS_URL=redis://:redis123@redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=redis123
+
+      # Better Auth
+      - BETTER_AUTH_SECRET=${BETTER_AUTH_SECRET:-change-me-to-a-random-64-char-secret}
+      - BETTER_AUTH_URL=http://localhost:3000
+
+      # Sarvagya Microservice
+      - SARVAGYA_API_URL=http://sarvagya:8000
+
+      # MinIO (S3-compatible object store)
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+
+      # Application URLs
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+      # AI Services
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-your_openai_key_here}
+
+      # TTS Service (Phase 3 Track B)
+      - TTS_SERVICE_URL=http://tts-service:8002
+
+      # Feature Flags
+      - USE_ENHANCED_RAG=true
+      - ENABLE_OCR=true
+      - ENABLE_FILE_UPLOAD=true
+
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+      - uploads_data:/app/uploads
+      - logs_data:/app/logs
+      - tmp_data:/app/tmp
+    depends_on:
+      mysql:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    networks:
+      - digiclassroom-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # MySQL Database — shared by Next.js + Sarvagya
+  # Better Auth tables live in the unified schema.
+  # ============================================================================
+  mysql:
+    image: mysql:8.0
+    container_name: dcp-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword123
+      MYSQL_DATABASE: virat_gyankosh
+    volumes:
+      - mysqldata:/var/lib/mysql
+      # Optional: bind init scripts if any exist
+      # - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3310:3306" # Dedicated unused port for DigiClassroomPro DB
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpassword123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - digiclassroom-network
+
+  # ============================================================================
+  # Sarvagya (SurfSense-based Research Microservice)
+  # ============================================================================
+  sarvagya:
+    build:
+      context: ./sarvagya
+      dockerfile: Dockerfile
+    container_name: dcp-sarvagya
+    ports:
+      - "8000:8000"
+    environment:
+      # Database — uses MySQL now
+      - DATABASE_URL=mysql+aiomysql://root:rootpassword123@mysql:3306/virat_gyankosh
+      - DB_SCHEMA=public
+
+      # Redis (shared with Next.js app)
+      - CELERY_BROKER_URL=redis://:redis123@redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://:redis123@redis:6379/1
+
+      # MinIO for file storage
+      - S3_ENDPOINT=http://minio:9000
+      - S3_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - S3_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - S3_BUCKET=sarvagya-uploads
+
+      # Service role: API-only (Celery disabled, BullMQ replaces it)
+      - SERVICE_ROLE=api
+
+      # Python config
+      - PYTHONPATH=/app
+      - UVICORN_LOOP=asyncio
+
+      # ETL service
+      - NEXT_PUBLIC_ETL_SERVICE=DOCLING
+
+      # AI Services (passthrough from host)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-your_openai_key_here}
+
+      # CORS — allow DigiClassroom app
+      - NEXT_FRONTEND_URL=http://app:3000
+
+    volumes:
+      - sarvagya_tmp:/tmp
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - digiclassroom-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # TTS Service (Kokoro) — spoken explanations for K-12 students
+  # Phase 3 Track B — CPU only, no GPU required
+  # ============================================================================
+  tts-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.tts
+    container_name: dcp-tts
+    ports:
+      - "8002:8002"
+    environment:
+      - PYTHONUNBUFFERED=1
+    # No GPU required — Kokoro runs on CPU at this scale
+    # Model weights are downloaded on first synthesize request
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8002/health" ]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+    networks:
+      - digiclassroom-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # Qdrant Vector Database (NCERT textbook vectors — unchanged)
+  # ============================================================================
+  qdrant:
+    image: qdrant/qdrant:v1.7.4
+    container_name: dcp-qdrant
+    ports:
+      # 6333/6334 are claimed by the DigiClassroomPro-BAMS sibling copy.
+      # Canonical DCP uses 6343/6344 so both can run at once.
+      - "6343:6333"
+      - "6344:6334"
+    volumes:
+      - ./qdrant_data:/qdrant/storage
+      - ./qdrant_config:/qdrant/config
+    environment:
+      - QDRANT__SERVICE__HTTP_PORT=6333
+      - QDRANT__SERVICE__GRPC_PORT=6334
+      - QDRANT__LOG_LEVEL=INFO
+      - QDRANT__SERVICE__ENABLE_CORS=true
+      - QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS=2
+      - QDRANT__STORAGE__PERFORMANCE__MAX_OPTIMIZATION_THREADS=1
+    # NOTE: the qdrant/qdrant:v1.7.4 image ships no curl/wget, so an HTTP
+    # healthcheck can't run inside it (it would always report "unhealthy" and
+    # block dependents). Dependents use `condition: service_started` instead;
+    # the app retries the Qdrant connection itself. (Host readiness check:
+    # curl http://localhost:6343/healthz from the host returns 200.)
+    networks:
+      - digiclassroom-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # Redis (shared: BullMQ queues, Sarvagya Celery broker, caching)
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: dcp-redis
+    ports:
+      # 6381 is owned by PDLMS (pdlms_pro-redis-1); DCP uses 6382 to coexist.
+      - "6382:6379"
+    command: >
+      redis-server --requirepass redis123 --maxmemory 512mb --maxmemory-policy allkeys-lru --save 900 1 --save 300 10 --save 60 10000
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "redis123", "--raw", "incr", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - digiclassroom-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # MinIO (S3-compatible object storage for Sarvagya uploads)
+  # ============================================================================
+  minio:
+    image: minio/minio:latest
+    container_name: dcp-minio
+    ports:
+      - "9000:9000" # API
+      - "9001:9001" # Console
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: [ "CMD", "mc", "ready", "local" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - digiclassroom-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # Cloudflare Tunnel for secure remote access
+  # ============================================================================
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: digiclassroom-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - app
+    networks:
+      - digiclassroom-network
+
+# ============================================================================
+# Volumes
+# ============================================================================
+volumes:
+  mysqldata:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+  uploads_data:
+    driver: local
+  logs_data:
+    driver: local
+  tmp_data:
+    driver: local
+  sarvagya_tmp:
+    driver: local
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  digiclassroom-network:
+    driver: bridge

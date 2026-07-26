@@ -45,7 +45,8 @@ export function hallucinationDetectionNode(state: TutorGraphState): TutorGraphSt
     // If citations exist, verify they're valid
     const supported = citations.every((citation) => {
       const context = contexts[citation - 1]
-      if (!context) return false
+      if (!context)
+  return false
       return segmentSupportedByContext(segment, context.text)
     })
 
@@ -93,7 +94,8 @@ function segmentSupportedByContext(segment: string, context: string): boolean {
     .filter((token) => token.length > 4)
     .slice(0, 8) // Increased from 6 to 8 for better coverage
 
-  if (keywords.length === 0) return true
+  if (keywords.length === 0)
+  return true
   const contextLower = context.toLowerCase()
   const matches = keywords.filter((keyword) => contextLower.includes(keyword))
 

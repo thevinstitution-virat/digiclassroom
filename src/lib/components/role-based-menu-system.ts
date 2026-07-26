@@ -259,7 +259,8 @@ export class RoleBasedMenuSystem {
    */
   private async loadMenuConfigFromDatabase(role: UserRole): Promise<MenuConfiguration | null> {
     try {
-      if (!this.db) return null;
+      if (!this.db)
+  return null;
 
       const query = `
         SELECT menu_structure, interaction_flows, default_prompts 
@@ -296,7 +297,8 @@ export class RoleBasedMenuSystem {
     baseConfig: MenuConfiguration, 
     dbConfig: MenuConfiguration | null
   ): MenuConfiguration {
-    if (!dbConfig) return baseConfig;
+    if (!dbConfig)
+  return baseConfig;
     
     return {
       ...baseConfig,
@@ -522,7 +524,8 @@ export class RoleBasedMenuSystem {
    */
   async updateMenuConfiguration(role: UserRole, config: Partial<MenuConfiguration>): Promise<boolean> {
     try {
-      if (!this.db) return false;
+      if (!this.db)
+  return false;
 
       const query = `
         UPDATE role_menu_configurations 
@@ -550,7 +553,8 @@ export class RoleBasedMenuSystem {
    */
   getMenuAction(actionId: string, role: UserRole): MenuAction | null {
     const config = this.menuConfigurations.get(role);
-    if (!config) return null;
+    if (!config)
+  return null;
     
     const allActions = [
       ...config.primaryActions,

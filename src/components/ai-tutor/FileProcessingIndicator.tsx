@@ -87,7 +87,8 @@ export function FileProcessingIndicator({
   }
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes'
+    if (bytes === 0)
+  return '0 Bytes'
     const k = 1024
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
@@ -107,7 +108,8 @@ export function FileProcessingIndicator({
   }
 
   const truncateText = (text: string, maxLength: number = 150) => {
-    if (text.length <= maxLength) return text
+    if (text.length <= maxLength)
+  return text
     return text.substring(0, maxLength) + '...'
   }
 

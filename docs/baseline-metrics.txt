@@ -1,0 +1,53 @@
+# Baseline Quality Metrics — DigiClassroom Pro (canonical / trio member)
+
+Discipline: re-measure on a cadence (start of each work phase) and track DOWNWARD.
+History is kept below so progress is visible. (Practice ported from the DCP-BAMS
+fork; numbers here are THIS repo's own honest measurements.)
+
+═══════════════════════════════════════════════════════════════════════════════
+## 2026-06-02  (current — measured against working tree, excl. node_modules)
+═══════════════════════════════════════════════════════════════════════════════
+
+### Type safety — this repo's structural advantage; protect it
+- Files with `// @ts-nocheck` (type-checking DISABLED): 0      ← KEEP AT 0
+- `tsc --noEmit` errors (all VISIBLE, none suppressed):   44     ← drive to 0
+- `@ts-ignore` / `@ts-expect-error`:                        5
+- `: any` coercions (src):                                 601   (was 1017)
+  NOTE: the DCP-BAMS fork carries 176 @ts-nocheck files + ~832 recorded TS errors.
+  Never close the gap by blanket-suppressing — that is the anti-pattern we avoid.
+
+### Noise / debt
+- console.log|warn|error (src):                            2949   ← route to logger
+- TODO / FIXME / HACK / XXX (src):                          70
+
+### Largest "god files" (KB) — extraction candidates
+1. src/app/dashboard/user/dictionary/page.tsx               ~85 KB
+2. src/app/dashboard/user/ai-tutor/_hooks/useAiTutor.tsx    ~81 KB
+3. src/lib/ai/rag/enhanced-rag-pipeline.ts                  ~64 KB
+4. src/lib/content/pdf-extract-kit-processor.ts             ~58 KB (NO_TOUCH_ZONE)
+5. src/lib/ai/rag/qdrant-search.ts                          ~50 KB
+   (The 135 KB ai-tutor/page.tsx god-component was already extracted into hooks +
+    TutorHeader / UpgradeModal / ContextSelector — continue that pattern.)
+
+### RAG regression suite (NEW — see scripts/eval/README.md)
+- Golden queries: 50  (scripts/eval/golden-queries.json)
+- Create frozen baseline: npm run eval:baseline   → results/baseline-<date>.json
+- Gate a change:          npm run eval:compare -- --base <frozen> --pr <new>
+- Live RAGAS/latency/cost snapshot: npm run canary:baseline → docs/canary/
+
+### Re-measure commands
+#   @ts-nocheck : grep -rl "@ts-nocheck" src | wc -l
+#   tsc errors  : npx tsc --noEmit | grep -c "error TS"
+#   : any       : grep -rE ": any( |,|\)|>|;|\[)" src | wc -l
+#   console.*   : grep -rE "console\.(log|warn|error)" src | wc -l
+
+═══════════════════════════════════════════════════════════════════════════════
+## March 2026  (original pre-upgrade baseline — kept for history)
+═══════════════════════════════════════════════════════════════════════════════
+- Console.log count (prod code only): 1088
+- `: any` type coercions: 1017
+- Direct `process.env` access: 276
+- Largest god files: ai-tutor/page.tsx 135 KB; dictionary 83.6 KB;
+  enhanced-rag-pipeline 63.8 KB; pdf-extract-kit-processor 59 KB (NO_TOUCH_ZONE);
+  agent_manager 56.6 KB; admin/content 52.7 KB; qdrant-search 49.4 KB
+- Next Steps (then): "Tracking these metrics downwards as Phases 2-10 are executed."

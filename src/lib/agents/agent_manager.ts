@@ -853,27 +853,40 @@ Let me help you with this topic. Could you please tell me:
   }
 
   private determineCognitiveLevel(gradeLevel: number): string {
-    if (gradeLevel <= 3) return "Remember/Understand";
-    if (gradeLevel <= 6) return "Understand/Apply";
-    if (gradeLevel <= 8) return "Apply/Analyze";
-    if (gradeLevel <= 10) return "Analyze/Evaluate";
+    if (gradeLevel <= 3)
+  return "Remember/Understand";
+    if (gradeLevel <= 6)
+  return "Understand/Apply";
+    if (gradeLevel <= 8)
+  return "Apply/Analyze";
+    if (gradeLevel <= 10)
+  return "Analyze/Evaluate";
     return "Evaluate/Create";
   }
 
   private getBloomLevel(gradeLevel: number): string {
-    if (gradeLevel <= 3) return "Remember";
-    if (gradeLevel <= 6) return "Understand";
-    if (gradeLevel <= 8) return "Apply";
-    if (gradeLevel <= 10) return "Analyze";
+    if (gradeLevel <= 3)
+  return "Remember";
+    if (gradeLevel <= 6)
+  return "Understand";
+    if (gradeLevel <= 8)
+  return "Apply";
+    if (gradeLevel <= 10)
+  return "Analyze";
     return "Evaluate";
   }
 
   private mapCognitiveToBloom(cognitiveLevel: string): string {
-    if (cognitiveLevel.includes('Remember')) return 'Remember';
-    if (cognitiveLevel.includes('Understand')) return 'Understand';
-    if (cognitiveLevel.includes('Apply')) return 'Apply';
-    if (cognitiveLevel.includes('Analyze')) return 'Analyze';
-    if (cognitiveLevel.includes('Evaluate')) return 'Evaluate';
+    if (cognitiveLevel.includes('Remember'))
+  return 'Remember';
+    if (cognitiveLevel.includes('Understand'))
+  return 'Understand';
+    if (cognitiveLevel.includes('Apply'))
+  return 'Apply';
+    if (cognitiveLevel.includes('Analyze'))
+  return 'Analyze';
+    if (cognitiveLevel.includes('Evaluate'))
+  return 'Evaluate';
     return 'Create';
   }
 

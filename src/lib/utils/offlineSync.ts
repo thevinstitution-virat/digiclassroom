@@ -361,7 +361,8 @@ export class OfflineSyncManager {
     const connectionInfo = serviceWorkerManager.getConnectionInfo()
     const pendingItems = this.syncStatus.pendingItems
     
-    if (pendingItems === 0) return 0
+    if (pendingItems === 0)
+  return 0
     
     let timePerItem = 1000 // 1 second per item default
     
@@ -387,9 +388,12 @@ export class OfflineSyncManager {
    * Check if sync is recommended
    */
   shouldSync(): boolean {
-    if (!this.syncStatus.isOnline) return false
-    if (this.syncStatus.isSyncing) return false
-    if (this.syncStatus.pendingItems === 0) return false
+    if (!this.syncStatus.isOnline)
+  return false
+    if (this.syncStatus.isSyncing)
+  return false
+    if (this.syncStatus.pendingItems === 0)
+  return false
     
     // Don't sync on slow connections unless it's been a while
     if (serviceWorkerManager.isSlowConnection()) {

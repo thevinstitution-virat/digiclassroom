@@ -319,10 +319,14 @@ export class AnswerTemplateEngine {
    * Get recommended words per mark
    */
   private getWordsPerMark(marks: number): number {
-    if (marks === 1) return 20
-    if (marks === 2) return 30
-    if (marks === 3) return 35
-    if (marks >= 4) return 40
+    if (marks === 1)
+  return 20
+    if (marks === 2)
+  return 30
+    if (marks === 3)
+  return 35
+    if (marks >= 4)
+  return 40
     return 30
   }
 
@@ -404,8 +408,10 @@ FORMATTING REQUIREMENTS (MANDATORY):
 4. Add blank lines between sections for visual hierarchy
 5. Use tables for comparisons with proper markdown syntax (| Column 1 | Column 2 |)
 6. Structure: Introduction → Body (with headings) → Conclusion (if needed)
-7. Use bullet points (•) for non-sequential items
-8. Use numbered lists (1., 2., 3.) for sequential steps or ranked items
+7. Use bullet points (•)
+  for non-sequential items
+8. Use numbered lists (1., 2., 3.)
+  for sequential steps or ranked items
 
 COMMAND WORD STRUCTURES (DETAILED):
 

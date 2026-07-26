@@ -6,8 +6,9 @@
  * Automatically adds approved answers to ground truth dataset
  */
 
+import { auth } from '@/auth';
+import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
 import { executeQuery, executeQuerySingle } from '@/lib/db/connection'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -45,8 +46,8 @@ interface TeacherValidateRequest {
 export async function POST(req: NextRequest) {
   try {
     // Authenticate teacher
-    const { userId } = await auth()
-    
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
     
     // Verify teacher role and approval status
     const teacher = await executeQuerySingle<any>(
-      'SELECT id, role, approval_status, email FROM users WHERE clerk_id = ?',
+      'SELECT id, role, approval_status, email FROM `user` WHERE id = ?',
       [userId]
     )
     

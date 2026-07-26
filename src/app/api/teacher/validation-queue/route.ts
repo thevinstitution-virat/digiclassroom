@@ -1,5 +1,6 @@
+import { auth } from '@/auth';
+import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
 import { executeQuery, executeQuerySingle } from '@/lib/db/connection'
 
 /**
@@ -8,14 +9,14 @@ import { executeQuery, executeQuerySingle } from '@/lib/db/connection'
  */
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth()
-    
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const teacher = await executeQuerySingle<any>(
-      'SELECT id, role, approval_status FROM users WHERE clerk_id = ?',
+      'SELECT id, role, approval_status FROM `user` WHERE id = ?',
       [userId]
     )
 

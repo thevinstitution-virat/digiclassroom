@@ -225,7 +225,8 @@ export default function CurricuTimer({
    * Calculate current streak from sessions
    */
   const calculateStreak = (sessions: any[]): number => {
-    if (!sessions.length) return 0
+    if (!sessions.length)
+  return 0
 
     let streak = 0
     const today = new Date()
@@ -457,7 +458,8 @@ export default function CurricuTimer({
    * Get progress percentage
    */
   const getProgress = (): number => {
-    if (!schedule) return 0
+    if (!schedule)
+  return 0
     return ((schedule.sessionDuration * 60 - timeLeft) / (schedule.sessionDuration * 60)) * 100
   }
 
@@ -466,9 +468,12 @@ export default function CurricuTimer({
    */
   const getEngagementStatus = () => {
     const score = getCurrentEngagementScore()
-    if (score >= 80) return { level: 'excellent', color: 'text-green-600', icon: '🔥' }
-    if (score >= 60) return { level: 'good', color: 'text-blue-600', icon: '👍' }
-    if (score >= 40) return { level: 'fair', color: 'text-yellow-600', icon: '⚡' }
+    if (score >= 80)
+  return { level: 'excellent', color: 'text-green-600', icon: '🔥' }
+    if (score >= 60)
+  return { level: 'good', color: 'text-blue-600', icon: '👍' }
+    if (score >= 40)
+  return { level: 'fair', color: 'text-yellow-600', icon: '⚡' }
     return { level: 'needs focus', color: 'text-red-600', icon: '⚠️' }
   }
 

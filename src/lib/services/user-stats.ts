@@ -317,11 +317,13 @@ export class UserStatsService {
    * Get daily activity data for charts
    */
   static getDailyActivity(days: number = 7): DailyActivity[] {
-    if (typeof window === 'undefined') return []
+    if (typeof window === 'undefined')
+  return []
 
     try {
       const stored = localStorage.getItem(this.DAILY_ACTIVITY_KEY)
-      if (!stored) return []
+      if (!stored)
+  return []
 
       const activities: Record<string, DailyActivity> = JSON.parse(stored)
       const result: DailyActivity[] = []

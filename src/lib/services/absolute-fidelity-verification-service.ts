@@ -531,7 +531,8 @@ Your responses must have 100% textbook fidelity.`;
   }
 
   private calculateWeightedFidelity(verifications: SentenceVerification[]): number {
-    if (verifications.length === 0) return 0;
+    if (verifications.length === 0)
+  return 0;
 
     const totalWeight = verifications.reduce((sum, v) => {
       return sum + this.VERIFICATION_WEIGHTS[v.verificationMethod];
@@ -553,7 +554,8 @@ Your responses must have 100% textbook fidelity.`;
   }
 
   private calculateCosineSimilarity(embedding1: number[], embedding2: number[]): number {
-    if (embedding1.length !== embedding2.length) return 0;
+    if (embedding1.length !== embedding2.length)
+  return 0;
     
     let dotProduct = 0;
     let norm1 = 0;

@@ -3,6 +3,19 @@
 import { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+type Accent = 'brand' | 'orange' | 'blue' | 'indigo' | 'violet' | 'green' | 'red' | 'cyan'
+
+const ACCENTS: Record<Accent, { chip: string; bar: string; chipShadow: string }> = {
+  brand:  { chip: 'from-orange-500 to-blue-600',   bar: 'from-orange-500 via-indigo-500 to-blue-600', chipShadow: 'shadow-[0_8px_20px_-6px_rgba(37,99,235,0.5)]' },
+  orange: { chip: 'from-orange-400 to-orange-600', bar: 'from-orange-400 to-orange-600',               chipShadow: 'shadow-[0_8px_20px_-6px_rgba(249,115,22,0.5)]' },
+  blue:   { chip: 'from-blue-500 to-blue-700',     bar: 'from-blue-400 to-blue-600',                   chipShadow: 'shadow-[0_8px_20px_-6px_rgba(37,99,235,0.5)]' },
+  indigo: { chip: 'from-indigo-500 to-violet-600', bar: 'from-indigo-400 to-violet-600',               chipShadow: 'shadow-[0_8px_20px_-6px_rgba(99,102,241,0.5)]' },
+  violet: { chip: 'from-violet-500 to-fuchsia-600',bar: 'from-violet-400 to-fuchsia-600',              chipShadow: 'shadow-[0_8px_20px_-6px_rgba(139,92,246,0.5)]' },
+  green:  { chip: 'from-emerald-500 to-teal-600',  bar: 'from-emerald-400 to-teal-600',                chipShadow: 'shadow-[0_8px_20px_-6px_rgba(16,185,129,0.5)]' },
+  red:    { chip: 'from-rose-500 to-red-600',      bar: 'from-rose-400 to-red-600',                    chipShadow: 'shadow-[0_8px_20px_-6px_rgba(244,63,94,0.5)]' },
+  cyan:   { chip: 'from-cyan-400 to-sky-600',      bar: 'from-cyan-400 to-sky-600',                    chipShadow: 'shadow-[0_8px_20px_-6px_rgba(6,182,212,0.5)]' },
+}
+
 interface StatCardProps {
   icon: LucideIcon
   title: string
@@ -10,47 +23,59 @@ interface StatCardProps {
   change?: string
   changeType?: 'positive' | 'negative' | 'neutral'
   description?: string
+  accent?: Accent
   className?: string
 }
 
-export function StatCard({ 
-  icon: Icon, 
-  title, 
-  value, 
-  change, 
+export function StatCard({
+  icon: Icon,
+  title,
+  value,
+  change,
   changeType = 'neutral',
   description,
-  className
+  accent = 'brand',
+  className,
 }: StatCardProps) {
+  const a = ACCENTS[accent]
   const changeColors = {
-    positive: 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/20',
-    negative: 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/20',
-    neutral: 'text-gray-600 bg-gray-100 dark:text-gray-400 dark:bg-gray-700'
+    positive: 'text-emerald-700 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-500/15',
+    negative: 'text-rose-700 bg-rose-100 dark:text-rose-300 dark:bg-rose-500/15',
+    neutral: 'text-muted-foreground bg-muted dark:bg-white/5',
   }
 
   return (
-    <div className={cn(
-      "bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] hover:border-orange-200 dark:hover:border-orange-800",
-      className
-    )}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-br from-orange-100 to-blue-100 dark:from-orange-900/20 dark:to-blue-900/20 rounded-lg">
-            <Icon className="h-6 w-6 text-orange-600 dark:text-orange-400" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{title}</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{value}</p>
-          </div>
+    <div
+      className={cn(
+        'group relative overflow-hidden rounded-2xl border border-border/70 bg-card p-5 shadow-elev-2 dc-hover-lift',
+        className
+      )}
+    >
+      <span className={cn('absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r opacity-90', a.bar)} />
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate text-[13px] font-medium text-muted-foreground">{title}</p>
+          <p className="mt-1.5 text-3xl font-bold tracking-tight tabular-nums text-foreground">{value}</p>
         </div>
-        {change && (
-          <div className={cn("px-2 py-1 rounded-full text-xs font-medium", changeColors[changeType])}>
-            {change}
-          </div>
-        )}
+        <div
+          className={cn(
+            'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white transition-transform duration-300 group-hover:scale-105',
+            a.chip,
+            a.chipShadow
+          )}
+        >
+          <Icon className="h-6 w-6" />
+        </div>
       </div>
-      {description && (
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-3">{description}</p>
+      {change ? (
+        <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className={cn('rounded-full px-2 py-0.5 text-xs font-semibold', changeColors[changeType])}>
+            {change}
+          </span>
+          {description && <span className="text-xs text-muted-foreground">{description}</span>}
+        </div>
+      ) : (
+        description && <p className="mt-3 text-sm text-muted-foreground">{description}</p>
       )}
     </div>
   )
@@ -67,39 +92,44 @@ interface MetricCardProps {
   color?: 'orange' | 'blue' | 'green' | 'red' | 'purple'
 }
 
-export function MetricCard({ 
-  icon: Icon, 
-  label, 
-  value, 
+export function MetricCard({
+  icon: Icon,
+  label,
+  value,
   trend,
-  color = 'orange'
+  color = 'orange',
 }: MetricCardProps) {
-  const colorClasses = {
-    orange: 'text-orange-600 bg-orange-100 dark:text-orange-400 dark:bg-orange-900/20',
-    blue: 'text-blue-600 bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20',
-    green: 'text-green-600 bg-green-100 dark:text-green-400 dark:bg-green-900/20',
-    red: 'text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-900/20',
-    purple: 'text-purple-600 bg-purple-100 dark:text-purple-400 dark:bg-purple-900/20'
+  const colorChip: Record<NonNullable<MetricCardProps['color']>, string> = {
+    orange: 'from-orange-400 to-orange-600',
+    blue: 'from-blue-500 to-blue-700',
+    green: 'from-emerald-500 to-teal-600',
+    red: 'from-rose-500 to-red-600',
+    purple: 'from-violet-500 to-fuchsia-600',
   }
 
   const trendColors = {
-    up: 'text-green-600 dark:text-green-400',
-    down: 'text-red-600 dark:text-red-400',
-    neutral: 'text-gray-600 dark:text-gray-400'
+    up: 'text-emerald-600 dark:text-emerald-400',
+    down: 'text-rose-600 dark:text-rose-400',
+    neutral: 'text-muted-foreground',
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 transition-all duration-300 hover:shadow-md">
+    <div className="group rounded-2xl border border-border/70 bg-card p-4 shadow-elev-1 transition-shadow duration-300 hover:shadow-elev-2">
       <div className="flex items-center gap-3">
-        <div className={cn("p-2 rounded-lg", colorClasses[color])}>
+        <div
+          className={cn(
+            'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-sm',
+            colorChip[color]
+          )}
+        >
           <Icon className="h-5 w-5" />
         </div>
-        <div className="flex-1">
-          <p className="text-sm text-gray-600 dark:text-gray-400">{label}</p>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm text-muted-foreground">{label}</p>
           <div className="flex items-center gap-2">
-            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{value}</p>
+            <p className="text-lg font-semibold tabular-nums text-foreground">{value}</p>
             {trend && (
-              <span className={cn("text-xs font-medium", trendColors[trend.direction])}>
+              <span className={cn('text-xs font-medium', trendColors[trend.direction])}>
                 {trend.value}
               </span>
             )}

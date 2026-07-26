@@ -18,6 +18,13 @@ export interface EducationalContext {
   requires_equations?: boolean;
   requires_tables?: boolean;
   cognitive_level?: string;
+  /**
+   * Batch 2b — per-org vector isolation directive, threaded down to qdrantSearch.search().
+   *   - string    → org sees its own vectors + global (untagged NCERT) ones
+   *   - null      → platform bypass (super_admin/admin): sees everything
+   *   - undefined → fail-closed default: global/untagged content only
+   */
+  organizationId?: string | null;
 }
 
 export interface ContentResult {
@@ -44,7 +51,7 @@ export interface SearchResponse {
 
 export class VectorStoreService {
   private client: QdrantClient;
-  private collectionName = 'digiclassroom';
+  private collectionName = process.env.QDRANT_COLLECTION_NAME || 'ncert-books-enhanced';
   private cacheService: ICacheService;
 
   constructor() {
@@ -54,11 +61,11 @@ export class VectorStoreService {
     });
 
     // Initialize Redis cache service (enterprise implementation)
+    // RedisCacheService expects { url, password } — passing host/port/db silently
+    // failed type-wise (masked by ignoreBuildErrors) so the cache never connected.
     this.cacheService = new RedisCacheService({
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
+      url: process.env.REDIS_URL || `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || '6379'}`,
       password: process.env.REDIS_PASSWORD,
-      db: parseInt(process.env.REDIS_DB || '0')
     });
 
     console.log('🔍 Vector Store Service initialized with Redis caching');
@@ -74,8 +81,14 @@ export class VectorStoreService {
       console.log(`🔍 Vector Search: ${context.query.substring(0, 50)}... for Class ${context.grade_level} ${context.subject}`);
 
       // Step 1: Check cache first
-      // Generate cache key from context
-      const cacheKey = `vector_search:${context.query}:${context.grade_level}:${context.subject}:${context.board_type}`;
+      // Generate cache key from context.
+      // 🛡️ Batch 2b: the org scope is part of the key — otherwise org A's cached chunks
+      // could be served to org B. null (platform-all) and undefined (global-only) are
+      // intentionally distinct cache namespaces.
+      const orgKeyPart = context.organizationId === undefined ? 'global-only'
+        : context.organizationId === null ? 'platform-all'
+        : context.organizationId;
+      const cacheKey = `vector_search:${orgKeyPart}:${context.query}:${context.grade_level}:${context.subject}:${context.board_type}`;
       const cachedResult = await this.cacheService.get<SearchResponse>(cacheKey);
 
       if (cachedResult) {
@@ -99,7 +112,9 @@ export class VectorStoreService {
         requiresEquations: context.requires_equations || false,
         requiresTables: context.requires_tables || false,
         contentTypes: context.content_types || ['text'],
-        sectionLevel: 3
+        sectionLevel: 3,
+        // 🛡️ Batch 2b: carry the org isolation directive into the vector search filter.
+        organizationId: context.organizationId
       };
 
       const qdrantResponse = await qdrantSearch.search(context.query, searchOptions);
@@ -230,15 +245,20 @@ export class VectorStoreService {
   }
 
   private getCognitiveLevelForGrade(gradeLevel: number): string {
-    if (gradeLevel <= 3) return "remember_understand";
-    if (gradeLevel <= 6) return "understand_apply";
-    if (gradeLevel <= 8) return "apply_analyze";
-    if (gradeLevel <= 10) return "analyze_evaluate";
+    if (gradeLevel <= 3)
+  return "remember_understand";
+    if (gradeLevel <= 6)
+  return "understand_apply";
+    if (gradeLevel <= 8)
+  return "apply_analyze";
+    if (gradeLevel <= 10)
+  return "analyze_evaluate";
     return "evaluate_create";
   }
 
   private calculateConfidence(results: ContentResult[]): number {
-    if (results.length === 0) return 0;
+    if (results.length === 0)
+  return 0;
     
     const avgScore = results.reduce((sum, result) => sum + result.score, 0) / results.length;
     const resultCount = Math.min(results.length / 5, 1); // Normalize by expected result count

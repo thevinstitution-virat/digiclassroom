@@ -194,7 +194,8 @@ export class BrowserStartupMonitor {
 
   // Measure Time to First Byte (TTFB)
   measureTTFB(): number | null {
-    if (typeof window === 'undefined') return null
+    if (typeof window === 'undefined')
+  return null
     
     const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming
     return navigation ? navigation.responseStart - navigation.requestStart : null

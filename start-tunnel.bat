@@ -1,0 +1,1 @@
+cloudflared.exe tunnel --no-autoupdate --edge-ip-version 4 --protocol http2 run --token eyJhIjoiY2IzZmI1MmE2NDRiNDcwM2UwYmJmOTVkNDYwYmNkMTciLCJ0IjoiM2Q1MmY4MzUtMGUzNi00ZTdhLWFlZmUtMGNiZTVlOWU1NWYyIiwicyI6Ik1USTFaR00yT0dVdE9HUXdOeTAwTWpWaUxXSTRZV0V0TURreFlUVmhPREF4TlRobSJ9

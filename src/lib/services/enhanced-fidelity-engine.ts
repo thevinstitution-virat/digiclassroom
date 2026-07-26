@@ -183,7 +183,8 @@ export class EnhancedFidelityEngine {
    * Calculate cosine similarity between two vectors
    */
   private cosineSimilarity(vecA: number[], vecB: number[]): number {
-    if (vecA.length !== vecB.length) return 0;
+    if (vecA.length !== vecB.length)
+  return 0;
 
     let dotProduct = 0;
     let normA = 0;
@@ -195,7 +196,8 @@ export class EnhancedFidelityEngine {
       normB += vecB[i] * vecB[i];
     }
 
-    if (normA === 0 || normB === 0) return 0;
+    if (normA === 0 || normB === 0)
+  return 0;
     
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
   }
@@ -225,8 +227,10 @@ export class EnhancedFidelityEngine {
    * Calculate confidence level based on score
    */
   private calculateConfidence(score: number): 'high' | 'medium' | 'low' {
-    if (score >= 0.8) return 'high';
-    if (score >= 0.5) return 'medium';
+    if (score >= 0.8)
+  return 'high';
+    if (score >= 0.5)
+  return 'medium';
     return 'low';
   }
 

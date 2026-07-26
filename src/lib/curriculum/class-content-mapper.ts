@@ -256,12 +256,13 @@ export async function getUserClassContext(userId: string): Promise<{
         c.grade_level,
         c.subjects,
         c.qdrant_namespace
-      FROM users u
+      FROM \`user\` u
       JOIN classes c ON u.class_id = c.id
       WHERE u.id = ? AND u.class_id IS NOT NULL
     `, [userId])
 
-    if (!userClass) return null
+    if (!userClass)
+  return null
 
     const subjects = userClass.subjects ? JSON.parse(userClass.subjects) : []
     const gradeLevel = userClass.grade_level.toString() as CBSEClass

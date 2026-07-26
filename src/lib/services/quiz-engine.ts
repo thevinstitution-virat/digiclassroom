@@ -24,7 +24,8 @@ export class QuizEngine {
 
     // Ensure we have enough unique words
     if (words.length < config.questionCount) {
-      console.warn(`⚠️ Not enough unique words (${words.length}) for requested questions (${config.questionCount})`)
+      console.warn(`⚠️ Not enough unique words (${words.length})
+  for requested questions (${config.questionCount})`)
     }
 
     let attempts = 0

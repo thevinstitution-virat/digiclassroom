@@ -160,7 +160,8 @@ export class EnhancedVoiceService {
 
   // Get current voice activity level
   getVoiceActivityLevel(): number {
-    if (!this.analyser) return 0
+    if (!this.analyser)
+  return 0
 
     const bufferLength = this.analyser.frequencyBinCount
     const dataArray = new Uint8Array(bufferLength)

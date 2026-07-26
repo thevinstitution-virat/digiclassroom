@@ -270,7 +270,8 @@ export class EnhancedSynthesisAgent {
    * Calculate what percentage of the answer is covered by textbook content
    */
   private calculateTextbookCoverage(answer: string, extracts: Array<{extract: string; source: string; relevance: number}>): number {
-    if (extracts.length === 0) return 0;
+    if (extracts.length === 0)
+  return 0;
 
     const answerWords = new Set(answer.toLowerCase().split(/\W+/).filter(w => w.length > 2));
     const extractWords = new Set();
@@ -289,8 +290,10 @@ export class EnhancedSynthesisAgent {
    * Assess confidence level based on textbook coverage and extract quality
    */
   private assessConfidenceLevel(coverage: number, extractCount: number): 'high' | 'medium' | 'low' {
-    if (coverage > 0.8 && extractCount >= 3) return 'high';
-    if (coverage > 0.6 && extractCount >= 2) return 'medium';
+    if (coverage > 0.8 && extractCount >= 3)
+  return 'high';
+    if (coverage > 0.6 && extractCount >= 2)
+  return 'medium';
     return 'low';
   }
 }

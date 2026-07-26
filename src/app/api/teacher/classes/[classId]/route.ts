@@ -1,5 +1,6 @@
+import { auth } from '@/auth';
+import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
 import { executeQuery, executeQuerySingle } from '@/lib/db/connection'
 import { generateId } from '@/lib/utils'
 
@@ -12,14 +13,14 @@ export async function GET(
   { params }: { params: { classId: string } }
 ) {
   try {
-    const { userId } = await auth()
-    
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const teacher = await executeQuerySingle<any>(
-      'SELECT id, role, approval_status FROM users WHERE clerk_id = ?',
+      'SELECT id, role, approval_status FROM `user` WHERE id = ?',
       [userId]
     )
 
@@ -31,8 +32,8 @@ export async function GET(
 
     // Get class with teacher assignment check
     const classData = await executeQuerySingle<any>(
-      `SELECT 
-        c.id, c.tenant_id, c.name, c.description, c.grade_level,
+      `SELECT
+        c.id, c.organization_id, c.name, c.description, c.grade_level,
         c.qdrant_namespace, c.subjects, c.student_count,
         c.created_at, c.updated_at
       FROM classes c
@@ -49,7 +50,7 @@ export async function GET(
       success: true,
       data: {
         id: classData.id,
-        tenantId: classData.tenant_id,
+        organizationId: classData.organization_id,
         name: classData.name,
         description: classData.description,
         gradeLevel: classData.grade_level,
@@ -76,14 +77,14 @@ export async function PUT(
   { params }: { params: { classId: string } }
 ) {
   try {
-    const { userId } = await auth()
-    
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const teacher = await executeQuerySingle<any>(
-      'SELECT id, role, approval_status FROM users WHERE clerk_id = ?',
+      'SELECT id, role, approval_status FROM `user` WHERE id = ?',
       [userId]
     )
 
@@ -171,14 +172,14 @@ export async function DELETE(
   { params }: { params: { classId: string } }
 ) {
   try {
-    const { userId } = await auth()
-    
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const teacher = await executeQuerySingle<any>(
-      'SELECT id, role, approval_status FROM users WHERE clerk_id = ?',
+      'SELECT id, role, approval_status FROM `user` WHERE id = ?',
       [userId]
     )
 

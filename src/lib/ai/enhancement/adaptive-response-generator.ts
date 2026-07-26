@@ -189,7 +189,8 @@ export class AdaptiveResponseGenerator {
     let adapted = content;
     const styleAdaptations = this.LEARNING_STYLE_ADAPTATIONS[options.learningStyle];
 
-    if (!styleAdaptations) return adapted;
+    if (!styleAdaptations)
+  return adapted;
 
     // Add learning style specific language
     const languagePatterns = styleAdaptations.language;
@@ -247,7 +248,8 @@ export class AdaptiveResponseGenerator {
     let adapted = content;
     const performanceAdaptations = this.PERFORMANCE_ADAPTATIONS[options.performanceLevel];
 
-    if (!performanceAdaptations) return adapted;
+    if (!performanceAdaptations)
+  return adapted;
 
     if (options.performanceLevel === 'struggling') {
       // Simplify language and add more support
@@ -366,7 +368,8 @@ export class AdaptiveResponseGenerator {
   private static generatePerformanceGuidance(options: AdaptiveOptions): string[] {
     const performanceAdaptations = this.PERFORMANCE_ADAPTATIONS[options.performanceLevel];
     
-    if (!performanceAdaptations) return [];
+    if (!performanceAdaptations)
+  return [];
 
     if ('encouragement' in performanceAdaptations) {
       return performanceAdaptations.encouragement;

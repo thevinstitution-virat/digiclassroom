@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useUser } from '@clerk/nextjs'
 import { api } from '@/lib/trpc/client'
 import {
   Search,
@@ -28,6 +27,7 @@ import StatsCards from '@/components/dictionary/StatsCards'
 import TodaysProgress from '@/components/dictionary/TodaysProgress'
 import { QuizConfig } from '@/lib/types/quiz'
 import { useUserStats } from '@/hooks/useUserStats'
+import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 
 // Enhanced Quiz Tab Component
 function QuizTab() {
@@ -291,7 +291,7 @@ const mockWordOfDay = {
 }
 
 export default function DictionaryPage() {
-  const { user } = useUser()
+  const { user } = useBetterAuthUser()
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState([])
   const [isSearching, setIsSearching] = useState(false)

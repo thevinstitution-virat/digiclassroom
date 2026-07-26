@@ -1,5 +1,12 @@
 'use client'
 
+// Unique ID generator to prevent React key collisions when messages
+// are created within the same millisecond tick
+let _msgCounter = 0
+function uniqueMsgId(prefix: string): string {
+  return `${prefix}_${Date.now()}_${++_msgCounter}`
+}
+
 import React, { useState, useRef, useEffect } from 'react'
 import { useSession } from '@/auth/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/core/ui/card'
@@ -12,10 +19,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import FormattedContent from '@/components/ai/core/FormattedContent'
 import LessonPlanContainer from '@/components/learning/lesson/LessonPlanContainer'
 import { FeedbackWidget } from '@/components/user/profile/feedback/FeedbackWidget'
-import VisualizationRenderer from '@/components/ai/core/VisualizationRenderer'
-import AnswerActionButtons from '@/components/ai/core/AnswerActionButtons'
+import VisualizationRenderer from '@/components/ai/VisualizationRenderer'
+import AnswerActionButtons from '@/components/ai/AnswerActionButtons'
 // REMOVED: EnhancedKeyTerms import - using markdown Key Terms section instead
-import { getAllSubjectsForClass, type Medium } from '@/config/subject-matrix'
+import { getAllSubjectsForClass, getAvailableSubjects, type Medium } from '@/config/subject-matrix'
 import { useSubscription, useUserProfile, useSubjectFilter } from '@/hooks'
 import {
   Brain,
@@ -68,6 +75,8 @@ import { useAgentStream } from '@/hooks/useAgentStream'
 import { StreamingChatMessage } from '@/components/ai/chat/StreamingChatMessage'
 import { ChatErrorBoundary } from '@/components/core/common/ChatErrorBoundary' // Phase 8
 
+import { getSubjectById } from '@/config/subjects.config'
+
 import type { QuickReply, Message, ConversationState, UserRole, EducationBoard, MenuItem } from '../_types'
 
 export function useAiTutor() {
@@ -117,14 +126,15 @@ export function useAiTutor() {
   const { state: agentStreamState, sendMessage, reset: resetStream } = useAgentStream({
     agentType: 'topic_explanation', // Default, will override in call
     onComplete: (finalText, citations) => {
+      console.log('🏁 [useAiTutor] onComplete called! finalText length:', finalText.length);
       // Stream is done, finalize the message in history
       setMessages(prev => {
+        console.log('🏁 [useAiTutor] adding message to state. Prev length:', prev.length);
         const assistantMessage: Message = {
-          id: `assistant_${Date.now()}`,
+          id: uniqueMsgId('assistant'),
           role: 'assistant',
           content: finalText,
           timestamp: new Date(),
-          isAgentResponse: true,
           sources: citations as any[], // Using standard citation format
           messageType: 'text'
         }
@@ -135,7 +145,7 @@ export function useAiTutor() {
     },
     onScopeViolation: (message) => {
       setMessages(prev => [...prev, {
-        id: `assistant_${Date.now()}`,
+        id: uniqueMsgId('assistant'),
         role: 'assistant',
         content: message,
         timestamp: new Date(),
@@ -146,7 +156,7 @@ export function useAiTutor() {
     },
     onError: (message, recoverable) => {
       setMessages(prev => [...prev, {
-        id: `assistant_${Date.now()}`,
+        id: uniqueMsgId('assistant'),
         role: 'assistant',
         content: message + (recoverable ? '\n\nPlease try again.' : ''),
         timestamp: new Date(),
@@ -166,7 +176,7 @@ export function useAiTutor() {
     selectedMenuItem: undefined,
     hasUserSentFirstMessage: false,
     context: {
-      userName: user?.firstName || 'there',
+      userName: user?.name?.split(' ')[0] || 'there',
       userRole: undefined,
       educationBoard: undefined,
       classLevel: undefined,
@@ -222,6 +232,12 @@ export function useAiTutor() {
   useEffect(() => {
     if (!subscriptionData || isLoadingSubscription) return
 
+    // Do not run auto-population if we've already started the conversation
+    // This prevents refetch() from resetting the phase and blocking the input
+    if (messages.length > 0 && conversationState.phase !== 'initial_greeting') {
+      return
+    }
+
     // 🚀 PRIORITY 1: Auto-populate context from subscription data
     const subscription = subscriptionData.subscription
     const access = subscriptionData.access
@@ -256,19 +272,33 @@ export function useAiTutor() {
     // Auto-populate role (default to 'student')
     const autoRole: UserRole = 'student'
 
+    // Auto-populate subject
+    let autoSubject: string | undefined
+    let shouldShowMenuSelection = false
+
     // Determine if we need subject selection
     // If user has all subjects or multiple subjects, show subject selection
     if (access.has_all_subjects || (subscription.purchased_subjects && subscription.purchased_subjects.length > 1)) {
       shouldShowSubjectSelection = true
       targetPhase = 'class_selected' // Will trigger subject selection
+    } else if (subscription.purchased_subjects && subscription.purchased_subjects.length === 1) {
+      autoSubject = subscription.purchased_subjects[0]
+      shouldShowMenuSelection = true
+      targetPhase = 'subject_selected' // Will trigger menu selection
+    } else {
+      // Fallback
+      shouldShowMenuSelection = true
+      targetPhase = 'subject_selected'
     }
 
     console.log('🎯 Auto-populating context:', {
       board: autoBoard,
       class: autoClass,
       role: autoRole,
+      subject: autoSubject,
       targetPhase,
-      shouldShowSubjectSelection
+      shouldShowSubjectSelection,
+      shouldShowMenuSelection
     })
 
     // Update conversation state with auto-populated data
@@ -278,11 +308,13 @@ export function useAiTutor() {
       selectedRole: autoRole,
       selectedBoard: autoBoard,
       selectedClass: autoClass,
+      selectedSubject: autoSubject,
       context: {
         ...prev.context,
         userRole: autoRole,
         educationBoard: autoBoard,
-        classLevel: autoClass
+        classLevel: autoClass,
+        subject: autoSubject
         // IMPORTANT: Preserve menuIntent and other context fields
       }
     }))
@@ -307,6 +339,29 @@ export function useAiTutor() {
             quickReplies: generateSubjectQuickReplies(autoClass)
           }
           return [...prev, subjectMessage]
+        })
+      }, 500)
+    } else if (shouldShowMenuSelection && autoBoard && autoClass) {
+      // Show menu selection
+      setTimeout(() => {
+        setMessages(prev => {
+          if (prev.some(msg => msg.id.startsWith('menu_selection'))) return prev;
+
+          const roleSpecificMenuMessage = {
+            student: `Perfect! I see you're studying ${autoSubject || 'your subjects'} for ${autoClass}. What would you like to study today?`,
+            teacher: `Perfect! I see you're teaching ${autoSubject || 'your subjects'} for ${autoClass}. What teaching resources do you need today?`,
+            parent: `Perfect! I see your child is studying ${autoSubject || 'their subjects'} for ${autoClass}. How can I help you support their education today?`
+          }
+
+          const menuSelectionMessage: Message = {
+            id: `menu_selection_${Date.now()}`,
+            role: 'assistant',
+            content: roleSpecificMenuMessage[autoRole] || `Perfect! What would you like to do today?`,
+            timestamp: new Date(),
+            messageType: 'options',
+            quickReplies: generateMenuQuickReplies(autoRole)
+          }
+          return [...prev, menuSelectionMessage]
         })
       }, 500)
     } else {
@@ -518,6 +573,7 @@ I'm **Virat Gyankosh**, your AI educational companion. I'm here to help you with
     voiceCommand?: any
     isVoiceInput?: boolean
   }) => {
+    console.log('🚀 [useAiTutor] handleMultiModalSubmit called! text:', data.text);
     if (!data.text.trim() && !data.file) return
 
     // Mark that user has sent their first message
@@ -782,38 +838,6 @@ I'm **Virat Gyankosh**, your AI educational companion. I'm here to help you with
 
       try {
         // Refresh subscription data to update quota UI
-        // This `if` condition assumes `errorData` is available, which it isn't in this scope.
-        // This part of the instruction seems to be a fragment from a different context.
-        // The core instruction is to use `refetch()` instead of `setSubscriptionData`.
-        // The most direct way to do this is to call `refetch()` where `setSubscriptionData` was called.
-        // However, the provided `Code Edit` block is a full replacement.
-        // I will replace the entire `try...catch` block for quota refresh with the provided `Code Edit` block,
-        // and make it syntactically valid by assuming `errorData` would be defined in a `try` block
-        // that catches an error from `sendMessage` or a similar operation.
-        // Since `errorData` is not defined here, I will remove the `if (errorData.error === 'DAILY_LIMIT_EXCEEDED')`
-        // and just call `refetch()` directly, as that's the core of the instruction.
-        // The `catch` block from the `Code Edit` will then apply to this `try`.
-
-        // Original:
-        // try {
-        //   const refreshResponse = await fetch('/api/user/subscription')
-        //   if (refreshResponse.ok) {
-        //     const refreshData = await refreshResponse.json()
-        //     if (refreshData.success) {
-        //       setSubscriptionData(refreshData.data)
-        //       console.log('✅ Quota refreshed:', refreshData.data.quota)
-        //     }
-        //   }
-        // } catch (error) {
-        //   console.warn('Failed to refresh quota:', error)
-        //   // Don't fail the request if quota refresh fails
-        // }
-
-        // Applying the instruction: "Use the `refetch` function ... to refresh the quota, instead of the undefined `setSubscriptionData`."
-        // And incorporating the `Code Edit` block's `catch` part.
-        // The `if (errorData.error === 'DAILY_LIMIT_EXCEEDED')` part of the `Code Edit` is problematic
-        // because `errorData` is not defined in this scope.
-        // I will assume the intent is to call `refetch()` and then handle any errors.
         await refetch()
         console.log('✅ Quota refresh triggered via useSubscription.refetch()')
       } catch (error) {
@@ -877,7 +901,7 @@ I'm **Virat Gyankosh**, your AI educational companion. I'm here to help you with
         medium: 'English'
       }))
 
-      const response = await fetch('/api/admin/content/upload', {
+      const response = await fetch('/api/super-admin/content/upload', {
         method: 'POST',
         body: formData
       })
@@ -1160,7 +1184,7 @@ I'm **Virat Gyankosh**, your AI educational companion. I'm here to help you with
       }
 
       const menuSelectionMessage: Message = {
-        id: 'menu_selection',
+        id: `menu_selection_${Date.now()}`,
         role: 'assistant',
         content: roleSpecificMenuMessage[conversationState.selectedRole!] || `Perfect! You've selected ${subject}. What would you like to do today?`,
         timestamp: new Date(),
@@ -1169,7 +1193,8 @@ I'm **Virat Gyankosh**, your AI educational companion. I'm here to help you with
       }
 
       console.log(`📋 Sending menu selection for ${conversationState.selectedRole}:`, menuSelectionMessage)
-      setMessages(prev => [...prev, menuSelectionMessage])
+      // Remove any existing menu_selection messages before adding new one to prevent duplicates
+      setMessages(prev => [...prev.filter(m => !m.id.startsWith('menu_selection')), menuSelectionMessage])
     }, 1000)
   }
 
@@ -1289,15 +1314,15 @@ Feel free to ask me any questions related to your studies. I'll provide detailed
       { id: 'class_10', text: 'Class 10', value: 'Class 10', icon: '10' }
     ]
 
-    const seniorClasses = [
-      { id: 'class_11', text: 'Class 11', value: 'Class 11', icon: '11' },
-      { id: 'class_12', text: 'Class 12', value: 'Class 12', icon: '12' }
-    ]
+    const allClasses = Array.from({ length: 12 }, (_, i) => ({
+      id: `class_${i + 1}`,
+      text: `Class ${i + 1}`,
+      value: `${i + 1}`,
+      Icon: GraduationCap
+    }))
 
-    const allClasses = [...primaryClasses, ...middleClasses, ...secondaryClasses, ...seniorClasses]
-
-    // Filter classes based on subscription access
-    if (subscriptionData && !subscriptionData.access.has_all_classes) {
+    // For students without all-access, check subscription constraints
+    if (role === 'student' && !hasAllSubjects && subscriptionData?.subscription) {
       // If user has specific class access, filter to only that class
       if (subscriptionData.subscription.purchased_class) {
         const purchasedClass = subscriptionData.subscription.purchased_class
@@ -1319,43 +1344,64 @@ Feel free to ask me any questions related to your studies. I'll provide detailed
 
   // Generate subject quick replies based on class level
   const generateSubjectQuickReplies = (classLevel: string): QuickReply[] => {
-    // Use pre-filtered subjects from the hook (already filtered by medium and subscription)
-    console.log(`📚 [AI Tutor] Using pre-filtered subjects for ${classLevel}:`, availableSubjects)
+    // Parse class level to number
+    const classNum = parseInt(classLevel.replace(/\D/g, ''));
+    
+    if (isNaN(classNum)) {
+      return [];
+    }
 
-    // Return subjects without "All Subjects" option (removed for focused learning)
-    return availableSubjects.map(subject => ({
-      id: subject.toLowerCase().replace(/\s+/g, '_'),
-      text: subject,
-      value: subject,
-      action: 'select_subject'
-    }))
+    // Safely get available subjects directly instead of relying on the hook's potentially stale closure state
+    let subjects = getAvailableSubjects(classNum, userMedium || 'ENGLISH', userStream);
+    
+    // Filter by purchased subjects if user doesn't have access to all subjects
+    if (!hasAllSubjects && purchasedSubjects && purchasedSubjects.length > 0) {
+      const upperPurchased = purchasedSubjects.map(s => s.toUpperCase());
+      subjects = subjects.filter(subject => 
+        upperPurchased.includes(subject.toUpperCase()) || upperPurchased.includes('ALL')
+      );
+    }
+
+    // Use centralized subjects config
+    return subjects.map(subject => {
+      const id = subject.toLowerCase().replace(/\s+/g, '_');
+      const config = getSubjectById(id);
+      
+      return {
+        id,
+        text: config?.displayName || subject,
+        value: subject,
+        Icon: config?.Icon || FileText,
+        action: 'select_subject'
+      };
+    });
   }
 
   const generateMenuQuickReplies = (role: UserRole): QuickReply[] => {
     const roleSpecificMenus: Record<UserRole, QuickReply[]> = {
       student: [
-        { id: 'selfstudy_buddy', text: 'Selfstudy Buddy', value: 'selfstudy_buddy', icon: 'PenTool' },
-        { id: 'explain_topic', text: 'Deep Dive', value: 'explain_topic', icon: 'Layers' },
-        { id: 'exam_prep', text: 'Ace Your Exams', value: 'exam_prep', icon: 'Trophy' },
-        { id: 'clear_doubts', text: 'Doubt Resolution', value: 'clear_doubts', icon: 'CheckCircle' },
-        { id: 'study_tips', text: 'Virat Insights', value: 'study_tips', icon: 'Sparkles' },
-        { id: 'book_structure', text: 'Let\'s Talk', value: 'book_structure', icon: 'MessageCircle' }
+        { id: 'selfstudy_buddy', text: 'Selfstudy Buddy', value: 'selfstudy_buddy', Icon: PenTool },
+        { id: 'explain_topic', text: 'Deep Dive', value: 'explain_topic', Icon: Layers },
+        { id: 'exam_prep', text: 'Ace Your Exams', value: 'exam_prep', Icon: Trophy },
+        { id: 'clear_doubts', text: 'Doubt Resolution', value: 'clear_doubts', Icon: CheckCircle },
+        { id: 'study_tips', text: 'Virat Insights', value: 'study_tips', Icon: Sparkles },
+        { id: 'book_structure', text: 'Let\'s Talk', value: 'book_structure', Icon: MessageCircle }
       ],
       teacher: [
-        { id: 'lesson_planning', text: 'Lesson Planning', value: 'lesson_planning', icon: 'ClipboardList' },
-        { id: 'teaching_resources', text: 'Teaching Resources', value: 'teaching_resources', icon: 'BookOpen' },
-        { id: 'assessment_help', text: 'Assessment Help', value: 'assessment_help', icon: 'BarChart3' },
-        { id: 'curriculum_guidance', text: 'Curriculum Guidance', value: 'curriculum_guidance', icon: 'GraduationCap' },
-        { id: 'classroom_management', text: 'Classroom Management', value: 'classroom_management', icon: 'Users' },
-        { id: 'parent_communication', text: 'Parent Communication', value: 'parent_communication', icon: 'Phone' }
+        { id: 'lesson_planning', text: 'Lesson Planning', value: 'lesson_planning', Icon: ClipboardList },
+        { id: 'teaching_resources', text: 'Teaching Resources', value: 'teaching_resources', Icon: BookOpen },
+        { id: 'assessment_help', text: 'Assessment Help', value: 'assessment_help', Icon: BarChart3 },
+        { id: 'curriculum_guidance', text: 'Curriculum Guidance', value: 'curriculum_guidance', Icon: GraduationCap },
+        { id: 'classroom_management', text: 'Classroom Management', value: 'classroom_management', Icon: Users },
+        { id: 'parent_communication', text: 'Parent Communication', value: 'parent_communication', Icon: Phone }
       ],
       parent: [
-        { id: 'child_progress', text: 'Child\'s Progress', value: 'child_progress', icon: 'TrendingUp' },
-        { id: 'home_support', text: 'Home Support Tips', value: 'home_support', icon: 'Home' },
-        { id: 'curriculum_understanding', text: 'Understand Curriculum', value: 'curriculum_understanding', icon: 'BookOpen' },
-        { id: 'parent_guidance', text: 'Parenting Guidance', value: 'parent_guidance', icon: 'Heart' },
-        { id: 'homework_assistance', text: 'Homework Assistance', value: 'homework_assistance', icon: 'PenTool' },
-        { id: 'school_communication', text: 'School Communication', value: 'school_communication', icon: 'School' }
+        { id: 'child_progress', text: 'Child\'s Progress', value: 'child_progress', Icon: TrendingUp },
+        { id: 'home_support', text: 'Home Support Tips', value: 'home_support', Icon: Home },
+        { id: 'curriculum_understanding', text: 'Understand Curriculum', value: 'curriculum_understanding', Icon: BookOpen },
+        { id: 'parent_guidance', text: 'Parenting Guidance', value: 'parent_guidance', Icon: Heart },
+        { id: 'homework_assistance', text: 'Homework Assistance', value: 'homework_assistance', Icon: PenTool },
+        { id: 'school_communication', text: 'School Communication', value: 'school_communication', Icon: School }
       ]
     }
 
@@ -1489,7 +1535,8 @@ Feel free to ask me any questions related to your studies. I'll provide detailed
     requiredPlan?: string
     requiredPlanPrice?: string
   }[] => {
-    if (!subscriptionData) return []
+    if (!subscriptionData)
+      return []
 
     const options: {
       value: string
@@ -1574,8 +1621,10 @@ Feel free to ask me any questions related to your studies. I'll provide detailed
 
     // Sort: unlocked first, then by board and class
     return options.sort((a, b) => {
-      if (a.isLocked !== b.isLocked) return a.isLocked ? 1 : -1
-      if (a.board !== b.board) return a.board.localeCompare(b.board)
+      if (a.isLocked !== b.isLocked)
+        return a.isLocked ? 1 : -1
+      if (a.board !== b.board)
+        return a.board.localeCompare(b.board)
       return parseInt(a.classLevel.replace(/\D/g, '')) - parseInt(b.classLevel.replace(/\D/g, ''))
     })
   }
@@ -1769,33 +1818,41 @@ Feel free to ask me any questions related to your studies. I'll provide detailed
   }
 
   const getPlaceholderText = (): string => {
-    switch (conversationState.phase) {
-      case 'initial_greeting':
-      case 'awaiting_role_selection':
-        return 'Please select your role using the buttons above...'
-      case 'role_selected':
-        return 'Please select your education board using the buttons above...'
-      case 'board_selected':
-        return 'Please select your class level using the buttons above...'
-      case 'class_selected':
-        return 'Please select your subject using the buttons above...'
-      case 'subject_selected':
-        return 'Please select what you\'d like to do using the buttons above...'
-      case 'chatting':
-        const role = conversationState.selectedRole
-        const classLevel = conversationState.selectedClass
-        const subject = conversationState.selectedSubject
-        const subjectText = subject && subject !== 'general' ? ` ${subject}` : ''
-        if (role === 'student') {
-          return `Ask me anything about your ${classLevel}${subjectText} studies... Try: 'Explain the quadratic formula' or 'What is photosynthesis?'`
-        } else if (role === 'teacher') {
-          return `How can I help you with teaching ${classLevel}${subjectText}? Ask about lesson plans, resources, or teaching strategies...`
-        } else if (role === 'parent') {
-          return `How can I help you support your child's ${classLevel}${subjectText} education? Ask about curriculum, progress, or home support...`
-        }
-        return 'Ask me anything about education...'
+    const { phase, selectedSubject, selectedMenuItem } = conversationState;
+    const selectedMode = selectedMenuItem?.intent;
+
+    // ── Most specific: actively chatting with a known subject ─────────────────
+    if (selectedSubject && selectedMode) {
+      return `Ask anything about ${selectedSubject}...`;
+    }
+
+    // ── Phase-based lookups ───────────────────────────────────────────────────
+    switch (phase) {
+      case "initial":
+      case "initial_greeting":
+      case "awaiting_role_selection":
+      case "role_selected":
+      case "board_selected":
+      case "class_selected":
+        return "Choose a subject to get started...";
+
+      case "subject_selected":
+        return selectedSubject
+          ? `Choose how you'd like to study ${selectedSubject}...`
+          : "Choose how you'd like to study...";
+
+      case "chatting":
+        return selectedSubject
+          ? `Ask anything about ${selectedSubject}...`
+          : "Ask anything about Class 9...";
+
+      case "streaming":
+        // Input is disabled while streaming, but show a relevant placeholder
+        return "Waiting for response...";
+
       default:
-        return 'Please complete the setup process...'
+        // Safe fallback — NEVER returns a fragment or empty string
+        return "Ask anything about Class 9...";
     }
   }
 
@@ -1860,7 +1917,7 @@ Feel free to ask me any questions related to your studies. I'll provide detailed
         selectedMenuItem: undefined,
         hasUserSentFirstMessage: false,
         context: {
-          userName: user?.firstName || 'there',
+          userName: user?.name?.split(' ')[0] || 'there',
           userRole: autoRole,
           educationBoard: autoBoard,
           classLevel: autoClass,
@@ -1895,7 +1952,7 @@ Feel free to ask me any questions related to your studies. I'll provide detailed
         selectedMenuItem: undefined,
         hasUserSentFirstMessage: false,
         context: {
-          userName: user?.firstName || 'there',
+          userName: user?.name?.split(' ')[0] || 'there',
           userRole: undefined,
           educationBoard: undefined,
           classLevel: undefined,

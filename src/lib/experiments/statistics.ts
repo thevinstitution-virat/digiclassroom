@@ -146,8 +146,10 @@ function tCDF(t: number, df: number): number {
  * Incomplete beta function approximation
  */
 function incompleteBeta(x: number, a: number, b: number): number {
-  if (x === 0) return 0
-  if (x === 1) return 1
+  if (x === 0)
+  return 0
+  if (x === 1)
+  return 1
   
   // Simple approximation for our use case
   // For more accuracy, would use continued fractions
@@ -165,8 +167,10 @@ function beta(a: number, b: number): number {
  * Gamma function approximation (Stirling's approximation)
  */
 function gamma(n: number): number {
-  if (n === 1) return 1
-  if (n === 0.5) return Math.sqrt(Math.PI)
+  if (n === 1)
+  return 1
+  if (n === 0.5)
+  return Math.sqrt(Math.PI)
   
   // Stirling's approximation
   return Math.sqrt(2 * Math.PI / n) * Math.pow(n / Math.E, n)

@@ -310,7 +310,8 @@ function generateRelevanceReason(
  * Normalize string for comparison
  */
 function normalize(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined
+  if (typeof value !== 'string')
+  return undefined
   return value.trim().toLowerCase()
 }
 

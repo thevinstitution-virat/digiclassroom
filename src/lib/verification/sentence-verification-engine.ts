@@ -565,12 +565,14 @@ export class SentenceVerificationEngine {
    * Calculate exact similarity between normalized texts
    */
   private calculateExactSimilarity(text1: string, text2: string): number {
-    if (text1 === text2) return 1.0;
+    if (text1 === text2)
+  return 1.0;
     
     const words1 = text1.split(/\s+/);
     const words2 = text2.split(/\s+/);
     
-    if (Math.abs(words1.length - words2.length) > 2) return 0;
+    if (Math.abs(words1.length - words2.length) > 2)
+  return 0;
     
     let matches = 0;
     const maxLength = Math.max(words1.length, words2.length);
@@ -586,7 +588,8 @@ export class SentenceVerificationEngine {
    * Calculate cosine similarity between embeddings
    */
   private calculateCosineSimilarity(embedding1: number[], embedding2: number[]): number {
-    if (embedding1.length !== embedding2.length) return 0;
+    if (embedding1.length !== embedding2.length)
+  return 0;
 
     let dotProduct = 0;
     let norm1 = 0;
@@ -686,7 +689,8 @@ export class SentenceVerificationEngine {
    */
   private extractMatchingContext(content: string, matchText: string, contextLength: number = 100): string {
     const index = content.toLowerCase().indexOf(matchText.toLowerCase());
-    if (index === -1) return content.substring(0, Math.min(200, content.length));
+    if (index === -1)
+  return content.substring(0, Math.min(200, content.length));
 
     const start = Math.max(0, index - contextLength);
     const end = Math.min(content.length, index + matchText.length + contextLength);
@@ -699,7 +703,8 @@ export class SentenceVerificationEngine {
    */
   private findExactPhraseMatch(sentence: string, content: string): { confidence: number; matchedText: string } | null {
     const words = sentence.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-    if (words.length < 3) return null; // Require at least 3 significant words
+    if (words.length < 3)
+  return null; // Require at least 3 significant words
 
     const contentLower = content.toLowerCase();
     let bestMatch = { confidence: 0, matchedText: '' };

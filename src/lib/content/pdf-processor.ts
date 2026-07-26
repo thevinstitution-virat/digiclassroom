@@ -1,3 +1,4 @@
+﻿import { openrouter } from '@/lib/openrouter/client';
 import fs from 'fs'
 import path from 'path'
 // @ts-ignore - pdf.js-extract types not available
@@ -51,7 +52,7 @@ export class PDFProcessor {
   private pdfExtract: PDFExtract
 
   constructor(openaiApiKey: string) {
-    this.openai = new OpenAI({ apiKey: openaiApiKey })
+    this.openai = openrouter
     this.pdfExtract = new PDFExtract()
   }
 
@@ -247,7 +248,7 @@ Focus on identifying clear chapter titles and their main topics.`
     const errors: string[] = []
 
     try {
-      console.log(`📚 Processing PDF: ${filename}`)
+      console.log(`ðŸ“š Processing PDF: ${filename}`)
 
       // Extract metadata
       const baseMetadata = this.extractMetadataFromFilename(filename)
@@ -257,7 +258,7 @@ Focus on identifying clear chapter titles and their main topics.`
       } as PDFMetadata
 
       // Extract text from PDF
-      console.log('📄 Extracting text from PDF...')
+      console.log('ðŸ“„ Extracting text from PDF...')
       const pdfData = await this.pdfExtract.extract(filePath, {})
       
       if (!pdfData.pages || pdfData.pages.length === 0) {
@@ -270,12 +271,12 @@ Focus on identifying clear chapter titles and their main topics.`
         .join('\n\n')
 
       // Detect chapters
-      console.log('🔍 Detecting chapters...')
+      console.log('ðŸ” Detecting chapters...')
       const chapters = await this.detectChapters(fullText)
       console.log(`Found ${chapters.length} chapters`)
 
       // Process pages and create chunks
-      console.log('✂️ Creating content chunks...')
+      console.log('âœ‚ï¸ Creating content chunks...')
       const chunks: ContentChunk[] = []
       let totalWords = 0
 
@@ -335,7 +336,7 @@ Focus on identifying clear chapter titles and their main topics.`
 
       const processingTime = Date.now() - startTime
 
-      console.log(`✅ Processing completed: ${chunks.length} chunks, ${totalWords} words`)
+      console.log(`âœ… Processing completed: ${chunks.length} chunks, ${totalWords} words`)
 
       return {
         success: true,
@@ -420,3 +421,4 @@ Focus on identifying clear chapter titles and their main topics.`
     return chapters;
   }
 }
+

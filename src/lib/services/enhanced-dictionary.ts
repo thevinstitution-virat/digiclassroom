@@ -140,10 +140,12 @@ export class EnhancedDictionaryService {
   private async fetchFromDictionaryAPI(word: string) {
     try {
       const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${word}`)
-      if (!response.ok) return null
+      if (!response.ok)
+  return null
 
       const data = await response.json()
-      if (!data || data.length === 0) return null
+      if (!data || data.length === 0)
+  return null
 
       const entry = data[0]
       
@@ -366,9 +368,12 @@ export class EnhancedDictionaryService {
     const commonWords = ['the', 'be', 'to', 'of', 'and', 'a', 'in', 'that', 'have', 'i', 'it', 'for', 'not', 'on', 'with', 'he', 'as', 'you', 'do', 'at']
     const uncommonWords = ['serendipity', 'ubiquitous', 'ephemeral', 'mandate', 'vicarious']
     
-    if (commonWords.includes(word.toLowerCase())) return 'very common'
-    if (uncommonWords.includes(word.toLowerCase())) return 'uncommon'
-    if (word.length > 8) return 'rare'
+    if (commonWords.includes(word.toLowerCase()))
+  return 'very common'
+    if (uncommonWords.includes(word.toLowerCase()))
+  return 'uncommon'
+    if (word.length > 8)
+  return 'rare'
     return 'common'
   }
 
@@ -376,8 +381,10 @@ export class EnhancedDictionaryService {
    * Determine difficulty level
    */
   private determineDifficulty(word: string): string {
-    if (word.length <= 4) return 'easy'
-    if (word.length <= 7) return 'medium'
+    if (word.length <= 4)
+  return 'easy'
+    if (word.length <= 7)
+  return 'medium'
     return 'hard'
   }
 

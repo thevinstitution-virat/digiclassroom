@@ -280,7 +280,8 @@ export class ServiceLifecycleManager {
   static getCachedUserContext(userId: string): any | null {
     const cacheEntry = this.userContextCache.get(userId);
 
-    if (!cacheEntry) return null;
+    if (!cacheEntry)
+  return null;
 
     const isExpired = Date.now() - cacheEntry.timestamp > cacheEntry.ttl;
     if (isExpired) {
@@ -313,7 +314,8 @@ export class ServiceLifecycleManager {
   static getCachedQdrantSchema(collectionName: string): any | null {
     const cacheEntry = this.qdrantSchemaCache.get(collectionName);
 
-    if (!cacheEntry) return null;
+    if (!cacheEntry)
+  return null;
 
     const isExpired = Date.now() - cacheEntry.timestamp > cacheEntry.ttl;
     if (isExpired) {

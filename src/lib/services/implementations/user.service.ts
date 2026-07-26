@@ -52,9 +52,9 @@ export class UserService implements IUserService {
     try {
       const connection = await getConnection();
 
-      // Fetch user data
+      // Fetch user data — Better Auth `user` table (legacy `users` removed in Phase 4.1a).
       const [userRows] = await connection.query<any[]>(
-        `SELECT * FROM users WHERE clerk_user_id = ? LIMIT 1`,
+        `SELECT * FROM \`user\` WHERE id = ? LIMIT 1`,
         [userId]
       );
 
@@ -81,7 +81,7 @@ export class UserService implements IUserService {
       const quota = quotaRows?.[0] || { current_usage: 0, quota_limit: 30 };
 
       const userContext: UserContext = {
-        userId: user.clerk_user_id,
+        userId: user.id,
         userName: user.name || 'Student',
         role: user.role || 'student',
         educationBoard: user.education_board || 'cbse',
@@ -152,9 +152,9 @@ export class UserService implements IUserService {
     try {
       const connection = await getConnection();
 
-      // Get user ID
+      // Get user ID — Better Auth `user` table.
       const [userRows] = await connection.query<any[]>(
-        `SELECT id FROM users WHERE clerk_user_id = ? LIMIT 1`,
+        `SELECT id FROM \`user\` WHERE id = ? LIMIT 1`,
         [userId]
       );
 

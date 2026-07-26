@@ -166,7 +166,8 @@ export class AcademicToneConverter {
     // Add analytical introductions to sentences that start abruptly
     const sentences = enhanced.split(/(?<=[.!?])\s+/);
     const improvedSentences = sentences.map((sentence, index) => {
-      if (index === 0) return sentence; // Don't modify first sentence
+      if (index === 0)
+  return sentence; // Don't modify first sentence
 
       const trimmed = sentence.trim();
       if (this.needsAnalyticalIntroduction(trimmed)) {
@@ -305,7 +306,8 @@ export class AcademicToneConverter {
    * Integrate citations naturally into text
    */
   static integrateCitationsNaturally(content: string, citations: string[]): string {
-    if (!citations || citations.length === 0) return content;
+    if (!citations || citations.length === 0)
+  return content;
 
     let enhanced = content;
     const sentences = enhanced.split(/(?<=[.!?])\s+/);

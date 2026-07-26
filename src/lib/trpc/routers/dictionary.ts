@@ -311,7 +311,8 @@ export const dictionaryRouter = createTRPCRouter({
         return response
         
       } catch (error) {
-        if (error instanceof TRPCError) throw error
+        if (error instanceof TRPCError)
+  throw error
         
         console.error('Get word detail error:', error)
         throw new TRPCError({

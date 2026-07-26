@@ -6,10 +6,10 @@ services:
     image: qdrant/qdrant:v1.7.4
     container_name: digiclassroom-qdrant
     ports:
-      - "6333:6333"  # REST API
-      - "6334:6334"  # gRPC API (optional)
+      - "6333:6333" # REST API
+      - "6334:6334" # gRPC API (optional)
     volumes:
-      - qdrant_storage:/qdrant/storage
+      - ./qdrant_data:/qdrant/storage
       - ./qdrant_config:/qdrant/config
     environment:
       - QDRANT__SERVICE__HTTP_PORT=6333
@@ -23,7 +23,7 @@ services:
       - QDRANT__STORAGE__WAL__WAL_SEGMENTS_AHEAD=2
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:6333/collections" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -38,7 +38,6 @@ services:
           cpus: '0.5'
     networks:
       - qdrant-network
-
   # Note: Qdrant Web UI removed due to image availability issues
   # Access Qdrant directly via API at http://localhost:6333
 

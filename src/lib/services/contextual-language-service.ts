@@ -63,14 +63,14 @@ export class ContextualLanguageService {
     userContext: UserContext,
     complexityLevel: string
   ): Promise<AdaptedContent> {
-    
+
     const languagePreference = userContext.languagePreference || 'english';
     const culturalContext = this.determineCulturalContext(userContext);
-    
+
     if (languagePreference === 'mixed' || languagePreference === 'hindi') {
       return this.generateBilingualContent(content, culturalContext, complexityLevel);
     }
-    
+
     return this.generateMonolingualContent(content, culturalContext, complexityLevel);
   }
 
@@ -84,7 +84,7 @@ export class ContextualLanguageService {
   ): AdaptedContent {
     const keyTerms = this.extractKeyTerms(content);
     const translatedTerms = this.translateKeyTerms(keyTerms, 'hindi');
-    
+
     return {
       primaryLanguage: 'mixed',
       supportLanguage: 'hindi',
@@ -147,15 +147,15 @@ export class ContextualLanguageService {
       // Geography terms
       'mountain', 'river', 'plateau', 'plain', 'climate', 'monsoon', 'latitude', 'longitude',
       'peninsula', 'island', 'desert', 'forest', 'population', 'density', 'agriculture',
-      
+
       // History terms
       'empire', 'dynasty', 'revolution', 'independence', 'freedom', 'struggle', 'movement',
       'constitution', 'democracy', 'republic', 'parliament', 'government',
-      
+
       // Science terms
       'photosynthesis', 'respiration', 'digestion', 'circulation', 'reproduction', 'evolution',
       'atom', 'molecule', 'element', 'compound', 'reaction', 'energy', 'force', 'motion',
-      
+
       // Mathematics terms
       'equation', 'algebra', 'geometry', 'triangle', 'circle', 'area', 'volume', 'percentage',
       'fraction', 'decimal', 'ratio', 'proportion', 'statistics', 'probability'
@@ -163,7 +163,7 @@ export class ContextualLanguageService {
 
     const foundTerms = [];
     const contentLower = content.toLowerCase();
-    
+
     educationalKeywords.forEach(term => {
       if (contentLower.includes(term)) {
         foundTerms.push(term);
@@ -178,7 +178,7 @@ export class ContextualLanguageService {
    */
   private translateKeyTerms(terms: string[], targetLanguage: string): { [key: string]: string } {
     const translations: { [key: string]: string } = {};
-    
+
     terms.forEach(term => {
       const mapping = this.educationalTerms.get(term.toLowerCase());
       if (mapping && targetLanguage === 'hindi') {
@@ -213,16 +213,16 @@ export class ContextualLanguageService {
    */
   private generateHindiExplanations(content: string, complexityLevel: string): string[] {
     const explanations = [];
-    
+
     if (complexityLevel === 'basic') {
       explanations.push('सरल हिंदी में समझाया गया है (Explained in simple Hindi)');
       explanations.push('मुख्य बिंदुओं को हिंदी में दोहराया गया है (Key points repeated in Hindi)');
     }
-    
+
     if (content.includes('geography') || content.includes('भूगोल')) {
       explanations.push('भौगोलिक अवधारणाओं की हिंदी व्याख्या (Geographical concepts in Hindi)');
     }
-    
+
     if (content.includes('history') || content.includes('इतिहास')) {
       explanations.push('ऐतिहासिक घटनाओं का हिंदी विवरण (Historical events in Hindi)');
     }
@@ -235,7 +235,7 @@ export class ContextualLanguageService {
    */
   private generatePronunciationGuides(terms: string[]): { [key: string]: string } {
     const guides: { [key: string]: string } = {};
-    
+
     terms.forEach(term => {
       const mapping = this.educationalTerms.get(term.toLowerCase());
       if (mapping) {
@@ -251,15 +251,15 @@ export class ContextualLanguageService {
    */
   private generateCulturalNotes(content: string, culturalContext: CulturalContext): string[] {
     const notes = [];
-    
+
     if (content.includes('river') || content.includes('नदी')) {
       notes.push('भारत में नदियों का धार्मिक और सांस्कृतिक महत्व (Religious and cultural significance of rivers in India)');
     }
-    
+
     if (content.includes('festival') || content.includes('त्योहार')) {
       notes.push('भारतीय त्योहारों में शिक्षा और विज्ञान के तत्व (Educational and scientific elements in Indian festivals)');
     }
-    
+
     if (content.includes('mathematics') || content.includes('गणित')) {
       notes.push('भारतीय गणित की समृद्ध परंपरा (Rich tradition of Indian mathematics)');
     }
@@ -278,18 +278,18 @@ export class ContextualLanguageService {
       { english: 'plateau', hindi: 'पठार', devanagari: 'पठार', pronunciation: 'pa-thaar', context: 'geography', difficulty: 'intermediate' },
       { english: 'monsoon', hindi: 'मानसून', devanagari: 'मानसून', pronunciation: 'maan-soon', context: 'geography', difficulty: 'intermediate' },
       { english: 'peninsula', hindi: 'प्रायद्वीप', devanagari: 'प्रायद्वीप', pronunciation: 'praay-dweep', context: 'geography', difficulty: 'advanced' },
-      
+
       // History terms
       { english: 'independence', hindi: 'स्वतंत्रता', devanagari: 'स्वतंत्रता', pronunciation: 'swa-tan-tra-ta', context: 'history', difficulty: 'intermediate' },
       { english: 'freedom', hindi: 'आज़ादी', devanagari: 'आज़ादी', pronunciation: 'aa-za-dee', context: 'history', difficulty: 'basic' },
       { english: 'constitution', hindi: 'संविधान', devanagari: 'संविधान', pronunciation: 'san-vi-dhaan', context: 'civics', difficulty: 'advanced' },
       { english: 'democracy', hindi: 'लोकतंत्र', devanagari: 'लोकतंत्र', pronunciation: 'lok-tan-tra', context: 'civics', difficulty: 'intermediate' },
-      
+
       // Science terms
       { english: 'photosynthesis', hindi: 'प्रकाश संश्लेषण', devanagari: 'प्रकाश संश्लेषण', pronunciation: 'pra-kaash san-shle-shan', context: 'biology', difficulty: 'advanced' },
       { english: 'respiration', hindi: 'श्वसन', devanagari: 'श्वसन', pronunciation: 'shwa-san', context: 'biology', difficulty: 'intermediate' },
       { english: 'digestion', hindi: 'पाचन', devanagari: 'पाचन', pronunciation: 'paa-chan', context: 'biology', difficulty: 'basic' },
-      
+
       // Mathematics terms
       { english: 'equation', hindi: 'समीकरण', devanagari: 'समीकरण', pronunciation: 'sa-mee-ka-ran', context: 'mathematics', difficulty: 'intermediate' },
       { english: 'fraction', hindi: 'भिन्न', devanagari: 'भिन्न', pronunciation: 'bhin-na', context: 'mathematics', difficulty: 'basic' },
@@ -437,3 +437,4 @@ export class ContextualLanguageService {
 
 // Export singleton instance
 export const contextualLanguageService = new ContextualLanguageService();
+

@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useUser } from '@clerk/nextjs'
 import {
   User,
   GraduationCap,
@@ -24,6 +23,8 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
+import JoinInstitutionPanel from '@/components/institution/JoinInstitutionPanel'
 import {
   EnhancedUserProfile,
   UserRole,
@@ -48,14 +49,14 @@ interface ValidationErrors {
 }
 
 export default function ProfilePage() {
-  const { user } = useUser()
+  const { user } = useBetterAuthUser()
   const [userProfile, setUserProfile] = useState<EnhancedUserProfile | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
-  
+
   const [formData, setFormData] = useState<ProfileFormData>({
     firstName: '',
     lastName: '',
@@ -64,7 +65,7 @@ export default function ProfilePage() {
     medium: 'ENGLISH',
     class: 10
   })
-  
+
   const [errors, setErrors] = useState<ValidationErrors>({})
 
   // Fetch user profile on component mount
@@ -78,8 +79,8 @@ export default function ProfilePage() {
   useEffect(() => {
     if (userProfile) {
       setFormData({
-        firstName: user?.firstName || '',
-        lastName: user?.lastName || '',
+        firstName: user?.name?.split(' ')[0] || '',
+        lastName: user?.name?.split(' ').slice(1).join(' ') || '',
         role: userProfile.role,
         board: userProfile.board,
         medium: userProfile.medium,
@@ -117,10 +118,10 @@ export default function ProfilePage() {
   const validateForm = (): boolean => {
     const newErrors: ValidationErrors = {}
 
-    if (!formData.firstName.trim()) {
+    if (!formData.firstName?.trim()) {
       newErrors.firstName = 'First name is required'
     }
-    if (!formData.lastName.trim()) {
+    if (!formData.lastName?.trim()) {
       newErrors.lastName = 'Last name is required'
     }
     if (!formData.role) {
@@ -151,16 +152,10 @@ export default function ProfilePage() {
     setSuccessMessage(null)
 
     try {
-      // Update Clerk user profile (name only)
-      if (user && (user.firstName !== formData.firstName || user.lastName !== formData.lastName)) {
-        await user.update({
-          firstName: formData.firstName,
-          lastName: formData.lastName
-        })
-      }
-
-      // Update application profile
+      // Update application profile (name is included so it's saved to the user table)
       const profileUpdate = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
         role: formData.role,
         board: formData.board,
         medium: formData.medium,
@@ -181,7 +176,7 @@ export default function ProfilePage() {
         setUserProfile(result.data)
         setIsEditing(false)
         setSuccessMessage('Profile updated successfully!')
-        
+
         // Clear success message after 3 seconds
         setTimeout(() => setSuccessMessage(null), 3000)
       } else {
@@ -198,8 +193,8 @@ export default function ProfilePage() {
   const handleCancel = () => {
     if (userProfile) {
       setFormData({
-        firstName: user?.firstName || '',
-        lastName: user?.lastName || '',
+        firstName: user?.name?.split(' ')[0] || '',
+        lastName: user?.name?.split(' ').slice(1).join(' ') || '',
         role: userProfile.role,
         board: userProfile.board,
         medium: userProfile.medium,
@@ -238,18 +233,19 @@ export default function ProfilePage() {
   }
 
   const getCompletionPercentage = (): number => {
-    if (!userProfile) return 0
-    
+    if (!userProfile)
+      return 0
+
     let completed = 0
     const total = 6
-    
+
     if (userProfile.role) completed++
     if (userProfile.board) completed++
     if (userProfile.medium) completed++
     if (userProfile.class) completed++
     if (userProfile.class < 11 || userProfile.stream) completed++
     if (userProfile.isOnboardingComplete) completed++
-    
+
     return Math.round((completed / total) * 100)
   }
 
@@ -360,11 +356,10 @@ export default function ProfilePage() {
 
             <div className="flex items-center gap-4">
               <Badge
-                className={`px-4 py-2 rounded-xl font-medium ${
-                  getCompletionPercentage() === 100
-                    ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 text-green-600 border-green-200'
-                    : 'bg-gradient-to-r from-yellow-500/10 to-orange-500/10 text-yellow-600 border-yellow-200'
-                }`}
+                className={`px-4 py-2 rounded-xl font-medium ${getCompletionPercentage() === 100
+                  ? 'bg-gradient-to-r from-green-500/10 to-emerald-500/10 text-green-600 border-green-200'
+                  : 'bg-gradient-to-r from-yellow-500/10 to-orange-500/10 text-yellow-600 border-yellow-200'
+                  }`}
               >
                 {getCompletionPercentage()}% Complete
               </Badge>
@@ -471,6 +466,12 @@ export default function ProfilePage() {
               userProfile={userProfile}
               getSubscriptionStatusColor={getSubscriptionStatusColor}
             />
+
+            {/* B2B2C: existing students can request to join an institution later */}
+            <JoinInstitutionPanel
+              requestedClass={userProfile.class}
+              requestedBoard={userProfile.board}
+            />
           </div>
         </div>
       </div>
@@ -535,7 +536,7 @@ function PersonalInfoSection({
               </div>
             ) : (
               <p className="text-gray-900 dark:text-gray-100 font-semibold text-lg">
-                {user?.firstName || 'Not provided'}
+                {user?.name?.split(' ')[0] || formData.firstName || 'Not provided'}
               </p>
             )}
           </div>
@@ -561,7 +562,7 @@ function PersonalInfoSection({
               </div>
             ) : (
               <p className="text-gray-900 dark:text-gray-100 font-semibold text-lg">
-                {user?.lastName || 'Not provided'}
+                {user?.name?.split(' ').slice(1).join(' ') || formData.lastName || 'Not provided'}
               </p>
             )}
           </div>
@@ -572,7 +573,7 @@ function PersonalInfoSection({
             Email Address
           </label>
           <p className="text-gray-900 dark:text-gray-100 font-semibold text-lg mb-2">
-            {user?.emailAddresses?.[0]?.emailAddress || 'Not provided'}
+            {user?.email || 'Not provided'}
           </p>
           <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
             <Shield className="h-4 w-4 mr-1" />
@@ -794,21 +795,19 @@ function ProfileCompletionCard({ userProfile, completionPercentage }: ProfileCom
             const Icon = item.icon
             return (
               <div key={index} className="flex items-center space-x-4 p-3 bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-700 border border-gray-200/50 dark:border-gray-600/50 rounded-xl">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                  item.completed
-                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
-                    : item.optional
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${item.completed
+                  ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
+                  : item.optional
                     ? 'bg-gradient-to-r from-gray-400 to-gray-500 text-white'
                     : 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white'
-                }`}>
+                  }`}>
                   <Icon className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
-                  <span className={`font-medium ${
-                    item.completed
-                      ? 'text-gray-900 dark:text-gray-100'
-                      : 'text-gray-600 dark:text-gray-400'
-                  }`}>
+                  <span className={`font-medium ${item.completed
+                    ? 'text-gray-900 dark:text-gray-100'
+                    : 'text-gray-600 dark:text-gray-400'
+                    }`}>
                     {item.label}
                     {item.optional && (
                       <span className="text-xs text-gray-500 ml-2 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-lg">(Optional)</span>
@@ -850,7 +849,8 @@ interface SubscriptionCardProps {
 
 function SubscriptionCard({ userProfile, getSubscriptionStatusColor }: SubscriptionCardProps) {
   const formatDate = (date?: Date) => {
-    if (!date) return 'No expiration'
+    if (!date)
+      return 'No expiration'
     return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
@@ -859,13 +859,15 @@ function SubscriptionCard({ userProfile, getSubscriptionStatusColor }: Subscript
   }
 
   const isExpiringSoon = (date?: Date) => {
-    if (!date) return false
+    if (!date)
+      return false
     const daysUntilExpiry = Math.ceil((new Date(date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     return daysUntilExpiry <= 30 && daysUntilExpiry > 0
   }
 
   const isExpired = (date?: Date) => {
-    if (!date) return false
+    if (!date)
+      return false
     return new Date(date).getTime() < Date.now()
   }
 
@@ -902,13 +904,12 @@ function SubscriptionCard({ userProfile, getSubscriptionStatusColor }: Subscript
             <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
               <Star className="h-4 w-4 mr-2" />
               <span>Expires: </span>
-              <span className={`ml-1 font-medium ${
-                isExpired(userProfile.subscription.expiresAt)
-                  ? 'text-red-600 dark:text-red-400'
-                  : isExpiringSoon(userProfile.subscription.expiresAt)
+              <span className={`ml-1 font-medium ${isExpired(userProfile.subscription.expiresAt)
+                ? 'text-red-600 dark:text-red-400'
+                : isExpiringSoon(userProfile.subscription.expiresAt)
                   ? 'text-yellow-600 dark:text-yellow-400'
                   : 'text-green-600 dark:text-green-400'
-              }`}>
+                }`}>
                 {formatDate(userProfile.subscription.expiresAt)}
               </span>
             </div>
@@ -934,32 +935,28 @@ function SubscriptionCard({ userProfile, getSubscriptionStatusColor }: Subscript
         </div>
 
         {(isExpired(userProfile.subscription.expiresAt) || isExpiringSoon(userProfile.subscription.expiresAt)) && (
-          <div className={`p-6 rounded-2xl border ${
-            isExpired(userProfile.subscription.expiresAt)
-              ? 'bg-gradient-to-r from-red-50/50 to-orange-50/50 dark:from-red-900/20 dark:to-orange-900/20 border-red-200/50'
-              : 'bg-gradient-to-r from-yellow-50/50 to-orange-50/50 dark:from-yellow-900/20 dark:to-orange-900/20 border-yellow-200/50'
-          }`}>
+          <div className={`p-6 rounded-2xl border ${isExpired(userProfile.subscription.expiresAt)
+            ? 'bg-gradient-to-r from-red-50/50 to-orange-50/50 dark:from-red-900/20 dark:to-orange-900/20 border-red-200/50'
+            : 'bg-gradient-to-r from-yellow-50/50 to-orange-50/50 dark:from-yellow-900/20 dark:to-orange-900/20 border-yellow-200/50'
+            }`}>
             <div className="flex items-start space-x-4">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                isExpired(userProfile.subscription.expiresAt)
-                  ? 'bg-gradient-to-r from-red-500 to-orange-500'
-                  : 'bg-gradient-to-r from-yellow-500 to-orange-500'
-              }`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isExpired(userProfile.subscription.expiresAt)
+                ? 'bg-gradient-to-r from-red-500 to-orange-500'
+                : 'bg-gradient-to-r from-yellow-500 to-orange-500'
+                }`}>
                 <AlertTriangle className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h4 className={`font-bold text-lg mb-2 ${
-                  isExpired(userProfile.subscription.expiresAt)
-                    ? 'text-red-800 dark:text-red-200'
-                    : 'text-yellow-800 dark:text-yellow-200'
-                }`}>
+                <h4 className={`font-bold text-lg mb-2 ${isExpired(userProfile.subscription.expiresAt)
+                  ? 'text-red-800 dark:text-red-200'
+                  : 'text-yellow-800 dark:text-yellow-200'
+                  }`}>
                   {isExpired(userProfile.subscription.expiresAt) ? 'Subscription Expired' : 'Expiring Soon'}
                 </h4>
-                <p className={`leading-relaxed ${
-                  isExpired(userProfile.subscription.expiresAt)
-                    ? 'text-red-700 dark:text-red-300'
-                    : 'text-yellow-700 dark:text-yellow-300'
-                }`}>
+                <p className={`leading-relaxed ${isExpired(userProfile.subscription.expiresAt)
+                  ? 'text-red-700 dark:text-red-300'
+                  : 'text-yellow-700 dark:text-yellow-300'
+                  }`}>
                   {isExpired(userProfile.subscription.expiresAt)
                     ? 'Your subscription has expired. Renew to continue accessing premium features.'
                     : 'Your subscription expires soon. Renew to avoid interruption.'

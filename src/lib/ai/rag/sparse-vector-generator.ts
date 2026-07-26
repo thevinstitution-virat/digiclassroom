@@ -46,7 +46,8 @@ export class SparseVectorGenerator {
   }
 
   /**
-   * Calculate term frequency (TF) for a document
+   * Calculate term frequency (TF)
+  for a document
    */
   private calculateTF(tokens: string[]): Map<string, number> {
     const tf = new Map<string, number>();

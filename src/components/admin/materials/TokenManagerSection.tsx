@@ -31,7 +31,7 @@ export function TokenManagerSection() {
       setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/admin/materials/google-drive/token-manager')
+      const response = await fetch('/api/super-admin/materials/google-drive/token-manager')
       const result = await response.json()
 
       if (result.success) {
@@ -52,7 +52,7 @@ export function TokenManagerSection() {
       setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/admin/materials/google-drive/token-manager', {
+      const response = await fetch('/api/super-admin/materials/google-drive/token-manager', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action })
@@ -75,7 +75,8 @@ export function TokenManagerSection() {
   }
 
   const formatTimeRemaining = (milliseconds: number): string => {
-    if (milliseconds <= 0) return 'Expired'
+    if (milliseconds <= 0)
+  return 'Expired'
     
     const minutes = Math.floor(milliseconds / (1000 * 60))
     const hours = Math.floor(minutes / 60)
@@ -87,7 +88,8 @@ export function TokenManagerSection() {
   }
 
   const getStatusBadge = () => {
-    if (!status) return null
+    if (!status)
+  return null
 
     if (!status.hasTokens) {
       return <Badge variant="destructive">No Tokens</Badge>

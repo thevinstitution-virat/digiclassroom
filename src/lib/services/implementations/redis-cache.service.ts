@@ -154,7 +154,8 @@ export class RedisCacheService implements ICacheService {
   }
 
   async exists(key: string): Promise<boolean> {
-    if (!this.connected) return false;
+    if (!this.connected)
+  return false;
 
     try {
       return (await this.client.exists(this.keyPrefix + key)) === 1;

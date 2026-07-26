@@ -2,16 +2,16 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useUser } from '@clerk/nextjs'
 import { Brain, Clock, Target, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react'
 import { AttentionAssessment } from '@/lib/attention/ScoringEngine'
+import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 
 interface FocusCheckCardProps {
   className?: string
 }
 
 export const FocusCheckCard: React.FC<FocusCheckCardProps> = ({ className = '' }) => {
-  const { user } = useUser()
+  const { user } = useBetterAuthUser()
   const router = useRouter()
   const [lastAssessment, setLastAssessment] = useState<AttentionAssessment | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -66,24 +66,34 @@ export const FocusCheckCard: React.FC<FocusCheckCardProps> = ({ className = '' }
     const diffTime = Math.abs(now.getTime() - date.getTime())
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
     
-    if (diffDays === 1) return 'Yesterday'
-    if (diffDays < 7) return `${diffDays} days ago`
-    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`
+    if (diffDays === 1)
+  return 'Yesterday'
+    if (diffDays < 7)
+  return `${diffDays} days ago`
+    if (diffDays < 30)
+  return `${Math.ceil(diffDays / 7)} weeks ago`
     return `${Math.ceil(diffDays / 30)} months ago`
   }
 
   const getScoreColor = (percentile: number) => {
-    if (percentile >= 75) return 'text-green-600'
-    if (percentile >= 50) return 'text-blue-600'
-    if (percentile >= 25) return 'text-yellow-600'
+    if (percentile >= 75)
+  return 'text-green-600'
+    if (percentile >= 50)
+  return 'text-blue-600'
+    if (percentile >= 25)
+  return 'text-yellow-600'
     return 'text-red-600'
   }
 
   const getScoreLabel = (percentile: number) => {
-    if (percentile >= 90) return 'Excellent'
-    if (percentile >= 75) return 'Good'
-    if (percentile >= 50) return 'Average'
-    if (percentile >= 25) return 'Below Average'
+    if (percentile >= 90)
+  return 'Excellent'
+    if (percentile >= 75)
+  return 'Good'
+    if (percentile >= 50)
+  return 'Average'
+    if (percentile >= 25)
+  return 'Below Average'
     return 'Needs Attention'
   }
 

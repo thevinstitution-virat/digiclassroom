@@ -112,7 +112,8 @@ export class DictionaryCacheService {
    * Get cached search results
    */
   static getCachedResults(): Record<string, CachedSearchResult> {
-    if (typeof window === 'undefined') return {}
+    if (typeof window === 'undefined')
+  return {}
 
     try {
       const stored = localStorage.getItem(this.SEARCH_RESULTS_KEY)
@@ -127,7 +128,8 @@ export class DictionaryCacheService {
    * Search in cache
    */
   static searchCache(query: string): CachedSearchResult[] {
-    if (typeof window === 'undefined') return []
+    if (typeof window === 'undefined')
+  return []
 
     try {
       const cached = this.getCachedResults()
@@ -226,7 +228,8 @@ export class DictionaryCacheService {
    * Get search history
    */
   static getSearchHistory(limit: number = 100): SearchHistoryEntry[] {
-    if (typeof window === 'undefined') return []
+    if (typeof window === 'undefined')
+  return []
 
     try {
       const stored = localStorage.getItem(this.SEARCH_HISTORY_KEY)
@@ -242,7 +245,8 @@ export class DictionaryCacheService {
    * Get current session searches
    */
   static getSessionSearches(): SearchHistoryEntry[] {
-    if (typeof window === 'undefined') return []
+    if (typeof window === 'undefined')
+  return []
 
     try {
       const stored = sessionStorage.getItem(this.SESSION_SEARCHES_KEY)

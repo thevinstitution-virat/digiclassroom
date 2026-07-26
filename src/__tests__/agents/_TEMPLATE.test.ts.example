@@ -1,0 +1,110 @@
+/**
+ * AGENT UNIT TEST TEMPLATE
+ * Phase 5.5 — Copy this file when migrating a new agent to LangGraph.
+ * Replace all [AGENT_NAME] placeholders.
+ *
+ * IMPORTANT: Use ACTUAL NCERTCitation fields:
+ *   - chapter (string)        ✅
+ *   - pageNumber (number)     ✅
+ *   - contentExcerpt (string) ✅
+ *   - sectionHeading (string) ✅
+ *   NOT: chapterNumber, verbatimKeyword, textbookEdition
+ */
+
+// import { [AGENT_NAME]GenerationNode } from '@/lib/agents/graph/agents/[AGENT_NAME]Node';
+// import type { TutorState } from '@/lib/agents/graph/TutorGraphState';
+// import { HumanMessage } from '@langchain/core/messages';
+
+/*
+// Mock ChatOpenAI — matches the actual import in generation nodes
+jest.mock('@langchain/openai', () => ({
+    ChatOpenAI: jest.fn().mockImplementation(() => ({
+        invoke: jest.fn().mockResolvedValue({
+            content: '[MOCK RESPONSE — replace with agent-appropriate mock]',
+            usage_metadata: {
+                input_tokens: 100,
+                output_tokens: 50,
+                total_tokens: 150,
+            },
+        }),
+    })),
+}));
+
+const mockState: Partial<TutorState> = {
+    messages: [new HumanMessage('[TYPICAL QUERY FOR THIS AGENT]')],
+    studentName: 'TestStudent',
+    grade: 10,
+    subject: '[SUBJECT]',
+    language: 'english',
+    sessionId: 'unit-test-template',
+    studentId: 'student-template',
+    retrievedChunks: [{
+        text: '[CHUNK CONTENT]',
+        score: 0.9,
+        metadata: {
+            page: 1,
+            chapter: '[CHAPTER NAME]',
+            section_title: '[SECTION]',
+            subject: '[SUBJECT]',
+            class_level: 'Class 10',
+        },
+    } as any],
+    citations: [{
+        id: 'cite_1',
+        textbookTitle: 'NCERT Class 10 [SUBJECT]',
+        chapter: '[CHAPTER NAME]',
+        pageNumber: 1,
+        sectionHeading: '[SECTION]',
+        contentExcerpt: '[EXCERPT containing key concept]',
+        citationFormat: 'NCERT Class 10 [SUBJECT], Chapter [X], Page 1',
+        classLevel: 'Class 10',
+        subject: '[SUBJECT]',
+    }],
+    ncertScopeValid: true,
+};
+
+describe('[AGENT_NAME] Generation Node — Unit Tests', () => {
+    // ── REQUIRED TESTS (same for all agents) ──────────────────────
+    it('returns non-empty rawResponse', async () => {
+        const result = await [AGENT_NAME]GenerationNode(mockState as TutorState);
+        expect(result.rawResponse).toBeDefined();
+        expect(result.rawResponse!.length).toBeGreaterThan(20);
+    });
+
+    it('includes student name', async () => {
+        const result = await [AGENT_NAME]GenerationNode(mockState as TutorState);
+        expect(result.rawResponse!).toContain('TestStudent');
+    });
+
+    it('sets generationTimeMs > 0', async () => {
+        const result = await [AGENT_NAME]GenerationNode(mockState as TutorState);
+        expect(result.generationTimeMs).toBeGreaterThan(0);
+    });
+
+    it('populates tokenUsage', async () => {
+        const result = await [AGENT_NAME]GenerationNode(mockState as TutorState);
+        expect(result.tokenUsage?.totalTokens).toBe(150);
+    });
+
+    it('completes within 5000ms (mocked LLM)', async () => {
+        const start = Date.now();
+        await [AGENT_NAME]GenerationNode(mockState as TutorState);
+        expect(Date.now() - start).toBeLessThan(5000);
+    });
+
+    it('does not throw on empty chunks', async () => {
+        const s = { ...mockState, retrievedChunks: [], citations: [] };
+        await expect([AGENT_NAME]GenerationNode(s as TutorState)).resolves.not.toThrow();
+    });
+
+    // ── AGENT-SPECIFIC TESTS (add at least 1 per agent) ───────────
+    // Examples:
+    //   - doubt_clearing: MCQ option analysis
+    //   - cbse_formatter: numbered point structure
+    //   - bilingual agents: Hindi/Devanagari presence
+    //   - exam_prep: chapter-wise question distribution
+    it('[AGENT-SPECIFIC TEST — fill this in]', async () => {
+        // TODO: implement agent-specific assertion
+    });
+});
+*/

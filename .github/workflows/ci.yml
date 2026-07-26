@@ -1,0 +1,43 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ "main", "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20.x]
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        
+    - name: Install Dependencies
+      run: npm ci
+      
+    - name: Run ESLint
+      run: npm run lint
+      
+    - name: Type Check
+      run: npx tsc --noEmit
+      
+    - name: Run Tests
+      run: npm run test:unit -- --passWithNoTests
+      
+    - name: Build Application
+      run: npm run build
+      env:
+        # Dummy minimal env vars for build process
+        DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/test"
+        BETTER_AUTH_SECRET: "mock_secret_for_build_only"
+        BETTER_AUTH_URL: "http://localhost:3000"

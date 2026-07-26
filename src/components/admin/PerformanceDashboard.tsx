@@ -62,7 +62,7 @@ export default function PerformanceDashboard() {
       setLoading(true)
       
       // Fetch system performance
-      const healthResponse = await fetch('/api/admin/performance')
+      const healthResponse = await fetch('/api/super-admin/performance')
       const healthData = await healthResponse.json()
       
       // Fetch startup metrics from localStorage (browser-side)
@@ -141,7 +141,8 @@ export default function PerformanceDashboard() {
   }
 
   const formatBytes = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes'
+    if (bytes === 0)
+  return '0 Bytes'
     const k = 1024
     const sizes = ['Bytes', 'KB', 'MB', 'GB']
     const i = Math.floor(Math.log(bytes) / Math.log(k))
@@ -149,7 +150,8 @@ export default function PerformanceDashboard() {
   }
 
   const formatTime = (ms: number) => {
-    if (ms < 1000) return `${ms}ms`
+    if (ms < 1000)
+  return `${ms}ms`
     return `${(ms / 1000).toFixed(2)}s`
   }
 

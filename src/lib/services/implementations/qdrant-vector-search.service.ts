@@ -213,7 +213,8 @@ export class QdrantVectorSearchService implements IVectorSearchService {
   private normalizeClassLevel(classLevel: string): number {
     // Extract number from "Class 9", "IX", "Grade 9", etc.
     const numMatch = classLevel.match(/\d+/);
-    if (numMatch) return parseInt(numMatch[0]);
+    if (numMatch)
+  return parseInt(numMatch[0]);
 
     // Roman numeral conversion
     const romanMap: Record<string, number> = {

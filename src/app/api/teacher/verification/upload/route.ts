@@ -7,9 +7,9 @@
  * B2C Feature: Part of the progressive verification system
  */
 
+import { auth } from '@/auth';
+import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
-import { clerkClient } from '@clerk/nextjs/server'
 import { executeQuery, executeQuerySingle } from '@/lib/db/connection'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
@@ -40,8 +40,8 @@ const ALLOWED_DOCUMENT_TYPES = [
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const { userId, sessionClaims } = await auth()
-    
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is a teacher
-    const userRole = sessionClaims?.metadata?.role
+    const userRole = session?.user?.role
     if (userRole !== 'teacher') {
       return NextResponse.json(
         { success: false, error: 'Only teachers can upload verification documents' },
@@ -60,9 +60,9 @@ export async function POST(request: NextRequest) {
 
     // Get teacher from database
     const teacher = await executeQuerySingle<any>(
-      `SELECT id, email, verification_status, first_name, last_name 
-       FROM users 
-       WHERE clerk_id = ? AND role = 'teacher'`,
+      `SELECT id, email, verification_status, first_name, last_name
+       FROM \`user\`
+       WHERE id = ? AND role = 'teacher'`,
       [userId]
     )
 
@@ -89,9 +89,9 @@ export async function POST(request: NextRequest) {
 
     if (!documentType || !ALLOWED_DOCUMENT_TYPES.includes(documentType)) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: `Invalid document type. Allowed types: ${ALLOWED_DOCUMENT_TYPES.join(', ')}` 
+        {
+          success: false,
+          error: `Invalid document type. Allowed types: ${ALLOWED_DOCUMENT_TYPES.join(', ')}`
         },
         { status: 400 }
       )
@@ -100,9 +100,9 @@ export async function POST(request: NextRequest) {
     // Validate file type
     if (!ALLOWED_FILE_TYPES[file.type as keyof typeof ALLOWED_FILE_TYPES]) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Invalid file type. Allowed types: PDF, JPG, PNG' 
+        {
+          success: false,
+          error: 'Invalid file type. Allowed types: PDF, JPG, PNG'
         },
         { status: 400 }
       )
@@ -111,9 +111,9 @@ export async function POST(request: NextRequest) {
     // Validate file size
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: `File size exceeds ${MAX_FILE_SIZE / (1024 * 1024)}MB limit` 
+        {
+          success: false,
+          error: `File size exceeds ${MAX_FILE_SIZE / (1024 * 1024)}MB limit`
         },
         { status: 400 }
       )
@@ -122,11 +122,11 @@ export async function POST(request: NextRequest) {
     // Generate unique filename
     const fileExtension = ALLOWED_FILE_TYPES[file.type as keyof typeof ALLOWED_FILE_TYPES]
     const uniqueFilename = `${uuidv4()}.${fileExtension}`
-    
+
     // Create upload directory path: uploads/teacher-verification/{teacher_id}/
     const uploadDir = join(process.cwd(), 'uploads', 'teacher-verification', teacher.id)
     const filePath = join(uploadDir, uniqueFilename)
-    
+
     // Relative path for database storage
     const relativeFilePath = `uploads/teacher-verification/${teacher.id}/${uniqueFilename}`
 
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
 
     // Create document record in database
     const documentId = uuidv4()
-    
+
     try {
       await executeQuery(
         `INSERT INTO teacher_verification_documents (
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
     // Note: We don't automatically set to 'verified_document' - admin must review first
     try {
       await executeQuery(
-        `UPDATE users 
+        `UPDATE \`user\`
          SET verification_status = 'unverified',
              updated_at = NOW()
          WHERE id = ? AND verification_status = 'unverified'`,
@@ -192,15 +192,7 @@ export async function POST(request: NextRequest) {
       )
 
       // Update Clerk metadata to reflect document submission
-      const client = await clerkClient()
-      await client.users.updateUserMetadata(userId, {
-        publicMetadata: {
-          ...sessionClaims?.metadata,
-          verificationDocumentSubmitted: true,
-          verificationDocumentSubmittedAt: new Date().toISOString(),
-        }
-      })
-
+      // TODO: Role update should use Better Auth admin API or direct DB update
     } catch (updateError) {
       console.error('Error updating verification status:', updateError)
       // Don't fail the request - document is already uploaded
@@ -222,8 +214,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ Error uploading verification document:', error)
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Failed to upload document',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -239,8 +231,8 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     // Check authentication
-    const { userId, sessionClaims } = await auth()
-    
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
@@ -249,7 +241,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is a teacher
-    const userRole = sessionClaims?.metadata?.role
+    const userRole = session?.user?.role
     if (userRole !== 'teacher') {
       return NextResponse.json(
         { success: false, error: 'Only teachers can view verification documents' },
@@ -259,7 +251,7 @@ export async function GET(request: NextRequest) {
 
     // Get teacher from database
     const teacher = await executeQuerySingle<any>(
-      `SELECT id FROM users WHERE clerk_id = ? AND role = 'teacher'`,
+      'SELECT id FROM `user` WHERE id = ? AND role = \'teacher\'',
       [userId]
     )
 
@@ -303,8 +295,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('❌ Error fetching verification documents:', error)
     return NextResponse.json(
-      { 
-        success: false, 
+      {
+        success: false,
         error: 'Failed to fetch documents',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

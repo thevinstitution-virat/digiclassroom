@@ -86,7 +86,8 @@ export function transformToHierarchicalChunks(chunks: RawChunk[]): HierarchicalC
 }
 
 function splitIntoParagraphs(text: string): string[] {
-  if (!text) return []
+  if (!text)
+  return []
   return text
     .split(/\r?\n\r?\n+/)
     .map((paragraph) => paragraph.replace(/\s+/g, ' ').trim())

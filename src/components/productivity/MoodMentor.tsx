@@ -158,7 +158,8 @@ export default function MoodMentor() {
   }
 
   const getMoodTrend = () => {
-    if (moodHistory.length < 2) return 'neutral'
+    if (moodHistory.length < 2)
+  return 'neutral'
     
     const recent = moodHistory.slice(0, 3)
     const moodValues = {
@@ -173,8 +174,10 @@ export default function MoodMentor() {
     const older = moodHistory.slice(3, 6)
     const avgOlder = older.length > 0 ? older.reduce((sum, entry) => sum + moodValues[entry.mood], 0) / older.length : avgRecent
     
-    if (avgRecent > avgOlder) return 'improving'
-    if (avgRecent < avgOlder) return 'declining'
+    if (avgRecent > avgOlder)
+  return 'improving'
+    if (avgRecent < avgOlder)
+  return 'declining'
     return 'stable'
   }
 

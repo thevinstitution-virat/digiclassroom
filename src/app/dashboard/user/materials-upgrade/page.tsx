@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState } from 'react'
-import { useUser } from '@clerk/nextjs'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Crown,
@@ -25,6 +24,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 
 interface PricingPlan {
   id: string
@@ -48,7 +48,7 @@ interface FeatureHighlight {
 }
 
 export default function MaterialsUpgradePage() {
-  const { user } = useUser()
+  const { user } = useBetterAuthUser()
   const [selectedPlan, setSelectedPlan] = useState<string>('premium')
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly')
 

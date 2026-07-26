@@ -203,7 +203,8 @@ export class ContentQualityMonitor {
     }
 
     const validResults = result.ocrResults.filter(r => !r.error && r.confidence > 0);
-    if (validResults.length === 0) return 0;
+    if (validResults.length === 0)
+  return 0;
 
     const avgConfidence = validResults.reduce((sum, r) => sum + r.confidence, 0) / validResults.length;
     return Math.min(avgConfidence / 100, 1.0);
@@ -371,10 +372,14 @@ export class ContentQualityMonitor {
    * Determine quality grade
    */
   private determineQualityGrade(score: number): 'A' | 'B' | 'C' | 'D' | 'F' {
-    if (score >= this.qualityThresholds.excellent) return 'A';
-    if (score >= this.qualityThresholds.good) return 'B';
-    if (score >= this.qualityThresholds.acceptable) return 'C';
-    if (score >= this.qualityThresholds.poor) return 'D';
+    if (score >= this.qualityThresholds.excellent)
+  return 'A';
+    if (score >= this.qualityThresholds.good)
+  return 'B';
+    if (score >= this.qualityThresholds.acceptable)
+  return 'C';
+    if (score >= this.qualityThresholds.poor)
+  return 'D';
     return 'F';
   }
 

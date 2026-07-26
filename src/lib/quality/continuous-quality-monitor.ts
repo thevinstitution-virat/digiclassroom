@@ -399,9 +399,12 @@ export class ContinuousQualityMonitor {
    * Assess response time performance
    */
   private assessResponseTime(responseTimeMs: number): number {
-    if (responseTimeMs < 5000) return 1.0;      // Excellent: < 5s
-    if (responseTimeMs < 10000) return 0.8;     // Good: 5-10s
-    if (responseTimeMs < 15000) return 0.6;     // Acceptable: 10-15s
+    if (responseTimeMs < 5000)
+  return 1.0;      // Excellent: < 5s
+    if (responseTimeMs < 10000)
+  return 0.8;     // Good: 5-10s
+    if (responseTimeMs < 15000)
+  return 0.6;     // Acceptable: 10-15s
     return 0.3;                                 // Poor: > 15s
   }
 
@@ -558,9 +561,12 @@ export class ContinuousQualityMonitor {
   }
 
   private mapIssueTypeToAlertType(issueType: string): QualityAlert['type'] {
-    if (issueType.includes('hallucination')) return 'high_hallucination_rate';
-    if (issueType.includes('citation')) return 'citation_accuracy_drop';
-    if (issueType.includes('response_time')) return 'response_time_spike';
+    if (issueType.includes('hallucination'))
+  return 'high_hallucination_rate';
+    if (issueType.includes('citation'))
+  return 'citation_accuracy_drop';
+    if (issueType.includes('response_time'))
+  return 'response_time_spike';
     return 'quality_degradation';
   }
 }

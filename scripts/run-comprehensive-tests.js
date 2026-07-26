@@ -15,14 +15,9 @@ const TEST_CONFIG = {
   timeout: 60000, // 60 seconds per test suite
   testSuites: [
     {
-      name: 'End-to-End Pipeline Tests',
-      file: 'src/__tests__/end-to-end-pipeline.test.ts',
-      description: 'Tests complete pipeline from upload to response generation'
-    },
-    {
-      name: 'AI Tutor Integration Tests',
-      file: 'src/__tests__/ai-tutor-integration.test.ts',
-      description: 'Tests AI Tutor API with real queries and validation'
+      name: 'Full Stack Integration',
+      file: 'src/__tests__/full-stack.test.ts',
+      description: 'Tests new Phase 8 Infrastructure (Provider A/B, Fail-Open Gates)'
     }
   ],
   reportFile: 'test-results/comprehensive-test-report.json',
@@ -68,7 +63,7 @@ class ComprehensiveTestRunner {
     const timestamp = new Date().toISOString();
     const coloredMessage = `${colors[color]}${message}${colors.reset}`;
     console.log(`[${timestamp}] ${coloredMessage}`);
-    
+
     // Also write to log file
     this.writeToLogFile(`[${timestamp}] ${message}`);
   }
@@ -78,20 +73,23 @@ class ComprehensiveTestRunner {
     if (!fs.existsSync(logDir)) {
       fs.mkdirSync(logDir, { recursive: true });
     }
-    
+
     fs.appendFileSync(TEST_CONFIG.logFile, message + '\n');
   }
 
   async runTestSuite(testSuite) {
     this.log(`🧪 Starting test suite: ${testSuite.name}`, 'cyan');
     this.log(`📝 Description: ${testSuite.description}`, 'blue');
-    
+
     const startTime = Date.now();
-    
+
     return new Promise((resolve) => {
-      const jestProcess = spawn('npx', ['jest', testSuite.file, '--verbose', '--json'], {
+      // Create a platform-independent way to set the env var for the child process
+      const env = { ...process.env, NODE_OPTIONS: '--experimental-vm-modules' };
+      const jestProcess = spawn('npx', ['jest', testSuite.file, '--verbose', '--json', '--config', 'jest.node.config.js'], {
         stdio: ['pipe', 'pipe', 'pipe'],
-        shell: true
+        shell: true,
+        env
       });
 
       let stdout = '';
@@ -108,7 +106,7 @@ class ComprehensiveTestRunner {
       jestProcess.on('close', (code) => {
         const endTime = Date.now();
         const duration = endTime - startTime;
-        
+
         let testResult = {
           name: testSuite.name,
           file: testSuite.file,
@@ -129,28 +127,19 @@ class ComprehensiveTestRunner {
           }
         };
 
-        // Try to parse Jest JSON output
-        try {
-          const lines = stdout.split('\n');
-          const jsonLine = lines.find(line => line.trim().startsWith('{') && line.includes('testResults'));
-          
-          if (jsonLine) {
-            const jestResults = JSON.parse(jsonLine);
-            testResult.testResults = jestResults;
-            
-            // Extract summary
-            if (jestResults.testResults && jestResults.testResults.length > 0) {
-              const suiteResult = jestResults.testResults[0];
-              testResult.summary = {
-                totalTests: suiteResult.numPassingTests + suiteResult.numFailingTests + suiteResult.numPendingTests,
-                passedTests: suiteResult.numPassingTests,
-                failedTests: suiteResult.numFailingTests,
-                skippedTests: suiteResult.numPendingTests
-              };
-            }
-          }
-        } catch (parseError) {
-          this.log(`⚠️ Could not parse Jest JSON output: ${parseError.message}`, 'yellow');
+        // Parse human-readable output instead of JSON since ts-jest pollutes stdout
+        const output = stdout + '\n' + stderr;
+        const totalMatch = output.match(/Tests:\s*(?:(\d+)\s*failed,\s*)?(?:(\d+)\s*passed,\s*)?(\d+)\s*total/);
+
+        if (totalMatch) {
+          testResult.summary.failedTests = parseInt(totalMatch[1] || '0', 10);
+          testResult.summary.passedTests = parseInt(totalMatch[2] || '0', 10);
+          testResult.summary.totalTests = parseInt(totalMatch[3] || '0', 10);
+        } else {
+          // Fallback
+          testResult.summary.totalTests = 1;
+          testResult.summary.passedTests = code === 0 ? 1 : 0;
+          testResult.summary.failedTests = code === 0 ? 0 : 1;
         }
 
         if (testResult.success) {
@@ -159,15 +148,15 @@ class ComprehensiveTestRunner {
         } else {
           this.log(`❌ Test suite failed: ${testSuite.name}`, 'red');
           this.log(`📊 Results: ${testResult.summary.passedTests} passed, ${testResult.summary.failedTests} failed, ${testResult.summary.skippedTests} skipped`, 'red');
-          
+
           if (stderr) {
             this.log(`🔍 Error output:`, 'red');
             this.log(stderr, 'red');
           }
         }
-        
+
         this.log(`⏱️ Duration: ${(duration / 1000).toFixed(2)}s`, 'blue');
-        
+
         resolve(testResult);
       });
 
@@ -182,9 +171,9 @@ class ComprehensiveTestRunner {
   async runAllTests() {
     this.log('🚀 Starting comprehensive test run...', 'bright');
     this.log(`📋 Running ${TEST_CONFIG.testSuites.length} test suites`, 'blue');
-    
+
     const overallStartTime = Date.now();
-    
+
     // Clear previous log file
     if (fs.existsSync(TEST_CONFIG.logFile)) {
       fs.unlinkSync(TEST_CONFIG.logFile);
@@ -194,7 +183,7 @@ class ComprehensiveTestRunner {
     for (const testSuite of TEST_CONFIG.testSuites) {
       const result = await this.runTestSuite(testSuite);
       this.results.testSuites.push(result);
-      
+
       // Update overall summary
       this.results.summary.totalTests += result.summary.totalTests;
       this.results.summary.passedTests += result.summary.passedTests;
@@ -206,7 +195,7 @@ class ComprehensiveTestRunner {
     const overallEndTime = Date.now();
     this.results.endTime = new Date(overallEndTime).toISOString();
     this.results.totalDuration = overallEndTime - overallStartTime;
-    
+
     if (this.results.summary.totalTests > 0) {
       this.results.summary.successRate = (this.results.summary.passedTests / this.results.summary.totalTests) * 100;
     }
@@ -217,57 +206,57 @@ class ComprehensiveTestRunner {
 
   generateFinalReport() {
     this.log('📊 Generating comprehensive test report...', 'cyan');
-    
+
     // Write JSON report
     const reportDir = path.dirname(TEST_CONFIG.reportFile);
     if (!fs.existsSync(reportDir)) {
       fs.mkdirSync(reportDir, { recursive: true });
     }
-    
+
     fs.writeFileSync(TEST_CONFIG.reportFile, JSON.stringify(this.results, null, 2));
-    
+
     // Console summary
     this.log('', 'reset');
     this.log('═══════════════════════════════════════════════════════════════', 'bright');
     this.log('🎯 COMPREHENSIVE TEST RESULTS SUMMARY', 'bright');
     this.log('═══════════════════════════════════════════════════════════════', 'bright');
-    
+
     this.log(`📊 Overall Results:`, 'bright');
     this.log(`   Total Tests: ${this.results.summary.totalTests}`, 'blue');
     this.log(`   ✅ Passed: ${this.results.summary.passedTests}`, 'green');
     this.log(`   ❌ Failed: ${this.results.summary.failedTests}`, this.results.summary.failedTests > 0 ? 'red' : 'green');
     this.log(`   ⏭️ Skipped: ${this.results.summary.skippedTests}`, 'yellow');
-    this.log(`   📈 Success Rate: ${this.results.summary.successRate.toFixed(1)}%`, 
+    this.log(`   📈 Success Rate: ${this.results.summary.successRate.toFixed(1)}%`,
       this.results.summary.successRate >= 90 ? 'green' : this.results.summary.successRate >= 70 ? 'yellow' : 'red');
-    
+
     this.log(``, 'reset');
     this.log(`⏱️ Timing:`, 'bright');
     this.log(`   Total Duration: ${(this.results.totalDuration / 1000).toFixed(2)}s`, 'blue');
     this.log(`   Started: ${this.results.startTime}`, 'blue');
     this.log(`   Ended: ${this.results.endTime}`, 'blue');
-    
+
     this.log(``, 'reset');
     this.log(`📋 Test Suite Details:`, 'bright');
-    
+
     this.results.testSuites.forEach((suite, index) => {
       const status = suite.success ? '✅' : '❌';
       const color = suite.success ? 'green' : 'red';
-      
+
       this.log(`   ${index + 1}. ${status} ${suite.name}`, color);
       this.log(`      Duration: ${(suite.duration / 1000).toFixed(2)}s`, 'blue');
       this.log(`      Tests: ${suite.summary.passedTests}/${suite.summary.totalTests} passed`, color);
     });
-    
+
     this.log(``, 'reset');
     this.log(`📁 Reports Generated:`, 'bright');
     this.log(`   JSON Report: ${TEST_CONFIG.reportFile}`, 'blue');
     this.log(`   Log File: ${TEST_CONFIG.logFile}`, 'blue');
-    
+
     this.log('═══════════════════════════════════════════════════════════════', 'bright');
-    
+
     // Final status
     const overallSuccess = this.results.summary.failedTests === 0 && this.results.summary.totalTests > 0;
-    
+
     if (overallSuccess) {
       this.log('🎉 ALL TESTS PASSED! DigiClassroom AI Tutor is ready for production.', 'green');
     } else if (this.results.summary.successRate >= 90) {
@@ -275,7 +264,7 @@ class ComprehensiveTestRunner {
     } else {
       this.log('❌ Significant test failures detected. Please review and fix issues.', 'red');
     }
-    
+
     // Exit with appropriate code
     process.exit(overallSuccess ? 0 : 1);
   }
@@ -284,7 +273,7 @@ class ComprehensiveTestRunner {
 // Main execution
 async function main() {
   const runner = new ComprehensiveTestRunner();
-  
+
   try {
     await runner.runAllTests();
   } catch (error) {

@@ -442,7 +442,8 @@ export class ContentQualityEnhancer {
    * - "Chapter 5 - Science Class 10" → "Chapter 5: Science"
    */
   private static extractChapterFromFilename(filename: string): ChapterExtractionResult | null {
-    if (!filename) return null;
+    if (!filename)
+  return null;
 
     // Pattern 1: "chapter-1-Geography" or "chapter-1-Geography Class-9th"
     const pattern1 = filename.match(/chapter[-\s]*(\d{1,2})[-\s]*([A-Za-z\s]+?)(?:\s+Class|\s+NCERT|$)/i);
@@ -771,9 +772,11 @@ export class ContentQualityEnhancer {
         // Filter out false positives (e.g., dates, page numbers)
         const validMatches = matches.filter(m => {
           // Exclude dates like "2023"
-          if (/^\d{4}$/.test(m)) return false;
+          if (/^\d{4}$/.test(m))
+  return false;
           // Exclude simple page numbers
-          if (/^Page\s+\d+$/i.test(m)) return false;
+          if (/^Page\s+\d+$/i.test(m))
+  return false;
           return true;
         });
         detectedElements.formulas.push(...validMatches.slice(0, 15)); // Increased limit

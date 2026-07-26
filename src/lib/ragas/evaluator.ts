@@ -1,3 +1,4 @@
+﻿import { openrouter } from '@/lib/openrouter/client';
 /**
  * RAGAS Main Evaluator
  * Combines faithfulness and relevancy evaluations
@@ -120,9 +121,7 @@ export async function evaluateRAGAS(
     console.log(`[RAGAS] Cache MISS for key: ${cacheKey} - evaluating...`)
     
     // Initialize OpenAI client
-    const openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    })
+    const openai = openrouter
     
     // Run all 4 evaluations in parallel for performance
     const [faithfulness, relevancy, contextPrecision, contextRecall] = await Promise.all([
@@ -291,4 +290,5 @@ export async function evaluateRAGASBackground(
       console.error('[RAGAS Background] Evaluation error:', error)
     })
 }
+
 

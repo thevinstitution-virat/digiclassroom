@@ -231,11 +231,16 @@ export class ClientAssessmentEngine {
     const ageAdjustment = Math.max(0, (age - 8) * 1.5)
     const adjustedScore = score + ageAdjustment
 
-    if (adjustedScore >= typeThresholds.p90) return 95
-    if (adjustedScore >= typeThresholds.p75) return 85
-    if (adjustedScore >= typeThresholds.p50) return 50
-    if (adjustedScore >= typeThresholds.p25) return 25
-    if (adjustedScore >= typeThresholds.p10) return 15
+    if (adjustedScore >= typeThresholds.p90)
+  return 95
+    if (adjustedScore >= typeThresholds.p75)
+  return 85
+    if (adjustedScore >= typeThresholds.p50)
+  return 50
+    if (adjustedScore >= typeThresholds.p25)
+  return 25
+    if (adjustedScore >= typeThresholds.p10)
+  return 15
     return 5
   }
 

@@ -5,7 +5,7 @@ const CONNECTION_CONFIG = {
   qdrant: {
     url: process.env.QDRANT_URL || 'http://localhost:6333',
     apiKey: process.env.QDRANT_API_KEY,
-    collectionName: process.env.QDRANT_COLLECTION_NAME || 'digiclassroom'
+    collectionName: process.env.QDRANT_COLLECTION_NAME || 'ncert-books-enhanced'
   },
   retry: {
     maxRetries: 3,
@@ -51,7 +51,8 @@ class ConnectionManager {
 
   async initialize(): Promise<void> {
     if (this.isInitialized) return
-    if (this.initializationPromise) return this.initializationPromise
+    if (this.initializationPromise)
+  return this.initializationPromise
 
     this.initializationPromise = this._initialize()
     await this.initializationPromise

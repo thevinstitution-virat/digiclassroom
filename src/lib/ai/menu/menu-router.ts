@@ -423,15 +423,18 @@ export class MenuRouter {
 
   // Helper methods
   private extractClassNumber(classLevel?: string): number {
-    if (!classLevel) return 10
+    if (!classLevel)
+  return 10
     const match = classLevel.match(/\d+/)
     return match ? parseInt(match[0]) : 10
   }
 
   private normalizeBoardType(board?: string): 'CBSE' | 'ICSE' | 'State Board' {
     const normalized = (board || 'CBSE').toUpperCase()
-    if (normalized.includes('ICSE')) return 'ICSE'
-    if (normalized.includes('STATE')) return 'State Board'
+    if (normalized.includes('ICSE'))
+  return 'ICSE'
+    if (normalized.includes('STATE'))
+  return 'State Board'
     return 'CBSE'
   }
 

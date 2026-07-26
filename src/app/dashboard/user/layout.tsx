@@ -1,8 +1,9 @@
 import { Suspense } from 'react'
-import { ProtectedComponent } from '@/components/auth/ProtectedComponent'
-import UserSidebarWrapper from '@/components/layout/UserSidebarWrapper'
+import { ProtectedComponent } from '@/components/auth/core/ProtectedComponent'
+import UserSidebarWrapper from '@/components/core/layout/UserSidebarWrapper'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import OnboardingWrapper from '@/components/onboarding/OnboardingWrapper'
 
 export default function UserLayout({
   children
@@ -29,7 +30,9 @@ export default function UserLayout({
         sidebar={<UserSidebarWrapper />}
       >
         <Suspense fallback={<LoadingSkeleton />}>
-          {children}
+          <OnboardingWrapper>
+            {children}
+          </OnboardingWrapper>
         </Suspense>
       </DashboardLayout>
     </ProtectedComponent>

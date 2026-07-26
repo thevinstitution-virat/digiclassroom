@@ -12,6 +12,7 @@ import { registerProcess, registerTempFile, clearUpload } from '@/lib/utils/uplo
 // NOTE: Avoid TS-only type import for Jest CJS parsing; refer via any in signatures
 import { ContentQualityMonitor, QualityReport } from '../services/content-quality-monitor';
 import { ContentQualityEnhancer } from './content-quality-enhancer';
+import pLimit from 'p-limit';
 
 export interface PDFExtractKitChunk {
   id: string;
@@ -89,9 +90,13 @@ export class PDFExtractKitProcessor {
   private visualAnalysisService: VisualContentAnalysisService; // Phase 3 Enhancement
 
   constructor(config?: Partial<PDFExtractKitConfig>) {
+    // PDF extraction requires the CUDA-enabled Python 3.11 venv (.venv-py311).
+    // System Python is intentionally NOT used as a fallback: PDF-Extract-Kit fails
+    // to import there (transformers/unimernet incompatibility on Python 3.13).
+    const defaultVenvPython = path.join(process.cwd(), '.venv-py311', 'Scripts', 'python.exe');
     this.config = {
       enabled: true, // Always enabled for simplified architecture
-      pythonPath: process.env.DOC_EXTRACT_ENGINE_PYTHON_PATH || 'python',
+      pythonPath: process.env.DOC_EXTRACT_ENGINE_PYTHON_PATH || defaultVenvPython,
       timeout: 10800000, // 3 hours for large textbooks (was 30 minutes)
       ...config
     };
@@ -677,12 +682,18 @@ export class PDFExtractKitProcessor {
     pageImagePaths?: Map<number, string>
   ): Promise<PDFExtractKitResult> {
     // First, enhance chunk quality if not already done by Python (async with GPT-4 validation)
+    const limit = pLimit(3);
     const enhancedRawChunks = await Promise.all(
-      (raw.chunks || []).map((c: any) => {
-        const pageNumber = c.metadata?.page || 1;
-        const pageImagePath = pageImagePaths?.get(pageNumber);
-        return this.enhanceChunkQuality(c, metadata, pageImagePath);
-      })
+      (raw.chunks || []).map((c: any) => limit(async () => {
+        try {
+          const pageNumber = c.metadata?.page || 1;
+          const pageImagePath = pageImagePaths?.get(pageNumber);
+          return await this.enhanceChunkQuality(c, metadata, pageImagePath);
+        } catch (error) {
+          console.warn(`⚠️ Chunk validation failed for page ${c.metadata?.page || 1}, using raw chunk:`, error);
+          return c; // Return un-enhanced chunk to prevent the whole PDF from failing
+        }
+      }))
     );
 
     const chunks: PDFExtractKitChunk[] = enhancedRawChunks.map((c: any, idx: number) => ({
@@ -953,7 +964,10 @@ export class PDFExtractKitProcessor {
         if (uploadId) {
           try { emitError(uploadId, error) } catch {}
         }
-        reject(new Error(`Failed to start doc-extract-engine process: ${error.message}`));
+        reject(new Error(
+          `Failed to start doc-extract-engine process using interpreter "${this.config.pythonPath}": ${error.message}. ` +
+          `Ensure the CUDA-enabled Python 3.11 venv (.venv-py311) exists, or set DOC_EXTRACT_ENGINE_PYTHON_PATH to a valid interpreter.`
+        ));
       });
     });
   }

@@ -37,7 +37,7 @@ export class DoubtClearingTool {
   private vectorService: VectorStoreService;
 
   constructor() {
-    this.llmService = OpenAIService.getInstance() as any; // Legacy compatibility
+    this.llmService = OpenAIService.getInstance() as unknown as Record<string, unknown>; // Legacy compatibility
     this.vectorService = new VectorStoreService();
   }
 
@@ -189,7 +189,7 @@ CRITICAL: Use ONLY the NCERT textbook content provided in the context below. Thi
 
   private buildDoubtResolutionPrompt(
     request: DoubtClearingRequest,
-    context: any,
+    context: Record<string, unknown>,
     responseLength: { type: string; description: string; wordLimit: number },
     languagePreference: string
   ): string {
@@ -303,7 +303,7 @@ ${this.getPromptStructure(request.doubt_question, responseLength, languagePrefer
   /**
    * Extract textbook sources from context results for citations
    */
-  private extractTextbookSources(results: any[]): Array<{
+  private extractTextbookSources(results: Record<string, unknown>[]): Array<{
     subject: string;
     class_level: string;
     chapter: string;
@@ -349,7 +349,7 @@ ${this.getPromptStructure(request.doubt_question, responseLength, languagePrefer
   /**
    * Get appropriate prompt structure based on question type and preferences
    */
-  private getPromptStructure(question: string, responseLength: any, languagePreference: string, studentName: string): string {
+  private getPromptStructure(question: string, responseLength: Record<string, unknown>, languagePreference: string, studentName: string): string {
     const isMCQ = this.isMCQQuestion(question);
     const isComparison = this.isComparisonQuestion(question);
     const mcqOptions = isMCQ ? this.extractMCQOptions(question) : [];
@@ -845,10 +845,14 @@ ${languagePreference === 'english' ?
   }
 
   private determineCognitiveLevel(gradeLevel: number): string {
-    if (gradeLevel <= 3) return "remember_understand";
-    if (gradeLevel <= 6) return "understand_apply";
-    if (gradeLevel <= 8) return "apply_analyze";
-    if (gradeLevel <= 10) return "analyze_evaluate";
+    if (gradeLevel <= 3)
+  return "remember_understand";
+    if (gradeLevel <= 6)
+  return "understand_apply";
+    if (gradeLevel <= 8)
+  return "apply_analyze";
+    if (gradeLevel <= 10)
+  return "analyze_evaluate";
     return "evaluate_create";
   }
 
@@ -899,7 +903,7 @@ ${languagePreference === 'english' ?
   private validateResponseScope(
     responseText: string,
     request: DoubtClearingRequest,
-    retrievedChunks: any[]
+    retrievedChunks: Record<string, unknown>[]
   ): {
     hasViolations: boolean;
     violations: string[];

@@ -101,7 +101,7 @@ export abstract class BaseAgent implements IAgent {
   /**
    * Helper: Build context from search results
    */
-  protected buildContext(results: any[]): string {
+  protected buildContext(results: Record<string, unknown>[]): string {
     return results
       .map((r, idx) => `[Source ${idx + 1}]\n${r.text}`)
       .join('\n\n---\n\n');
@@ -110,7 +110,7 @@ export abstract class BaseAgent implements IAgent {
   /**
    * Helper: Extract sources from search results
    */
-  protected extractSources(results: any[]): string[] {
+  protected extractSources(results: Record<string, unknown>[]): string[] {
     return results.map(r => {
       const meta = r.metadata;
       return `${meta.subject} - Class ${meta.class_level} - ${meta.content_type}`;

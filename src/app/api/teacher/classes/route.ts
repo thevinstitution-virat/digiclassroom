@@ -1,5 +1,6 @@
+import { auth } from '@/auth';
+import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
 import { executeQuery, executeQuerySingle } from '@/lib/db/connection'
 import { TeacherClassSchema } from '@/lib/validations'
 import { generateId } from '@/lib/utils'
@@ -11,8 +12,8 @@ import { generateId } from '@/lib/utils'
 export async function GET(request: NextRequest) {
   try {
     // Check authentication
-    const { userId } = await auth()
-    
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     // Get teacher from database
     const teacher = await executeQuerySingle<any>(
-      'SELECT id, role, approval_status FROM users WHERE clerk_id = ?',
+      'SELECT id, role, approval_status FROM `user` WHERE id = ?',
       [userId]
     )
 
@@ -49,8 +50,8 @@ export async function GET(request: NextRequest) {
 
     // Get classes assigned to this teacher
     const classes = await executeQuery<any>(
-      `SELECT 
-        c.id, c.tenant_id, c.name, c.description, c.grade_level,
+      `SELECT
+        c.id, c.organization_id, c.name, c.description, c.grade_level,
         c.qdrant_namespace, c.subjects, c.student_count,
         c.created_at, c.updated_at,
         tca.assigned_at, tca.is_active
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
     // Parse subjects JSON
     const formattedClasses = classes.map(cls => ({
       id: cls.id,
-      tenantId: cls.tenant_id,
+      organizationId: cls.organization_id,
       name: cls.name,
       description: cls.description,
       gradeLevel: cls.grade_level,
@@ -103,8 +104,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Check authentication
-    const { userId } = await auth()
-    
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     // Get teacher from database
     const teacher = await executeQuerySingle<any>(
-      'SELECT id, tenant_id, role, approval_status FROM users WHERE clerk_id = ?',
+      'SELECT id, role, approval_status FROM `user` WHERE id = ?',
       [userId]
     )
 
@@ -156,19 +157,28 @@ export async function POST(request: NextRequest) {
 
     const { name, subject, gradeLevel, section, description } = validationResult.data
 
+    // Resolve the teacher's organization from the Better Auth `member` table
+    // (Phase 4.1: legacy `users.tenant_id` removed — org membership now lives
+    // in `member`). A teacher with no org membership creates an org-less class.
+    const membership = await executeQuerySingle<any>(
+      'SELECT organization_id FROM `member` WHERE user_id = ? LIMIT 1',
+      [teacher.id]
+    )
+    const organizationId = membership?.organization_id ?? null
+
     // Create class
     const classId = generateId()
     const qdrantNamespace = `class_${classId}_grade_${gradeLevel}_${subject.toLowerCase().replace(/\s+/g, '_')}`
 
     await executeQuery(
       `INSERT INTO classes (
-        id, tenant_id, name, description, grade_level,
+        id, organization_id, name, description, grade_level,
         qdrant_namespace, subjects, student_count, settings,
         created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [
         classId,
-        teacher.tenant_id,
+        organizationId,
         `${name}${section ? ` - ${section}` : ''}`,
         description || `${subject} class for Grade ${gradeLevel}`,
         gradeLevel,

@@ -199,7 +199,8 @@ export const useOfflineDictionary = () => {
    * Check if a specific feature is available offline
    */
   const isFeatureAvailableOffline = useCallback((feature: 'search' | 'favorites' | 'history') => {
-    if (!offlineState.isOfflineReady) return false
+    if (!offlineState.isOfflineReady)
+  return false
     
     switch (feature) {
       case 'search':

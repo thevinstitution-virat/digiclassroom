@@ -256,5 +256,4 @@ CREATE TABLE IF NOT EXISTS analytics_events (
 );
 
 -- Add foreign key constraint for users.class_id after classes table is created
-ALTER TABLE users ADD CONSTRAINT fk_users_class_id 
-    FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE SET NULL;
+ALTER TABLE users ADD CONSTRAINT fk_users_class_id_dcp FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE SET NULL;

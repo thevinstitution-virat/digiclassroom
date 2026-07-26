@@ -776,7 +776,7 @@ export class EnhancedRAGPipeline {
       language?: string;
     },
     filename: string,
-    options?: { uploadId?: string }
+    options?: { uploadId?: string; organizationId?: string | null; materialId?: string | null }
   ): Promise<{
     success: boolean;
     chunks_indexed: number;
@@ -821,84 +821,85 @@ export class EnhancedRAGPipeline {
         throw new Error(`doc-extract-engine processing failed: ${processingResult.errors.join(', ')}`);
       }
 
-      console.log(`✂️ doc-extract-engine created ${processingResult.chunks.length} enhanced chunks`);
-
       // Check if multi-level chunking is enabled
       const enableMultiLevelChunking = process.env.ENABLE_MULTI_LEVEL_CHUNKING === 'true';
-      let chunksToIndex: any[] = [];
 
-      if (enableMultiLevelChunking) {
-        console.log('📚 Multi-level chunking ENABLED - creating atomic, paragraph, and section chunks');
+      // PARTIAL SAVING: Process chunks in batches and save each batch to Qdrant immediately
+      const BATCH_SIZE = 50;
+      let totalIndexedCount = 0;
+      let totalValidCount = 0;
+      let totalInvalidCount = 0;
+      const allInvalidChunks: Array<{ chunkId: string; error: string }> = [];
 
-        // Import multi-level chunker
-        const { multiLevelChunker } = await import('./multi-level-chunker');
+      console.log(`📚 Processing ${processingResult.chunks.length} chunks in batches of ${BATCH_SIZE}`);
 
-        // Combine all chunk texts into a single document
-        const fullText = processingResult.chunks.map(c => c.text).join('\n\n');
+      for (let batchStart = 0; batchStart < processingResult.chunks.length; batchStart += BATCH_SIZE) {
+        const batchChunks = processingResult.chunks.slice(batchStart, batchStart + BATCH_SIZE);
+        const batchNum = Math.floor(batchStart / BATCH_SIZE) + 1;
+        console.log(`🔄 Processing batch ${batchNum} (chunks ${batchStart + 1} to ${batchStart + batchChunks.length})...`);
 
-        // Create multi-level chunks with enhanced prompt and quality metrics
-        const multiLevelResult = await multiLevelChunker.chunkText(fullText, {
-          class: metadata.classLevel,
-          subject: metadata.subject,
-          book_title: metadata.bookTitle,
-          source: filename,
-          curriculum: metadata.curriculum || 'CBSE',
-          language: metadata.language || 'English'
-        }, {
-          useGPTForAtomic: true,        // Use GPT-4o-mini for atomic fact extraction
-          useEnhancedPrompt: true,      // Use enhanced educational-content-specific prompt
-          maxRetries: 2,                // Retry up to 2 times on failure
-          enableQualityMetrics: true    // Track quality metrics
-        });
+        let chunksToIndex: any[] = [];
 
-        // Combine all levels for indexing
-        chunksToIndex = [
-          ...multiLevelResult.atomic.map(c => ({ ...c, metadata: { ...c.metadata, chunk_level: 'atomic' } })),
-          ...multiLevelResult.paragraph.map(c => ({ ...c, metadata: { ...c.metadata, chunk_level: 'paragraph' } })),
-          ...multiLevelResult.section.map(c => ({ ...c, metadata: { ...c.metadata, chunk_level: 'section' } }))
-        ];
+        if (enableMultiLevelChunking) {
+          console.log('📚 Multi-level chunking ENABLED for this batch');
+          const { multiLevelChunker } = await import('./multi-level-chunker');
+          const fullText = batchChunks.map(c => c.text).join('\n\n');
 
-        console.log(`📊 Multi-level chunking results:`);
-        console.log(`   - Atomic: ${multiLevelResult.atomic.length} chunks`);
-        console.log(`   - Paragraph: ${multiLevelResult.paragraph.length} chunks`);
-        console.log(`   - Section: ${multiLevelResult.section.length} chunks`);
-        console.log(`   - Total: ${chunksToIndex.length} chunks`);
+          const multiLevelResult = await multiLevelChunker.chunkText(fullText, {
+            class: metadata.classLevel,
+            subject: metadata.subject,
+            book_title: metadata.bookTitle,
+            source: filename,
+            curriculum: metadata.curriculum || 'CBSE',
+            language: metadata.language || 'English'
+          }, {
+            useGPTForAtomic: true,
+            useEnhancedPrompt: true,
+            maxRetries: 2,
+            enableQualityMetrics: true
+          });
 
-        // Log quality metrics if available
-        if (multiLevelResult.qualityMetrics) {
-          const qm = multiLevelResult.qualityMetrics;
-          console.log(`\n📈 Quality Metrics Summary:`);
-          console.log(`   - Total Facts: ${qm.totalFactsExtracted}`);
-          console.log(`   - Avg Length: ${qm.avgFactLength.toFixed(1)} tokens`);
-          console.log(`   - JSON Success: ${qm.jsonParseSuccessRate.toFixed(1)}%`);
-          if (qm.extractionFailures > 0) {
-            console.log(`   - ⚠️ Failures: ${qm.extractionFailures}`);
-          }
+          chunksToIndex = [
+            ...multiLevelResult.atomic.map(c => ({ ...c, metadata: { ...c.metadata, chunk_level: 'atomic' } })),
+            ...multiLevelResult.paragraph.map(c => ({ ...c, metadata: { ...c.metadata, chunk_level: 'paragraph' } })),
+            ...multiLevelResult.section.map(c => ({ ...c, metadata: { ...c.metadata, chunk_level: 'section' } }))
+          ];
+        } else {
+          const hierarchicalChunks = transformToHierarchicalChunks(batchChunks);
+          chunksToIndex = hierarchicalChunks;
         }
-      } else {
-        console.log('📚 Multi-level chunking DISABLED - using hierarchical chunking');
-        const hierarchicalChunks = transformToHierarchicalChunks(processingResult.chunks);
-        console.log(`📝 Hierarchical chunking produced ${hierarchicalChunks.length} paragraph-level chunks`);
-        chunksToIndex = hierarchicalChunks;
+
+        // Index this batch in Qdrant immediately (partial saving!)
+        try {
+          const indexingResult = await this.indexChunksInQdrant(chunksToIndex, {
+            organizationId: options?.organizationId,
+            materialId: options?.materialId,
+          });
+          totalIndexedCount += indexingResult.indexedCount;
+          totalValidCount += indexingResult.validationStats.validCount;
+          totalInvalidCount += indexingResult.validationStats.invalidCount;
+          allInvalidChunks.push(...indexingResult.validationStats.invalidChunks);
+          console.log(`✅ Batch ${batchNum} saved to Qdrant: ${indexingResult.indexedCount} chunks indexed`);
+        } catch (batchError) {
+          console.error(`⚠️ Batch ${batchNum} failed to index in Qdrant:`, batchError);
+          // Continue to next batch — partial progress is preserved!
+        }
       }
 
-      // Index chunks in Qdrant (now returns validation stats)
-      const indexingResult = await this.indexChunksInQdrant(chunksToIndex);
-
-      console.log(`✅ Indexed ${indexingResult.indexedCount} chunks in Qdrant`);
+      console.log(`🏁 All batches completed. Total indexed: ${totalIndexedCount}`);
 
       // Get extraction strategy from environment
       const { getValidatedExtractionStrategy } = await import('@/lib/content/chunk-metadata-schema');
       const strategy = getValidatedExtractionStrategy();
 
       return {
-        success: true,
-        chunks_indexed: indexingResult.indexedCount,
+        success: totalIndexedCount > 0,
+        chunks_indexed: totalIndexedCount,
         errors: processingResult.errors,
         processor_used: 'doc-extract-engine',
         stats: {
           total_pages: processingResult.stats.total_pages,
-          total_chunks: chunksToIndex.length,
+          total_chunks: totalIndexedCount,
           total_words: processingResult.stats.total_words,
           processing_time: processingResult.stats.processing_time,
           extraction_method: enableMultiLevelChunking ? 'doc-extract-engine + multi-level' : 'doc-extract-engine',
@@ -906,8 +907,12 @@ export class EnhancedRAGPipeline {
           equations_found: processingResult.stats.equations_found,
           figures_found: processingResult.stats.figures_found
         },
-        // PHASE 3: Include validation statistics
-        validationStats: indexingResult.validationStats,
+        validationStats: {
+          validCount: totalValidCount,
+          invalidCount: totalInvalidCount,
+          validationRate: (totalValidCount + totalInvalidCount) > 0 ? totalValidCount / (totalValidCount + totalInvalidCount) : 1,
+          invalidChunks: allInvalidChunks
+        },
         strategy
       };
 
@@ -925,8 +930,17 @@ export class EnhancedRAGPipeline {
   /**
    * Index chunks in Qdrant with enhanced metadata (supports both Docling and doc-extract-engine chunks)
    * Returns validation statistics for Phase 3 monitoring
+   *
+   * Batch 2b — per-org isolation + bridge tracking:
+   *   - options.organizationId (non-empty) tags every point payload with organization_id,
+   *     making the chunks private to that org. Omit/null/empty → untagged = global (NCERT base).
+   *   - options.materialId (when supplied) records each point in the qdrant_vector_ids bridge
+   *     so the material's vectors can later be purged on delete/reconciliation.
    */
-  private async indexChunksInQdrant(chunks: DoclingChunk[] | any[]): Promise<{
+  private async indexChunksInQdrant(
+    chunks: DoclingChunk[] | any[],
+    options: { organizationId?: string | null; materialId?: string | null } = {}
+  ): Promise<{
     indexedCount: number;
     validationStats: {
       validCount: number;
@@ -935,6 +949,16 @@ export class EnhancedRAGPipeline {
       invalidChunks: Array<{ chunkId: string; error: string }>;
     };
   }> {
+    // Batch 2b: only a concrete, non-empty org id tags content as private; everything else
+    // (platform/system ingestion of NCERT base) stays untagged → global.
+    const ingestionOrgId =
+      typeof options.organizationId === 'string' && options.organizationId !== ''
+        ? options.organizationId
+        : null;
+    const bridgeMaterialId =
+      typeof options.materialId === 'string' && options.materialId !== ''
+        ? options.materialId
+        : null;
     // PHASE 2: Validate chunks before indexing
     const { validateChunkBatch } = await import('@/lib/content/chunk-metadata-schema');
     const { valid, invalid, stats } = validateChunkBatch(chunks);
@@ -985,6 +1009,7 @@ export class EnhancedRAGPipeline {
 
     const batchSize = 100;
     let indexedCount = 0;
+    let bridgeChunkIndex = 0; // Batch 2b: running chunk index for qdrant_vector_ids rows
 
     for (let i = 0; i < validatedChunks.length; i += batchSize) {
       const batch = validatedChunks.slice(i, i + batchSize);
@@ -1071,6 +1096,10 @@ export class EnhancedRAGPipeline {
             extractionMethod: 'doc-extract-engine',
             originalId: chunk.id || `chunk_${index}`, // Keep original ID in payload
 
+            // 🛡️ Batch 2b: tag org-private content. Spread keeps NCERT base untagged (global)
+            // so it stays matchable by the search-side `organization_id is_empty` condition.
+            ...(ingestionOrgId ? { organization_id: ingestionOrgId } : {}),
+
             // Enhanced quality metadata
             quality_score: chunkMetadata.quality_score,
             quality_grade: chunkMetadata.quality_grade,
@@ -1111,6 +1140,27 @@ export class EnhancedRAGPipeline {
         console.error('Collection name:', this.collectionName);
         console.error('Points sample:', JSON.stringify(points[0], null, 2));
         throw error;
+      }
+
+      // 🛡️ Batch 2b: record this batch's point ids in the bridge (delete/reconciliation).
+      // Best-effort and per-batch — bridge bookkeeping must never fail a successful upsert,
+      // and recording per-batch keeps earlier batches tracked even if a later one throws.
+      if (bridgeMaterialId) {
+        try {
+          const { recordQdrantVectorIds } = await import('@/lib/db/qdrant-vector-ids');
+          await recordQdrantVectorIds(
+            points.map((p: any) => ({
+              materialId: bridgeMaterialId,
+              pointId: p.id,
+              collection: this.collectionName,
+              chunkIndex: bridgeChunkIndex++,
+            }))
+          );
+        } catch (bridgeError) {
+          console.warn('⚠️ Batch 2b: failed to record qdrant_vector_ids bridge rows:', bridgeError);
+        }
+      } else {
+        bridgeChunkIndex += points.length;
       }
 
       indexedCount += batch.length;

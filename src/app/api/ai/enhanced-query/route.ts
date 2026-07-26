@@ -3,8 +3,9 @@
  * Provides 100% textbook-fidelity responses with source citations
  */
 
+import { auth } from '@/auth';
+import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
 import { EnhancedAgentService } from '@/lib/services/enhanced_agent_service';
 
 // Initialize enhanced agent service
@@ -13,12 +14,13 @@ const enhancedAgentService = new EnhancedAgentService();
 export async function POST(req: NextRequest) {
   try {
     // Authentication check
-    const { userId } = await auth();
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const body = await req.json();
+    const body = await req.json() as Record<string, unknown>;
     const {
       query,
       grade_level,

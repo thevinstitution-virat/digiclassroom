@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth, clerkClient } from '@clerk/nextjs/server'
+import { auth } from '@/auth'
+import { headers } from 'next/headers'
 import { runTutorGraph } from '@/lib/ai/langgraph/graph'
 import { subscriptionValidationService } from '@/lib/services/subscription-validation-service'
 import { findPreGeneratedAnswer, recordPreGeneratedAnswerHit, generateQuestionHash } from '@/lib/services/pre-generated-answers-service'
@@ -40,8 +41,9 @@ export async function POST(req: NextRequest) {
     // ============================================================================
     // STEP 1: AUTHENTICATION
     // ============================================================================
-    const { userId: clerkId } = await auth()
-    if (!clerkId) {
+    const session = await auth.api.getSession({ headers: await headers() })
+    const userId = session?.user?.id
+    if (!userId) {
       return NextResponse.json(
         {
           error: 'AUTHENTICATION_REQUIRED',
@@ -71,9 +73,9 @@ export async function POST(req: NextRequest) {
     // Extract conversation history for context-aware agents (e.g., Homework Help)
     const conversationHistory = Array.isArray(body.conversationHistory)
       ? body.conversationHistory.map((msg: any) => ({
-          role: msg.role === 'user' ? 'student' : 'assistant',
-          content: String(msg.content || '')
-        }))
+        role: msg.role === 'user' ? 'student' : 'assistant',
+        content: String(msg.content || '')
+      }))
       : []
 
     // CRITICAL DEBUG: Always log menu intent extraction
@@ -90,9 +92,8 @@ export async function POST(req: NextRequest) {
     // Fetch user's first name for personalization (used by Doubt Resolution agent)
     let userName: string | undefined
     try {
-      const client = await clerkClient()
-      const user = await client.users.getUser(clerkId)
-      userName = user.firstName || undefined
+      const user = session?.user as any
+      userName = user?.name?.split(' ')[0] || undefined
       if (userName) {
         console.log(`👤 User name: ${userName}`)
       }
@@ -107,10 +108,10 @@ export async function POST(req: NextRequest) {
     // ============================================================================
     // STEP 2: CHECK DAILY QUESTION QUOTA
     // ============================================================================
-    const quotaCheck = await subscriptionValidationService.canAskQuestion(clerkId)
+    const quotaCheck = await subscriptionValidationService.canAskQuestion(userId)
 
     if (!quotaCheck.allowed) {
-      console.log(`❌ Quota exceeded for user ${clerkId}: ${quotaCheck.message}`)
+      console.log(`❌ Quota exceeded for user ${userId}: ${quotaCheck.message}`)
       return NextResponse.json(
         {
           error: 'DAILY_LIMIT_EXCEEDED',
@@ -129,12 +130,12 @@ export async function POST(req: NextRequest) {
     // STEP 3: VALIDATE BOARD ACCESS
     // ============================================================================
     const hasBoardAccess = await subscriptionValidationService.hasAccessToBoard(
-      clerkId,
+      userId,
       profile.board || 'CBSE'
     )
 
     if (!hasBoardAccess) {
-      console.log(`❌ Board access denied for user ${clerkId}: ${profile.board}`)
+      console.log(`❌ Board access denied for user ${userId}: ${profile.board}`)
       return NextResponse.json(
         {
           error: 'BOARD_ACCESS_DENIED',
@@ -150,13 +151,13 @@ export async function POST(req: NextRequest) {
     // STEP 4: VALIDATE CLASS ACCESS
     // ============================================================================
     const hasClassAccess = await subscriptionValidationService.hasAccessToClass(
-      clerkId,
+      userId,
       profile.board || 'CBSE',
       classNumber
     )
 
     if (!hasClassAccess) {
-      console.log(`❌ Class access denied for user ${clerkId}: Class ${classNumber}`)
+      console.log(`❌ Class access denied for user ${userId}: Class ${classNumber}`)
       return NextResponse.json(
         {
           error: 'CLASS_ACCESS_DENIED',
@@ -174,14 +175,14 @@ export async function POST(req: NextRequest) {
     // ============================================================================
     if (profile.subject && profile.subject !== 'general') {
       const hasSubjectAccess = await subscriptionValidationService.hasAccessToSubject(
-        clerkId,
+        userId,
         profile.board || 'CBSE',
         classNumber,
         profile.subject
       )
 
       if (!hasSubjectAccess) {
-        console.log(`❌ Subject access denied for user ${clerkId}: ${profile.subject}`)
+        console.log(`❌ Subject access denied for user ${userId}: ${profile.subject}`)
         return NextResponse.json(
           {
             error: 'SUBJECT_ACCESS_DENIED',
@@ -226,7 +227,7 @@ export async function POST(req: NextRequest) {
             services.analytics.trackCacheHit('semantic', true).catch(err =>
               console.warn('⚠️ Analytics tracking failed:', err.message)
             )
-          }).catch(() => {})
+          }).catch(() => { })
         } else {
           console.log(`❌ [Semantic Cache] MISS - Proceeding to RAG`)
 
@@ -235,7 +236,7 @@ export async function POST(req: NextRequest) {
             services.analytics.trackCacheHit('semantic', false).catch(err =>
               console.warn('⚠️ Analytics tracking failed:', err.message)
             )
-          }).catch(() => {})
+          }).catch(() => { })
         }
       } catch (error) {
         console.error('❌ Error checking semantic cache:', error)
@@ -279,7 +280,7 @@ export async function POST(req: NextRequest) {
             services.analytics.trackCacheHit('database', true).catch(err =>
               console.warn('⚠️ Analytics tracking failed:', err.message)
             )
-          }).catch(() => {})
+          }).catch(() => { })
         }
       } catch (error) {
         console.error('❌ Error checking pre-generated answers:', error)
@@ -339,7 +340,7 @@ export async function POST(req: NextRequest) {
         query: message,
         profile,
         routingIntent: routingDecision.intent,
-        userId: clerkId,
+        userId: userId,
         userName,  // Pass user's first name for personalization
         conversationHistory
       })
@@ -427,14 +428,14 @@ export async function POST(req: NextRequest) {
     // STEP 8: INCREMENT QUESTION COUNT (After successful response)
     // ============================================================================
     try {
-      await subscriptionValidationService.incrementQuestionCount(clerkId, clerkId, {
+      await subscriptionValidationService.incrementQuestionCount(userId, userId, {
         subject: profile.subject || 'general',
         board: profile.board || 'CBSE',
         class: classNumber.toString(),
         menu_type: 'ai_chat',
         timestamp: new Date().toISOString()
       })
-      console.log(`✅ Question count incremented for user ${clerkId}`)
+      console.log(`✅ Question count incremented for user ${userId}`)
     } catch (error) {
       console.error('❌ Failed to increment question count:', error)
       // Don't fail the request if quota increment fails
@@ -447,7 +448,7 @@ export async function POST(req: NextRequest) {
     LegacyAgentAdapter.getServices().then(services => {
       services.analytics.trackEvent({
         eventType: 'chat_request',
-        userId: clerkId,
+        userId: userId,
         metadata: {
           menuIntent: menuIntent || 'general_help',
           subject: profile.subject,
@@ -461,7 +462,7 @@ export async function POST(req: NextRequest) {
         },
         timestamp: new Date()
       }).catch(err => console.warn('⚠️ Analytics tracking failed:', err.message))
-    }).catch(() => {})
+    }).catch(() => { })
 
     console.log(`📊 [Analytics] Request completed in ${requestDuration}ms`)
 
@@ -498,8 +499,8 @@ export async function POST(req: NextRequest) {
           error: error instanceof Error ? error.message : 'Unknown error'
         },
         timestamp: new Date()
-      }).catch(() => {})
-    }).catch(() => {})
+      }).catch(() => { })
+    }).catch(() => { })
 
     return NextResponse.json(
       {

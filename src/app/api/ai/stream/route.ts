@@ -9,8 +9,9 @@
  * - Returns appropriate error responses
  */
 
+import { auth } from '@/auth';
+import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
 import { StreamingService, StreamingContext, StreamingConfig } from '@/lib/services/streaming_service';
 import { LLMRequest } from '@/lib/services/streaming_service';
 import { SourceChunk } from '@/lib/agents/source_validation';
@@ -45,9 +46,10 @@ export async function POST(request: NextRequest) {
     // ============================================================================
     // STEP 1: AUTHENTICATION
     // ============================================================================
-    const { userId: clerkId } = await auth();
+    const session = await auth.api.getSession({ headers: await headers() });
+    const userId = session?.user?.id;
 
-    if (!clerkId) {
+    if (!userId) {
       return NextResponse.json(
         {
           error: 'AUTHENTICATION_REQUIRED',
@@ -72,10 +74,10 @@ export async function POST(request: NextRequest) {
     // ============================================================================
     // STEP 2: CHECK DAILY QUESTION QUOTA
     // ============================================================================
-    const quotaCheck = await subscriptionValidationService.canAskQuestion(clerkId);
+    const quotaCheck = await subscriptionValidationService.canAskQuestion(userId);
 
     if (!quotaCheck.allowed) {
-      console.log(`❌ Quota exceeded for user ${clerkId}: ${quotaCheck.message}`);
+      console.log(`❌ Quota exceeded for user ${userId}: ${quotaCheck.message}`);
       return NextResponse.json(
         {
           error: 'DAILY_LIMIT_EXCEEDED',
@@ -94,12 +96,12 @@ export async function POST(request: NextRequest) {
     // STEP 3: VALIDATE BOARD ACCESS
     // ============================================================================
     const hasBoardAccess = await subscriptionValidationService.hasAccessToBoard(
-      clerkId,
+      userId,
       body.context.board_type
     );
 
     if (!hasBoardAccess) {
-      console.log(`❌ Board access denied for user ${clerkId}: ${body.context.board_type}`);
+      console.log(`❌ Board access denied for user ${userId}: ${body.context.board_type}`);
       return NextResponse.json(
         {
           error: 'BOARD_ACCESS_DENIED',
@@ -115,13 +117,13 @@ export async function POST(request: NextRequest) {
     // STEP 4: VALIDATE CLASS ACCESS
     // ============================================================================
     const hasClassAccess = await subscriptionValidationService.hasAccessToClass(
-      clerkId,
+      userId,
       body.context.board_type,
       body.context.grade_level
     );
 
     if (!hasClassAccess) {
-      console.log(`❌ Class access denied for user ${clerkId}: Class ${body.context.grade_level}`);
+      console.log(`❌ Class access denied for user ${userId}: Class ${body.context.grade_level}`);
       return NextResponse.json(
         {
           error: 'CLASS_ACCESS_DENIED',
@@ -138,14 +140,14 @@ export async function POST(request: NextRequest) {
     // STEP 5: VALIDATE SUBJECT ACCESS
     // ============================================================================
     const hasSubjectAccess = await subscriptionValidationService.hasAccessToSubject(
-      clerkId,
+      userId,
       body.context.board_type,
       body.context.grade_level,
       body.context.subject
     );
 
     if (!hasSubjectAccess) {
-      console.log(`❌ Subject access denied for user ${clerkId}: ${body.context.subject}`);
+      console.log(`❌ Subject access denied for user ${userId}: ${body.context.subject}`);
       return NextResponse.json(
         {
           error: 'SUBJECT_ACCESS_DENIED',
@@ -230,7 +232,7 @@ export async function POST(request: NextRequest) {
               type: 'chunk',
               data: chunk
             };
-            
+
             const chunkText = `data: ${JSON.stringify(chunkData)}\n\n`;
             controller.enqueue(encoder.encode(chunkText));
           }
@@ -251,14 +253,14 @@ export async function POST(request: NextRequest) {
           // STEP 6: INCREMENT QUESTION COUNT (After successful response)
           // ============================================================================
           try {
-            await subscriptionValidationService.incrementQuestionCount(clerkId, clerkId, {
+            await subscriptionValidationService.incrementQuestionCount(userId, userId, {
               subject: body.context.subject,
               board: body.context.board_type,
               class: body.context.grade_level.toString(),
               menu_type: body.context.agent_type,
               timestamp: new Date().toISOString()
             });
-            console.log(`✅ Question count incremented for user ${clerkId}`);
+            console.log(`✅ Question count incremented for user ${userId}`);
           } catch (error) {
             console.error('❌ Failed to increment question count:', error);
             // Don't fail the request if quota increment fails
@@ -270,7 +272,7 @@ export async function POST(request: NextRequest) {
 
         } catch (error) {
           console.error('❌ Streaming error:', error);
-          
+
           const errorData = {
             type: 'error',
             data: {
@@ -278,7 +280,7 @@ export async function POST(request: NextRequest) {
               timestamp: Date.now()
             }
           };
-          
+
           const errorText = `data: ${JSON.stringify(errorData)}\n\n`;
           controller.enqueue(encoder.encode(errorText));
           controller.close();
@@ -300,7 +302,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('❌ Streaming API Error:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Streaming service error',
         details: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -377,11 +379,11 @@ function buildCitation(chunk: SourceChunk): string {
   if (chunk.chapter) parts.push(`Ch ${chunk.chapter}`);
   if (chunk.page) parts.push(`Pg ${chunk.page}`);
   if (chunk.section) parts.push(`Section: ${chunk.section}`);
-  
+
   if (parts.length === 0) {
     parts.push(chunk.source || 'NCERT Textbook');
   }
-  
+
   return `[${parts.join(', ')}]`;
 }
 
@@ -393,7 +395,7 @@ function getTemperatureForAgent(agentType: string): number {
     'doubt_clearing': 0.3,
     'study_tips': 0.5
   };
-  
+
   return temperatureMap[agentType] || 0.4;
 }
 

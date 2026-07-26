@@ -165,8 +165,10 @@ export class ChemistryFormatter {
    * Check if the content is in a chemistry context
    */
   private static isChemistryContext(content: string, subject?: string, classLevel?: string): boolean {
-    if (subject?.toLowerCase() === 'chemistry') return true
-    if (classLevel?.toLowerCase().includes('chemistry')) return true
+    if (subject?.toLowerCase() === 'chemistry')
+  return true
+    if (classLevel?.toLowerCase().includes('chemistry'))
+  return true
 
     const lowerContent = content.toLowerCase()
     const chemistryIndicators = [

@@ -122,8 +122,10 @@ function determineComplexity(
   // Calculate final complexity
   const avgScore = complexityScore / 5
   
-  if (avgScore <= 0.5) return 'simple'
-  if (avgScore <= 1.5) return 'moderate'
+  if (avgScore <= 0.5)
+  return 'simple'
+  if (avgScore <= 1.5)
+  return 'moderate'
   return 'complex'
 }
 

@@ -127,7 +127,8 @@ export class GoogleDriveService {
    * Initialize Google Drive API (Legacy method for backward compatibility)
    */
   async initialize(): Promise<boolean> {
-    if (this.isInitialized) return true
+    if (this.isInitialized)
+  return true
 
     try {
       // Load Google API client
@@ -348,11 +349,16 @@ export class GoogleDriveService {
   private extractMaterialType(fileName: string, description?: string): string {
     const text = `${fileName} ${description || ''}`.toLowerCase()
     
-    if (text.includes('note') || text.includes('chapter')) return 'notes'
-    if (text.includes('summary') || text.includes('revision')) return 'summaries'
-    if (text.includes('mind map') || text.includes('mindmap')) return 'mind_maps'
-    if (text.includes('quiz') || text.includes('test') || text.includes('mcq')) return 'quizzes'
-    if (text.includes('textbook') || text.includes('book')) return 'textbooks'
+    if (text.includes('note') || text.includes('chapter'))
+  return 'notes'
+    if (text.includes('summary') || text.includes('revision'))
+  return 'summaries'
+    if (text.includes('mind map') || text.includes('mindmap'))
+  return 'mind_maps'
+    if (text.includes('quiz') || text.includes('test') || text.includes('mcq'))
+  return 'quizzes'
+    if (text.includes('textbook') || text.includes('book'))
+  return 'textbooks'
     
     return 'reference'
   }
@@ -383,8 +389,10 @@ export class GoogleDriveService {
   private extractDifficulty(fileName: string, description?: string): 'easy' | 'medium' | 'hard' {
     const text = `${fileName} ${description || ''}`.toLowerCase()
     
-    if (text.includes('easy') || text.includes('basic') || text.includes('beginner')) return 'easy'
-    if (text.includes('hard') || text.includes('advanced') || text.includes('difficult')) return 'hard'
+    if (text.includes('easy') || text.includes('basic') || text.includes('beginner'))
+  return 'easy'
+    if (text.includes('hard') || text.includes('advanced') || text.includes('difficult'))
+  return 'hard'
     
     return 'medium'
   }

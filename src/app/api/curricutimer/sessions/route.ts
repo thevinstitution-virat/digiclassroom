@@ -23,7 +23,8 @@ const mockDatabase = {
   
   updateSession: (id: string, updates: any) => {
     const session = mockDatabase.sessions.get(id)
-    if (!session) return null
+    if (!session)
+  return null
     
     const updatedSession = {
       ...session,

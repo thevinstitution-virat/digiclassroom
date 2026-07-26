@@ -1,101 +1,118 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# ============================================================================
+# DigiClassroom Pro — .gitignore
+# ============================================================================
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# Vendor deps
+vendor/
+vendor
+# ============================================================================
 
-# testing
-/coverage
-/test-results
-/test-documents
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+.yarn/install-state.gz
 
-# next.js
-/.next/
-/out/
+# Environment variables (CRITICAL — never commit secrets)
+.env
+.env.local
+.env.local.bak-utf16
+.env.development.local
+.env.test.local
+.env.production.local
+.env.staging
+!.env.example
 
-# production
-/build
+# Next.js build output
+.next/
+out/
 
-# misc
-.DS_Store
-*.pem
+# Production build
+build/
+dist/
 
-# debug
+# Testing
+coverage/
+test-results/
+.jest-cache/
+jest-html-report/
+*.lcov
+
+# Debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# temporary files
-/tmp
-/tmp/*
-/temp
-*.tmp
-tmp.py
-tmp_*.py
-test-*.js
-test_*.js
-test-*.ps1
-removal-report.json
-nul
-
-# ===== PHASE 2 ADDITIONS =====
-
-# Large third-party code (47 MB - PDF-Extract-Kit)
-/vendor/
-
-# Python virtual environments (8+ GB)
-/.venv/
-/.venv310/
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Vector database runtime data
-/qdrant_data/
-
-# AI models (if large)
-/models/pdf-extract-kit/
-
-# User uploads and runtime data
-/uploads/
-/logs/
 *.log
 
-# IDE files
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDE / Editor
 .vscode/
 .idea/
 *.swp
 *.swo
-*.sublime-*
-*.sublime-project
+*~
 *.sublime-workspace
+*.sublime-project
 
-# OS files
-Thumbs.db
-desktop.ini
+# Temporary files and uploads
+tmp/
+temp/
+uploads/
 
-# Phase cleanup reports (archived to docs/reports/)
-PHASE_*_CLEANUP_REPORT.md
-PHASE_*_STRUCTURE_CLEANUP_REPORT.md
+# Local database dumps (may contain user data)
+.backups/
 
-# Backup files
+# Vector database data (Qdrant)
+qdrant_data/
+qdrant_storage/
+
+# Cache directories
+.cache/
+.turbo/
+
+# Python virtual environments
+.venv*/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+
+# ML/AI model caches (large binary files)
+models/
+*.onnx
+*.bin
+*.safetensors
+*.pt
+*.pth
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Bundle analysis output
+.analyzer/
+stats.json
+
+# Miscellaneous
+*.bak
 *.backup
-.gitignore.backup
+*.old
+*.orig
+*.tmp
+
+# Phase 0 additions
+jest-*.log
+jest-*.json
+tsc.log
+build_output.txt
+docker-compose-resolved.yaml
+lint_report*.log
+tsc_errors*.log

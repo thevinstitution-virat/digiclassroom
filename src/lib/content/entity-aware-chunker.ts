@@ -505,7 +505,8 @@ export class EntityAwareChunker {
   }
 
   private calculateCosineSimilarity(embedding1: number[], embedding2: number[]): number {
-    if (embedding1.length !== embedding2.length) return 0;
+    if (embedding1.length !== embedding2.length)
+  return 0;
     
     let dotProduct = 0;
     let norm1 = 0;

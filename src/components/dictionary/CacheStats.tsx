@@ -85,19 +85,24 @@ export default function CacheStats({ className = '', showControls = true }: Cach
   }
 
   const formatCacheSize = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    if (bytes < 1024)
+  return `${bytes} B`
+    if (bytes < 1024 * 1024)
+  return `${(bytes / 1024).toFixed(1)} KB`
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
   const formatLastCleanup = (timestamp: number): string => {
-    if (!timestamp) return 'Never'
+    if (!timestamp)
+  return 'Never'
     const date = new Date(timestamp)
     const now = new Date()
     const diffHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
     
-    if (diffHours < 1) return 'Less than 1 hour ago'
-    if (diffHours < 24) return `${diffHours} hours ago`
+    if (diffHours < 1)
+  return 'Less than 1 hour ago'
+    if (diffHours < 24)
+  return `${diffHours} hours ago`
     return `${Math.floor(diffHours / 24)} days ago`
   }
 
