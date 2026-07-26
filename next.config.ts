@@ -90,14 +90,6 @@ const nextConfig: NextConfig = {
               chunks: 'all',
               priority: 10,
             },
-            // Authentication
-            auth: {
-              test: /[\\/]node_modules[\\/](@clerk)[\\/]/,
-              name: 'auth',
-              chunks: 'all',
-              priority: 10,
-            },
-
             // Other vendor libraries
             vendor: {
               test: /[\\/]node_modules[\\/]/,
