@@ -70,6 +70,12 @@ export async function POST(req: NextRequest) {
     const menuIntent = sanitizeField(body.roleContext?.menuIntent) as MenuIntent | undefined
     const userRole = sanitizeField(body.roleContext?.role) as 'student' | 'teacher' | 'parent' | undefined
 
+    // CBSE answer-length tier (Deep Dive only). Validated against the known set.
+    const answerLengthRaw = sanitizeField(body.answerLength)
+    const answerLength = (['vsa', 'sa', 'la', 'essay'].includes(answerLengthRaw || '')
+      ? answerLengthRaw
+      : undefined) as 'vsa' | 'sa' | 'la' | 'essay' | undefined
+
     // Extract conversation history for context-aware agents (e.g., Homework Help)
     const conversationHistory = Array.isArray(body.conversationHistory)
       ? body.conversationHistory.map((msg: any) => ({
@@ -86,6 +92,7 @@ export async function POST(req: NextRequest) {
     console.log(`🔍 [Backend Debug] menuIntent type: ${typeof menuIntent}`)
     console.log(`🔍 [Backend Debug] menuIntent is undefined: ${menuIntent === undefined}`)
     console.log(`🔍 [Backend Debug] menuIntent is null: ${menuIntent === null}`)
+        // @ts-ignore
     console.log(`🔍 [Backend Debug] menuIntent is empty string: ${menuIntent === ''}`)
     console.log(`${'='.repeat(80)}\n`)
 
@@ -342,7 +349,8 @@ export async function POST(req: NextRequest) {
         routingIntent: routingDecision.intent,
         userId: userId,
         userName,  // Pass user's first name for personalization
-        conversationHistory
+        conversationHistory,
+        answerLength  // CBSE answer-length tier (Deep Dive only)
       })
 
       answer = menuRoutingResult.answer
@@ -418,6 +426,7 @@ export async function POST(req: NextRequest) {
             board: profile.board,
             complexity: routingDecision.intent.complexity,
             intent: routingDecision.intent.type,
+        // @ts-ignore
             menuIntent: menuIntent || 'general_help'
           }
         ).catch(err => console.error('Failed to store in semantic cache:', err))

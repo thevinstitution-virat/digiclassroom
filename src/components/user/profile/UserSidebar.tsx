@@ -14,6 +14,10 @@ import {
   Sparkles,
   Search,
   FolderTree,
+  MonitorPlay,
+  Receipt,
+  Award,
+  TrendingUp,
   CreditCard
 } from 'lucide-react'
 
@@ -35,6 +39,12 @@ export default function UserSidebar({ user }: UserSidebarProps) {
       description: 'Overview and activities',
       gradient: 'from-slate-500 to-gray-600'
     }),
+    createNavigationItem('My Classroom', '/dashboard/student', MonitorPlay, {
+      description: 'Your batches and video lectures',
+      featured: true,
+      gradient: 'from-violet-500 to-purple-600'
+    }),
+
     createNavigationItem('Virat Gyankosh', '/dashboard/user/ai-tutor', Brain, {
       description: 'Chat with your AI teacher',
       featured: true,
@@ -84,6 +94,21 @@ export default function UserSidebar({ user }: UserSidebarProps) {
       description: 'Settings and preferences',
       featured: true,
       gradient: 'from-indigo-500 to-purple-500'
+    }),
+
+    createNavigationItem('Certificates', '/dashboard/student/certificates', Award, {
+      description: 'Course completion certificates',
+      featured: true,
+      gradient: 'from-yellow-500 to-amber-500'
+    }),
+    createNavigationItem('My analytics', '/dashboard/student/my-analytics', TrendingUp, {
+      description: 'Performance and growth metrics',
+      featured: true,
+      gradient: 'from-blue-600 to-indigo-600'
+    }),
+    createNavigationItem('My purchases', '/dashboard/student/purchases', Receipt, {
+      description: 'Payment history and receipts',
+      featured: false,
     })
   ]
 
@@ -115,8 +140,8 @@ export default function UserSidebar({ user }: UserSidebarProps) {
 
   // Prepare user data for BaseSidebar
   const sidebarUser = user ? {
-    firstName: user?.name?.split(' ')[0],
-    lastName: user?.name?.split(' ').slice(1).join(' '),
+    firstName: user?.firstName,
+    lastName: user?.lastName,
     emailAddress: user.emailAddress
   } : null
 

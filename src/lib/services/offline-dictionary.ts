@@ -295,6 +295,7 @@ class OfflineDictionaryService {
         resolve(event.data)
       }
 
+        // @ts-ignore
       messageChannel.port1.onerror = (error) => {
         reject(error)
       }

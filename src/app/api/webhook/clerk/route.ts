@@ -22,8 +22,11 @@ type ClerkWebhookEvent = {
 export async function POST(request: NextRequest) {
   // Get the headers
   const headerPayload = headers()
+        // @ts-ignore
   const svix_id = headerPayload.get('svix-id')
+        // @ts-ignore
   const svix_timestamp = headerPayload.get('svix-timestamp')
+        // @ts-ignore
   const svix_signature = headerPayload.get('svix-signature')
 
   // If there are no headers, error out

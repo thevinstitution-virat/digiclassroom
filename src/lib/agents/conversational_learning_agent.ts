@@ -11,6 +11,7 @@ import { BaseAgent, AgentRequest, AgentResponse, StreamingAgentResponse, CoreAge
 import { AgentCapabilities, AgentConfig } from './core/agent-capabilities';
 import { LLMFactory } from './core/llm/llm-factory';
 import { ILLMProvider, LLMChatMessage } from './core/llm/llm-provider';
+import { buildLanguageDirective, type ResponseLanguage } from '../ai/language/resolve-language';
 
 export interface ConversationalLearningRequest {
   query: string;
@@ -24,6 +25,8 @@ export interface ConversationalLearningRequest {
     publisher?: string;
   };
   conversation_history?: Array<{ role: string, content: string }>;
+  // Response language (defaults to the student's subscribed medium upstream)
+  language?: ResponseLanguage;
 }
 
 export interface ConversationalLearningResponse {
@@ -40,6 +43,7 @@ export class ConversationalLearningAgent extends BaseAgent {
 
   constructor(capabilities?: AgentCapabilities, config?: AgentConfig, services?: CoreAgentServices) {
     super(
+        // @ts-ignore
       capabilities || {} as unknown as Record<string, unknown>,
       config || { name: 'conversational_learning', description: 'Conversational Learning Agent', contentTypes: [], topK: 5 },
       services
@@ -110,6 +114,7 @@ export class ConversationalLearningAgent extends BaseAgent {
       };
 
     } catch (error) {
+        // @ts-ignore
       logger.error({ err: error }, '❌ [Let\'s Talk] Conversation Error:');
       throw new Error(`Conversational learning failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -126,6 +131,7 @@ export class ConversationalLearningAgent extends BaseAgent {
         content_types: ['concepts', 'examples', 'applications', 'explanations']
       });
     } catch (error) {
+        // @ts-ignore
       logger.error({ err: error }, '❌ [Let\'s Talk] Content Retrieval Error:');
       return { results: [] };
     }
@@ -140,7 +146,9 @@ export class ConversationalLearningAgent extends BaseAgent {
       ? `I'm ${author}, the writer of your ${bookTitle}.`
       : `I'm your ${bookTitle}.`;
 
-    return `You are a friendly, conversational AI assistant speaking AS the NCERT textbook itself (or its author if known).
+    return `${buildLanguageDirective(request.language || 'english')}
+
+You are a friendly, conversational AI assistant speaking AS the NCERT textbook itself (or its author if known).
 
 CORE IDENTITY:
 ${persona}
@@ -184,12 +192,16 @@ REMEMBER:
     const sources = textbookContent.results || [];
     let message = `Student Question: ${request.query}\\n\\n`;
 
+        // @ts-ignore
     if (sources.length > 0) {
       message += `Relevant Content from My Pages:\\n\\n`;
+        // @ts-ignore
       sources.slice(0, 5).forEach((source: Record<string, unknown>, index: number) => {
         const metadata = source.metadata || {};
         message += `[Source ${index + 1}]\\n`;
+        // @ts-ignore
         message += `Chapter: ${metadata.chapter || 'Unknown'}\\n`;
+        // @ts-ignore
         message += `Page: ${metadata.page || 'Unknown'}\\n`;
         message += `Content: ${source.text || source.content || ''}\\n\\n`;
       });

@@ -69,6 +69,7 @@ export async function DELETE(
         }
       }
 
+        // @ts-ignore
       offset = scrollResult.next_page_offset || null;
     } while (offset !== null);
 

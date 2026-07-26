@@ -24,11 +24,15 @@ export async function ProtectedComponent({
   // (Finer tiers — institution-admin / teacher / parent — are gated by their own
   // server layouts via getOrgContext, not by this coarse check.)
   void userId
-  let hasAccess = true
-  if (roles.length > 0) {
-    const normalizedRole: string =
-      userRole === 'admin' || userRole === 'super_admin' ? 'admin' : 'user'
-    hasAccess = roles.includes(normalizedRole as UserRole)
+  let hasAccess = false
+  if (user) {
+    if (roles.length > 0) {
+      const normalizedRole: string =
+        userRole === 'admin' || userRole === 'super_admin' ? 'admin' : 'user'
+      hasAccess = roles.includes(normalizedRole as UserRole)
+    } else {
+      hasAccess = true
+    }
   }
 
   return hasAccess ? <>{children}</> : <>{fallback}</>

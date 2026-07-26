@@ -27,6 +27,7 @@ export interface OpenAILLMServiceConfig {
 }
 
 export class OpenAILLMService implements ILLMService {
+        // @ts-ignore
   private client: OpenAI;
   private embeddingModel: string;
   private generationModel: string;
@@ -120,6 +121,7 @@ export class OpenAILLMService implements ILLMService {
         dimensions: this.dimensions
       });
 
+        // @ts-ignore
       return response.data.map(item => item.embedding);
     });
   }

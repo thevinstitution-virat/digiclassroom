@@ -238,6 +238,7 @@ export async function POST(request: NextRequest) {
           }
 
           // Send final result
+        // @ts-ignore
           const finalResult = await streamGenerator.return();
           if (finalResult.value) {
             const finalData = {

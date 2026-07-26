@@ -1,4 +1,4 @@
-import { relations, sql } from "drizzle-orm";
+﻿import { relations, sql } from "drizzle-orm";
 import {
     mysqlTable,
     index,
@@ -40,11 +40,11 @@ export const materialStatusEnums = ['draft', 'pending_review', 'approved', 'reje
 // LEGACY USERS & TENANTS (WILL INTERACT WITH BETTER AUTH)
 // ============================================================================
 
-// Phase 4.1 — legacy `tenants` and `users` tables removed. All fields
+// Phase 4.1 â€” legacy `tenants` and `users` tables removed. All fields
 // migrated to Better Auth `organization` and `user` respectively. Legacy
 // SQL endpoints in app/api/teacher/* and app/api/super-admin/teachers/* still
 // query these tables with raw SQL and will throw at runtime until they are
-// refactored (Phase 4.1b). See identity-federation-design.md §8.3.
+// refactored (Phase 4.1b). See identity-federation-design.md Â§8.3.
 
 // Map userProfiles directly to enhanced_user_profiles
 export const enhancedUserProfiles = mysqlTable('enhanced_user_profiles', {
@@ -112,7 +112,7 @@ export const userSubscriptions = mysqlTable('user_subscriptions', {
     organizationId: varchar('organization_id', { length: 255 }).references(() => organization.id, { onDelete: 'cascade' }),
     id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
     userId: varchar('user_id', { length: 255 }).notNull(), // Refs BetterAuth user or legacy users
-    clerkId: varchar('clerk_id', { length: 255 }), // @deprecated Legacy Clerk column — use userId instead
+    clerkId: varchar('clerk_id', { length: 255 }), // @deprecated Legacy Clerk column â€” use userId instead
     subscriptionPlanId: varchar('subscription_plan_id', { length: 36 }).references(() => subscriptionPlans.id),
     subscriptionType: mysqlEnum('subscription_type', planTypeEnums).notNull(),
     subscriptionStatus: mysqlEnum('subscription_status', subscriptionStatusEnums).default('trial').notNull(),
@@ -252,10 +252,11 @@ export const googleDriveFolders = mysqlTable('google_drive_folders', {
     class: int('class'),
     subject: varchar('subject', { length: 100 }),
     materialType: mysqlEnum('material_type', materialTypeEnums),
-    isActive: boolean('is_active').default(true),
+    status: mysqlEnum('status', ['draft', 'published', 'archived']).default('draft'),
     createdAt: timestamp('created_at').defaultNow(),
-    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow()
 });
+
 
 export const materialApprovalLog = mysqlTable('material_approval_log', {
     organizationId: varchar('organization_id', { length: 255 }).references(() => organization.id, { onDelete: 'cascade' }),
@@ -300,36 +301,36 @@ export const userMaterialAccess = mysqlTable(
       .primaryKey()
       .default(sql`(UUID())`),
 
-    // ── Ownership / scope ─────────────────────────────────────────────────
+    // â”€â”€ Ownership / scope â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     organizationId: varchar('organization_id', { length: 255 })
       .references(() => organization.id, { onDelete: 'cascade' }),
 
-    // Changed from text → varchar(255) so it can participate in a unique index
+    // Changed from text â†’ varchar(255) so it can participate in a unique index
     userId: varchar('user_id', { length: 255 }),
 
-    // ── Material reference (NEW) ──────────────────────────────────────────
+    // â”€â”€ Material reference (NEW) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // NULL = legacy search-log row created before Phase 2b
     materialId: varchar('material_id', { length: 36 })
       .references(() => materials.id, { onDelete: 'cascade' }),
 
-    // ── Access tracking (NEW) ─────────────────────────────────────────────
+    // â”€â”€ Access tracking (NEW) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     accessCount: int('access_count').default(1).notNull(),
 
-    // ── Legacy search-log columns (kept — do not drop) ────────────────────
+    // â”€â”€ Legacy search-log columns (kept â€” do not drop) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Existing rows use these; new access rows leave them null.
     accessType: text('access_type'),
     filterData: json('filter_data'),
     ipAddress:  text('ip_address'),
     userAgent:  text('user_agent'),
 
-    // ── Timestamps ────────────────────────────────────────────────────────
-    // Renamed accessedAt alias for clarity in new code — maps to created_at
+    // â”€â”€ Timestamps â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Renamed accessedAt alias for clarity in new code â€” maps to created_at
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
   },
   (table) => ({
     // Unique: one row per user per material (drives the upsert in access/route.ts)
-    // MySQL unique indexes treat NULL as distinct — legacy rows with NULL materialId
+    // MySQL unique indexes treat NULL as distinct â€” legacy rows with NULL materialId
     // will not conflict with each other or with new access rows.
     uqUserMaterial: uniqueIndex('uq_uma_user_material').on(
       table.userId,
@@ -381,7 +382,7 @@ export const practestQuestionBank = mysqlTable('practest_question_bank', {
     subtopic: text('subtopic'),
     difficultyLevel: text('difficulty_level'),
     bloomLevel: text('bloom_level'),
-    // CASA (page-level citation) — edition-pinned, anchor-resolved against the NCERT corpus.
+    // CASA (page-level citation) â€” edition-pinned, anchor-resolved against the NCERT corpus.
     casaBook: varchar('casa_book', { length: 255 }),
     casaEdition: varchar('casa_edition', { length: 50 }),
     casaPage: int('casa_page'),
@@ -449,7 +450,7 @@ export const practestTestSessions = mysqlTable('practest_test_sessions', {
     updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
 
-// Append-only attempt events — the SOURCE OF TRUTH for question analytics.
+// Append-only attempt events â€” the SOURCE OF TRUTH for question analytics.
 // Each row is one student's response to one question; never mutated. Per-question
 // stats (usage, accuracy, discrimination) are DERIVED from this table so they are
 // always recomputable (vs. the denormalized counters cached on the question row).
@@ -505,7 +506,7 @@ export const userNotes = mysqlTable('user_notes', {
     lastAccessedAt: timestamp('last_accessed_at').defaultNow(),
 });
 
-// Wiki-link graph edges (Phase 2). Each row = one [[link]] from source → target note.
+// Wiki-link graph edges (Phase 2). Each row = one [[link]] from source â†’ target note.
 export const noteLinks = mysqlTable('note_links', {
     id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
     userId: varchar('user_id', { length: 255 }).notNull(),
@@ -783,9 +784,9 @@ export const user = mysqlTable("user", {
     updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
     role: varchar("role", { length: 255 }).default("student"),
     classId: varchar("class_id", { length: 255 }),
-    // Phase 4.1 — columns previously on legacy `users` table. Legacy domain
+    // Phase 4.1 â€” columns previously on legacy `users` table. Legacy domain
     // code (teacher verification, admissions) reads/writes these fields. See
-    // identity-federation-design.md §8.3.
+    // identity-federation-design.md Â§8.3.
     firstName: varchar("first_name", { length: 100 }),
     lastName: varchar("last_name", { length: 100 }),
     approvalStatus: mysqlEnum("approval_status", approvalStatusEnums),
@@ -852,10 +853,13 @@ export const organization = mysqlTable("organization", {
     logo: text("logo"),
     createdAt: timestamp("created_at").notNull(),
     metadata: text("metadata"),
-    // Phase 4.1 — columns previously on legacy `tenants` table.
+    // Phase 4.1 â€” columns previously on legacy `tenants` table.
     subscriptionPlan: mysqlEnum("subscription_plan", subscriptionPlanEnums).default("starter"),
     subscriptionStatus: mysqlEnum("subscription_status", subscriptionStatusEnums).default("trial"),
     settings: json("settings"),
+    // Phase 16 â€” Razorpay integration
+    razorpayLinkedAccountId: varchar('razorpay_linked_account_id', { length: 255 }),
+    platformFeeRate: decimal('platform_fee_rate', { precision: 5, scale: 4 }).default('0.0500'),
 });
 
 export const member = mysqlTable("member", {
@@ -867,6 +871,7 @@ export const member = mysqlTable("member", {
 }, (table) => [
     index("member_organizationId_idx").on(table.organizationId),
     index("member_userId_idx").on(table.userId),
+    uniqueIndex('uq_member_user_org').on(table.userId, table.organizationId),
 ]);
 
 export const invitation = mysqlTable("invitation", {
@@ -987,7 +992,7 @@ export const institutionProfiles = mysqlTable('institution_profiles', {
 // studentEnrollments / institutionProfiles declarations removed (canonical
 // versions live above).
 
-// ── B2B2C: student → institution join requests (self-select, admin-approved) ──
+// â”€â”€ B2B2C: student â†’ institution join requests (self-select, admin-approved) â”€â”€
 export const institutionJoinRequests = mysqlTable('institution_join_requests', {
     id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
     userId: varchar('user_id', { length: 255 }).notNull().references(() => user.id, { onDelete: 'cascade' }),
@@ -1007,9 +1012,9 @@ export const institutionJoinRequests = mysqlTable('institution_join_requests', {
 ]);
 
 // ============================================================================
-// PHASE 4.2 — LEGACY DOMAIN TABLES (previously declared only in
+// PHASE 4.2 â€” LEGACY DOMAIN TABLES (previously declared only in
 // src/lib/db/schema.sql). Now mirrored in Drizzle for type-safety. Tenant
-// FKs migrated to organization. See identity-federation-design.md §8.3.
+// FKs migrated to organization. See identity-federation-design.md Â§8.3.
 // ============================================================================
 
 export const classes = mysqlTable('classes', {
@@ -1072,4 +1077,409 @@ export const teacherVerificationDocuments = mysqlTable('teacher_verification_doc
     reviewedAt: timestamp('reviewed_at'),
     rejectionReason: text('rejection_reason'),
     uploadedAt: timestamp('uploaded_at').defaultNow(),
+});
+
+// ============================================================================
+// PHASE 5: LMS ARCHITECTURE (INTELLIGENT HYBRID MODEL)
+// ============================================================================
+
+export const taxonomyDomains = mysqlTable('taxonomy_domains', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+    name: varchar('name', { length: 255 }).notNull(),
+    sortOrder: int('sort_order').default(0),
+    createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const taxonomyCourses = mysqlTable('taxonomy_courses', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+    domainId: varchar('domain_id', { length: 36 })
+        .references(() => taxonomyDomains.id, { onDelete: 'cascade' })
+        .notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    sortOrder: int('sort_order').default(0),
+    createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const taxonomyLevels = mysqlTable('taxonomy_levels', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+    courseId: varchar('course_id', { length: 36 })
+        .references(() => taxonomyCourses.id, { onDelete: 'cascade' })
+        .notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    sortOrder: int('sort_order').default(0),
+    createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const taxonomySubjects = mysqlTable('taxonomy_subjects', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+    levelId: varchar('level_id', { length: 36 })
+        .references(() => taxonomyLevels.id, { onDelete: 'cascade' })
+        .notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    sortOrder: int('sort_order').default(0),
+    createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const batchTemplates = mysqlTable('batch_templates', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+    levelId: varchar('level_id', { length: 36 })
+        .references(() => taxonomyLevels.id, { onDelete: 'restrict' })
+        .notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: text('description'),
+    createdAt: timestamp('created_at').defaultNow()
+}, (table) => [
+    uniqueIndex('batch_templates_name_levelId_idx').on(table.name, table.levelId)
+]);
+
+export const batches = mysqlTable('batches', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+    templateId: varchar('template_id', { length: 36 })
+        .references(() => batchTemplates.id, { onDelete: 'set null' }),
+    orgId: varchar('org_id', { length: 255 })
+        .references(() => organization.id, { onDelete: 'cascade' })
+        .notNull(),
+    levelId: varchar('level_id', { length: 36 })
+        .references(() => taxonomyLevels.id, { onDelete: 'cascade' })
+        .notNull(),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: text('description'),
+    price: decimal('price', { precision: 10, scale: 2 }).default('0.00'),
+    startDate: date('start_date'),
+    isActive: boolean('is_active').default(true),
+    joinCode: varchar('join_code', { length: 8 }).unique(),
+    maxStudents: int('max_students'),
+    createdAt: timestamp('created_at').defaultNow()
+});
+
+export const enrollments = mysqlTable('enrollments', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+    batchId: varchar('batch_id', { length: 36 })
+        .references(() => batches.id, { onDelete: 'cascade' })
+        .notNull(),
+    userId: varchar('user_id', { length: 255 })
+        .references(() => user.id, { onDelete: 'cascade' })
+        .notNull(),
+    orgId: varchar('org_id', { length: 255 })
+        .references(() => organization.id, { onDelete: 'cascade' })
+        .notNull(),
+    status: mysqlEnum('status', ['pending_payment', 'active', 'suspended', 'completed', 'revoked']).default('active'),
+    enrolledAt: timestamp('enrolled_at').defaultNow(),
+    emailOptOut: boolean('email_opt_out').default(false).notNull(),
+}, (table) => {
+    return {
+        uniqueBatchUser: uniqueIndex('uq_enrollments_batch_user').on(table.batchId, table.userId)
+    };
+});
+
+export const videoAssets = mysqlTable('video_assets', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+    tenantId: varchar('tenant_id', { length: 255 })
+        .references(() => organization.id, { onDelete: 'cascade' }), // NULLABLE for global platform content
+    
+    // Legacy Taxonomy Placement
+    // Note: Pre-Phase-6 rows contain human-readable strings (e.g. "BAMS Final Year").
+    // Post-Phase-6 rows contain raw taxonomy UUIDs as a bridging mechanism for legacy logic.
+    domain: varchar('domain', { length: 100 }).notNull(),
+    course: varchar('course', { length: 100 }).notNull(),
+    level: varchar('level', { length: 100 }).notNull(),
+    subject: varchar('subject', { length: 100 }).notNull(),
+    book: varchar('book', { length: 100 }).notNull(),
+    
+    // New Normalized Taxonomy FKs
+    levelId: varchar('level_id', { length: 36 })
+        .references(() => taxonomyLevels.id, { onDelete: 'set null' }),
+    subjectId: varchar('subject_id', { length: 36 })
+        .references(() => taxonomySubjects.id, { onDelete: 'set null' }),
+    bookTag: text('book_tag'),
+    
+    // Video Metadata & Webhook Tracking
+    title: varchar('title', { length: 255 }).notNull(),
+    description: text('description'),
+    provider: varchar('provider', { length: 50 }).notNull().default('bunny'),
+    providerVideoId: varchar('provider_video_id', { length: 255 }).notNull(),
+    durationSeconds: int('duration_seconds'),
+    thumbnailUrl: varchar('thumbnail_url', { length: 512 }),
+    status: mysqlEnum('status', ['uploading', 'processing', 'ready', 'failed']).default('uploading'),
+    sortOrder: int('sort_order').default(0),
+    isFreePreview: boolean('is_free_preview').default(false),
+    
+    createdBy: varchar('created_by', { length: 255 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow()
+}, (table) => {
+    return {
+        tenantProviderUnique: uniqueIndex('tenant_provider_idx').on(table.tenantId, table.providerVideoId)
+    };
+});
+
+export const studentVideoProgress = mysqlTable('student_video_progress', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+    tenantId: varchar('tenant_id', { length: 255 })
+        .references(() => organization.id, { onDelete: 'cascade' })
+        .notNull(),
+    userId: varchar('user_id', { length: 255 })
+        .references(() => user.id, { onDelete: 'cascade' })
+        .notNull(),
+    videoId: varchar('video_id', { length: 36 })
+        .references(() => videoAssets.id, { onDelete: 'cascade' })
+        .notNull(),
+    maxWatchedSeconds: int('max_watched_seconds').default(0),
+    completionPercentage: decimal('completion_percentage', { precision: 5, scale: 2 }).default('0.00'),
+    lastWatchedAt: timestamp('last_watched_at').defaultNow()
+}, (table) => {
+    return {
+        // Required for ON DUPLICATE KEY UPDATE in videoProgress.upsert
+        uniqueUserVideo: uniqueIndex('uq_svp_user_video').on(table.userId, table.videoId),
+        // Tenant-scoped lookups
+        idxTenantUser: index('idx_svp_tenant_user').on(table.tenantId, table.userId),
+    };
+});
+
+// â”€â”€ PHASE 5.1: VIDEO CHAPTERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Stores named timestamps (chapters) for any video (Bunny or YouTube).
+// The player renders these as a clickable sidebar and tick-marks on the
+// progress bar. Chapters are saved via full-replace (delete + reinsert)
+// through videoChapters.saveChapters â€” the unique index prevents
+// duplicate start times on the same video.
+export const videoChapters = mysqlTable('video_chapters', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+    videoAssetId: varchar('video_asset_id', { length: 36 })
+        .references(() => videoAssets.id, { onDelete: 'cascade' })
+        .notNull(),
+    tenantId: varchar('tenant_id', { length: 255 }).notNull(),
+    title: varchar('title', { length: 255 }).notNull(),
+    startSeconds: int('start_seconds').notNull(),
+    sortOrder: int('sort_order').notNull().default(0),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+}, (table) => {
+    return {
+        videoAssetIdx: index('idx_video_chapters_asset').on(table.videoAssetId),
+        tenantIdx: index('idx_video_chapters_tenant').on(table.tenantId),
+        uniqueVideoStart: uniqueIndex('uq_chapter_video_start').on(table.videoAssetId, table.startSeconds),
+    };
+});
+
+// â”€â”€ PHASE 15: IA ANNOUNCEMENTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+export const announcements = mysqlTable('announcements', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+    batchId: varchar('batch_id', { length: 36 })
+        .notNull()
+        .references(() => batches.id, { onDelete: 'cascade' }),
+    orgId: varchar('org_id', { length: 36 }).notNull(),
+    authorId: varchar('author_id', { length: 36 }).notNull(),
+    title: varchar('title', { length: 150 }).notNull(),
+    body: text('body'),
+    isPinned: boolean('is_pinned').default(false).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => {
+    return {
+        batchIdx: index('idx_announcements_batch').on(table.batchId),
+        orgIdx: index('idx_announcements_org').on(table.orgId),
+    };
+});
+
+// ============================================================================
+// PHASE 16 â€” RAZORPAY PAYMENT INTEGRATION
+// ============================================================================
+
+export const orders = mysqlTable('orders', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+    studentId: varchar('student_id', { length: 255 }).notNull().references(() => user.id),
+    batchId: varchar('batch_id', { length: 36 }).notNull().references(() => batches.id),
+    orgId: varchar('org_id', { length: 255 }).notNull().references(() => organization.id),
+
+    // Financials (stored in paise)
+    amountPaise: int('amount_paise').notNull(),
+    platformFeePaise: int('platform_fee_paise').notNull(),
+    platformFeeRate: decimal('platform_fee_rate', { precision: 5, scale: 4 }).notNull(),
+    institutionPaise: int('institution_paise').notNull(),
+    currency: varchar('currency', { length: 3 }).default('INR').notNull(),
+
+    status: mysqlEnum('status', ['created', 'authorized', 'captured', 'failed', 'refunded']).notNull().default('created'),
+    razorpayOrderId: varchar('razorpay_order_id', { length: 255 }).unique().notNull(),
+
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow()
+});
+
+export const payments = mysqlTable('payments', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+    orderId: varchar('order_id', { length: 36 }).notNull().references(() => orders.id, { onDelete: 'cascade' }),
+    razorpayPaymentId: varchar('razorpay_payment_id', { length: 255 }).unique().notNull(),
+    razorpayTransferId: varchar('razorpay_transfer_id', { length: 255 }), // Populated after Route split executes
+
+    status: mysqlEnum('status', ['captured', 'failed', 'refunded']).notNull(),
+    capturedAt: timestamp('captured_at'),
+    refundId: varchar('refund_id', { length: 255 }),
+    refundedAt: timestamp('refunded_at'),
+    createdAt: timestamp('created_at').defaultNow()
+});
+
+// ============================================================================
+// PHASE 21 â€” COUPONS
+// ============================================================================
+
+export const batchCoupons = mysqlTable('batch_coupons', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+    batchId: varchar('batch_id', { length: 36 }).notNull().references(() => batches.id, { onDelete: 'cascade' }),
+    code: varchar('code', { length: 50 }).notNull(),
+    discountType: mysqlEnum('discount_type', ['percentage', 'fixed']).notNull(),
+    discountValue: decimal('discount_value', { precision: 10, scale: 2 }).notNull(),
+    usageLimit: int('usage_limit'),
+    usageCount: int('usage_count').default(0).notNull(),
+    expiresAt: timestamp('expires_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow().notNull(),
+}, (table) => {
+    return {
+        uniqueBatchCode: uniqueIndex('uq_batch_coupons_code').on(table.batchId, table.code)
+    };
+});
+
+// ============================================================================
+// PHASE 22B â€” CERTIFICATES
+// ============================================================================
+
+export const certificates = mysqlTable('certificates', {
+    id: varchar('id', { length: 36 }).primaryKey(),
+    userId: varchar('user_id', { length: 36 }).notNull().references(() => user.id),
+    batchId: varchar('batch_id', { length: 36 }).notNull().references(() => batches.id),
+    orgId: varchar('org_id', { length: 36 }).notNull(),
+    certificateNumber: varchar('certificate_number', { length: 50 }).notNull().unique(),
+    issuedAt: timestamp('issued_at').notNull().defaultNow(),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => ({
+    uq_cert_user_batch: uniqueIndex('uq_cert_user_batch').on(t.userId, t.batchId),
+}));
+
+// ============================================================================
+// PHASE 23A â€” WAITLIST
+// ============================================================================
+
+export const batchWaitlist = mysqlTable('batch_waitlist', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+    batchId: varchar('batch_id', { length: 36 }).notNull().references(() => batches.id, { onDelete: 'cascade' }),
+    userId: varchar('user_id', { length: 255 }).notNull().references(() => user.id, { onDelete: 'cascade' }),
+    orgId: varchar('org_id', { length: 255 }).notNull().references(() => organization.id, { onDelete: 'cascade' }),
+    joinedAt: timestamp('joined_at').notNull().defaultNow(),
+    notifiedAt: timestamp('notified_at'),
+}, (t) => ({
+    uq_waitlist_batch_user: uniqueIndex('uq_waitlist_batch_user').on(t.batchId, t.userId),
+}));
+
+export const quizzes = mysqlTable('quizzes', {
+  id:                    varchar('id', { length: 36 }).primaryKey(),
+  batchId:               varchar('batch_id', { length: 36 }).notNull()
+                           .references(() => batches.id, { onDelete: 'cascade' }),
+  orgId:                 varchar('org_id', { length: 36 }).notNull(),
+  title:                 varchar('title', { length: 200 }).notNull(),
+  timeLimitMinutes:      int('time_limit_minutes'),
+  passingScore:          decimal('passing_score', { precision: 5, scale: 2 }),
+  shuffleQuestions:      boolean('shuffle_questions').notNull().default(false),
+  allowMultipleAttempts: boolean('allow_multiple_attempts').notNull().default(true),
+  createdAt:             timestamp('created_at').notNull().defaultNow(),
+});
+
+export const quizQuestions = mysqlTable('quiz_questions', {
+  id:           varchar('id', { length: 36 }).primaryKey(),
+  quizId:       varchar('quiz_id', { length: 36 }).notNull()
+                  .references(() => quizzes.id, { onDelete: 'cascade' }),
+  questionText: text('question_text').notNull(),
+  explanation:  text('explanation'),
+  sortOrder:    int('sort_order').notNull().default(0),
+});
+
+export const quizOptions = mysqlTable('quiz_options', {
+  id:         varchar('id', { length: 36 }).primaryKey(),
+  questionId: varchar('question_id', { length: 36 }).notNull()
+                .references(() => quizQuestions.id, { onDelete: 'cascade' }),
+  optionText: varchar('option_text', { length: 500 }).notNull(),
+  isCorrect:  boolean('is_correct').notNull().default(false),
+  sortOrder:  int('sort_order').notNull().default(0),
+});
+
+export const quizAttempts = mysqlTable('quiz_attempts', {
+  id:             varchar('id', { length: 36 }).primaryKey(),
+  quizId:         varchar('quiz_id', { length: 36 }).notNull()
+                    .references(() => quizzes.id, { onDelete: 'cascade' }),
+  userId:         varchar('user_id', { length: 36 }).notNull(),
+  orgId:          varchar('org_id', { length: 36 }).notNull(),
+  score:          decimal('score', { precision: 5, scale: 2 }),
+  totalQuestions: int('total_questions').notNull(),
+  correctAnswers: int('correct_answers'),
+  startedAt:      timestamp('started_at').notNull().defaultNow(),
+  completedAt:    timestamp('completed_at'),
+}, (t) => ({
+  idx_user: index('idx_quiz_attempts_user').on(t.userId),
+}));
+
+export const quizAnswers = mysqlTable('quiz_answers', {
+  id:               varchar('id', { length: 36 }).primaryKey(),
+  attemptId:        varchar('attempt_id', { length: 36 }).notNull()
+                      .references(() => quizAttempts.id, { onDelete: 'cascade' }),
+  questionId:       varchar('question_id', { length: 36 }).notNull(),
+  selectedOptionId: varchar('selected_option_id', { length: 36 }),
+  isCorrect:        boolean('is_correct').notNull().default(false),
+});
+
+// ============================================================================
+// PHASE 25A — STUDENT ANALYTICS
+// ============================================================================
+
+export const learningEvents = mysqlTable('learning_events', {
+  id:        varchar('id', { length: 36 }).primaryKey(),
+  userId:    varchar('user_id', { length: 36 }).notNull(),
+  batchId:   varchar('batch_id', { length: 36 }),
+  orgId:     varchar('org_id', { length: 36 }).notNull(),
+  eventType: mysqlEnum('event_type', [
+    'video_play', 'video_pause', 'video_seek', 'video_complete',
+    'video_speed_change', 'quiz_start', 'quiz_submit',
+    'session_start', 'session_end'
+  ]).notNull(),
+  metadata:  json('metadata'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => ({
+  idx_user_time:  index('idx_le_user_time').on(t.userId, t.createdAt),
+  idx_batch_time: index('idx_le_batch_time').on(t.batchId, t.createdAt),
+}))
+
+export const studentEngagementSnapshots = mysqlTable('student_engagement_snapshots', {
+  id:              varchar('id', { length: 36 }).primaryKey(),
+  userId:          varchar('user_id', { length: 36 }).notNull(),
+  batchId:         varchar('batch_id', { length: 36 }).notNull(),
+  orgId:           varchar('org_id', { length: 36 }).notNull(),
+  weekOf:          date('week_of').notNull(),
+  engagementScore: decimal('engagement_score', { precision: 5, scale: 2 }).default('0'),
+  riskScore:       decimal('risk_score', { precision: 5, scale: 2 }).default('0'),
+  videosWatched:   int('videos_watched').default(0),
+  quizzesTaken:    int('quizzes_taken').default(0),
+  avgQuizScore:    decimal('avg_quiz_score', { precision: 5, scale: 2 }),
+  minutesActive:   int('minutes_active').default(0),
+  streakDays:      int('streak_days').default(0),
+}, (t) => ({
+  uq_snapshot: uniqueIndex('uq_snapshot_user_batch_week').on(t.userId, t.batchId, t.weekOf),
+}))
+
+export const studentYearlyGrowth = mysqlTable('student_yearly_growth', {
+  id:                 varchar('id', { length: 36 }).primaryKey(),
+  userId:             varchar('user_id', { length: 36 }).notNull(),
+  year:               int('year').notNull(),
+  totalMinutes:       int('total_minutes').default(0),
+  coursesEnrolled:    int('courses_enrolled').default(0),
+  coursesCompleted:   int('courses_completed').default(0),
+  avgQuizScore:       decimal('avg_quiz_score', { precision: 5, scale: 2 }),
+  certificatesEarned: int('certificates_earned').default(0),
+  computedAt:         timestamp('computed_at').notNull().defaultNow(),
+}, (t) => ({
+  uq_growth: uniqueIndex('uq_growth_user_year').on(t.userId, t.year),
+}))
+
+export const appConfig = mysqlTable('app_config', {
+  id: int('id').primaryKey().default(1),
+  maintenanceMode: boolean('maintenance_mode').default(false).notNull(),
+  debugMode: boolean('debug_mode').default(false).notNull(),
+  sessionTimeoutMinutes: int('session_timeout_minutes').default(60).notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });

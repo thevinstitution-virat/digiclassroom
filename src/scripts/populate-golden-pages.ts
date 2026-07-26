@@ -58,6 +58,7 @@ async function main() {
                 console.log(`No valid page found for ${testCase.id}`);
             }
         } catch (err: unknown) {
+        // @ts-ignore
             console.log(`Error querying ${testCase.id}: ${err.message}`);
         }
     }

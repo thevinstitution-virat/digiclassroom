@@ -183,7 +183,7 @@ const inputVariants = cva(
 )
 
 export interface EnhancedInputProps
-  extends React.InputHTMLAttributes<HTMLInputElement>,
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'>,
     VariantProps<typeof inputVariants> {
   label?: string
   error?: string

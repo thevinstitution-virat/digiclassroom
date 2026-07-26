@@ -7,7 +7,6 @@ import { CheckCircle, XCircle, Clock, Mail, Award, Briefcase, X } from 'lucide-r
 
 interface Teacher {
   userId: string
-  clerkId: string
   email: string
   firstName: string
   lastName: string

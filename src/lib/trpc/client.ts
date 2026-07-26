@@ -19,7 +19,6 @@ export const api = createTRPCReact<AppRouter>()
 export const trpc = createTRPCNext<AppRouter>({
   config() {
     return {
-      transformer: superjson,
       links: [
         loggerLink({
           enabled: (opts) =>
@@ -28,6 +27,7 @@ export const trpc = createTRPCNext<AppRouter>({
         }),
         httpBatchLink({
           url: `${getBaseUrl()}/api/trpc`,
+          transformer: superjson,
           headers() {
             return {
               // Add any custom headers here
@@ -39,7 +39,7 @@ export const trpc = createTRPCNext<AppRouter>({
         defaultOptions: {
           queries: {
             staleTime: 5 * 60 * 1000, // 5 minutes
-            cacheTime: 10 * 60 * 1000, // 10 minutes
+            gcTime: 10 * 60 * 1000, // 10 minutes
             retry: (failureCount, error: any) => {
               // Don't retry on 4xx errors
               if (error?.data?.httpStatus >= 400 && error?.data?.httpStatus < 500) {
@@ -58,6 +58,7 @@ export const trpc = createTRPCNext<AppRouter>({
     }
   },
   ssr: false, // We'll handle SSR manually where needed
+  transformer: superjson,
 })
 
 // Utility function to invalidate queries
@@ -97,32 +98,6 @@ export const handleTRPCClientError = (error: any) => {
   console.error('An unexpected error occurred:', error.message)
 }
 
-// Custom hooks for common operations
-export const useInvalidateQuery = () => {
-  const utils = api.useUtils()
-  
-  return {
-    invalidateAll: () => utils.invalidate(),
-    invalidateContent: () => utils.content.invalidate(),
-    invalidateClasses: () => utils.classes.invalidate(),
-    invalidateUsers: () => utils.users.invalidate(),
-  }
-}
-
-// Optimistic update utilities
-export const useOptimisticUpdate = () => {
-  const utils = api.useUtils()
-
-  return {
-    updateUserProgress: (userId: string, contentId: string, progress: number) => {
-      utils.progress.getUserProgress.setData({ userId, contentId }, (old) => {
-        if (!old)
-  return old
-        return { ...old, progress }
-      })
-    },
-  }
-}
 
 // Type exports for use in components
 export type { AppRouter } from '@/lib/trpc/routers'

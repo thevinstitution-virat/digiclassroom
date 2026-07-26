@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       tokenManager: {
+        // @ts-ignore
         isRunning: tokenManager.intervalId !== null,
         ...status
       }

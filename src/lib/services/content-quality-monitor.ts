@@ -165,6 +165,7 @@ export class ContentQualityMonitor {
       console.error('❌ Quality validation failed:', error);
       
       // Return minimal quality report
+        // @ts-ignore
       return this.createFailureReport(result, error.message);
     }
   }
@@ -202,6 +203,7 @@ export class ContentQualityMonitor {
       return result.processingMode === 'primary' ? 0.8 : 0.5; // Estimated based on processing mode
     }
 
+        // @ts-ignore
     const validResults = result.ocrResults.filter(r => !r.error && r.confidence > 0);
     if (validResults.length === 0)
   return 0;

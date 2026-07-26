@@ -10,11 +10,13 @@ const redisClient = process.env.REDIS_URL
 let isConnected = false;
 
 if (redisClient) {
+        // @ts-ignore
     redisClient.on('error', err => logger.error({ error: err }, 'Redis Client Error'));
     redisClient.connect().then(() => {
         isConnected = true;
         logger.info('✅ Rate Limiter connected to Redis');
     }).catch(err => {
+        // @ts-ignore
         logger.warn({ data: err.message }, '⚠️ Rate Limiter Redis connection failed (running in open mode)');
     });
 }
@@ -108,6 +110,7 @@ export async function studentRateLimiter(
 
     } catch (e) {
         // Fallback open on Redis failure
+        // @ts-ignore
         logger.error({ error: e }, `Rate limit pipeline error for user ${userId}:`);
         return { allowed: true, remaining: 1, resetTimeMs: 0 };
     }

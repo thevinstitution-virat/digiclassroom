@@ -11,9 +11,7 @@
 //   EMAIL_FROM       — From address, e.g. "DigiClassroom Pro <noreply@yourdomain.com>"
 
 import { logger } from '@/lib/logger';
-
-const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const EMAIL_FROM = process.env.EMAIL_FROM || 'DigiClassroom Pro <onboarding@resend.dev>';
+import { Resend } from 'resend';
 
 export interface SendEmailParams {
   to: string;
@@ -29,39 +27,33 @@ export interface SendEmailResult {
 }
 
 /**
- * Send a transactional email. Never throws — returns { ok } so auth callbacks
- * (reset/verify/invite/magic-link) don't break the surrounding flow on failure.
+ * Send a transactional email.
  */
 export async function sendEmail({ to, subject, html, text }: SendEmailParams): Promise<SendEmailResult> {
-  // Dev / unconfigured fallback — log instead of sending so nothing crashes.
-  if (!RESEND_API_KEY) {
-    logger.warn('[email] RESEND_API_KEY not set — email NOT sent (dev fallback).', {
-      to,
-      subject,
-      hint: 'Set RESEND_API_KEY + EMAIL_FROM to enable real delivery.',
-    });
-    return { ok: false, error: 'EMAIL_NOT_CONFIGURED' };
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY is missing. Production requires a valid Resend API key to send emails.');
   }
 
+  const EMAIL_FROM = process.env.EMAIL_FROM || 'DigiClassroom Pro <onboarding@resend.dev>';
+  const resend = new Resend(apiKey);
+
   try {
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ from: EMAIL_FROM, to, subject, html, ...(text ? { text } : {}) }),
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to,
+      subject,
+      html,
+      ...(text ? { text } : {}),
     });
 
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '');
-      logger.error('[email] Resend API error', { status: res.status, detail, to, subject });
-      return { ok: false, error: `RESEND_${res.status}` };
+    if (error) {
+      logger.error('[email] Resend SDK error', { error, to, subject });
+      return { ok: false, error: error.message };
     }
 
-    const data = (await res.json().catch(() => ({}))) as { id?: string };
-    logger.info('[email] sent', { to, subject, id: data.id });
-    return { ok: true, id: data.id };
+    logger.info('[email] sent', { to, subject, id: data?.id });
+    return { ok: true, id: data?.id };
   } catch (err) {
     logger.error('[email] send failed', { error: (err as Error).message, to, subject });
     return { ok: false, error: (err as Error).message };

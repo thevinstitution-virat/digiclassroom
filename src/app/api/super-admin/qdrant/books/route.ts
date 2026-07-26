@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
       });
 
       allPoints.push(...scrollResult.points);
+        // @ts-ignore
       offset = scrollResult.next_page_offset || null;
     } while (offset !== null);
 

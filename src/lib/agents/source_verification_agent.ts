@@ -186,6 +186,7 @@ export class ContentVerificationTool {
 
 export class SourceVerificationAgent {
   private verificationTool: ContentVerificationTool;
+        // @ts-ignore
   private llmService: LLMService;
 
   constructor() {

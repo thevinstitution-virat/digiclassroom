@@ -165,6 +165,7 @@ export function createRateLimiter(
       return addRateLimitHeaders(null, config, entry);
       
     } catch (error) {
+        // @ts-ignore
       logger.error({ error: error }, '❌ Rate limiter error:');
       // On error, allow request to continue (fail open)
       return null;

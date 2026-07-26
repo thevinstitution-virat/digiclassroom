@@ -154,6 +154,7 @@ export class EducationalRAGTester {
       let retrievedResults = ragResult.results?.length || 0
       
       // If main search fails, test emergency search
+        // @ts-ignore
       if (!ragResult.success || retrievedResults === 0) {
         console.log('  🔄 Main RAG failed, testing emergency search...')
         const qdrantSearch = new QdrantRAGSearch();

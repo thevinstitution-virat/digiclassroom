@@ -21,6 +21,17 @@ import useSWR, { mutate } from 'swr'
 import UploadProgressModal from '@/components/admin/UploadProgressModal'
 import ContentOverview from '@/components/admin/ContentOverview'
 import DocumentManagement from '@/components/admin/DocumentManagement'
+import {
+  getDomains,
+  getCourses,
+  getLevels,
+  getSubjects,
+  getBooks,
+  labelForDomain,
+  labelForCourse,
+  labelForLevel,
+  MEDIUMS,
+} from '@/config/content-taxonomy'
 
 function HealthWidget() {
   const fetcher = (url: string) => fetch(url).then(r => r.json())
@@ -104,20 +115,78 @@ export default function UploadPage() {
   const [activeUploadId, setActiveUploadId] = useState<string | null>(null)
   const lastFormRef = useRef<FormData | null>(null)
   const [activeTab, setActiveTab] = useState<'upload' | 'overview' | 'manage'>('upload')
+  const [ingestMode, setIngestMode] = useState<'pdf' | 'markdown'>('pdf')
+  const [mdSkipped, setMdSkipped] = useState<string[]>([])
+  // Cascading hierarchy: domain → course → level → subject → book → medium → title.
+  // domain/course/level hold taxonomy IDs; subject/book/medium hold display values.
   const [formData, setFormData] = useState({
     file: null as File | null,
-    classLevel: '',
+    domain: '',
+    course: '',
+    level: '',
     subject: '',
-    bookTitle: '',
-    board: '',
-    medium: ''
+    book: '',
+    medium: '',
+    bookTitle: ''
   })
+
+  const handleMarkdownSubmit = async () => {
+    if (!formData.file) {
+      alert('Please choose an enriched Markdown (.md) file')
+      return
+    }
+    if (!formData.file.name.toLowerCase().endsWith('.md')) {
+      alert('Curated lane expects a .md file. Switch to PDF mode for PDFs.')
+      return
+    }
+
+    setIsUploading(true)
+    setUploadProgress(10)
+    setResult(null)
+    setMdSkipped([])
+    setCurrentStep('Parsing enriched markdown...')
+    setShowProgressModal(true)
+
+    try {
+      const uploadId = Math.random().toString(36).slice(2)
+      setActiveUploadId(uploadId)
+
+      const body = new FormData()
+      body.append('file', formData.file)
+      body.append('uploadId', uploadId)
+
+      setUploadProgress(50)
+      setCurrentStep('Embedding + indexing to Qdrant...')
+
+      const response = await fetch('/api/super-admin/content/ingest-markdown', {
+        method: 'POST',
+        body,
+        headers: { 'X-Upload-Id': uploadId },
+      })
+      const json = await response.json()
+
+      setUploadProgress(100)
+      setCurrentStep(json.success ? 'Indexed successfully!' : 'Failed')
+      setResult(json)
+      setMdSkipped(Array.isArray(json.skipped) ? json.skipped : [])
+      if (!response.ok || !json.success) console.warn('Markdown ingest returned error:', json)
+    } catch (err) {
+      setResult({ success: false, error: err instanceof Error ? err.message : 'Ingest failed' } as unknown as UploadResult)
+    } finally {
+      setIsUploading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!formData.file || !formData.classLevel || !formData.subject || !formData.bookTitle || !formData.board || !formData.medium) {
-      alert('Please fill in all fields including Board and Medium')
+    if (ingestMode === 'markdown') {
+      await handleMarkdownSubmit()
+      return
+    }
+
+    if (!formData.file || !formData.domain || !formData.course || !formData.level || !formData.subject || !formData.book || !formData.medium || !formData.bookTitle) {
+      alert('Please complete every step: domain, course, level, subject, book, medium, title and file.')
       return
     }
 
@@ -126,10 +195,18 @@ export default function UploadPage() {
     setResult(null)
 
     try {
+      // Resolve taxonomy IDs to human-readable labels for storage/retrieval.
+      const domainLabel = labelForDomain(formData.domain)
+      const courseLabel = labelForCourse(formData.domain, formData.course)
+      const levelLabel = labelForLevel(formData.domain, formData.course, formData.level)
+
       const uploadFormData = new FormData()
       uploadFormData.append('file', formData.file)
-      uploadFormData.append('classLevel', formData.classLevel)
+      uploadFormData.append('domain', domainLabel)
+      uploadFormData.append('course', courseLabel)
+      uploadFormData.append('level', levelLabel)
       uploadFormData.append('subject', formData.subject)
+      uploadFormData.append('book', formData.book)
       uploadFormData.append('bookTitle', formData.bookTitle)
 
       // Generate uploadId and wire up SSE progress
@@ -219,7 +296,6 @@ export default function UploadPage() {
       setActiveUploadId(uploadId)
       setShowProgressModal(true)
 
-      uploadFormData.append('board', formData.board)
       uploadFormData.append('medium', formData.medium)
       lastFormRef.current = uploadFormData
 
@@ -377,125 +453,166 @@ export default function UploadPage() {
               </div>
             </div>
 
+            {/* Ingestion mode toggle — super-admin chooses the lane */}
+            <div className="mb-6">
+              <div className="inline-flex rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-1">
+                {([
+                  { key: 'pdf', label: 'PDF · Extract-Kit (auto)' },
+                  { key: 'markdown', label: 'Enriched Markdown (curated)' },
+                ] as const).map(({ key, label }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setIngestMode(key)}
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
+                      ingestMode === key
+                        ? 'bg-gradient-to-r from-orange-500 to-blue-600 text-white shadow'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                {ingestMode === 'pdf'
+                  ? 'Automated OCR + layout + metadata extraction. Use for bulk / un-curated PDFs.'
+                  : 'Human-validated markdown (from a chapter skill). Skips OCR — metadata & printed page numbers are read from the file frontmatter for exact citations.'}
+              </p>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Class Level
-                  </label>
-                  <select
-                    value={formData.classLevel}
-                    onChange={(e) => setFormData({ ...formData, classLevel: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300"
-                    required
-                  >
-                    <option value="">Select Class</option>
-                    <option value="Class I">Class I</option>
-                    <option value="Class II">Class II</option>
-                    <option value="Class III">Class III</option>
-                    <option value="Class IV">Class IV</option>
-                    <option value="Class V">Class V</option>
-                    <option value="Class VI">Class VI</option>
-                    <option value="Class VII">Class VII</option>
-                    <option value="Class VIII">Class VIII</option>
-                    <option value="Class IX">Class IX</option>
-                    <option value="Class X">Class X</option>
-                    <option value="Class XI">Class XI</option>
-                    <option value="Class XII">Class XII</option>
-                  </select>
-                </div>
+              {ingestMode === 'pdf' && (() => {
+                const selectCls = "w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                const labelCls = "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Subject
-                  </label>
-                  <select
-                    value={formData.subject}
-                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300"
-                    required
-                  >
-                    <option value="">Select Subject</option>
-                    <option value="Mathematics">Mathematics</option>
-                    <option value="Science">Science</option>
-                    <option value="Social Science">Social Science</option>
-                    <option value="English">English</option>
-                    <option value="Hindi">Hindi</option>
-                    <option value="Economics">Economics</option>
-                    <option value="History">History</option>
-                    <option value="Geography">Geography</option>
-                    <option value="Political Science">Political Science</option>
-                    <option value="Physics">Physics</option>
-                    <option value="Chemistry">Chemistry</option>
-                    <option value="Biology">Biology</option>
-                  </select>
-                </div>
-              </div>
+                const courses = formData.domain ? getCourses(formData.domain) : []
+                const levels = formData.domain && formData.course ? getLevels(formData.domain, formData.course) : []
+                const subjects = formData.domain && formData.course && formData.level ? getSubjects(formData.domain, formData.course, formData.level) : []
+                const rawBooks = formData.subject ? getBooks(formData.domain, formData.course, formData.level, formData.subject) : []
+                const books = rawBooks.length ? rawBooks : (formData.subject ? [formData.subject] : [])
 
-              {/* Board and Medium Selection Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    <span className="flex items-center gap-2">
-                      🏛️ Education Board
-                      <span className="text-red-500">*</span>
-                    </span>
-                  </label>
-                  <select
-                    value={formData.board}
-                    onChange={(e) => setFormData({ ...formData, board: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300"
-                    required
-                  >
-                    <option value="">Select Education Board</option>
-                    <option value="CBSE">CBSE (Central Board of Secondary Education)</option>
-                    <option value="ICSE">ICSE (Indian Certificate of Secondary Education)</option>
-                    <option value="State Board">State Board</option>
-                  </select>
-                </div>
+                return (
+                  <>
+                    {/* 1 + 2 — Domain & Course */}
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className={labelCls}><span className="flex items-center gap-2">🎯 Domain<span className="text-red-500">*</span></span></label>
+                        <select
+                          value={formData.domain}
+                          onChange={(e) => setFormData({ ...formData, domain: e.target.value, course: '', level: '', subject: '', book: '' })}
+                          className={selectCls}
+                          required
+                        >
+                          <option value="">Select Domain</option>
+                          {getDomains().map((d) => (<option key={d.id} value={d.id}>{d.label}</option>))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelCls}><span className="flex items-center gap-2">📚 Course<span className="text-red-500">*</span></span></label>
+                        <select
+                          value={formData.course}
+                          onChange={(e) => setFormData({ ...formData, course: e.target.value, level: '', subject: '', book: '' })}
+                          className={selectCls}
+                          disabled={!formData.domain}
+                          required
+                        >
+                          <option value="">{formData.domain ? 'Select Course' : 'Select a domain first'}</option>
+                          {courses.map((c) => (<option key={c.id} value={c.id}>{c.label}</option>))}
+                        </select>
+                      </div>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    <span className="flex items-center gap-2">
-                      🌐 Language Medium
-                      <span className="text-red-500">*</span>
-                    </span>
-                  </label>
-                  <select
-                    value={formData.medium}
-                    onChange={(e) => setFormData({ ...formData, medium: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300"
-                    required
-                  >
-                    <option value="">Select Language Medium</option>
-                    <option value="English">English</option>
-                    <option value="Hindi">Hindi</option>
-                  </select>
-                </div>
-              </div>
+                    {/* 3 + 4 — Level & Subject */}
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className={labelCls}><span className="flex items-center gap-2">🎓 Level<span className="text-red-500">*</span></span></label>
+                        <select
+                          value={formData.level}
+                          onChange={(e) => setFormData({ ...formData, level: e.target.value, subject: '', book: '' })}
+                          className={selectCls}
+                          disabled={!formData.course}
+                          required
+                        >
+                          <option value="">{formData.course ? 'Select Level' : 'Select a course first'}</option>
+                          {levels.map((l) => (<option key={l.id} value={l.id}>{l.label}</option>))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelCls}><span className="flex items-center gap-2">🧭 Subject<span className="text-red-500">*</span></span></label>
+                        <select
+                          value={formData.subject}
+                          onChange={(e) => setFormData({ ...formData, subject: e.target.value, book: '' })}
+                          className={selectCls}
+                          disabled={!formData.level}
+                          required
+                        >
+                          <option value="">{formData.level ? 'Select Subject' : 'Select a level first'}</option>
+                          {subjects.map((s) => (<option key={s} value={s}>{s}</option>))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* 5 + 6 — Book & Medium */}
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className={labelCls}><span className="flex items-center gap-2">📖 Book<span className="text-red-500">*</span></span></label>
+                        <select
+                          value={formData.book}
+                          onChange={(e) => setFormData({ ...formData, book: e.target.value })}
+                          className={selectCls}
+                          disabled={!formData.subject}
+                          required
+                        >
+                          <option value="">{formData.subject ? 'Select Book' : 'Select a subject first'}</option>
+                          {books.map((b) => (<option key={b} value={b}>{b}</option>))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className={labelCls}><span className="flex items-center gap-2">🌐 Medium<span className="text-red-500">*</span></span></label>
+                        <select
+                          value={formData.medium}
+                          onChange={(e) => setFormData({ ...formData, medium: e.target.value })}
+                          className={selectCls}
+                          required
+                        >
+                          <option value="">Select Medium</option>
+                          {MEDIUMS.map((m) => (<option key={m} value={m}>{m}</option>))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* 7 — Book Title */}
+                    <div>
+                      <label className={labelCls}>Book Title</label>
+                      <input
+                        type="text"
+                        value={formData.bookTitle}
+                        onChange={(e) => setFormData({ ...formData, bookTitle: e.target.value })}
+                        placeholder="e.g., NCERT Economics Textbook (full title as printed)"
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300"
+                        required
+                      />
+                    </div>
+                  </>
+                )
+              })()}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Book Title
+                  {ingestMode === 'pdf' ? 'PDF File' : 'Enriched Markdown File (.md)'}
                 </label>
-                <input
-                  type="text"
-                  value={formData.bookTitle}
-                  onChange={(e) => setFormData({ ...formData, bookTitle: e.target.value })}
-                  placeholder="e.g., NCERT Economics Textbook"
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  PDF File
-                </label>
+                {ingestMode === 'markdown' && (
+                  <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+                    Metadata (book, subject, class, chapter, page numbers) is read from the file&apos;s
+                    <code className="mx-1 px-1 rounded bg-gray-100 dark:bg-gray-700">BOOK_METADATA</code>
+                    frontmatter. Only <strong>APPROVED</strong> files are indexed.
+                  </p>
+                )}
                 <div className="relative">
                   <input
                     type="file"
-                    accept=".pdf"
+                    accept={ingestMode === 'pdf' ? '.pdf' : '.md,text/markdown'}
                     onChange={(e) => setFormData({ ...formData, file: e.target.files?.[0] || null })}
                     className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
                     required
@@ -516,10 +633,22 @@ export default function UploadPage() {
                 ) : (
                   <>
                     <Upload className="h-5 w-5" />
-                    <span>Upload & Process</span>
+                    <span>{ingestMode === 'pdf' ? 'Upload & Process' : 'Ingest Curated Markdown'}</span>
                   </>
                 )}
               </button>
+
+              {/* Curated-lane audit trail: what was skipped / flagged */}
+              {ingestMode === 'markdown' && mdSkipped.length > 0 && (
+                <div className="mt-4 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
+                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-300 mb-2">
+                    Reviewer audit — {mdSkipped.length} item(s) skipped or flagged
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1 text-xs text-amber-800 dark:text-amber-200 max-h-40 overflow-y-auto">
+                    {mdSkipped.map((s, i) => <li key={i}>{s}</li>)}
+                  </ul>
+                </div>
+              )}
             </form>
 
             {/* Advanced Progress Modal */}

@@ -40,6 +40,7 @@ export class RoleBasedMenuSystem {
   private db: any;
   
   constructor() {
+        // @ts-ignore
     this.db = connectionManager.getMySQLConnection();
     this.initializeMenuConfigurations();
   }

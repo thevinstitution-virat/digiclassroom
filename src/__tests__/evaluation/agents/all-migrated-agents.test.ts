@@ -30,6 +30,7 @@ const baseMockState: Partial<TutorState> = {
     ncertScopeValid: true,
     citations: [
         {
+        // @ts-ignore
             type: 'ncert',
             id: 'cit-1',
             chapter: '3',

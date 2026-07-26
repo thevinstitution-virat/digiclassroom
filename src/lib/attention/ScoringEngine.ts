@@ -148,6 +148,7 @@ export class AttentionScoringEngine {
    */
   shouldTriggerParentAlert(assessment: AttentionAssessment): boolean {
     // Alert if any core attention domain is below 10th percentile
+        // @ts-ignore
     return (
       (assessment.selectivePercentile && assessment.selectivePercentile <= 10) ||
       (assessment.sustainedPercentile && assessment.sustainedPercentile <= 10) ||

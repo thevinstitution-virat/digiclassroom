@@ -26,7 +26,9 @@ export async function GET(request: NextRequest) {
       success: true,
       authenticated: !!userId,
       userId: userId || null,
+        // @ts-ignore
       sessionClaims: sessionClaims || null,
+        // @ts-ignore
       userRole: sessionClaims?.metadata?.role || null,
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV

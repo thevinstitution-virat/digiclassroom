@@ -41,6 +41,7 @@ async function getClient(): Promise<LangfuseClient | null> {
         });
         return lfClient;
     } catch (err) {
+        // @ts-ignore
         logger.warn({ data: (err as Error).message }, '[TracingService] Langfuse unavailable:');
         return null;
     }

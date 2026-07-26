@@ -7,4 +7,5 @@ export const constrainedGenerationGraph = buildAgentGraph({
     generationNode: constrainedGenerationNode
 });
 
+        // @ts-ignore
 registerGraph('constrained_generation', constrainedGenerationGraph);

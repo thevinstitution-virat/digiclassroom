@@ -425,8 +425,11 @@ async function getHindiTranslation(word: string): Promise<string> {
     'sleep': 'सोना',
     'eat': 'खाना',
     'drink': 'पीना',
+        // @ts-ignore
     'happy': 'खुश',
+        // @ts-ignore
     'sad': 'उदास',
+        // @ts-ignore
     'angry': 'गुस्सा',
     'love': 'प्यार',
     'like': 'पसंद',

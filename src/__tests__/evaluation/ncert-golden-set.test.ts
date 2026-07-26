@@ -415,6 +415,7 @@ describe('NCERT Golden Test Set — Citation Quality Regression Suite', () => {
     test.each(GOLDEN_SET)(
         '[%s] Grade %d %s — "%s"',
         async ({ id, grade, subject, query, expectedKeywords, expectedPageRange, pageNumberPrecisionMin = 0.9 }) => {
+        // @ts-ignore
             const rawResponse = await agentManager.executeAgent({
                 query,
                 grade,

@@ -41,6 +41,7 @@ export interface ConstrainedGenerationResponse {
 }
 
 export class TextbookConstrainedGenerator {
+        // @ts-ignore
   private llm_service: LLMService;
   private verification_engine: ContentVerificationEngine;
   
@@ -115,6 +116,7 @@ export class TextbookConstrainedGenerator {
       }
       
       // Refine prompt for next iteration
+        // @ts-ignore
       constrained_prompt = this.refinePromptBasedOnVerification(constrained_prompt, verification_result);
     }
     
@@ -193,6 +195,7 @@ export class TextbookConstrainedGenerator {
     
     const high_bloom_levels = ['analyze', 'evaluate', 'create', 'synthesis'];
     
+        // @ts-ignore
     return reasoning_patterns.some(pattern => pattern.test(query)) ||
            (bloom_level && high_bloom_levels.includes(bloom_level.toLowerCase()));
   }
@@ -307,6 +310,7 @@ Remember: You are helping a Class ${request.grade_level} student with ${request.
       create: 'Combine textbook elements in new ways as demonstrated in the material'
     };
     
+        // @ts-ignore
     return instructions[bloom_level.toLowerCase()] || instructions.understand;
   }
 

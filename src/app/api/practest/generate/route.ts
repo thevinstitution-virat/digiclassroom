@@ -11,8 +11,8 @@
 //   GET  — poll the status of an existing session (or report no active session)
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withOrgContext } from '@/lib/auth/with-org-context';
-import type { OrgContext } from '@/lib/auth/get-org-context';
+import { withTenantContext } from '@/lib/auth/with-tenant-context';
+import type { TenantContext } from '@/lib/db/tenant-scope';
 import { practestQueries } from '@/lib/db/practest-queries';
 import { presentOptions } from '@/lib/practest/options';
 import { selectQuestions } from '@/lib/practest/selection';
@@ -21,8 +21,8 @@ import { subscriptionValidationService } from '@/lib/services/subscription-valid
 
 const SECONDS_PER_QUESTION = 90;
 
-export const POST = withOrgContext(
-  async (req: NextRequest, _ctx: unknown, orgContext: OrgContext) => {
+export const POST = withTenantContext(
+  async (req: NextRequest, _ctx: unknown, orgContext: TenantContext) => {
     const { userId, orgId } = orgContext;
 
     let body: Record<string, unknown>;
@@ -173,15 +173,14 @@ export const POST = withOrgContext(
       );
     }
   },
-  { requireOrg: true },
 );
 
 // ── GET /api/practest/generate?sessionId= ────────────────────────────────────
 // With sessionId: return that session's status. Without: report no active session
 // (used by the client on mount — must not 400).
 
-export const GET = withOrgContext(
-  async (req: NextRequest, _ctx: unknown, orgContext: OrgContext) => {
+export const GET = withTenantContext(
+  async (req: NextRequest, _ctx: unknown, orgContext: TenantContext) => {
     const { userId, orgId } = orgContext;
     const sessionId = req.nextUrl.searchParams.get('sessionId');
 
@@ -222,5 +221,4 @@ export const GET = withOrgContext(
       );
     }
   },
-  { requireOrg: true },
 );

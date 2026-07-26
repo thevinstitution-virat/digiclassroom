@@ -201,9 +201,13 @@ export class HybridRetrievalEngine {
         query,
         results: validatedResults,
         strategies: {
+        // @ts-ignore
           exact: strategyResults[0],
+        // @ts-ignore
           semantic: strategyResults[1],
+        // @ts-ignore
           entity: strategyResults[2],
+        // @ts-ignore
           structural: strategyResults[3]
         },
         totalResults: validatedResults.length,
@@ -216,6 +220,7 @@ export class HybridRetrievalEngine {
 
     } catch (error) {
       console.error('❌ Hybrid retrieval failed:', error);
+        // @ts-ignore
       throw new Error(`Hybrid retrieval failed: ${error.message}`);
     }
   }

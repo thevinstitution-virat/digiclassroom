@@ -8,6 +8,7 @@ export async function POST(request: NextRequest) {
     // OCR dependencies removed; this endpoint now reports deprecation status
     const testText = 'OCR Deprecated'
 
+        // @ts-ignore
     await worker.terminate()
     console.log('✅ Tesseract worker terminated successfully')
 

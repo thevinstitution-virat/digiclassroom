@@ -146,6 +146,7 @@ export class ServiceWorkerManager {
     if (!this.registration) return
 
     try {
+        // @ts-ignore
       await this.registration.sync.register('vg-kosh-sync')
       console.log('Background sync registered')
     } catch (error) {

@@ -4,6 +4,13 @@
  */
 
 // Dynamic imports to avoid SSR issues
+let offlineDB: any = null;
+let serviceWorkerManager: any = null;
+
+if (typeof window !== 'undefined') {
+  import('./offlineDB').then(m => offlineDB = m.getOfflineDB()).catch(console.error);
+  import('./serviceWorker').then(m => serviceWorkerManager = m.getServiceWorkerManager()).catch(console.error);
+}
 
 export interface SyncStatus {
   isOnline: boolean
@@ -98,17 +105,14 @@ export class OfflineSyncManager {
    */
   private async loadSyncStatus(): Promise<void> {
     try {
-      const { getOfflineDB } = await import('./offlineDB')
-      const offlineDB = getOfflineDB()
-
-      const lastSyncTime = await offlineDB.getSetting('lastSyncTime')
+      const lastSyncTime = await offlineDB?.getSetting('lastSyncTime')
       if (lastSyncTime) {
         this.syncStatus.lastSyncTime = new Date(lastSyncTime)
       }
 
       // Count pending items
-      const pendingItems = await offlineDB.getSyncQueue()
-      this.syncStatus.pendingItems = pendingItems.length
+      const pendingItems = await offlineDB?.getSyncQueue()
+      this.syncStatus.pendingItems = pendingItems?.length || 0
 
       this.notifyListeners()
     } catch (error) {
@@ -175,7 +179,7 @@ export class OfflineSyncManager {
       
       this.syncStatus.lastSyncTime = new Date()
       this.syncStatus.pendingItems = result.failed
-      await offlineDB.storeSetting('lastSyncTime', this.syncStatus.lastSyncTime.toISOString())
+      await offlineDB?.storeSetting('lastSyncTime', this.syncStatus.lastSyncTime.toISOString())
 
       return result
     } catch (error) {
@@ -199,7 +203,7 @@ export class OfflineSyncManager {
    * Perform the actual sync operation
    */
   private async performSync(): Promise<SyncResult> {
-    const syncQueue = await offlineDB.getSyncQueue()
+    const syncQueue = await offlineDB?.getSyncQueue() || []
     let synced = 0
     let failed = 0
     const errors: string[] = []
@@ -218,7 +222,7 @@ export class OfflineSyncManager {
 
         if (response.ok) {
           // Successfully synced, remove from queue
-          await offlineDB.removeFromSyncQueue(item.id!)
+          await offlineDB?.removeFromSyncQueue(item.id!)
           synced++
         } else {
           // Server error, keep in queue but increment retry count
@@ -245,7 +249,7 @@ export class OfflineSyncManager {
    */
   async queueForSync(url: string, method: string, data: any): Promise<void> {
     try {
-      await offlineDB.addToSyncQueue({
+      await offlineDB?.addToSyncQueue({
         url,
         method,
         headers: {
@@ -322,9 +326,9 @@ export class OfflineSyncManager {
    */
   async clearSyncQueue(): Promise<void> {
     try {
-      const syncQueue = await offlineDB.getSyncQueue()
+      const syncQueue = await offlineDB?.getSyncQueue() || []
       for (const item of syncQueue) {
-        await offlineDB.removeFromSyncQueue(item.id!)
+        await offlineDB?.removeFromSyncQueue(item.id!)
       }
       
       this.syncStatus.pendingItems = 0
@@ -338,7 +342,7 @@ export class OfflineSyncManager {
    * Get sync statistics
    */
   async getSyncStats(): Promise<any> {
-    const syncQueue = await offlineDB.getSyncQueue()
+    const syncQueue = await offlineDB?.getSyncQueue() || []
     const lastSyncTime = this.syncStatus.lastSyncTime
     
     return {
@@ -349,7 +353,7 @@ export class OfflineSyncManager {
       syncProgress: this.syncStatus.syncProgress,
       errors: this.syncStatus.errors.length,
       oldestPendingItem: syncQueue.length > 0 ? 
-        Math.min(...syncQueue.map(item => item.timestamp)) : null
+        Math.min(...syncQueue.map((item: any) => item.timestamp)) : null
     }
   }
 
@@ -358,7 +362,7 @@ export class OfflineSyncManager {
    */
   estimateSyncTime(): number {
     // Estimate based on pending items and connection speed
-    const connectionInfo = serviceWorkerManager.getConnectionInfo()
+    const connectionInfo = serviceWorkerManager?.getConnectionInfo()
     const pendingItems = this.syncStatus.pendingItems
     
     if (pendingItems === 0)
@@ -396,7 +400,7 @@ export class OfflineSyncManager {
   return false
     
     // Don't sync on slow connections unless it's been a while
-    if (serviceWorkerManager.isSlowConnection()) {
+    if (serviceWorkerManager?.isSlowConnection()) {
       const lastSync = this.syncStatus.lastSyncTime
       if (lastSync) {
         const hoursSinceLastSync = (Date.now() - lastSync.getTime()) / (1000 * 60 * 60)
@@ -416,7 +420,7 @@ export class OfflineSyncManager {
     if (!this.syncStatus.isOnline) {
       recommendations.push('Connect to internet to sync your data')
     } else if (this.syncStatus.pendingItems > 0) {
-      if (serviceWorkerManager.isSlowConnection()) {
+      if (serviceWorkerManager?.isSlowConnection()) {
         recommendations.push('Slow connection detected - sync when on WiFi for better experience')
       } else {
         recommendations.push('Sync now to backup your progress')

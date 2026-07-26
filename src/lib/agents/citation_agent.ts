@@ -230,7 +230,9 @@ export class CitationAgent {
     }
 
     // Include extraction method if present
+        // @ts-ignore
     if (source.metadata?.extraction_method) {
+        // @ts-ignore
       parts.push(`(${source.metadata.extraction_method})`);
     }
 

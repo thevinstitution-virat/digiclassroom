@@ -6,7 +6,7 @@ import { Textarea } from '@/components/core/ui/textarea'
 import { Card, CardContent } from '@/components/core/ui/card'
 import { VoiceRecordingButton } from './VoiceRecordingButton'
 import { FileProcessingIndicator } from './FileProcessingIndicator'
-import { Paperclip, Send, X, FileText, Image, Mic } from 'lucide-react'
+import { Paperclip, Send, X, FileText, Image, Mic, Upload } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import { voiceCommandsService } from '@/lib/services/voice-commands-service'
@@ -29,6 +29,8 @@ interface MultiModalInputProps {
     classLevel?: string
     subject?: string
   }
+  /** Optional controls rendered as a slim toolbar at the top of the input card (e.g. tutor selector). */
+  headerSlot?: React.ReactNode
 }
 
 interface ProcessingFile {
@@ -50,7 +52,8 @@ export function MultiModalInput({
   disabled = false,
   placeholder = "Type your message or use voice...",
   className,
-  context
+  context,
+  headerSlot
 }: MultiModalInputProps) {
   const [uploadedFile, setUploadedFile] = useState<ProcessingFile | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -286,6 +289,13 @@ export function MultiModalInput({
         onDrop={handleDrop}
       >
         <CardContent className="p-4">
+          {/* Header toolbar (e.g. tutor selector) — slim row above the input */}
+          {headerSlot && (
+            <div className="mb-2.5 flex items-center justify-between gap-2 border-b border-orange-100/60 pb-2.5">
+              {headerSlot}
+            </div>
+          )}
+
           {/* Drag and Drop Overlay */}
           <AnimatePresence>
             {isDragOver && (

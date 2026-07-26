@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Run detection
+        // @ts-ignore
     const detections = await smartDetectionService.detectAndEnrich(content);
 
     // Combine all detections

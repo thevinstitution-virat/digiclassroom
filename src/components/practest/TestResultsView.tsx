@@ -49,8 +49,11 @@ interface ResultsShape {
   difficultyPerformance?: Breakdown[]
 }
 
+import { type NormalizedResult } from '@/types/quiz'
+
 interface TestResultsViewProps {
-  results: ResultsShape
+  results?: ResultsShape
+  batchResult?: NormalizedResult
   onBackToGenerator: () => void
   onViewHistory: () => void
 }
@@ -58,17 +61,40 @@ interface TestResultsViewProps {
 const accuracyVariant = (a: number): 'success' | 'warning' | 'destructive' =>
   a >= 80 ? 'success' : a >= 60 ? 'warning' : 'destructive'
 
-export default function TestResultsView({ results, onBackToGenerator, onViewHistory }: TestResultsViewProps) {
+export default function TestResultsView({ results, batchResult, onBackToGenerator, onViewHistory }: TestResultsViewProps) {
   const [tab, setTab] = useState('overview')
 
-  const percentage = Math.round(results?.percentage ?? 0)
-  const totalScore = results?.totalScore ?? 0
-  const maxScore = results?.maxPossibleScore ?? 0
-  const correct = results?.correct ?? 0
-  const total = results?.total ?? 0
-  const questionResults = results?.questionResults ?? []
-  const topicPerformance = results?.topicPerformance ?? []
-  const difficultyPerformance = results?.difficultyPerformance ?? []
+  let computedResults = results
+  if (batchResult) {
+    computedResults = {
+      percentage: batchResult.score,
+      totalScore: batchResult.correctAnswers,
+      maxPossibleScore: batchResult.totalQuestions,
+      correct: batchResult.correctAnswers,
+      total: batchResult.totalQuestions,
+      questionResults: batchResult.breakdown.map(b => ({
+        questionId: b.questionId,
+        questionText: b.questionText,
+        yourAnswerText: b.selectedOptionId ? (b.selectedOptionId === b.correctOptionId ? 'Correct Option' : 'Incorrect Option') : 'Not answered',
+        correctAnswerText: 'Correct Option',
+        isCorrect: b.isCorrect,
+        marksAwarded: b.isCorrect ? 1 : 0,
+        maxMarks: 1,
+        difficulty: null,
+        topic: null,
+        explanation: b.explanation || null,
+      }))
+    }
+  }
+
+  const percentage = Math.round(computedResults?.percentage ?? 0)
+  const totalScore = computedResults?.totalScore ?? 0
+  const maxScore = computedResults?.maxPossibleScore ?? 0
+  const correct = computedResults?.correct ?? 0
+  const total = computedResults?.total ?? 0
+  const questionResults = computedResults?.questionResults ?? []
+  const topicPerformance = computedResults?.topicPerformance ?? []
+  const difficultyPerformance = computedResults?.difficultyPerformance ?? []
 
   const badge =
     percentage >= 90 ? { variant: 'success' as const, text: 'Excellent' }

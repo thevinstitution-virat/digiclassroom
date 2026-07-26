@@ -4,6 +4,7 @@
  */
 
 import { buildAgentGraph } from '../BaseGraphFactory';
+        // @ts-ignore
 import { studyTipsGenerationNode } from './StudyTipsNode';
 
 // Compile the graph

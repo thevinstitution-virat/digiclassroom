@@ -2,14 +2,14 @@
 // Today's practice-test usage vs. the plan's daily limit (trial = 5/day).
 
 import { NextRequest, NextResponse } from 'next/server'
-import { withOrgContext } from '@/lib/auth/with-org-context'
-import type { OrgContext } from '@/lib/auth/get-org-context'
+import { withTenantContext } from '@/lib/auth/with-tenant-context'
+import type { TenantContext } from '@/lib/db/tenant-scope'
 import { practestQueries } from '@/lib/db/practest-queries'
 import { practestDailyLimit } from '@/lib/practest/limits'
 import { subscriptionValidationService } from '@/lib/services/subscription-validation-service'
 
-export const GET = withOrgContext(
-  async (_req: NextRequest, _ctx: unknown, orgContext: OrgContext) => {
+export const GET = withTenantContext(
+  async (_req: NextRequest, _ctx: unknown, orgContext: TenantContext) => {
     try {
       const sub = await subscriptionValidationService.getUserSubscription(orgContext.userId)
       const limit = practestDailyLimit(sub?.plan_code)
@@ -31,5 +31,4 @@ export const GET = withOrgContext(
       return NextResponse.json({ success: false, error: 'Failed to load usage' }, { status: 500 })
     }
   },
-  { requireOrg: true },
 )

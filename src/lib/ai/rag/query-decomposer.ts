@@ -35,6 +35,7 @@ export interface QueryDecomposition {
 }
 
 export class QueryDecomposer {
+        // @ts-ignore
   private openai: OpenAI;
   private maxSubQueries: number;
   private complexityThreshold: number;

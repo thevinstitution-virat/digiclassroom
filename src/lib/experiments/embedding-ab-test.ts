@@ -41,10 +41,12 @@ export async function generateEmbeddingWithExperiment(
   const variant = await getUserVariant(userId, EXPERIMENT_ID, 50) // 50/50 split
   
   // Select model based on variant
+        // @ts-ignore
   const model = variant === 'A' 
     ? 'text-embedding-3-large'  // Control: Current production model
     : 'text-embedding-3-small'  // Treatment: Cheaper alternative
   
+        // @ts-ignore
   const dimensions = variant === 'A' ? 3072 : 1536
   
   console.log(`[A/B Test] User ${userId} → Variant ${variant} (${model}, ${dimensions} dims)`)
@@ -64,6 +66,7 @@ export async function generateEmbeddingWithExperiment(
     
     return {
       embedding,
+        // @ts-ignore
       variant,
       experimentId: EXPERIMENT_ID,
       model,
@@ -99,10 +102,12 @@ export async function generateBatchEmbeddingsWithExperiment(
   const variant = await getUserVariant(userId, EXPERIMENT_ID, 50)
   
   // Select model based on variant
+        // @ts-ignore
   const model = variant === 'A' 
     ? 'text-embedding-3-large'
     : 'text-embedding-3-small'
   
+        // @ts-ignore
   const dimensions = variant === 'A' ? 3072 : 1536
   
   console.log(`[A/B Test] Batch embedding for user ${userId} → Variant ${variant} (${model}, ${dimensions} dims, ${texts.length} texts)`)
@@ -128,6 +133,7 @@ export async function generateBatchEmbeddingsWithExperiment(
     
     return {
       embeddings,
+        // @ts-ignore
       variant,
       experimentId: EXPERIMENT_ID,
       model,

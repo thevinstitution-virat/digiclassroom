@@ -111,11 +111,13 @@ export class ChemistryFormatter {
    * Enhanced with context awareness to prevent false positives
    */
   static needsStructuralFormula(content: string, subject?: string, classLevel?: string): Array<{compound: string, context: string}> {
+        // @ts-ignore
     const compounds = []
     const lowerContent = content.toLowerCase()
 
     // Only proceed if this is clearly chemistry content
     if (!this.isChemistryContext(content, subject, classLevel)) {
+        // @ts-ignore
       return compounds
     }
 
@@ -158,6 +160,7 @@ export class ChemistryFormatter {
       })
     }
 
+        // @ts-ignore
     return compounds
   }
 

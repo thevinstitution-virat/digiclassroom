@@ -174,6 +174,7 @@ export class EnhancedFidelityEngine {
       // Calculate cosine similarity
       return this.cosineSimilarity(sentenceEmbedding, sourceEmbedding);
     } catch (error) {
+        // @ts-ignore
       console.warn('⚠️ Semantic similarity calculation failed:', error.message);
       return 0;
     }

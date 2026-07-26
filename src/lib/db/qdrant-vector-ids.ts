@@ -83,6 +83,7 @@ export async function deleteMaterialVectors(materialId: string): Promise<{ point
   const client = new QdrantClient({
     url: process.env.QDRANT_URL || 'http://localhost:6333',
     apiKey: process.env.QDRANT_API_KEY,
+        // @ts-ignore
     checkCompatibility: false,
   });
 

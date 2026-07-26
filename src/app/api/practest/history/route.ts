@@ -5,8 +5,8 @@
 //   Lock 2: practestQueries(orgId).getSessionsByUser() — org-scoped session list
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withOrgContext } from '@/lib/auth/with-org-context';
-import type { OrgContext } from '@/lib/auth/get-org-context';
+import { withTenantContext } from '@/lib/auth/with-tenant-context';
+import type { TenantContext } from '@/lib/db/tenant-scope';
 import { practestQueries } from '@/lib/db/practest-queries';
 
 // ── GET /api/practest/history ─────────────────────────────────────────────────
@@ -14,8 +14,8 @@ import { practestQueries } from '@/lib/db/practest-queries';
 // org_admin / owner can optionally pass ?userId= to view another user's history.
 // super_admin sees everything via practestQueries(null).
 
-export const GET = withOrgContext(
-  async (req: NextRequest, _ctx: unknown, orgContext: OrgContext) => {
+export const GET = withTenantContext(
+  async (req: NextRequest, _ctx: unknown, orgContext: TenantContext) => {
     const { userId, orgId, orgRole, isPlatformBypass } = orgContext;
     const { searchParams } = req.nextUrl;
 
@@ -64,5 +64,4 @@ export const GET = withOrgContext(
       );
     }
   },
-  { requireOrg: true },
 );

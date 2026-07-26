@@ -10,8 +10,8 @@
 // what this org's students can actually be tested on.
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withOrgContext } from '@/lib/auth/with-org-context';
-import type { OrgContext } from '@/lib/auth/get-org-context';
+import { withTenantContext } from '@/lib/auth/with-tenant-context';
+import { tenantScope, type TenantContext } from '@/lib/db/tenant-scope';
 import { db } from '@/db';
 import { materials } from '@/db/schema';
 import { and, eq, sql } from 'drizzle-orm';
@@ -32,20 +32,19 @@ const NCERT_SUBJECTS_BY_GRADE: Record<number, string[]> = {
 // Returns available subjects and grades for this org.
 // ?grade=10 filters to a specific grade.
 
-export const GET = withOrgContext(
-  async (req: NextRequest, _ctx: unknown, orgContext: OrgContext) => {
-    const { orgId, isPlatformBypass } = orgContext;
+export const GET = withTenantContext(
+  async (req: NextRequest, _ctx: unknown, orgContext: TenantContext) => {
     const { searchParams } = req.nextUrl;
     const gradeParam = searchParams.get('grade');
     const grade = gradeParam ? parseInt(gradeParam, 10) : undefined;
 
     try {
-      // ── Lock 2: derive chapter list from org's own ingested materials ──────
+      // ── Lock 2: derive chapter list from this caller's materials ───────────
+      // org member → org + global (NCERT base); B2C → global; platform → all.
       const conditions = [];
 
-      if (!isPlatformBypass) {
-        conditions.push(eq(materials.organizationId, orgId));
-      }
+      const orgFilter = tenantScope(orgContext).orgOrGlobal(materials);
+      if (orgFilter) conditions.push(orgFilter);
       if (grade !== undefined && !isNaN(grade)) {
         conditions.push(eq(materials.class, grade));
       }
@@ -113,5 +112,4 @@ export const GET = withOrgContext(
       );
     }
   },
-  { requireOrg: true },
 );

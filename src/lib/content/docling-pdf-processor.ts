@@ -125,6 +125,7 @@ export class DoclingPDFProcessor {
       return {
         ...result,
         stats: {
+        // @ts-ignore
           ...result.stats,
           processing_time: processingTime
         }

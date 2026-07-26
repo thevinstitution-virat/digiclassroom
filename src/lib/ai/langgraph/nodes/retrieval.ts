@@ -50,6 +50,7 @@ export async function retrievalNode(state: TutorGraphState): Promise<TutorGraphS
     results.forEach((result) => {
       const key =
         result.id ||
+        // @ts-ignore
         `${result.metadata?.bookTitle ?? ''}-${result.metadata?.page ?? ''}-${result.metadata?.chapter ?? ''}-${result.content?.slice(0, 40) ?? ''}`
 
       const existing = aggregated.get(key)

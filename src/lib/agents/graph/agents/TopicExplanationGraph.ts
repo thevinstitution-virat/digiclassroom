@@ -7,4 +7,5 @@ export const topicExplanationGraph = buildAgentGraph({
     generationNode: topicExplanationNode
 });
 
+        // @ts-ignore
 registerGraph('topic_explanation', topicExplanationGraph);

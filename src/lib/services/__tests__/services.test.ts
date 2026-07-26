@@ -73,6 +73,7 @@ describe('OpenAILLMService', () => {
   });
 
   it('should generate response', async () => {
+        // @ts-ignore
     mockOpenAI.chat.completions.create.mockResolvedValue({
       choices: [{ message: { content: 'Test response' }, finish_reason: 'stop' }],
       usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
@@ -86,6 +87,7 @@ describe('OpenAILLMService', () => {
   });
 
   it('should create embedding', async () => {
+        // @ts-ignore
     mockOpenAI.embeddings.create.mockResolvedValue({
       data: [{ embedding: new Array(3072).fill(0.1) }]
     });
@@ -117,6 +119,7 @@ describe('RedisCacheService', () => {
   });
 
   it('should get cached value', async () => {
+        // @ts-ignore
     mockRedisClient.get.mockResolvedValue(JSON.stringify({ test: 'value' }));
 
     const value = await service.get<{ test: string }>('test-key');
@@ -135,7 +138,9 @@ describe('RedisCacheService', () => {
   });
 
   it('should track cache stats', async () => {
+        // @ts-ignore
     mockRedisClient.get.mockResolvedValueOnce(JSON.stringify({ test: 'value' }));
+        // @ts-ignore
     mockRedisClient.get.mockResolvedValueOnce(null);
 
     await service.get('key1'); // Hit

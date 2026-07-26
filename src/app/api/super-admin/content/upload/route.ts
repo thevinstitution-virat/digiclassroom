@@ -65,14 +65,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Parse form data
+    // Parse form data — new content hierarchy:
+    // domain → course → level → subject (umbrella) → book (leaf) → medium → title
     const formData = await request.formData()
     const file = formData.get('file') as File
-    const classLevel = formData.get('classLevel') as string
-    const subject = formData.get('subject') as string
-    const bookTitle = formData.get('bookTitle') as string
-    const board = formData.get('board') as string
+    const domain = formData.get('domain') as string
+    const course = formData.get('course') as string
+    const level = formData.get('level') as string
+    const subjectGroup = formData.get('subject') as string   // umbrella, e.g. "Social Science"
+    const book = formData.get('book') as string              // leaf, e.g. "Economics"
     const medium = formData.get('medium') as string
+    const bookTitle = formData.get('bookTitle') as string
     const uploadId = (formData.get('uploadId') as string) || undefined
     // Optional: scope this content to a specific institution's vectors.
     // Omitted = global content (NCERT base), readable by every org.
@@ -103,9 +106,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (!file || !classLevel || !subject || !bookTitle || !board || !medium) {
+    if (!file || !domain || !course || !level || !subjectGroup || !book || !medium || !bookTitle) {
       return NextResponse.json(
-        { success: false, error: 'File, class level, subject, book title, board, and medium are all required' },
+        { success: false, error: 'File, domain, course, level, subject, book, medium, and book title are all required' },
         { status: 400 }
       )
     }
@@ -128,7 +131,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`📚 Starting enhanced upload for: ${file.name}`)
-    console.log(`📋 Metadata: ${board} ${classLevel} ${subject} (${medium}) - ${bookTitle}`)
+    console.log(`📋 Hierarchy: ${domain} / ${course} / ${level} / ${subjectGroup} > ${book} (${medium}) - ${bookTitle}`)
 
     let tempFilePath: string | null = null
 
@@ -144,17 +147,31 @@ export async function POST(request: NextRequest) {
       // Write file to disk
       await writeFile(tempFilePath, buffer)
 
-      // Prepare metadata for enhanced processing with normalization
-      const normalizedClassLevel = normalizeClassLevel(classLevel);
+      // Prepare metadata for enhanced processing with normalization.
+      // Mapping rationale (see content-taxonomy.ts): the tutor retrieves by the
+      // LEAF the student studies, which is `book` — so the searchable `subject`
+      // payload = book, and the umbrella subject is preserved as `subjectGroup`.
+      const normalizedClassLevel = normalizeClassLevel(level);
       const metadata = {
-        classLevel: normalizedClassLevel,  // Normalized to Arabic numbers (e.g., "9" instead of "Class IX")
-        subject,
+        // Searchable leaf (e.g. "Economics") — what the AI tutor filters on
+        subject: book,
+        // Umbrella subject (e.g. "Social Science")
+        subjectGroup,
+        // Full content hierarchy (human-readable labels)
+        domain,
+        course,
+        level,
+        book,
         bookTitle,
-        curriculum: board, // Use selected board instead of default
-        language: medium   // Use selected medium instead of default
+        // Legacy/compat fields consumed by existing retrieval + payload builder
+        classLevel: normalizedClassLevel,  // Arabic number (e.g., "9")
+        curriculum: course,                // board === course in the new model
+        board: course,
+        language: medium,
+        medium
       }
 
-      console.log(`📝 Metadata normalization: "${classLevel}" → "${normalizedClassLevel}"`);
+      console.log(`📝 Level normalization: "${level}" → "${normalizedClassLevel}"`);
 
       // Always use doc-extract-engine for all document processing
       console.log('🚀 Using doc-extract-engine Pipeline (Single-Tier Processing)')

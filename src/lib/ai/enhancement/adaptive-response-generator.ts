@@ -187,6 +187,7 @@ export class AdaptiveResponseGenerator {
     strategies: string[]
   ): string {
     let adapted = content;
+        // @ts-ignore
     const styleAdaptations = this.LEARNING_STYLE_ADAPTATIONS[options.learningStyle];
 
     if (!styleAdaptations)
@@ -255,6 +256,7 @@ export class AdaptiveResponseGenerator {
       // Simplify language and add more support
       adapted = this.simplifyLanguage(adapted);
       adapted += '\n\n**💪 Building Confidence:**\n';
+        // @ts-ignore
       adapted += performanceAdaptations.encouragement.slice(0, 2).map(enc => `• ${enc}`).join('\n') + '\n';
       strategies.push('Applied struggling learner adaptations');
     } else if (options.performanceLevel === 'advanced' || options.performanceLevel === 'gifted') {
@@ -307,6 +309,7 @@ export class AdaptiveResponseGenerator {
     const tips: string[] = [];
 
     // Learning style tips
+        // @ts-ignore
     const styleAdaptations = this.LEARNING_STYLE_ADAPTATIONS[options.learningStyle];
     if (styleAdaptations) {
       tips.push(...styleAdaptations.enhancements.slice(0, 2));
@@ -358,6 +361,7 @@ export class AdaptiveResponseGenerator {
    * Generate learning style enhancements
    */
   private static generateLearningStyleEnhancements(options: AdaptiveOptions): string[] {
+        // @ts-ignore
     const styleAdaptations = this.LEARNING_STYLE_ADAPTATIONS[options.learningStyle];
     return styleAdaptations ? styleAdaptations.enhancements : [];
   }

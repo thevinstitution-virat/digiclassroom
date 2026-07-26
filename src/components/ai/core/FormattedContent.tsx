@@ -54,7 +54,7 @@ interface FormattedContentProps {
   className?: string
 }
 
-export default function FormattedContent({
+function FormattedContent({
   content,
   options = {},
   showMetadata = false,
@@ -195,8 +195,11 @@ export default function FormattedContent({
     }
   }, [content, options])
 
-  // Loading state
-  if (isLoading) {
+  // Loading state — only on the FIRST format (no prior result yet).
+  // On re-formats we keep the previous content visible instead of flashing
+  // this spinner, which otherwise causes whole-screen flicker when the parent
+  // re-renders (e.g. on every keystroke in the chat input).
+  if (isLoading && !formattingResult) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="flex items-center space-x-2 text-gray-600">
@@ -375,6 +378,11 @@ export default function FormattedContent({
     </div>
   )
 }
+
+// Memoized so an unchanged message subtree does not re-render (and re-run the
+// async format effect) when the parent page re-renders on every keystroke.
+// Relies on the parent passing a stable `options` object (see AITutorPage).
+export default React.memo(FormattedContent)
 
 // Content Type Badge Component - Hidden in production
 function ContentTypeBadge({ contentType }: { contentType: string }) {

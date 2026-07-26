@@ -7,4 +7,5 @@ export const selfStudyBuddyGraph = buildAgentGraph({
     generationNode: selfStudyBuddyNode
 });
 
+        // @ts-ignore
 registerGraph('selfstudy_buddy', selfStudyBuddyGraph);

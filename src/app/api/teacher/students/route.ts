@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
         u.id, u.email, u.first_name, u.last_name,
         u.class_id, c.name as class_name, c.grade_level,
         u.created_at as enrolled_at
-      FROM \`user\` u
+      FROM \`users\` u
       LEFT JOIN classes c ON u.class_id = c.id
       INNER JOIN teacher_class_assignments tca ON c.id = tca.class_id
       WHERE u.role = 'student'

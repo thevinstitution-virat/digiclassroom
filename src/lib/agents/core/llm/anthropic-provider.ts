@@ -31,6 +31,7 @@ export class AnthropicProvider implements ILLMProvider {
             .filter(m => m.role !== 'system')
             .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
+        // @ts-ignore
         const response = await this.client.messages.create({
             model: this.model,
             max_tokens: request.maxTokens || 1024,
@@ -63,6 +64,7 @@ export class AnthropicProvider implements ILLMProvider {
             .filter(m => m.role !== 'system')
             .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
+        // @ts-ignore
         const stream = this.client.messages.stream({
             model: this.model,
             max_tokens: request.maxTokens || 1024,

@@ -147,6 +147,7 @@ export class TokenManager {
     const driveService = new GoogleDriveService(credentials)
     
     // Attempt to refresh the access token
+        // @ts-ignore
     const newTokens = await driveService.refreshAccessToken()
     
     if (newTokens) {

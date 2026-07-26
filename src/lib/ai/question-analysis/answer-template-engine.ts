@@ -220,6 +220,7 @@ export class AnswerTemplateEngine {
       examples.push('   Everyone—including government officials—is subject to the same laws. No one is above the law.')
       examples.push('')
       examples.push('NOTICE: Introduction paragraph, ### heading before points, **bold** for point headings, blank lines for spacing.')
+        // @ts-ignore
     } else if (analysis.commandWord === 'define' && bodyFormat !== 'numbered_points') {
       examples.push('For simple DEFINE questions:')
       examples.push('"[Term] is defined as [precise textbook definition]. [Optional: One characteristic or example]."')

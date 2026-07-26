@@ -373,6 +373,7 @@ export class CBSEAnswerFormatter {
       'evaluation': ['Lack of evidence', 'No balanced judgment']
     };
 
+        // @ts-ignore
     return [...general, ...(specific[questionType] || [])];
   }
 

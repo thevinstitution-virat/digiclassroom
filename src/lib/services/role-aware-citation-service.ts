@@ -372,6 +372,7 @@ export class RoleAwareCitationService extends CitationAgent {
    * Generate language adaptation for bilingual support
    */
   private async generateLanguageAdaptation(citation: Citation, context: UserContext): Promise<any> {
+        // @ts-ignore
     if (context.languagePreference === 'mixed' || context.languagePreference === 'hindi') {
       return {
         hindiTranslation: this.translateCitationToHindi(citation),

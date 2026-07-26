@@ -122,6 +122,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Verify note belongs to user
+        // @ts-ignore
     const noteCheck = await executeQuery<NoteRow>(
       'SELECT id, user_id FROM user_notes WHERE id = ?',
       [noteId]
@@ -136,6 +137,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Fetch attachments
+        // @ts-ignore
     const attachments = await executeQuery<PdfAttachmentRow>(
       `SELECT * FROM note_pdf_attachments 
        WHERE note_id = ? 

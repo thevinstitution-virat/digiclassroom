@@ -5,6 +5,7 @@
 // only for the platform owner (super_admin).
 import BaseSidebar from '@/components/core/shared/BaseSidebar'
 import OrganizationSwitcher from '@/components/core/shared/OrganizationSwitcher'
+import { InstitutionSwitcher } from '@/components/core/super-admin/InstitutionSwitcher'
 import { PLATFORM_NAV, visibleNav } from '@/lib/dashboard/dashboard-nav'
 
 interface AdminSidebarProps {
@@ -44,7 +45,16 @@ export default function AdminSidebar({ user, isOwner = false }: AdminSidebarProp
       profilePath="/dashboard/super-admin/profile"
       showLogout
       userRole="admin"
-      headerSlot={<OrganizationSwitcher />}
+      headerSlot={isOwner ? (
+        <div className="px-1 py-1 mb-2">
+          <p className="mb-1.5 px-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Working Context
+          </p>
+          <InstitutionSwitcher />
+        </div>
+      ) : (
+        <OrganizationSwitcher />
+      )}
     />
   )
 }

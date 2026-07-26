@@ -49,13 +49,14 @@ export interface GeneratedSession {
 
 interface ActiveTestInterfaceProps {
   session: GeneratedSession
-  onTestCompleted: (results: any) => void
+  onTestCompleted?: (results: any) => void
   onError: (error: string) => void
+  onBatchSubmit?: (answers: Record<string, string | null>) => Promise<void>
 }
 
 const LETTER = (i: number) => String.fromCharCode(65 + i)
 
-export default function ActiveTestInterface({ session, onTestCompleted, onError }: ActiveTestInterfaceProps) {
+export default function ActiveTestInterface({ session, onTestCompleted, onError, onBatchSubmit }: ActiveTestInterfaceProps) {
   const questions = session.questions ?? []
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
@@ -116,6 +117,24 @@ export default function ActiveTestInterface({ session, onTestCompleted, onError 
     completedRef.current = true
     setIsSubmitting(true)
     recordTime(questions[currentIndex]?.id)
+
+    if (onBatchSubmit) {
+      const fullAnswers: Record<string, string | null> = {}
+      questions.forEach(q => {
+        fullAnswers[q.id] = answers[q.id] ?? null
+      })
+      try {
+        await onBatchSubmit(fullAnswers)
+      } catch (err: any) {
+        completedRef.current = false
+        console.error('Failed to submit batch test:', err)
+        onError(err.message || 'Failed to submit test')
+      } finally {
+        setIsSubmitting(false)
+      }
+      return
+    }
+
     try {
       const res = await fetch('/api/practest/submit', {
         method: 'PUT',
@@ -124,7 +143,7 @@ export default function ActiveTestInterface({ session, onTestCompleted, onError 
       })
       const data = await res.json()
       if (data.success) {
-        onTestCompleted(data)
+        onTestCompleted?.(data)
       } else {
         completedRef.current = false
         onError(data.error || 'Failed to complete test')

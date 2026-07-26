@@ -7,4 +7,5 @@ export const homeworkHelpGraph = buildAgentGraph({
     generationNode: homeworkHelpNode
 });
 
+        // @ts-ignore
 registerGraph('homework_help', homeworkHelpGraph);

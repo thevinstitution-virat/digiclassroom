@@ -11,6 +11,9 @@ import AnswerActionButtons from '@/components/ai/AnswerActionButtons'
 import { User, Bot, BookOpen, FileText, Loader2, X, Zap } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MultiModalInput } from '@/components/ai/tutor/MultiModalInput'
+import { AgentSelector } from '@/components/ai/tutor/AgentSelector'
+import { SubjectSelector } from '@/components/ai/tutor/SubjectSelector'
+import { LengthSelector } from '@/components/ai/tutor/LengthSelector'
 import { ChatHistoryPanel } from '@/components/ai/tutor/ChatHistoryPanel'
 import { StreamingChatMessage } from '@/components/ai/chat/StreamingChatMessage'
 import { ChatErrorBoundary } from '@/components/core/common/ChatErrorBoundary'
@@ -31,6 +34,7 @@ export default function AITutorPage() {
     fileContent, setFileContent,
     isProcessingFile, setIsProcessingFile,
     voiceCommand, setVoiceCommand,
+    answerLength, setAnswerLength,
     sessionId,
     agentStreamState, sendMessage, resetStream,
     conversationState, setConversationState,
@@ -82,6 +86,23 @@ export default function AITutorPage() {
     messagesEndRef,
     abortControllerRef
   } = useAiTutor();
+
+  // Stable options identity for FormattedContent. Without this, a fresh object
+  // literal on every keystroke re-fired FormattedContent's format effect and
+  // flashed every message to its loading spinner → whole-screen flicker.
+  const formattedContentOptions = React.useMemo(() => ({
+    classLevel: conversationState.context.classLevel || undefined,
+    subject: conversationState.selectedSubject || selectedSubject || 'general',
+    userRole: conversationState.selectedRole || 'student',
+    enableAdvancedFormatting: true,
+    enableAccessibilityFeatures: true,
+    enableDiagramGeneration: true
+  }), [
+    conversationState.context.classLevel,
+    conversationState.selectedSubject,
+    conversationState.selectedRole,
+    selectedSubject
+  ]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50/30 via-blue-50/40 to-indigo-100/50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900">
@@ -197,14 +218,7 @@ export default function AITutorPage() {
                                     return (
                                       <FormattedContent
                                         content={message.content}
-                                        options={{
-                                          classLevel: conversationState.context.classLevel || undefined,
-                                          subject: conversationState.selectedSubject || selectedSubject || 'general',
-                                          userRole: conversationState.selectedRole || 'student',
-                                          enableAdvancedFormatting: true,
-                                          enableAccessibilityFeatures: true,
-                                          enableDiagramGeneration: true
-                                        }}
+                                        options={formattedContentOptions}
                                         showMetadata={showFormattingMetadata}
                                         enableInteractiveFeatures={typeof window !== 'undefined'
                                           ? window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
@@ -568,6 +582,44 @@ export default function AITutorPage() {
                   subject: conversationState.selectedSubject || selectedSubject
                 }}
                 className="w-full"
+                // Tutor + subject switchers live inside the input box once a chat
+                // is active, letting the student change either mid-conversation
+                // without resetting the chat (history is preserved).
+                headerSlot={
+                  conversationState.phase === 'chatting' ? (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <AgentSelector
+                        value={conversationState.context.menuIntent}
+                        onChange={handleMenuSelection}
+                        disabled={isLoading}
+                      />
+                      {availableSubjects.length > 0 && (
+                        <SubjectSelector
+                          value={conversationState.selectedSubject || selectedSubject}
+                          options={availableSubjects}
+                          disabled={isLoading}
+                          onChange={(subject) => {
+                            // Switch subject but stay in the chat with the same tutor.
+                            setSelectedSubject(subject)
+                            setConversationState(prev => ({
+                              ...prev,
+                              selectedSubject: subject,
+                              context: { ...prev.context, subject }
+                            }))
+                          }}
+                        />
+                      )}
+                      {/* Answer-length sizing — Deep Dive only. */}
+                      {conversationState.context.menuIntent === 'explain_topic' && (
+                        <LengthSelector
+                          value={answerLength}
+                          onChange={setAnswerLength}
+                          disabled={isLoading}
+                        />
+                      )}
+                    </div>
+                  ) : undefined
+                }
               />
             </div>
           </CardContent>

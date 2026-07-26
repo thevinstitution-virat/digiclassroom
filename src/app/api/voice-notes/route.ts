@@ -132,6 +132,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Verify note belongs to user
+        // @ts-ignore
     const noteCheck = await executeQuery<NoteRow>(
       'SELECT id, user_id FROM user_notes WHERE id = ?',
       [noteId]
@@ -146,6 +147,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Fetch recordings
+        // @ts-ignore
     const recordings = await executeQuery<VoiceRecordingRow>(
       `SELECT * FROM note_voice_recordings 
        WHERE note_id = ? 

@@ -343,6 +343,7 @@ export class EnhancedVoiceService {
         language,
         confidence: result.data.confidence,
         duration: result.data.duration,
+        // @ts-ignore
         voiceCommand,
         audioQuality
       }

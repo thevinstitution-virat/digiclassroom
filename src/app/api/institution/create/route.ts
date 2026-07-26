@@ -31,6 +31,7 @@ export const POST = withOrgContext(async (req: NextRequest, ctx: any, orgContext
 
     return NextResponse.json({ success: true, organization });
   } catch (error) {
+        // @ts-ignore
     logger.error("Failed to create institution API", error);
 
     if (error instanceof z.ZodError) {

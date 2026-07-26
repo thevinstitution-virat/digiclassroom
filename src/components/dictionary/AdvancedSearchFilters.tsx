@@ -6,12 +6,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Slider } from '@/components/ui/slider'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/core/ui/card'
+import { Button } from '@/components/core/ui/button'
+import { Badge } from '@/components/core/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/core/ui/select'
 import { 
   Filter, 
   SortAsc, 
@@ -306,10 +304,12 @@ export default function AdvancedSearchFilters({
               <h4 className="font-medium text-gray-900 dark:text-gray-100">Features</h4>
               <div className="space-y-3">
                 <div className="flex items-center space-x-3">
-                  <Checkbox
+                  <input
+                    type="checkbox"
                     id="hasAudio"
                     checked={localFilters.hasAudio}
-                    onCheckedChange={(checked) => updateFilter('hasAudio', checked)}
+                    onChange={(e) => updateFilter('hasAudio', e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
                   />
                   <label htmlFor="hasAudio" className="flex items-center space-x-2 text-sm cursor-pointer">
                     <Volume2 className="h-4 w-4 text-blue-500" />
@@ -317,10 +317,12 @@ export default function AdvancedSearchFilters({
                   </label>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <Checkbox
+                  <input
+                    type="checkbox"
                     id="hasHindi"
                     checked={localFilters.hasHindiTranslation}
-                    onCheckedChange={(checked) => updateFilter('hasHindiTranslation', checked)}
+                    onChange={(e) => updateFilter('hasHindiTranslation', e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
                   />
                   <label htmlFor="hasHindi" className="flex items-center space-x-2 text-sm cursor-pointer">
                     <Globe className="h-4 w-4 text-orange-500" />
@@ -334,13 +336,14 @@ export default function AdvancedSearchFilters({
             <div className="space-y-3">
               <h4 className="font-medium text-gray-900 dark:text-gray-100">Word Frequency</h4>
               <div className="px-3">
-                <Slider
-                  value={localFilters.frequencyRange}
-                  onValueChange={(value) => updateFilter('frequencyRange', value)}
+                <input
+                  type="range"
+                  value={localFilters.frequencyRange[0]}
+                  onChange={(e) => updateFilter('frequencyRange', [parseInt(e.target.value, 10), localFilters.frequencyRange[1]])}
                   max={1000}
                   min={1}
                   step={10}
-                  className="w-full"
+                  className="w-full accent-orange-500"
                 />
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
                   <span>Most Common ({localFilters.frequencyRange[0]})</span>

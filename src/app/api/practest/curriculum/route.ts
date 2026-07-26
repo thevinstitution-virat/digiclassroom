@@ -4,12 +4,12 @@
 // offers values that actually have questions, eliminating "typo → no questions" gaps.
 
 import { NextRequest, NextResponse } from 'next/server'
-import { withOrgContext } from '@/lib/auth/with-org-context'
-import type { OrgContext } from '@/lib/auth/get-org-context'
+import { withTenantContext } from '@/lib/auth/with-tenant-context'
+import type { TenantContext } from '@/lib/db/tenant-scope'
 import { practestQueries } from '@/lib/db/practest-queries'
 
-export const GET = withOrgContext(
-  async (req: NextRequest, _ctx: unknown, orgContext: OrgContext) => {
+export const GET = withTenantContext(
+  async (req: NextRequest, _ctx: unknown, orgContext: TenantContext) => {
     try {
       const gradeRaw = req.nextUrl.searchParams.get('grade')
       const board = req.nextUrl.searchParams.get('board')
@@ -40,5 +40,4 @@ export const GET = withOrgContext(
       return NextResponse.json({ success: false, error: 'Failed to load curriculum' }, { status: 500 })
     }
   },
-  { requireOrg: true },
 )

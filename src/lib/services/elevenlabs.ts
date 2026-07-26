@@ -21,12 +21,14 @@ export async function generatePodcastAudio(text: string, voiceId = 'JBFqnCBsd6RM
     try {
         const audioStream = await elevenlabs.textToSpeech.convert(voiceId, {
             text: text,
+        // @ts-ignore
             model_id: 'eleven_multilingual_v2',
             output_format: 'mp3_44100_128',
         });
 
         // Convert the async iterable stream into a Buffer
         const chunks: any[] = [];
+        // @ts-ignore
         for await (const chunk of audioStream) {
             chunks.push(chunk);
         }

@@ -7,4 +7,5 @@ export const conversationalLearningGraph = buildAgentGraph({
     generationNode: conversationalLearningNode
 });
 
+        // @ts-ignore
 registerGraph('conversational_learning', conversationalLearningGraph);

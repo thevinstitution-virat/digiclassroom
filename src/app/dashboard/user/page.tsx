@@ -23,6 +23,7 @@ import {
 import { LoadingButton } from '@/components/ui/loading-button'
 import { StatCard } from '@/components/ui/stat-card'
 import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
+import { StudentNoticesWidget, StudentHomeworkWidget } from './ClassroomWidgets'
 
 type Accent = 'brand' | 'orange' | 'blue' | 'indigo' | 'violet' | 'green' | 'red' | 'cyan'
 
@@ -246,6 +247,10 @@ export default function UserDashboard() {
               </LoadingButton>
             </div>
           </div>
+          
+          {/* Dynamic Classroom Widgets */}
+          <StudentNoticesWidget />
+          <StudentHomeworkWidget />
         </div>
       </section>
     </div>

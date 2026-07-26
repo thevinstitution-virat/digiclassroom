@@ -68,6 +68,7 @@ export class SyllabusParser {
   private static getSyllabusData(board: string, grade: number, subject: string): SyllabusData {
     const syllabusTemplates = this.getSyllabusTemplates()
     
+        // @ts-ignore
     const boardData = syllabusTemplates[board]
     if (!boardData) {
       throw new Error(`Board ${board} not found`)

@@ -65,6 +65,7 @@ export const auth = betterAuth({
     trustedOrigins: [
         'https://desktop-9mdcf0m.taile7a3e3.ts.net',
         'http://localhost:3000',
+        'http://localhost:3334',
         'https://app.vinstitution.com'
     ],
     emailAndPassword: {
@@ -204,6 +205,7 @@ export const auth = betterAuth({
                 after: async (session) => {
                     if (!FEDERATION_ENABLED) return;
                     try {
+        // @ts-ignore
                         await syncFederatedSession(session.userId);
                     } catch (err) {
                         console.error('[federation] syncFederatedSession failed:', err);

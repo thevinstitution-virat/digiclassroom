@@ -120,6 +120,7 @@ export class MemoryAidGenerator {
    */
   private static generateVisualAssociations(content: string, options: MemoryAidOptions): string[] {
     const associations: string[] = [];
+        // @ts-ignore
     const subjectVisuals = this.VISUAL_TECHNIQUES[options.subject] || {};
 
     // Find matching visual techniques
@@ -284,6 +285,7 @@ export class MemoryAidGenerator {
       'Political Science': ['People', 'Participate', 'In', 'Democratic', 'Governance']
     };
 
+        // @ts-ignore
     const pattern = patterns[subject] || ['Remember', 'These', 'Important', 'Key', 'Points'];
     
     if (firstLetters.length <= pattern.length) {

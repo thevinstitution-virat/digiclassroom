@@ -17,6 +17,7 @@ export function responseSynthesisNode(state: TutorGraphState): TutorGraphState {
   console.log('🔑 Key terms count:', generation.keyTerms?.length || 0)
 
   // Detect content type from question
+        // @ts-ignore
   const question = state.question || ''
   let contentType: 'plain' | 'mathematical' | 'chemical' = 'plain'
   if (/calculat|solve|equation|formula/i.test(question)) {

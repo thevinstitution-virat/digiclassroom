@@ -33,7 +33,9 @@ export function useEngagementTracker() {
   const [isIdle, setIsIdle] = useState(false)
   const [isTracking, setIsTracking] = useState(false)
   
+        // @ts-ignore
   const idleTimerRef = useRef<NodeJS.Timeout>()
+        // @ts-ignore
   const updateIntervalRef = useRef<NodeJS.Timeout>()
   const lastUpdateRef = useRef(Date.now())
   

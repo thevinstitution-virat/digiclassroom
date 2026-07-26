@@ -109,24 +109,28 @@ export const protectedProcedure = baseProcedure
   .use(enforceUserIsAuthed)
   .use(enforceTenantIsolation)
 
-// Admin-only procedure
+// Super Admin-only procedure
+export const superAdminProcedure = baseProcedure
+  .use(enforceUserHasRole(['super_admin']))
+
+// Admin+ procedure
 export const adminProcedure = baseProcedure
-  .use(enforceUserHasRole(['admin']))
+  .use(enforceUserHasRole(['admin', 'super_admin']))
   .use(enforceTenantIsolation)
 
 // Teacher+ procedure (admin and teacher)
 export const teacherProcedure = baseProcedure
-  .use(enforceUserHasRole(['admin', 'teacher']))
+  .use(enforceUserHasRole(['admin', 'super_admin', 'teacher']))
   .use(enforceTenantIsolation)
 
 // Student+ procedure (admin, teacher, student)
 export const studentProcedure = baseProcedure
-  .use(enforceUserHasRole(['admin', 'teacher', 'student']))
+  .use(enforceUserHasRole(['admin', 'super_admin', 'teacher', 'student']))
   .use(enforceTenantIsolation)
 
 // Parent+ procedure (admin, teacher, parent)
 export const parentProcedure = baseProcedure
-  .use(enforceUserHasRole(['admin', 'teacher', 'parent']))
+  .use(enforceUserHasRole(['admin', 'super_admin', 'teacher', 'parent']))
   .use(enforceTenantIsolation)
 
 // Utility function to check if user can access specific class
@@ -173,7 +177,7 @@ export const rateLimit = (maxRequests: number, windowMs: number) =>
     // Clean up old entries
     if (Math.random() < 0.01) { // 1% chance to clean up
       const now = Date.now()
-      for (const [k, v] of rateLimitMap.entries()) {
+      for (const [k, v] of Array.from(rateLimitMap.entries())) {
         if (v.resetTime < now) {
           rateLimitMap.delete(k)
         }

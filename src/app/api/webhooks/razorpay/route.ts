@@ -1,61 +1,132 @@
-/**
- * Razorpay Webhook — Credit Purchase Handler
- * Receives payment confirmation from Razorpay and adds Sarvagya credits.
- */
-
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { addCredits } from '@/lib/sarvagya/credits';
+import { db } from '@/db';
+import { schema } from '@/db';
+import { eq, and } from 'drizzle-orm';
 
-const RAZORPAY_WEBHOOK_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || '';
+export async function POST(req: Request) {
+  try {
+    const bodyText = await req.text();
+    const signature = req.headers.get('x-razorpay-signature');
 
-function verifySignature(body: string, signature: string): boolean {
-    if (!RAZORPAY_WEBHOOK_SECRET)
-  return false;
-    const expectedSignature = crypto
-        .createHmac('sha256', RAZORPAY_WEBHOOK_SECRET)
-        .update(body)
-        .digest('hex');
-    return crypto.timingSafeEqual(
-        Buffer.from(signature),
-        Buffer.from(expectedSignature),
-    );
-}
-
-export async function POST(req: NextRequest) {
-    try {
-        const body = await req.text();
-        const signature = req.headers.get('x-razorpay-signature') || '';
-
-        if (!verifySignature(body, signature)) {
-            return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-        }
-
-        const event = JSON.parse(body);
-
-        if (event.event === 'payment.captured') {
-            const payment = event.payload?.payment?.entity;
-            const userId = payment?.notes?.user_id;
-            const creditsAmount = parseInt(payment?.notes?.credits_amount || '0', 10);
-
-            if (!userId || !creditsAmount) {
-                return NextResponse.json({ error: 'Missing user_id or credits_amount in notes' }, { status: 400 });
-            }
-
-            const result = await addCredits(userId, creditsAmount, `Razorpay payment ${payment.id}`);
-
-            console.log(`💳 Razorpay payment captured: ${payment.id} → ${creditsAmount} credits for ${userId}`);
-
-            return NextResponse.json({ success: true, newBalance: result.newBalance });
-        }
-
-        // Acknowledge but ignore unhandled events
-        return NextResponse.json({ received: true });
-    } catch (error) {
-        console.error('❌ Razorpay webhook error:', error);
-        return NextResponse.json(
-            { error: 'Webhook processing failed' },
-            { status: 500 },
-        );
+    if (!signature) {
+      return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
     }
+
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET || 'dummy_webhook_secret')
+      .update(bodyText)
+      .digest('hex');
+
+    if (expectedSignature !== signature) {
+      // For local testing without a real webhook, we might bypass this,
+      // but in production, we MUST fail on invalid signature.
+      if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+      }
+    }
+
+    const payload = JSON.parse(bodyText);
+
+    if (payload.event === 'payment.captured') {
+      const paymentEntity = payload.payload.payment.entity;
+      const razorpayOrderId = paymentEntity.order_id;
+      const razorpayPaymentId = paymentEntity.id;
+      const razorpayTransferId = paymentEntity.transfers && paymentEntity.transfers.length > 0 ? paymentEntity.transfers[0].id : null;
+
+      // Idempotency check:
+      const existingPayment = await db.query.payments.findFirst({
+        where: eq(schema.payments.razorpayPaymentId, razorpayPaymentId)
+      });
+
+      if (existingPayment) {
+        return new NextResponse('ok', { status: 200 });
+      }
+
+      // 1. Get the order
+      const order = await db.query.orders.findFirst({
+        where: eq(schema.orders.razorpayOrderId, razorpayOrderId)
+      });
+
+      if (!order) {
+        console.error('Webhook received for unknown order:', razorpayOrderId);
+        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+      }
+
+      // 2. Database transaction
+      await db.transaction(async (tx) => {
+        // a. Update order status
+        await tx.update(schema.orders)
+          .set({ status: 'captured' })
+          .where(eq(schema.orders.id, order.id));
+
+        // b. Insert payment
+        await tx.insert(schema.payments)
+          .values({
+            id: crypto.randomUUID(),
+            orderId: order.id,
+            razorpayPaymentId,
+            razorpayTransferId,
+            status: 'captured',
+            capturedAt: new Date(),
+          });
+
+        // c. Ensure membership
+        await tx.insert(schema.member)
+          .values({
+            id: crypto.randomUUID(),
+            organizationId: order.orgId,
+            userId: order.studentId,
+            role: 'student',
+            createdAt: new Date(),
+          })
+          .onDuplicateKeyUpdate({ set: { organizationId: order.orgId } });
+
+        // d. Update enrollment
+        await tx.update(schema.enrollments)
+          .set({ status: 'active' })
+          .where(and(
+            eq(schema.enrollments.batchId, order.batchId),
+            eq(schema.enrollments.userId, order.studentId)
+          ));
+      });
+
+      return new NextResponse('ok', { status: 200 });
+    } else if (payload.event === 'payment.failed') {
+      const razorpayOrderId = payload.payload.payment.entity.order_id;
+
+      const order = await db.query.orders.findFirst({
+        where: eq(schema.orders.razorpayOrderId, razorpayOrderId)
+      });
+
+      if (!order) {
+        console.error('Webhook received payment.failed for unknown order:', razorpayOrderId);
+        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+      }
+
+      await db.transaction(async (tx) => {
+        // Mark the order as failed
+        await tx.update(schema.orders)
+          .set({ status: 'failed', updatedAt: new Date() })
+          .where(eq(schema.orders.razorpayOrderId, razorpayOrderId));
+
+        // Remove the pending_payment enrollment entirely
+        await tx.delete(schema.enrollments)
+          .where(
+            and(
+              eq(schema.enrollments.batchId, order.batchId),
+              eq(schema.enrollments.userId, order.studentId),
+              eq(schema.enrollments.status, 'pending_payment')
+            )
+          );
+      });
+
+      return new NextResponse('ok', { status: 200 });
+    }
+
+    return new NextResponse('ignored', { status: 200 });
+  } catch (error) {
+    console.error('Webhook Error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

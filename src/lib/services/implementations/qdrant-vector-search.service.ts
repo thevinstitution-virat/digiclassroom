@@ -116,6 +116,7 @@ export class QdrantVectorSearchService implements IVectorSearchService {
       return {
         name: this.collectionName,
         vectorCount: info.points_count || 0,
+        // @ts-ignore
         dimensions: info.config?.params?.vectors?.size || 0
       };
     } catch (error) {

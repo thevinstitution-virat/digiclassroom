@@ -44,6 +44,7 @@ export class PreGeneratedAnswersService implements IPreGeneratedAnswersService {
       const hash = this.generateHash(question);
       const connection = await getConnection();
 
+        // @ts-ignore
       const [rows] = await connection.query<any[]>(
         `SELECT answer_text FROM pre_generated_answers 
          WHERE question_hash = ? 
@@ -127,6 +128,7 @@ export class PreGeneratedAnswersService implements IPreGeneratedAnswersService {
 
     try {
       const connection = await getConnection();
+        // @ts-ignore
       const [rows] = await connection.query<any[]>(
         `SELECT COUNT(*) as total, AVG(hit_count) as avgHitCount 
          FROM pre_generated_answers`

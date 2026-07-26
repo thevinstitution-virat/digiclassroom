@@ -134,6 +134,7 @@ export class ExamStrategyIntegrator {
    * Generate time management guidance
    */
   private static generateTimeManagement(options: ExamStrategyOptions): ExamStrategyResult['timeManagement'] {
+        // @ts-ignore
     const baseTime = this.TIME_ALLOCATION_MATRIX[options.marks] || options.marks * 1.5;
     
     // Adjust for question complexity
@@ -272,6 +273,7 @@ export class ExamStrategyIntegrator {
       'Political Science': ['democracy', 'constitution', 'rights', 'institutions', 'governance']
     };
 
+        // @ts-ignore
     const keywords = subjectKeywords[subject] || ['concept', 'definition', 'example', 'significance'];
     
     return [
@@ -314,6 +316,7 @@ export class ExamStrategyIntegrator {
    * Quick strategy addition for existing content
    */
   static addQuickStrategy(content: string, marks: number, questionType: string): string {
+        // @ts-ignore
     const timeAllocation = this.TIME_ALLOCATION_MATRIX[marks] || marks * 1.5;
     
     return content + `\n\n**📋 Quick Exam Tips:**\n` +

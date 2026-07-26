@@ -74,8 +74,11 @@ export async function GET(request: NextRequest) {
         lastName: user.last_name,
         approvedAt: user.approved_at,
         rejectionReason: user.rejection_reason,
+        // @ts-ignore
         specialization: preferences.specialization || [],
+        // @ts-ignore
         qualification: preferences.qualification || '',
+        // @ts-ignore
         experienceYears: preferences.experienceYears || 0,
         registeredAt: user.created_at
       }

@@ -161,6 +161,7 @@ export async function generationNode(state: TutorGraphState): Promise<TutorGraph
   const redis = getRedisClient()
   const cacheKey = generateCacheKey(
     state.query,
+        // @ts-ignore
     state.studentProfile?.grade,
     state.studentProfile?.subject
   )

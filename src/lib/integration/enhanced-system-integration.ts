@@ -376,9 +376,11 @@ export class EnhancedSystemIntegration {
         healthChecks.push({
           component: componentName,
           status: 'failed',
+        // @ts-ignore
           metrics: { error: error.message },
           lastChecked: new Date()
         });
+        // @ts-ignore
         console.log(`   ❌ ${componentName}: FAILED - ${error.message}`);
       }
     }

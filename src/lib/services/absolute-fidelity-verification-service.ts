@@ -149,6 +149,7 @@ export class AbsoluteFidelityVerificationService {
 
     } catch (error) {
       console.error('❌ Absolute fidelity verification failed:', error);
+        // @ts-ignore
       throw new Error(`Fidelity verification failed: ${error.message}`);
     }
   }

@@ -65,8 +65,11 @@ export async function GET(request: NextRequest) {
     const queryParams = Object.fromEntries(url.searchParams.entries())
     
     // Convert string numbers to actual numbers
+        // @ts-ignore
     if (queryParams.class) queryParams.class = parseInt(queryParams.class)
+        // @ts-ignore
     if (queryParams.page) queryParams.page = parseInt(queryParams.page)
+        // @ts-ignore
     if (queryParams.limit) queryParams.limit = parseInt(queryParams.limit)
 
     const validatedParams = AdminMaterialsRequestSchema.parse(queryParams)

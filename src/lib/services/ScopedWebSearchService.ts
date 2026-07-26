@@ -108,6 +108,7 @@ export class ScopedWebSearchService {
                 retrievedAt: new Date().toISOString(),
             }));
         } catch (error) {
+        // @ts-ignore
             logger.error({ error: error }, '[WebSearch] Search failed:');
             return null; // non-fatal — fall back to NCERT-only response
         }
@@ -174,6 +175,7 @@ export class ScopedWebSearchService {
                         if (times > 3) {
                             if (times === 4) {
                                 logger.warn(
+        // @ts-ignore
                                     { service: 'WebSearch RateLimiter', attempts: times },
                                     'Redis unavailable — rate limiting disabled. Start Redis to enable.'
                                 );
@@ -186,6 +188,7 @@ export class ScopedWebSearchService {
 
                 this._rateLimitRedis.on('error', (err) => {
                     if (this._rateLimitRedis?.status !== 'end') {
+        // @ts-ignore
                         logger.warn({ err: err.message }, 'WebSearch RateLimiter Redis connection error');
                     }
                 });

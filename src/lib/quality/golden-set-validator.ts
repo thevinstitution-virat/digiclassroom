@@ -224,6 +224,7 @@ export class GoldenSetValidator {
         qualityIssues: [{
           type: 'validation_error',
           severity: 'critical',
+        // @ts-ignore
           description: `Validation failed: ${error.message}`,
           location: 'structure',
           recommendation: 'Check system configuration and retry'

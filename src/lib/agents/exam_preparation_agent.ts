@@ -5,6 +5,7 @@
 
 import { OpenAIService } from '../services/openai_service';
 import { VectorStoreService } from '../services/vector_store_service';
+import { buildLanguageDirective, type ResponseLanguage } from '../ai/language/resolve-language';
 
 export interface ExamStrategyRequest {
   chapters: string[];
@@ -16,6 +17,8 @@ export interface ExamStrategyRequest {
   student_strengths?: string[];
   student_weaknesses?: string[];
   conversation_history?: Array<{role: string, content: string}>;
+  // Response language (defaults to the student's subscribed medium upstream)
+  language?: ResponseLanguage;
 }
 
 export interface StudyPlan {
@@ -38,11 +41,11 @@ export interface StudyPlan {
 }
 
 export class ExamStrategyTool {
-  private llmService: LLMService;
+  private llmService: OpenAIService;
   private vectorService: VectorStoreService;
 
   constructor() {
-    this.llmService = OpenAIService.getInstance() as unknown as Record<string, unknown>; // Legacy compatibility
+    this.llmService = OpenAIService.getInstance();
     this.vectorService = new VectorStoreService();
   }
 
@@ -58,7 +61,7 @@ export class ExamStrategyTool {
           grade_level: request.grade_level,
           subject: request.subject,
           board_type: request.board_type,
-          limit: 5
+          limit: 12
         });
         allContent.push({ chapter, content: content.results });
       }
@@ -70,12 +73,16 @@ export class ExamStrategyTool {
       const prompt = this.buildExamStrategyPrompt(request, allContent, timeAvailable, examType);
       
       // Generate exam strategy
-      const response = await this.llmService.generate_educational_response(prompt, {
-        grade_level: request.grade_level,
-        subject: request.subject,
-        board_type: request.board_type,
-        cultural_context: true,
-        cognitive_level: this.determineCognitiveLevel(request.grade_level)
+      const response = await this.llmService.generateChatCompletion({
+        messages: [
+          {
+            role: 'system',
+            content: `${buildLanguageDirective(request.language || 'english')}\n\nYou are an expert ${request.board_type} exam-preparation coach for Class ${request.grade_level} ${request.subject}. Use Indian cultural context and target the "${this.determineCognitiveLevel(request.grade_level)}" cognitive level.`
+          },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.7,
+        maxTokens: 2000
       });
 
       // Extract structured information
@@ -113,7 +120,9 @@ export class ExamStrategyTool {
     }> = [];
 
     for (const item of allContent) {
+        // @ts-ignore
       if (item.content && item.content.length > 0) {
+        // @ts-ignore
         for (const result of item.content) {
           if (result.metadata) {
             sources.push({
@@ -141,9 +150,10 @@ export class ExamStrategyTool {
     timeAvailable: number,
     examType: string
   ): string {
-    const chaptersInfo = allContent.map(item =>
-      `**${item.chapter}**: ${item.content.length > 0 ? item.content[0].text.substring(0, 200) + '...' : 'Content available'}`
-    ).join('\n');
+    const chaptersInfo = allContent.map(item => {
+      const chunks = (item.content as any[]) || [];
+      return `**${item.chapter}**:\n${chunks.length > 0 ? chunks.map((c: any) => c.text).join('\n\n') : 'Content available'}`;
+    }).join('\n\n');
     const conversationHistory = this.formatConversationHistory(request.conversation_history || []);
     const textbookSources = this.extractTextbookSources(allContent);
 
@@ -422,6 +432,7 @@ export class ExamPreparationAgent {
       board_type: 'CBSE' | 'ICSE' | 'State Board';
       exam_type?: 'regular' | 'board' | 'competitive' | 'unit_test';
       time_available?: number;
+      language?: ResponseLanguage;
     },
     studentProfile: {
       strengths?: string[];
@@ -440,7 +451,8 @@ export class ExamPreparationAgent {
       time_available: studentContext.time_available || 30,
       student_strengths: studentProfile.strengths,
       student_weaknesses: studentProfile.weaknesses,
-      conversation_history: conversationHistory
+      conversation_history: conversationHistory,
+      language: studentContext.language
     };
 
     return await this.strategyTool.create_comprehensive_exam_plan(request);

@@ -119,6 +119,7 @@ export const ENHANCED_MATHJAX_CONFIG = {
   // Startup configuration
   startup: {
     pageReady: () => {
+        // @ts-ignore
       return MathJax.startup.defaultPageReady().then(() => {
         // Add custom CSS for enhanced formula display
         const style = document.createElement('style');

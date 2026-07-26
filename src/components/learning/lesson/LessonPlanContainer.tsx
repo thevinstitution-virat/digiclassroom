@@ -35,10 +35,10 @@ export default function LessonPlanContainer({ markdown }: { markdown: string }) 
     <div>
       <LessonActionBar onCopy={handleCopy} onPrint={printLesson} onExportPdf={exportPdf} />
       <LessonPrintView ref={setPrintRef}>
-        {sections.objectives && <ObjectivesSection markdown={sections.objectives} />}
-        {sections.key && <KeyPointsSection markdown={sections.key} />}
-        {sections.activities && <ActivitiesSection markdown={sections.activities} />}
-        {sections.assessment && <AssessmentSection markdown={sections.assessment} />}
+        {sections.objectives && <ObjectivesSection title="Objectives" markdown={sections.objectives} />}
+        {sections.key && <KeyPointsSection title="Key Points" markdown={sections.key} />}
+        {sections.activities && <ActivitiesSection title="Activities" markdown={sections.activities} />}
+        {sections.assessment && <AssessmentSection title="Assessment" markdown={sections.assessment} />}
         {!sections.objectives && !sections.key && !sections.activities && !sections.assessment && (
           <div className="prose max-w-none">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>

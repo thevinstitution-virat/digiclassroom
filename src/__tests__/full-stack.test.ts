@@ -16,6 +16,7 @@ import { StudentCostMonitor } from '../lib/services/cost-monitor';
 // Mock the Redis client
 jest.mock('redis', () => ({
     createClient: jest.fn(() => ({
+        // @ts-ignore
         connect: jest.fn().mockRejectedValue(new Error('Connection refused')),
         on: jest.fn(),
         quit: jest.fn(),

@@ -53,6 +53,7 @@ export class UserService implements IUserService {
       const connection = await getConnection();
 
       // Fetch user data — Better Auth `user` table (legacy `users` removed in Phase 4.1a).
+        // @ts-ignore
       const [userRows] = await connection.query<any[]>(
         `SELECT * FROM \`user\` WHERE id = ? LIMIT 1`,
         [userId]
@@ -65,6 +66,7 @@ export class UserService implements IUserService {
       const user = userRows[0];
 
       // Fetch subscription
+        // @ts-ignore
       const [subRows] = await connection.query<any[]>(
         `SELECT * FROM subscriptions WHERE user_id = ? AND status = 'active' LIMIT 1`,
         [user.id]
@@ -73,6 +75,7 @@ export class UserService implements IUserService {
       const subscription = subRows?.[0];
 
       // Fetch quota
+        // @ts-ignore
       const [quotaRows] = await connection.query<any[]>(
         `SELECT current_usage, quota_limit FROM user_quotas WHERE user_id = ? LIMIT 1`,
         [user.id]
@@ -153,6 +156,7 @@ export class UserService implements IUserService {
       const connection = await getConnection();
 
       // Get user ID — Better Auth `user` table.
+        // @ts-ignore
       const [userRows] = await connection.query<any[]>(
         `SELECT id FROM \`user\` WHERE id = ? LIMIT 1`,
         [userId]

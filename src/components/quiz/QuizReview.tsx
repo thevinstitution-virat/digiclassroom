@@ -203,8 +203,8 @@ export default function QuizReview({
                         <div className="flex items-center space-x-2">
                           {isCorrectAnswer && <CheckCircleIcon className="h-5 w-5 text-green-600" />}
                           {isUserAnswer && !isCorrectAnswer && <XCircleIcon className="h-5 w-5 text-red-600" />}
-                          {isUserAnswer && <Badge variant="outline" size="sm">Your Answer</Badge>}
-                          {isCorrectAnswer && <Badge variant="outline" size="sm" className="bg-green-50 text-green-700 border-green-300">Correct</Badge>}
+                          {isUserAnswer && <Badge variant="outline">Your Answer</Badge>}
+                          {isCorrectAnswer && <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">Correct</Badge>}
                         </div>
                       </div>
                     </div>

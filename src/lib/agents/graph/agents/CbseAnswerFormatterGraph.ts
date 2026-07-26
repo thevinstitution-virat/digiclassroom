@@ -7,4 +7,5 @@ export const cbseAnswerFormatterGraph = buildAgentGraph({
     generationNode: cbseAnswerFormatterNode
 });
 
+        // @ts-ignore
 registerGraph('cbse_answer_formatter', cbseAnswerFormatterGraph);

@@ -215,6 +215,7 @@ The verification array must have exactly ${claims.length} elements, one for each
       supported: v === 'supported'
     }))
     
+        // @ts-ignore
     const supportedCount = results.filter(r => r.supported).length
     console.log(`[RAGAS Context Recall] ${supportedCount}/${claims.length} claims supported by context`)
     

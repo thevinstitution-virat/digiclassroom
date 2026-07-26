@@ -32,14 +32,19 @@ export class CitationService {
         for (const result of results) {
             if (!result.metadata) continue;
 
+        // @ts-ignore
             const key = `${result.metadata.subject}-${result.metadata.class_level}-${result.metadata.chapter}-${result.metadata.page || ''}`;
 
             if (!seen.has(key)) {
                 seen.add(key);
                 sources.push({
+        // @ts-ignore
                     subject: result.metadata.subject || 'Unknown Subject',
+        // @ts-ignore
                     class_level: result.metadata.class_level || 'Unknown Class',
+        // @ts-ignore
                     chapter: result.metadata.chapter || 'Unknown Chapter',
+        // @ts-ignore
                     page: result.metadata.page
                 });
             }

@@ -112,6 +112,7 @@ export class QuizEngine {
     let questionText = `What does "${word.word}" mean in Hindi?`
     
     if (config.culturalContext) {
+        // @ts-ignore
       questionText = this.addCulturalContext(questionText, word)
     }
     

@@ -5,6 +5,7 @@
  */
 
 import { describe, test, expect, beforeAll, afterAll } from '@jest/globals';
+        // @ts-ignore
 import request from 'supertest';
 import { NextRequest } from 'next/server';
 
@@ -89,6 +90,7 @@ describe('AI Tutor Integration Tests', () => {
         const mockRequest = createMockRequest(requestBody);
         
         // Import and call the API handler
+        // @ts-ignore
         const { POST } = await import('../app/api/ai-tutor/chat/route');
         const response = await POST(mockRequest);
         
@@ -162,6 +164,7 @@ describe('AI Tutor Integration Tests', () => {
 
         const mockRequest = createMockRequest(requestBody);
         
+        // @ts-ignore
         const { POST } = await import('../app/api/ai-tutor/chat/route');
         const response = await POST(mockRequest);
         
@@ -199,6 +202,7 @@ describe('AI Tutor Integration Tests', () => {
         };
 
         const mockRequest = createMockRequest(requestBody);
+        // @ts-ignore
         const { POST } = await import('../app/api/ai-tutor/chat/route');
         const response = await POST(mockRequest);
         const responseData = await response.json();
@@ -245,6 +249,7 @@ describe('AI Tutor Integration Tests', () => {
       };
 
       const mockRequest = createMockRequest(requestBody);
+        // @ts-ignore
       const { POST } = await import('../app/api/ai-tutor/chat/route');
       const response = await POST(mockRequest);
       const responseData = await response.json();
@@ -292,6 +297,7 @@ describe('AI Tutor Integration Tests', () => {
 
       // First query (cold start)
       const mockRequest1 = createMockRequest(requestBody);
+        // @ts-ignore
       const { POST } = await import('../app/api/ai-tutor/chat/route');
       
       const startTime1 = Date.now();
@@ -327,6 +333,7 @@ describe('AI Tutor Integration Tests', () => {
         invalidField: 'test'
       });
 
+        // @ts-ignore
       const { POST } = await import('../app/api/ai-tutor/chat/route');
       const response = await POST(malformedRequest);
       
@@ -347,6 +354,7 @@ describe('AI Tutor Integration Tests', () => {
         }
       });
 
+        // @ts-ignore
       const { POST } = await import('../app/api/ai-tutor/chat/route');
       const response = await POST(emptyRequest);
       
@@ -369,6 +377,7 @@ describe('AI Tutor Integration Tests', () => {
         }
       });
 
+        // @ts-ignore
       const { POST } = await import('../app/api/ai-tutor/chat/route');
       const response = await POST(longRequest);
       

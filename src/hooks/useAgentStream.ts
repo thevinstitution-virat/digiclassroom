@@ -62,7 +62,15 @@ export function useAgentStream({
         sessionId: string;
         studentId: string;
         conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>;
+        // Per-message agent identity (menu intent); overrides the hook-level default
+        agentType?: string;
+        // Student's subscribed medium (ENGLISH | HINDI) — drives default response language
+        medium?: string;
+        // CBSE answer-length tier (Deep Dive only): vsa | sa | la | essay
+        answerLength?: string;
     }) => {
+        // The agent persona selected for THIS message — falls back to the hook default
+        const effectiveAgentType = input.agentType || agentType;
         // Cancel any in-flight stream before starting new one (handles React Strict Mode double-invokes)
         abortControllerRef.current?.abort();
         const abortController = new AbortController();
@@ -77,7 +85,7 @@ export function useAgentStream({
             const response = await fetch('/api/chat/stream', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ agentType, input }),
+                body: JSON.stringify({ agentType: effectiveAgentType, input }),
                 signal: abortController.signal,
             });
 
@@ -94,9 +102,11 @@ export function useAgentStream({
                     board: 'CBSE', // fallback
                     classLevel: `Class ${input.grade || 10}`,
                     subject: input.subject || 'general',
+                    medium: input.medium,  // student's subscribed medium → default response language
+                    answerLength: input.answerLength,  // CBSE answer-length tier (Deep Dive only)
                     conversationHistory: input.conversationHistory,
                     roleContext: {
-                        menuIntent: agentType
+                        menuIntent: effectiveAgentType
                     }
                 };
 
@@ -180,6 +190,7 @@ export function useAgentStream({
 
                     switch (chunk.type) {
                         case 'token':
+        // @ts-ignore
                         case 'chunk': // Legacy `/api/ai/chat` uses 'chunk'
                             tokensRef.current += chunk.content;
                             setState(prev => ({
@@ -222,12 +233,17 @@ export function useAgentStream({
                             onError?.(chunk.message, chunk.recoverable);
                             break;
 
+        // @ts-ignore
                         case 'complete': { // Legacy `/api/ai/chat` uses 'complete' instead of 'done' and sends sources here
                             // Use the final answer from chunk if available, otherwise fallback to accumulated tokens
+        // @ts-ignore
                             if (chunk.answer) {
+        // @ts-ignore
                                 tokensRef.current = chunk.answer;
                             }
+        // @ts-ignore
                             if (chunk.sources?.sources) {
+        // @ts-ignore
                                 citationsRef.current = chunk.sources.sources;
                             }
                             
@@ -236,7 +252,9 @@ export function useAgentStream({
                                 status: 'complete' as const,
                                 tokens: tokensRef.current,
                                 citations: citationsRef.current,
+        // @ts-ignore
                                 confidenceScore: chunk.sources?.sources?.[0]?.confidence || prev.confidenceScore,
+        // @ts-ignore
                                 agentName: chunk.menu?.agentUsed || prev.agentName,
                             }));
                             

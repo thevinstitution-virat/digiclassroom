@@ -100,25 +100,33 @@ export class RetrievalService {
     }
 
     private async applyReranking(query: string, response: SearchResponse, limit = 5): Promise<SearchResponse> {
-        const { crossEncoderReranker } = await import('../../../ai/rag/cross-encoder-reranker');
+        try {
+            const { crossEncoderReranker } = await import('../../../ai/rag/cross-encoder-reranker');
 
-        // Map ContentResult -> any chunk for reranker
-        // The reranker expects chunk.content for model input. ContentResult has chunk.text.
-        const mappedResults = response.results.map(r => ({
-            ...r,
-            content: r.text
-        }));
+            // Map ContentResult -> any chunk for reranker
+            // The reranker expects chunk.content for model input. ContentResult has chunk.text.
+            const mappedResults = response.results.map(r => ({
+                ...r,
+                content: r.text
+            }));
 
-        const reranked = await crossEncoderReranker.rerank(query, mappedResults, limit);
+            const reranked = await crossEncoderReranker.rerank(query, mappedResults, limit);
 
-        // Map back to ContentResult
-        response.results = reranked.map(r => ({
-            text: r.content, // preserve from spread content
-            metadata: r.metadata,
-            score: r.rerank_score
-        }));
+            // Map back to ContentResult
+            response.results = reranked.map(r => ({
+                text: r.content, // preserve from spread content
+                metadata: r.metadata,
+                score: r.rerank_score
+            }));
 
-        return response;
+            return response;
+        } catch (error) {
+            // Reranker is an optimization, not a dependency: if its native runtime
+            // (onnxruntime) fails to load, return vector-search order unreranked.
+            logger.warn(`⚠️ [RetrievalService] Reranker unavailable, using vector order: ${error instanceof Error ? error.message.split('\n')[0] : 'unknown error'}`);
+            response.results = response.results.slice(0, limit);
+            return response;
+        }
     }
 
     public formatEducationalContext(results: ContentResult[]): string {

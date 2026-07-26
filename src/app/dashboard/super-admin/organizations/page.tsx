@@ -4,9 +4,16 @@
 // Landing page after onboarding; data from /api/super-admin/organizations/list.
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   Building2, Plus, Search, Users, CheckCircle2, Clock, ArrowRight,
 } from 'lucide-react'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { trpc } from '@/lib/trpc/client'
+import { toast } from 'sonner'
 
 interface OrgRow {
   id: string; name: string; slug: string; type: string; plan: string | null
@@ -27,17 +34,103 @@ const statusBadge: Record<string, string> = {
   cancelled: 'bg-gray-100 text-gray-500',
 }
 
+function CompleteOnboardingDialog({ orgId, open, onClose, onSuccess }: { orgId: string | null; open: boolean; onClose: () => void; onSuccess: () => void }) {
+  const [phone, setPhone] = useState('')
+  const [address, setAddress] = useState('')
+  const [website, setWebsite] = useState('')
+  const [year, setYear] = useState('')
+  
+  const mutation = trpc.institutionProfiles.superAdminCompleteOnboarding.useMutation({
+    onSuccess: () => {
+      toast.success('Onboarding completed manually')
+      onSuccess()
+      onClose()
+    },
+    onError: (err) => {
+      toast.error(err.message || 'Failed to complete onboarding')
+    }
+  })
+
+  // Reset form when opened
+  useEffect(() => {
+    if (open) {
+      setPhone('')
+      setAddress('')
+      setWebsite('')
+      setYear('')
+    }
+  }, [open])
+
+  if (!open) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Complete Setup</DialogTitle>
+          <DialogDescription>
+            Bypass the institution admin and manually complete onboarding for this organization.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="phone">Contact Phone <span className="text-red-500">*</span></Label>
+            <Input id="phone" value={phone} onChange={e => setPhone(e.target.value)} placeholder="e.g. +1 234 567 8900" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="address">Address <span className="text-muted-foreground text-xs font-normal ml-2">(Optional - Can be updated by admin later)</span></Label>
+            <Input id="address" value={address} onChange={e => setAddress(e.target.value)} placeholder="Physical address" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="website">Website <span className="text-muted-foreground text-xs font-normal ml-2">(Optional - Can be updated by admin later)</span></Label>
+            <Input id="website" value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://..." />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="year">Established Year <span className="text-muted-foreground text-xs font-normal ml-2">(Optional)</span></Label>
+            <Input id="year" type="number" value={year} onChange={e => setYear(e.target.value)} placeholder="e.g. 1995" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={mutation.isPending}>Cancel</Button>
+          <Button 
+            disabled={!phone.trim() || mutation.isPending} 
+            onClick={() => {
+              if (orgId) {
+                mutation.mutate({
+                  orgId,
+                  contactPhone: phone,
+                  address: address || undefined,
+                  website: website || undefined,
+                  establishedYear: year ? parseInt(year) : undefined,
+                })
+              }
+            }}
+          >
+            {mutation.isPending ? 'Saving...' : 'Complete Onboarding'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export default function OrganizationsPage() {
+  const router = useRouter()
   const [orgs, setOrgs] = useState<OrgRow[]>([])
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null)
 
-  useEffect(() => {
+  const fetchOrgs = () => {
     fetch('/api/super-admin/organizations/list')
       .then((r) => (r.ok ? r.json() : { organizations: [] }))
       .then((d) => setOrgs(d?.organizations ?? []))
       .catch(() => {})
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    fetchOrgs()
   }, [])
 
   const filtered = useMemo(() => {
@@ -124,7 +217,11 @@ export default function OrganizationsPage() {
               </thead>
               <tbody>
                 {filtered.map((o) => (
-                  <tr key={o.id} className="border-t border-gray-50 hover:bg-gray-50 dark:border-gray-700/50 dark:hover:bg-gray-700/30">
+                  <tr 
+                    key={o.id} 
+                    onClick={() => router.push(`/dashboard/super-admin/organizations/${o.id}`)}
+                    className="border-t border-gray-50 hover:bg-gray-50 dark:border-gray-700/50 dark:hover:bg-gray-700/30 cursor-pointer"
+                  >
                     <td className="px-5 py-3">
                       <div className="font-semibold text-gray-900 dark:text-white">{o.name}</div>
                       <div className="font-mono text-xs text-gray-400">/{o.slug} · <span className="capitalize">{o.type?.replace('_', ' ')}</span></div>
@@ -141,7 +238,20 @@ export default function OrganizationsPage() {
                       {o.onboardingCompleted ? (
                         <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600"><CheckCircle2 className="h-3.5 w-3.5" /> Complete</span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600"><Clock className="h-3.5 w-3.5" /> Pending</span>
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-600"><Clock className="h-3.5 w-3.5" /> Pending</span>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-7 text-xs ml-2" 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedOrgId(o.id);
+                            }}
+                          >
+                            Complete Setup
+                          </Button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -151,6 +261,13 @@ export default function OrganizationsPage() {
           </div>
         )}
       </div>
+
+      <CompleteOnboardingDialog 
+        orgId={selectedOrgId} 
+        open={!!selectedOrgId} 
+        onClose={() => setSelectedOrgId(null)} 
+        onSuccess={fetchOrgs}
+      />
     </div>
   )
 }

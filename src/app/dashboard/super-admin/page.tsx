@@ -3,6 +3,7 @@
 // Super-admin platform overview — modern console: stats, institutions, quick actions.
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { SARevenueClient } from '@/components/super-admin/SARevenueClient'
 import {
   Building2, Users, GraduationCap, ShieldCheck, Plus, CreditCard, Flag,
   FileText, AlertTriangle, ArrowRight, ArrowUpRight,
@@ -168,6 +169,13 @@ export default function AdminDashboard() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* Revenue Analytics Section */}
+      <div className="rounded-2xl border border-gray-200/70 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-gray-900/50">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Revenue Analytics</h2>
+        <p className="text-sm text-gray-500 mb-6">Platform-wide · All institutions · Captured payments only</p>
+        <SARevenueClient />
       </div>
     </div>
   )

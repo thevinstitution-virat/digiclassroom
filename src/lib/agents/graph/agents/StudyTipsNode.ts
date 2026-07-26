@@ -34,6 +34,7 @@ export async function studyTipsNode(state: TutorState): Promise<Partial<TutorSta
     const contextText = retrievalService.formatEducationalContext(state.retrievedChunks);
 
     // Filter to just textbook sources for the prompt rules
+        // @ts-ignore
     const textbookSources = citationService.extractTextbookSources(state.retrievedChunks).slice(0, 3);
 
     let textbookSection = `**Note:** Study guidance will be based on general educational psychology and proven study techniques.`;

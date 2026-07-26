@@ -21,7 +21,7 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
         defaultOptions: {
           queries: {
             staleTime: 5 * 60 * 1000, // 5 minutes
-            cacheTime: 10 * 60 * 1000, // 10 minutes
+            gcTime: 10 * 60 * 1000, // 10 minutes
             retry: (failureCount, error: any) => {
               // Don't retry on 4xx errors
               if (error?.data?.httpStatus >= 400 && error?.data?.httpStatus < 500) {
@@ -40,7 +40,6 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
 
   const [trpcClient] = useState(() =>
     api.createClient({
-      transformer: superjson,
       links: [
         httpLink({
           url: `${getBaseUrl()}/api/trpc`,

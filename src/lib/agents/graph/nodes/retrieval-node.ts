@@ -60,6 +60,7 @@ export async function retrievalNode(state: TutorState): Promise<Partial<TutorSta
     // Combine NCERT + web citations into AnyCitation[]
     const allCitations: AnyCitation[] = [
         ...ncertCitations,
+        // @ts-ignore
         ...(response.webContext || []),
     ];
 

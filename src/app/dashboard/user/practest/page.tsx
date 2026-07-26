@@ -29,6 +29,8 @@ import { Board, GenerateTestRequest, TestSession } from '@/types/practest'
 import TestGeneratorForm from '@/components/practest/TestGeneratorForm'
 import ActiveTestInterface from '@/components/practest/ActiveTestInterface'
 import TestResultsView from '@/components/practest/TestResultsView'
+import { BatchModeSelector } from '@/components/practest/BatchModeSelector'
+import { BatchQuizList } from '@/components/practest/BatchQuizList'
 import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 import { useUserProfile } from '@/hooks'
 
@@ -51,6 +53,8 @@ export default function PractestPage() {
     loading: false,
     error: null
   })
+
+  const [mode, setMode] = useState<'general' | 'batch'>('general')
 
   const [series, setSeries] = useState<any[]>([])
   const [usage, setUsage] = useState<{ used: number; limit: number; remaining: number; isTrial: boolean; planName: string | null; needsUpgrade: boolean } | null>(null)
@@ -264,8 +268,13 @@ export default function PractestPage() {
           </div>
         )}
 
+        <BatchModeSelector mode={mode} setMode={setMode} />
+
         {/* Enhanced Main Content */}
-        <div className="space-y-8">
+        {mode === 'batch' ? (
+          <BatchQuizList />
+        ) : (
+          <div className="space-y-8">
           {state.currentView === 'generator' && (
             <div className="space-y-8">
               {/* Published test series */}
@@ -345,6 +354,7 @@ export default function PractestPage() {
             </div>
           )}
         </div>
+        )}
 
         {/* Enhanced Quick Stats Footer */}
         <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

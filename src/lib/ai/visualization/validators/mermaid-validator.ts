@@ -167,11 +167,13 @@ export class MermaidValidator {
 
     if (validation.isValid && validation.correctedSyntax) {
       if (validation.warnings && validation.warnings.length > 0) {
+        // @ts-ignore
         logger.warn({ data: validation.warnings }, '⚠️ [Mermaid] Validation warnings:');
       }
       return validation.correctedSyntax;
     }
 
+        // @ts-ignore
     logger.error({ data: validation.errors }, '❌ [Mermaid] Validation failed:');
     return this.createFallbackDiagram(query);
   }

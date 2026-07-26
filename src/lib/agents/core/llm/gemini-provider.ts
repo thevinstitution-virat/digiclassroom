@@ -22,6 +22,7 @@ export class GeminiProvider implements ILLMProvider {
     }
 
     public async generateChatCompletion(request: LLMChatRequest): Promise<LLMChatResponse> {
+        // @ts-ignore
         const genModel = this.client.getGenerativeModel({
             model: this.model,
             generationConfig: {
@@ -64,6 +65,7 @@ export class GeminiProvider implements ILLMProvider {
     }
 
     public async *generateChatCompletionStream(request: LLMChatRequest): AsyncGenerator<string, void, unknown> {
+        // @ts-ignore
         const genModel = this.client.getGenerativeModel({
             model: this.model,
             generationConfig: {
@@ -95,12 +97,14 @@ export class GeminiProvider implements ILLMProvider {
     }
 
     public async generateEmbedding(text: string): Promise<number[]> {
+        // @ts-ignore
         const embeddingModel = this.client.getGenerativeModel({ model: 'text-embedding-004' });
         const result = await embeddingModel.embedContent(text);
         return result.embedding.values;
     }
 
     public async generateEmbeddings(texts: string[]): Promise<number[][]> {
+        // @ts-ignore
         const embeddingModel = this.client.getGenerativeModel({ model: 'text-embedding-004' });
         const results = await embeddingModel.batchEmbedContents({
             requests: texts.map(text => ({ content: { parts: [{ text }] } })),

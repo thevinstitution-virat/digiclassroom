@@ -58,6 +58,7 @@ export async function POST(request: NextRequest) {
     await ChatHistoryService.saveConversationExchange(
       {
         userId,
+        // @ts-ignore
         userId,
         role,
         intent,

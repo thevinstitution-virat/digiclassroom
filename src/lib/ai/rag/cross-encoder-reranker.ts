@@ -73,6 +73,7 @@ export class CrossEncoderReranker {
         const startTime = Date.now();
 
         // Load the feature extraction pipeline for cross-encoder
+        // @ts-ignore
         this.model = await pipeline('feature-extraction', this.modelName, {
           quantized: true, // Use quantized model for faster inference
         });

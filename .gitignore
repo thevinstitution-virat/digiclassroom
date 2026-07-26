@@ -14,13 +14,13 @@ node_modules/
 .yarn/install-state.gz
 
 # Environment variables (CRITICAL — never commit secrets)
-.env
-.env.local
-.env.local.bak-utf16
-.env.development.local
-.env.test.local
-.env.production.local
-.env.staging
+/.env
+/.env.local
+/.env.production
+/.env.production.local
+/.env.development.local
+/.env.test.local
+/.env.staging
 !.env.example
 
 # Next.js build output
@@ -60,16 +60,16 @@ Desktop.ini
 *.sublime-project
 
 # Temporary files and uploads
-tmp/
-temp/
-uploads/
+/tmp/
+/temp/
+/uploads/
 
 # Local database dumps (may contain user data)
-.backups/
+/.backups/
 
 # Vector database data (Qdrant)
-qdrant_data/
-qdrant_storage/
+/qdrant_data/
+/qdrant_storage/
 
 # Cache directories
 .cache/

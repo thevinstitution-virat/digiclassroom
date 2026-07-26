@@ -25,13 +25,16 @@ export const safeJsonParse = <T = any>(value: unknown, fallback: T | null = null
     try {
       return JSON.parse(value) as T;
     } catch (error) {
+        // @ts-ignore
       logger.error({ error: error }, '❌ [JSON Parse] Failed to parse JSON string:');
+        // @ts-ignore
       logger.error({ data: value.substring(0, 100) }, '   Value:');
       return fallback;
     }
   }
 
   // Other types - return fallback
+        // @ts-ignore
   logger.warn({ data: typeof value }, '⚠️ [JSON Parse] Unexpected type:');
   return fallback;
 };
@@ -50,6 +53,7 @@ export const safeJsonStringify = (value: unknown, fallback: string | null = null
   try {
     return JSON.stringify(value);
   } catch (error) {
+        // @ts-ignore
     logger.error({ error: error }, '❌ [JSON Stringify] Failed to stringify value:');
     return fallback;
   }

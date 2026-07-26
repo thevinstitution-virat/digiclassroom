@@ -50,6 +50,7 @@ function SignUpForm() {
                 email,
                 password,
                 name,
+                callbackURL: redirectUrl,
             })
 
             if (result.error) {

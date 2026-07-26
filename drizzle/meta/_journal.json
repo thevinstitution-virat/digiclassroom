@@ -15,6 +15,20 @@
       "when": 1774198273041,
       "tag": "0001_classy_unicorn",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1781382802099,
+      "tag": "0002_absurd_shiver_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1781395016328,
+      "tag": "0003_legal_terrax",
+      "breakpoints": true
     }
   ]
 }

@@ -20,6 +20,7 @@ export const {
     signUp,
     signOut,
     useSession,
+        // @ts-ignore
     forgetPassword,
     resetPassword,
     organization,

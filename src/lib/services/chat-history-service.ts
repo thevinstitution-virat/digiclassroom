@@ -10,7 +10,6 @@ import { executeQuery } from '@/lib/db/connection';
 
 export interface SaveConversationParams {
   userId: string;
-  userId: string;
   role: 'student' | 'teacher' | 'parent' | 'admin';
   intent: string; // Agent type: homework_help, explain_topic, etc.
   topic?: string;
@@ -68,13 +67,13 @@ export class ChatHistoryService {
         ]
       );
 
-      const conversationId = (result as unknown).insertId;
+      const conversationId = (result as any).insertId;
       logger.info(`✅ [Chat History] Created new conversation: ${conversationId} (Agent: ${params.intent})`);
       
       return conversationId;
 
     } catch (error) {
-      logger.error({ error: error }, '❌ [Chat History] Error creating conversation:');
+      logger.error({ error: error instanceof Error ? error.message : error }, '❌ [Chat History] Error creating conversation:');
       throw error;
     }
   }
@@ -108,7 +107,7 @@ export class ChatHistoryService {
       logger.info(`💬 [Chat History] Saved ${params.messageType} message to conversation ${params.conversationId}`);
 
     } catch (error) {
-      logger.error({ error: error }, '❌ [Chat History] Error saving message:');
+      logger.error({ error: error instanceof Error ? error.message : error }, '❌ [Chat History] Error saving message:');
       throw error;
     }
   }
@@ -158,7 +157,7 @@ export class ChatHistoryService {
       logger.info(`✅ [Chat History] Saved conversation exchange (Conversation: ${conversationId})`);
 
     } catch (error) {
-      logger.error({ error: error }, '❌ [Chat History] Error saving conversation exchange:');
+      logger.error({ error: error instanceof Error ? error.message : error }, '❌ [Chat History] Error saving conversation exchange:');
       // Don't throw - we don't want to break the chat flow if history saving fails
     }
   }
@@ -178,7 +177,7 @@ export class ChatHistoryService {
       logger.info(`✅ [Chat History] Marked conversation as completed (Session: ${sessionId})`);
 
     } catch (error) {
-      logger.error({ error: error }, '❌ [Chat History] Error completing conversation:');
+      logger.error({ error: error instanceof Error ? error.message : error }, '❌ [Chat History] Error completing conversation:');
     }
   }
 
@@ -208,7 +207,7 @@ export class ChatHistoryService {
       return true;
 
     } catch (error) {
-      logger.error({ error: error }, '❌ [Chat History] Error deleting conversation:');
+      logger.error({ error: error instanceof Error ? error.message : error }, '❌ [Chat History] Error deleting conversation:');
       return false;
     }
   }
@@ -246,7 +245,7 @@ export class ChatHistoryService {
       );
 
       const agentBreakdown: Record<string, number> = {};
-      agentStats.forEach((stat: unknown) => {
+      agentStats.forEach((stat: any) => {
         agentBreakdown[stat.intent] = stat.count;
       });
 
@@ -257,7 +256,7 @@ export class ChatHistoryService {
       };
 
     } catch (error) {
-      logger.error({ error: error }, '❌ [Chat History] Error getting user stats:');
+      logger.error({ error: error instanceof Error ? error.message : error }, '❌ [Chat History] Error getting user stats:');
       return {
         totalConversations: 0,
         totalMessages: 0,

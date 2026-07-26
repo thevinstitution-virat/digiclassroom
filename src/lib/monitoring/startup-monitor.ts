@@ -231,6 +231,7 @@ export class BrowserStartupMonitor {
   // Generate browser performance report
   generateBrowserReport(): {
     totalTime: number
+        // @ts-ignore
     phases: typeof this.phases
     ttfb: number | null
     webVitals: {

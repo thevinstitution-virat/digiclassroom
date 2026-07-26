@@ -13,6 +13,13 @@ export function formatDate(date: Date): string {
   }).format(date)
 }
 
+export function formatPaise(paise: number): string {
+  return '₹' + (paise / 100).toLocaleString('en-IN', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })
+}
+
 export function formatDateTime(date: Date): string {
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",

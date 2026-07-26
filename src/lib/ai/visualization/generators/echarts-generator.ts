@@ -126,6 +126,7 @@ JSON OUTPUT ONLY (no markdown, no explanation):`;
       return config;
 
     } catch (error) {
+        // @ts-ignore
       logger.error({ error: error }, '❌ [ECharts] Bar chart generation failed:');
       throw error;
     }
@@ -206,6 +207,7 @@ JSON OUTPUT ONLY (no markdown, no explanation):`;
       return config;
 
     } catch (error) {
+        // @ts-ignore
       logger.error({ error: error }, '❌ [ECharts] Pie chart generation failed:');
       throw error;
     }
@@ -293,6 +295,7 @@ JSON OUTPUT ONLY (no markdown, no explanation):`;
       return config;
 
     } catch (error) {
+        // @ts-ignore
       logger.error({ error: error }, '❌ [ECharts] Line chart generation failed:');
       throw error;
     }

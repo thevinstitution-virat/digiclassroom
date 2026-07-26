@@ -53,6 +53,7 @@ const AUTH_ROUTES = [
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  
 
   // ── 1. Block dev/test routes in production (Bug I5 fix) ───────────────────
   if (process.env.NODE_ENV === 'production') {
@@ -72,6 +73,7 @@ export async function middleware(req: NextRequest) {
   // ── 3. Read session cookie (optimistic — no DB hit) ───────────────────────
   const sessionCookie = getSessionCookie(req);
   const isAuthenticated = !!sessionCookie;
+  console.log(`[Middleware] ${pathname} - isPublic: ${isPublic}, hasCookie: ${isAuthenticated}`);
 
   // ── 4. Auth routes: redirect authenticated users to dashboard (Bug A9 fix) ─
   // Previously this was client-side only, causing a brief sign-in page flash.

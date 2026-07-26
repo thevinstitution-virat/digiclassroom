@@ -7,4 +7,5 @@ export const doubtClearingGraph = buildAgentGraph({
     generationNode: doubtClearingNode
 });
 
+        // @ts-ignore
 registerGraph('doubt_clearing', doubtClearingGraph);

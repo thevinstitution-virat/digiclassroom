@@ -8,16 +8,21 @@
  * - Preserves all caching, validation, and streaming functionality
  */
 
-import { HomeworkHelpAgent } from '@/lib/agents/homework_help_agent'
+import { SocraticTutoringTool } from '@/lib/agents/selfstudy_buddy_agent'
 import { TopicExplanationAgent } from '@/lib/agents/topic_explanation_agent'
-import { ExamStrategyTool } from '@/lib/agents/exam_preparation_agent'
+import { ExamPreparationAgent } from '@/lib/agents/exam_preparation_agent'
 import { DoubtClearingTool } from '@/lib/agents/doubt_clearing_agent'
 import { PersonalizedStudyCoach } from '@/lib/agents/study_tips_agent'
+import { ConversationalLearningAgent } from '@/lib/agents/conversational_learning_agent'
+import { bookMetadataService } from '@/lib/services/book-metadata-service'
 import { runTutorGraph } from '@/lib/ai/langgraph/graph'
 import type { TutorGraphState } from '@/lib/ai/langgraph/state'
+import { resolveResponseLanguage, type ResponseLanguage } from '@/lib/ai/language/resolve-language'
+import type { AnswerLength } from '@/lib/ai/answer-length'
 
 export type MenuIntent =
-  | 'homework_help'
+  | 'selfstudy_buddy'  // New name
+  | 'homework_help'    // Backward compatibility
   | 'explain_topic'
   | 'exam_prep'
   | 'clear_doubts'
@@ -39,6 +44,11 @@ export interface MenuRoutingContext {
   userId?: string
   userName?: string  // User's first name for personalization
   conversationHistory?: Array<{role: string, content: string}>
+  // Resolved response language (explicit in-prompt request → else subscribed
+  // medium). Set by route(); read by each specialized agent. See resolve-language.ts
+  language?: ResponseLanguage
+  // CBSE answer-length tier — Deep Dive (explain_topic) only. See answer-length.ts
+  answerLength?: AnswerLength
 }
 
 export interface MenuRoutingResult {
@@ -62,19 +72,21 @@ export interface MenuRoutingResult {
  * Dispatches to specialized agents or falls back to default RAG pipeline
  */
 export class MenuRouter {
-  private homeworkAgent: HomeworkHelpAgent
+  private selfstudyBuddyAgent: SocraticTutoringTool  // Renamed from homeworkAgent
   private topicAgent: TopicExplanationAgent
-  private examAgent: ExamStrategyTool
+  private examAgent: ExamPreparationAgent
   private doubtAgent: DoubtClearingTool
   private studyCoach: PersonalizedStudyCoach
+  private conversationalAgent: ConversationalLearningAgent
 
   constructor() {
     // Initialize specialized agents (lazy loading for performance)
-    this.homeworkAgent = new HomeworkHelpAgent()
+    this.selfstudyBuddyAgent = new SocraticTutoringTool()  // Renamed
     this.topicAgent = new TopicExplanationAgent()
-    this.examAgent = new ExamStrategyTool()
+    this.examAgent = new ExamPreparationAgent()
     this.doubtAgent = new DoubtClearingTool()
     this.studyCoach = new PersonalizedStudyCoach()
+    this.conversationalAgent = new ConversationalLearningAgent()
   }
 
   /**
@@ -84,11 +96,18 @@ export class MenuRouter {
   async route(context: MenuRoutingContext): Promise<MenuRoutingResult> {
     const { menuIntent, query, profile, routingIntent, userId } = context
 
+    // Resolve the response language ONCE for every specialized agent:
+    // an explicit in-prompt request wins; otherwise the student's subscribed
+    // medium (profile.medium) is the default. Stored on context so each agent reads it.
+    context.language = resolveResponseLanguage(query, profile.medium)
+    console.log(`🗣️ [Menu Router] Response language: ${context.language} (medium: ${profile.medium || 'n/a'})`)
+
     console.log(`🔍 [Menu Router Debug] Received context:`, {
       menuIntent,
       menuIntentType: typeof menuIntent,
       isUndefined: menuIntent === undefined,
       isNull: menuIntent === null,
+        // @ts-ignore
       isEmpty: menuIntent === '',
       isGeneralHelp: menuIntent === 'general_help',
       query: query.substring(0, 50),
@@ -107,8 +126,9 @@ export class MenuRouter {
     try {
       // Route to specialized agent based on menu intent
       switch (menuIntent) {
-        case 'homework_help':
-          return await this.routeToHomeworkHelp(context)
+        case 'selfstudy_buddy':  // New name
+        case 'homework_help':     // Backward compatibility
+          return await this.routeToSelfstudyBuddy(context)
 
         case 'explain_topic':
           return await this.routeToTopicExplanation(context)
@@ -136,7 +156,7 @@ export class MenuRouter {
       if (error instanceof TypeError && error.message.includes('is not a function')) {
         console.error(`🔍 [Menu Router] Method call error detected - check agent method signatures`)
         console.error(`🔍 [Menu Router] Expected methods:`)
-        console.error(`   - homework_help: help_with_homework()`)
+        console.error(`   - selfstudy_buddy/homework_help: provide_socratic_guidance()`)
         console.error(`   - explain_topic: explain_topic_legacy()`)
         console.error(`   - exam_prep: create_exam_strategy()`)
         console.error(`   - clear_doubts: resolve_doubt_professionally()`)
@@ -151,22 +171,22 @@ export class MenuRouter {
   }
 
   /**
-   * Homework Help: Socratic tutoring with step-by-step guidance
+   * Selfstudy Buddy: Socratic tutoring with step-by-step guidance
+   * (Previously known as Homework Help)
    */
-  private async routeToHomeworkHelp(context: MenuRoutingContext): Promise<MenuRoutingResult> {
-    console.log('📚 [Homework Help] Using Socratic tutoring approach')
+  private async routeToSelfstudyBuddy(context: MenuRoutingContext): Promise<MenuRoutingResult> {
+    console.log('📚 [Selfstudy Buddy] Using Socratic tutoring approach')
 
     const classNumber = this.extractClassNumber(context.profile.classLevel)
 
-    const response = await this.homeworkAgent.help_with_homework(
-      context.query,
-      {
-        grade_level: classNumber,
-        subject: context.profile.subject || 'General',
-        board_type: this.normalizeBoardType(context.profile.board),
-      },
-      context.conversationHistory || []
-    )
+    const response = await this.selfstudyBuddyAgent.provide_socratic_guidance({
+      student_question: context.query,
+      grade_level: classNumber,
+      subject: context.profile.subject || 'General',
+      board_type: this.normalizeBoardType(context.profile.board),
+      conversation_history: context.conversationHistory || [],
+      language: context.language
+    })
 
     return {
       answer: response.guidance, // Correct field name
@@ -174,7 +194,7 @@ export class MenuRouter {
       keyTerms: [],
       metadata: {
         menuSpecific: true,
-        agentUsed: 'homework_help_agent',
+        agentUsed: 'selfstudy_buddy_agent',
         socraticApproach: true,
         guidanceType: response.type,
         requiresStudentResponse: response.requires_student_response,
@@ -200,7 +220,9 @@ export class MenuRouter {
         grade_level: classNumber,
         subject: context.profile.subject || 'General',
         board_type: this.normalizeBoardType(context.profile.board),
-        explanation_type: 'comprehensive'
+        explanation_type: 'comprehensive',
+        language: context.language,
+        answerLength: context.answerLength
       },
       context.conversationHistory || []
     )
@@ -246,7 +268,8 @@ export class MenuRouter {
         subject: context.profile.subject || 'General',
         board_type: this.normalizeBoardType(context.profile.board),
         exam_type: 'regular',
-        time_available: 30
+        time_available: 30,
+        language: context.language
       },
       {},
       context.conversationHistory || []
@@ -284,7 +307,10 @@ export class MenuRouter {
       doubt_type: 'conceptual',
       student_name: context.userName,  // Pass user's first name for personalization
       response_length: 'balanced',
-      conversation_history: context.conversationHistory || []
+      conversation_history: context.conversationHistory || [],
+      // Default to the subscribed medium; the agent still honours an explicit
+      // in-question language request via its own detection.
+      language_preference: context.language
     })
 
     // Validate response structure
@@ -347,7 +373,8 @@ export class MenuRouter {
       {
         grade_level: classNumber,
         subject: context.profile.subject,
-        learning_style: 'mixed'
+        learning_style: 'mixed',
+        language: context.language
       },
       context.query
     )
@@ -370,26 +397,59 @@ export class MenuRouter {
   }
 
   /**
-   * Let's Talk: Textbook navigation and chapter overview
-   * Falls back to RAG with structure-focused retrieval
+   * Let's Talk: Conversational learning with textbook persona
+   * Agent speaks as the textbook/author in first person
    */
   private async routeToBookStructure(context: MenuRoutingContext): Promise<MenuRoutingResult> {
-    console.log('📚 [Let\'s Talk] Providing textbook structure overview')
-    
-    // For book structure, use RAG but with structure-focused prompt
-    const ragResult = await this.executeDefaultRAG(context)
-    
-    // Enhance with structure-specific formatting
-    const structureEnhancedAnswer = this.formatAsBookStructure(ragResult.answer, context)
-    
+    console.log('💬 [Let\'s Talk] Starting conversational learning experience')
+
+    const classNumber = this.extractClassNumber(context.profile.classLevel)
+    const studentName = context.userName || 'there'
+    const subject = context.profile.subject || 'General'
+    const board = context.profile.board || 'CBSE'
+
+    // Fetch book metadata from Qdrant
+    const bookMetadata = await bookMetadataService.getBookMetadata(
+      classNumber,
+      subject,
+      board
+    )
+
+    const response = await this.conversationalAgent.have_conversation({
+      query: context.query,
+      student_name: studentName,
+      grade_level: classNumber,
+      subject,
+      board_type: this.normalizeBoardType(board),
+      book_metadata: {
+        book_title: bookMetadata.book_title,
+        author: bookMetadata.author,
+        publisher: bookMetadata.publisher
+      },
+      conversation_history: context.conversationHistory || [],
+      language: context.language
+    })
+
     return {
-      ...ragResult,
-      answer: structureEnhancedAnswer,
+      answer: response.response,
+      sources: [],
+      keyTerms: response.key_topics_discussed.map(topic => ({
+        term: topic,
+        definition: ''
+      })),
       metadata: {
-        ...ragResult.metadata,
         menuSpecific: true,
-        agentUsed: 'book_structure_rag',
-        structureView: true
+        agentUsed: 'conversational_learning_agent',
+        conversational: response.conversational,
+        personalized: response.personalized,
+        textbookAligned: response.textbook_aligned,
+        sourcesIncluded: response.sources_included,
+        keyTopicsDiscussed: response.key_topics_discussed,
+        bookMetadata: {
+          title: bookMetadata.book_title,
+          author: bookMetadata.author,
+          publisher: bookMetadata.publisher
+        }
       }
     }
   }
@@ -450,11 +510,6 @@ export class MenuRouter {
     
     // Default: use subject as chapter
     return [subject || 'General Topics']
-  }
-
-  private formatAsBookStructure(answer: string, context: MenuRoutingContext): string {
-    // Add structure-specific formatting
-    return `# 📚 Textbook Structure Overview\n\n${answer}\n\n---\n\n*This overview is based on ${context.profile.board || 'CBSE'} ${context.profile.subject || 'curriculum'} for ${context.profile.classLevel || 'Class 10'}.*`
   }
 }
 

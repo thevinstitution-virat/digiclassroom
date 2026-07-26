@@ -233,6 +233,7 @@ Return your analysis as JSON:`;
         maxTokens: 500
       });
 
+        // @ts-ignore
       const result = JSON.parse(response.content);
 
       return {

@@ -72,6 +72,7 @@ import { MultiModalInput } from '@/components/ai/tutor/MultiModalInput'
 import { ChatHistoryPanel } from '@/components/ai/tutor/ChatHistoryPanel'
 import { History } from 'lucide-react'
 import { useAgentStream } from '@/hooks/useAgentStream'
+import type { AnswerLength } from '@/lib/ai/answer-length'
 import { StreamingChatMessage } from '@/components/ai/chat/StreamingChatMessage'
 import { ChatErrorBoundary } from '@/components/core/common/ChatErrorBoundary' // Phase 8
 
@@ -118,13 +119,15 @@ export function useAiTutor() {
   const [fileContent, setFileContent] = useState<string>('')
   const [isProcessingFile, setIsProcessingFile] = useState(false)
   const [voiceCommand, setVoiceCommand] = useState<any>(null)
+  // CBSE answer-length tier for Deep Dive (undefined = agent auto-sizes the answer)
+  const [answerLength, setAnswerLength] = useState<AnswerLength | undefined>(undefined)
 
   // Session ID for tracking chat history and button usage
   const [sessionId] = useState(() => `session_${user?.id || 'anonymous'}_${Date.now()}`)
 
   // Initialize the streaming hook
   const { state: agentStreamState, sendMessage, reset: resetStream } = useAgentStream({
-    agentType: 'topic_explanation', // Default, will override in call
+    agentType: 'general_help', // Default when no menu selected; overridden per message via sendMessage({ agentType })
     onComplete: (finalText, citations) => {
       console.log('🏁 [useAiTutor] onComplete called! finalText length:', finalText.length);
       // Stream is done, finalize the message in history
@@ -706,7 +709,7 @@ I'm **Virat Gyankosh**, your AI educational companion. I'm here to help you with
         studentName: conversationState.context.userName,
         grade: parseInt(conversationState.context.classLevel?.replace('Class ', '') || '10'),
         subject: conversationState.selectedSubject || selectedSubject || 'general',
-        language: 'english', // Defaulting to english, could pull from profile
+        language: 'english', // Legacy field (graph path); default response language is driven by `medium` below
         sessionId: sessionId,
         studentId: user?.id || 'anonymous',
         // Note: The new hook accepts standard conversation history
@@ -714,8 +717,14 @@ I'm **Virat Gyankosh**, your AI educational companion. I'm here to help you with
           role: msg.role === 'user' ? 'user' : 'assistant',
           content: msg.content
         })),
-        // Pass any necessary extra context as query parameters or in history depending on backend API structure.
-        // The SSE backend (/api/chat/stream) natively handles graph agents.
+        // The selected agent persona (Selfstudy Buddy, Deep Dive, …) — routes to the
+        // matching specialized agent on the backend (graph path or legacy MenuRouter).
+        agentType: currentMenuIntent,
+        // Student's subscribed medium → backend defaults the response language to it
+        // (unless the student explicitly asks for a language in their message).
+        medium: userMedium,
+        // CBSE answer-length tier — only meaningful for Deep Dive, so only sent then.
+        answerLength: currentMenuIntent === 'explain_topic' ? answerLength : undefined,
       })
 
       // Clear uploaded file after request fired
@@ -1973,6 +1982,7 @@ Feel free to ask me any questions related to your studies. I'll provide detailed
     fileContent, setFileContent,
     isProcessingFile, setIsProcessingFile,
     voiceCommand, setVoiceCommand,
+    answerLength, setAnswerLength,
     sessionId,
     agentStreamState, sendMessage, resetStream,
     conversationState, setConversationState,

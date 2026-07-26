@@ -111,7 +111,8 @@ export const contentRouter = createTRPCRouter({
             const ragPipeline = new EnhancedRAGPipeline();
             
             // Index chunks (pipeline will handle embedding generation)
-            indexedCount = await ragPipeline['indexChunksInQdrant'](chunksToIndex);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            indexedCount = await (ragPipeline as any)['indexChunksInQdrant'](chunksToIndex);
             indexingTimeMs = Date.now() - startIndexing;
             
             console.log(`✅ Indexed ${indexedCount} chunks in ${indexingTimeMs}ms`);
@@ -222,7 +223,8 @@ export const contentRouter = createTRPCRouter({
 
         return {
           success: true,
-          metricId: result.insertId,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          metricId: (result as any).insertId,
         };
       } catch (error) {
         console.error('❌ Record metrics error:', error);

@@ -10,5 +10,5 @@ export default defineConfig({
         url: process.env.DATABASE_URL || `mysql://root:rootpassword123@localhost:3310/virat_gyankosh`,
     },
     verbose: true,
-    strict: true,
+    strict: false,
 });

@@ -10,15 +10,15 @@
 //   PUT  — complete the session: recompute the whole score + analytics server-side
 
 import { NextRequest, NextResponse } from 'next/server';
-import { withOrgContext } from '@/lib/auth/with-org-context';
-import type { OrgContext } from '@/lib/auth/get-org-context';
+import { withTenantContext } from '@/lib/auth/with-tenant-context';
+import type { TenantContext } from '@/lib/db/tenant-scope';
 import { practestQueries } from '@/lib/db/practest-queries';
 import { scoreAnswer } from '@/lib/practest/options';
 import { db } from '@/db';
 import { practestAttemptEvents } from '@/db/schema';
 
-export const POST = withOrgContext(
-  async (req: NextRequest, _ctx: unknown, orgContext: OrgContext) => {
+export const POST = withTenantContext(
+  async (req: NextRequest, _ctx: unknown, orgContext: TenantContext) => {
     const { userId, orgId } = orgContext;
 
     let body: Record<string, unknown>;
@@ -81,14 +81,13 @@ export const POST = withOrgContext(
       return NextResponse.json({ success: false, error: 'Failed to submit answer' }, { status: 500 });
     }
   },
-  { requireOrg: true },
 );
 
 // ── PUT /api/practest/submit ──────────────────────────────────────────────────
 // Complete a session. Recomputes everything server-side from the answers map.
 
-export const PUT = withOrgContext(
-  async (req: NextRequest, _ctx: unknown, orgContext: OrgContext) => {
+export const PUT = withTenantContext(
+  async (req: NextRequest, _ctx: unknown, orgContext: TenantContext) => {
     const { userId, orgId } = orgContext;
 
     let body: Record<string, unknown>;
@@ -235,7 +234,6 @@ export const PUT = withOrgContext(
       return NextResponse.json({ success: false, error: 'Failed to complete test session' }, { status: 500 });
     }
   },
-  { requireOrg: true },
 );
 
 function aggregate(

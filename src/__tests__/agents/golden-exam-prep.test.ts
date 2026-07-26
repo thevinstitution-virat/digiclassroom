@@ -55,6 +55,7 @@ describe('Golden Flow: ExamPreparationAgent', () => {
             }
         };
 
+        // @ts-ignore
         const response = await agent.execute(request);
 
         // Verify response structure

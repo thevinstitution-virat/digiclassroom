@@ -7,4 +7,5 @@ export const enhancedSynthesisGraph = buildAgentGraph({
     generationNode: enhancedSynthesisNode
 });
 
+        // @ts-ignore
 registerGraph('enhanced_synthesis', enhancedSynthesisGraph);

@@ -140,6 +140,7 @@ export class QdrantRAGSearch {
         return {
           success: true,
           results: keywordResult.results,
+        // @ts-ignore
           totalResults: keywordResult.total_results,
           searchMethod: 'keyword_fallback',
           processingTime: Date.now() - startTime,
@@ -266,6 +267,7 @@ export class QdrantRAGSearch {
         return {
           success: true,
           results: keywordResult.results,
+        // @ts-ignore
           totalResults: keywordResult.total_results,
           searchMethod: 'emergency_keyword_fallback',
           processingTime: Date.now() - startTime,

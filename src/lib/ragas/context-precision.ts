@@ -198,6 +198,7 @@ The relevance array must have exactly ${context.length} elements, one for each c
     // Convert to boolean array
     const indicators = relevance.map((r: string) => r === 'relevant')
     
+        // @ts-ignore
     const relevantCount = indicators.filter(r => r).length
     console.log(`[RAGAS Context Precision] Found ${relevantCount}/${context.length} relevant chunks`)
     

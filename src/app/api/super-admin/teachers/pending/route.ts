@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
       }
 
       return {
-        id: teacher.id,
+        userId: teacher.id,
         email: teacher.email,
         firstName: teacher.first_name,
         lastName: teacher.last_name,

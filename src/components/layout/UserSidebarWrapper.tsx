@@ -12,8 +12,8 @@ export default async function UserSidebarWrapper() {
   const user = _baSession?.user; const userData = user ? {
     firstName: user?.name?.split(' ')[0],
     lastName: user?.name?.split(' ').slice(1).join(' '),
-    emailAddress: user.primaryEmailAddress?.emailAddress,
-    persona: user.publicMetadata?.persona as string || 'student'
+    emailAddress: user.email,
+    persona: user.role || 'student'
   } : null
 
   return <UserSidebar user={userData} />

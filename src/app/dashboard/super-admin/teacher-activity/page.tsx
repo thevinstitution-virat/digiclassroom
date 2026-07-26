@@ -6,7 +6,6 @@ import { Activity, TrendingUp, Users, BookOpen, CheckSquare, Eye } from 'lucide-
 
 interface TeacherStats {
   teacherId: string
-  clerkId: string
   email: string
   teacherName: string
   approvalStatus: string

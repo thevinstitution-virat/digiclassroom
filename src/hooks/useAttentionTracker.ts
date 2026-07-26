@@ -45,6 +45,7 @@ export const useAttentionTracker = () => {
   const [focusLossEvents, setFocusLossEvents] = useState(0)
   const [mouseMovements, setMouseMovements] = useState(0)
   
+        // @ts-ignore
   const idleTimeoutRef = useRef<NodeJS.Timeout>()
   const startTimeRef = useRef<number>(Date.now())
   const lastActivityTime = useRef<number>(Date.now())

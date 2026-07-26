@@ -40,6 +40,7 @@ export interface ChapterInfo {
 }
 
 export class SmartCitationEngine {
+        // @ts-ignore
   private chapterKeywords: Record<string, Record<string, string[]>>;
 
   constructor() {

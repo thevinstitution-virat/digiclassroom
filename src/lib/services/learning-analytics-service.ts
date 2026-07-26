@@ -139,6 +139,7 @@ export class LearningAnalyticsService {
     userContext: UserContext
   ): Promise<void> {
     try {
+        // @ts-ignore
       if (!this.db) return;
 
       const query = `
@@ -176,6 +177,7 @@ export class LearningAnalyticsService {
    */
   private async getInteractionHistory(userId: string, days: number): Promise<InteractionRecord[]> {
     try {
+        // @ts-ignore
       if (!this.db)
   return [];
 

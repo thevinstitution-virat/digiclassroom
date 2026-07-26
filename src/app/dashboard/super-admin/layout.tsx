@@ -9,6 +9,7 @@ import { dashboardHome } from '@/lib/dashboard/dashboard-nav'
 import AdminSidebarWrapper from '@/components/core/layout/AdminSidebarWrapper'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import { SuperAdminContextProvider } from './_context/SuperAdminContext'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const ctx = await getOrgContextOrNull()
@@ -22,8 +23,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <DashboardLayout sidebar={<AdminSidebarWrapper />}>
-      <Suspense fallback={<LoadingSkeleton />}>{children}</Suspense>
-    </DashboardLayout>
+    <SuperAdminContextProvider>
+      <DashboardLayout sidebar={<AdminSidebarWrapper />}>
+        <Suspense fallback={<LoadingSkeleton />}>{children}</Suspense>
+      </DashboardLayout>
+    </SuperAdminContextProvider>
   )
 }

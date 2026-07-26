@@ -84,6 +84,7 @@ Answer:`;
         maxTokens: 800
       });
 
+        // @ts-ignore
       const generatedText = response.choices[0]?.message?.content || '';
       console.log(`✅ Constrained generation complete: ${generatedText.length} characters`);
       return generatedText;

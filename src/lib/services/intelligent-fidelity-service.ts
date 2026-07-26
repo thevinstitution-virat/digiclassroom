@@ -318,6 +318,7 @@ export class IntelligentFidelityService {
         maxTokens: 400
       });
 
+        // @ts-ignore
       const regeneratedContent = { text: response.choices[0]?.message?.content || '' };
       
       console.log('✅ Content regenerated with strict constraints');

@@ -7,4 +7,5 @@ export const examPreparationGraph = buildAgentGraph({
     generationNode: examPreparationNode
 });
 
+        // @ts-ignore
 registerGraph('exam_preparation', examPreparationGraph);

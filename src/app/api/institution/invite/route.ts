@@ -110,6 +110,7 @@ async function handleBulkInvite(body: any, orgContext: OrgRouteContext) {
       errors: errors.slice(0, 50)
     });
   } catch (error) {
+        // @ts-ignore
     logger.error("Bulk invitation failed", error);
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Invalid data", details: error.errors }, { status: 400 });

@@ -74,16 +74,30 @@ export interface IAgent {
 }
 
 // ============================================================================
+// Core Agent Services (shared service container for composable agents)
+// ============================================================================
+
+import { RetrievalService } from './services/retrieval.service';
+
+export interface CoreAgentServices {
+  retrieval: RetrievalService;
+}
+
+// ============================================================================
 // Abstract Base Agent (Optional - provides common functionality)
 // ============================================================================
 
 export abstract class BaseAgent implements IAgent {
   protected capabilities: AgentCapabilities;
   protected config: AgentConfig;
+  protected services: CoreAgentServices;
 
-  constructor(capabilities: AgentCapabilities, config: AgentConfig) {
+  constructor(capabilities: AgentCapabilities, config: AgentConfig, services?: CoreAgentServices) {
     this.capabilities = capabilities;
     this.config = config;
+    // Default container so agents constructed bare (e.g. by MenuRouter) still
+    // get a working retrieval pipeline (vector search + rerank + cache).
+    this.services = services ?? { retrieval: new RetrievalService() };
   }
 
   getConfig(): AgentConfig {
@@ -113,6 +127,7 @@ export abstract class BaseAgent implements IAgent {
   protected extractSources(results: Record<string, unknown>[]): string[] {
     return results.map(r => {
       const meta = r.metadata;
+        // @ts-ignore
       return `${meta.subject} - Class ${meta.class_level} - ${meta.content_type}`;
     });
   }

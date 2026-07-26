@@ -62,6 +62,7 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
 
   // ── 4. Write audit log BEFORE the destructive operation ───────────────────
   try {
+        // @ts-ignore
     await db.insert(adminActivityLog).values({
       id: crypto.randomUUID(),
       adminId: ctx.userId,
