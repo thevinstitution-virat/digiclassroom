@@ -26,7 +26,6 @@ const DEV_ROUTE_PREFIXES = [
   '/api/experiments',
   '/api/ground-truth',
   '/api/scan-books',         // Bug A7: was in publicPrefixes — removed
-  '/api/webhook/clerk',      // Bug I4: dead Clerk webhook
 ] as const;
 
 // ── Routes that don't require authentication ──────────────────────────────────
