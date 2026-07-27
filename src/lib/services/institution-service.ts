@@ -1,11 +1,9 @@
+
 import { db } from '@/db';
 import { 
     institutionProfiles, 
-        // @ts-ignore
     institutionClasses, 
-        // @ts-ignore
     institutionSections, 
-        // @ts-ignore
     studentEnrollments 
 } from '@/db/schema';
 import { auth } from '@/auth';

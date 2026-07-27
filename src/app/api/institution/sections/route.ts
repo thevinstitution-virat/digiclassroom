@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-        // @ts-ignore
 import { institutionSections } from "@/db/schema";
 import { withOrgContext, OrgRouteContext } from "@/lib/auth/with-org-context";
 import { eq, and } from "drizzle-orm";

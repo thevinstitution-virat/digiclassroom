@@ -1,4 +1,4 @@
-﻿import { relations, sql } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
     mysqlTable,
     index,
@@ -1028,9 +1028,58 @@ export const institutionProfiles = mysqlTable('institution_profiles', {
     updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
 
-// Phase 4.2: duplicate institutionClasses / institutionSections /
-// studentEnrollments / institutionProfiles declarations removed (canonical
-// versions live above).
+export const institutionClasses = mysqlTable('institution_classes', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+    organizationId: varchar('organization_id', { length: 255 })
+        .notNull()
+        .references(() => organization.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 100 }).notNull(),
+    level: int('level'),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+}, (table) => [
+    index('ic_org_idx').on(table.organizationId),
+]);
+
+export const institutionSections = mysqlTable('institution_sections', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+    organizationId: varchar('organization_id', { length: 255 })
+        .notNull()
+        .references(() => organization.id, { onDelete: 'cascade' }),
+    classId: varchar('class_id', { length: 36 })
+        .notNull()
+        .references(() => institutionClasses.id, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 100 }).notNull(),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+}, (table) => [
+    index('is_org_idx').on(table.organizationId),
+    index('is_class_idx').on(table.classId),
+]);
+
+export const studentEnrollments = mysqlTable('student_enrollments', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+    organizationId: varchar('organization_id', { length: 255 })
+        .notNull()
+        .references(() => organization.id, { onDelete: 'cascade' }),
+    userId: varchar('user_id', { length: 255 })
+        .notNull()
+        .references(() => user.id, { onDelete: 'cascade' }),
+    classId: varchar('class_id', { length: 36 })
+        .notNull()
+        .references(() => institutionClasses.id, { onDelete: 'cascade' }),
+    sectionId: varchar('section_id', { length: 36 })
+        .references(() => institutionSections.id, { onDelete: 'set null' }),
+    rollNumber: varchar('roll_number', { length: 50 }),
+    academicYear: varchar('academic_year', { length: 50 }),
+    status: varchar('status', { length: 20 }).default('active'),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
+}, (table) => [
+    index('se_org_idx').on(table.organizationId),
+    index('se_user_idx').on(table.userId),
+    index('se_class_idx').on(table.classId),
+]);
 
 // â”€â”€ B2B2C: student â†’ institution join requests (self-select, admin-approved) â”€â”€
 export const institutionJoinRequests = mysqlTable('institution_join_requests', {
