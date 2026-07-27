@@ -8,6 +8,7 @@ import { routeQuery } from '@/lib/ai/routing/query-router'
 import { getSemanticCache } from '@/lib/ai/cache/semantic-cache-service'
 import { FeedbackStream } from '@/lib/ai/feedback/progressive-feedback'
 import { menuRouter, type MenuIntent } from '@/lib/ai/menu/menu-router'
+import { logTutorTopicEvent, getTopWeakTopics } from '@/lib/services/topic-weakness-service'
 // NEW: Enterprise services integration (non-breaking)
 import { LegacyAgentAdapter } from '@/lib/adapters/legacy-agent-adapter'
 
@@ -207,6 +208,24 @@ export async function POST(req: NextRequest) {
     console.log(`✅ Access validation passed: ${profile.board} / Class ${classNumber} / ${profile.subject}`)
 
     // ============================================================================
+    // STEP 3b: LOG TOPIC EVENT (fire-and-forget)
+    // ============================================================================
+    // One row per chat request, reusing the profile fields already assembled
+    // above. Deliberately NOT awaited: this is the write half of the topic-
+    // weakness signal and must add no latency to, and never be able to fail, the
+    // student's question. logTutorTopicEvent swallows its own errors, including
+    // the case where 010_tutor_topic_events.sql has not been applied yet.
+    void logTutorTopicEvent({
+      userId,
+      subject: profile.subject,
+      board: profile.board,
+      classLevel: profile.classLevel,
+      chapter: sanitizeField(body.chapter) || sanitizeField(body.context?.chapter) || null,
+      topic: sanitizeField(body.topic) || sanitizeField(body.context?.topic) || null,
+      agentId: menuIntent || null,
+    })
+
+    // ============================================================================
     // STEP 4: INTELLIGENT QUERY ROUTING
     // ============================================================================
     const routingDecision = await routeQuery(message, profile)
@@ -218,13 +237,42 @@ export async function POST(req: NextRequest) {
     let semanticCacheResult: any = null
     const semanticCache = getSemanticCache()
 
-    if (routingDecision.route === 'semantic-cache' || routingDecision.route === 'cached-template') {
+    // Widened from `route === 'semantic-cache' || route === 'cached-template'`.
+    //
+    // Rationale, per makeRoutingDecision in src/lib/ai/routing/query-router.ts:286:
+    //   cached-template  simple ≤5-word definition — cache-first by design
+    //   semantic-cache   simple / moderate + cache-first — cache-first by design
+    //   hybrid           labelled "Hybrid (cache + minimal RAG)" (line 319-326) —
+    //                    its own reasoning string says it checks cache, but the old
+    //                    condition excluded it, so it never did. That was the bug.
+    //   full-rag         complex; determineCacheStrategy (line 274) marks complex
+    //                    as 'rag-first' with "low reuse, needs fresh context".
+    //
+    // "Needs fresh RAG context" is not the same as "must never reuse an identical
+    // prior answer", so full-rag is now checked too — but behind a stricter
+    // similarity threshold, because a loose semantic match on a complex analytical
+    // question is likelier to be subtly wrong than on a simple definition. If
+    // searchCache ignores an unknown option, full-rag simply behaves as before
+    // this change for threshold purposes; it still gains the lookup.
+    //
+    // An explicit client bypassCache always wins — used by "Explain a different
+    // way", where returning the cached answer would hand back the very
+    // explanation the student just said didn't help.
+    const bypassCache = body?.bypassCache === true
+    const CACHE_ELIGIBLE_ROUTES = ['cached-template', 'semantic-cache', 'hybrid', 'full-rag'] as const
+    const routeIsCacheEligible = (CACHE_ELIGIBLE_ROUTES as readonly string[]).includes(routingDecision.route)
+    const STRICT_SIMILARITY_ROUTES = ['full-rag']
+
+    if (!bypassCache && routeIsCacheEligible) {
       try {
         semanticCacheResult = await semanticCache.searchCache(message, {
           classLevel: profile.classLevel,
           subject: profile.subject,
-          board: profile.board
-        })
+          board: profile.board,
+          ...(STRICT_SIMILARITY_ROUTES.includes(routingDecision.route)
+            ? { minSimilarity: 0.95 }
+            : {})
+        } as any)
 
         if (semanticCacheResult.found) {
           console.log(`✅ [Semantic Cache] HIT - Similarity: ${(semanticCacheResult.similarity! * 100).toFixed(1)}%`)
@@ -256,12 +304,32 @@ export async function POST(req: NextRequest) {
     let isPreGenerated = false
     let preGeneratedAnswer: any = null
 
-    if (!semanticCacheResult?.found && profile.subject && profile.classLevel) {
+    // Widened from `profile.subject && profile.classLevel`, which skipped the
+    // pre-generated cache entirely whenever either field was absent — and profile
+    // is built from request-body fields (line 62) that the client does not always
+    // send, so a missing subject silently disabled this whole cache tier.
+    //
+    // Now attempts a lookup scoped to whatever IS present. classLevel remains
+    // required because findPreGeneratedAnswer and generateQuestionHash both take
+    // it positionally and it participates in the hash — a wrong-grade answer is a
+    // genuine correctness problem, not just a weaker match. Subject falls back to
+    // the router's detected subject where available, then to a wildcard the
+    // lookup can treat as "any".
+    const preGenClassLevel = profile.classLevel
+    const preGenSubject =
+      profile.subject ||
+      (routingDecision.intent as any)?.subject ||
+      null
+
+    if (!bypassCache && !semanticCacheResult?.found && preGenClassLevel) {
       try {
         preGeneratedAnswer = await findPreGeneratedAnswer(
           message,
-          profile.classLevel,
-          profile.subject,
+          preGenClassLevel,
+          // findPreGeneratedAnswer's subject arg is part of the lookup key; when
+          // the client omitted it we pass the router's guess rather than skipping
+          // the cache tier outright.
+          preGenSubject as string,
           profile.board || 'CBSE'
         )
 
@@ -269,8 +337,8 @@ export async function POST(req: NextRequest) {
           isPreGenerated = true
           const questionHash = generateQuestionHash(
             message,
-            profile.classLevel,
-            profile.subject,
+            preGenClassLevel,
+            preGenSubject as string,
             profile.board || 'CBSE'
           )
 
@@ -340,6 +408,21 @@ export async function POST(req: NextRequest) {
     }
     // Priority 3: Menu-Aware Routing (NEW: Specialized agents or RAG)
     else {
+      // Personalised weak topics — "Ace Your Exams" only, per spec. Awaited
+      // (unlike the write) because the value must be in the prompt, but it is
+      // fully fault-tolerant: getTopWeakTopics returns [] on any failure, in
+      // which case the agent falls back to its previous generic behaviour.
+      let weakTopics: string[] | undefined
+      if (menuIntent === 'exam_prep') {
+        const topWeak = await getTopWeakTopics(userId, 3, profile.subject)
+        if (topWeak.length) {
+          weakTopics = topWeak.map((t) =>
+            [t.topic, t.chapter, t.subject].filter(Boolean).join(' — ')
+          )
+          console.log(`🎯 [Ace Your Exams] Personalising with weak topics: ${weakTopics.join(' | ')}`)
+        }
+      }
+
       // Route through menu-aware router
       const menuRoutingResult = await menuRouter.route({
         menuIntent: menuIntent || 'general_help',
@@ -350,7 +433,8 @@ export async function POST(req: NextRequest) {
         userId: userId,
         userName,  // Pass user's first name for personalization
         conversationHistory,
-        answerLength  // CBSE answer-length tier (Deep Dive only)
+        answerLength,  // CBSE answer-length tier (Deep Dive only)
+        weakTopics     // Ace Your Exams only
       })
 
       answer = menuRoutingResult.answer

@@ -7,6 +7,9 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 
 
 const nextConfig: NextConfig = {
+  // Standalone output for Docker/Coolify: emits .next/standalone, a minimal
+  // self-contained Node server (server.js) that the Dockerfile copies + runs.
+  output: 'standalone',
   typescript: {
     // !! WARN !!
     // Dangerously allow production builds to successfully complete even if

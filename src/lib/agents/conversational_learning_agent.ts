@@ -91,6 +91,17 @@ export class ConversationalLearningAgent extends BaseAgent {
 
     try {
       const textbookContent = await this.retrieveTextbookContent(request);
+      const retrievedSources = (textbookContent?.results as Array<unknown> | undefined) ?? [];
+      const hasRetrievedSources = retrievedSources.length > 0;
+
+      if (!hasRetrievedSources) {
+        logger.warn(
+          `⚠️ [Let's Talk] No textbook content retrieved for "${request.query}" ` +
+          `(${request.board_type} Class ${request.grade_level} ${request.subject}) — ` +
+          `answering in refusal mode, not from general knowledge.`
+        );
+      }
+
       const systemPrompt = this.buildConversationalSystemPrompt(request);
       const userMessage = this.buildUserMessage(request, textbookContent);
       const messages = this.buildConversationMessages(systemPrompt, userMessage, request.conversation_history || []);
@@ -103,13 +114,18 @@ export class ConversationalLearningAgent extends BaseAgent {
 
       const response = chatResponse.text;
       const keyTopics = this.extractKeyTopics(response);
+      const sourcesIncluded = this.hasSourceCitations(response);
 
       return {
         response,
         conversational: true,
         personalized: true,
-        textbook_aligned: true,
-        sources_included: this.hasSourceCitations(response),
+        // Derived, not asserted. Was hardcoded `true`, which claimed textbook
+        // alignment even on an ungrounded answer — the flag feeds `fidelity` in
+        // execute() (1.0 vs 0.5), so a hardcoded true also reported false confidence
+        // downstream. Requires BOTH real retrieved sources AND citations in the output.
+        textbook_aligned: hasRetrievedSources && sourcesIncluded,
+        sources_included: sourcesIncluded,
         key_topics_discussed: keyTopics
       };
 
@@ -189,25 +205,45 @@ REMEMBER:
   }
 
   private buildUserMessage(request: ConversationalLearningRequest, textbookContent: Record<string, unknown>): string {
-    const sources = textbookContent.results || [];
-    let message = `Student Question: ${request.query}\\n\\n`;
+    const sources = (textbookContent?.results as Array<Record<string, unknown>> | undefined) ?? [];
+    let message = `Student Question: ${request.query}\n\n`;
 
-        // @ts-ignore
     if (sources.length > 0) {
-      message += `Relevant Content from My Pages:\\n\\n`;
-        // @ts-ignore
+      message += `Relevant Content from My Pages:\n\n`;
       sources.slice(0, 5).forEach((source: Record<string, unknown>, index: number) => {
-        const metadata = source.metadata || {};
-        message += `[Source ${index + 1}]\\n`;
-        // @ts-ignore
-        message += `Chapter: ${metadata.chapter || 'Unknown'}\\n`;
-        // @ts-ignore
-        message += `Page: ${metadata.page || 'Unknown'}\\n`;
-        message += `Content: ${source.text || source.content || ''}\\n\\n`;
+        const metadata = (source.metadata as Record<string, unknown> | undefined) ?? {};
+        message += `[Source ${index + 1}]\n`;
+        message += `Chapter: ${metadata.chapter || 'Unknown'}\n`;
+        message += `Page: ${metadata.page || 'Unknown'}\n`;
+        message += `Content: ${source.text || source.content || ''}\n\n`;
       });
+
+      message += `\nPlease respond as the textbook/author, speaking directly to ${request.student_name} in a friendly, conversational manner.`;
+      return message;
     }
 
-    message += `\\nPlease respond as the textbook/author, speaking directly to ${request.student_name} in a friendly, conversational manner.`;
+    // NO RETRIEVED CONTENT — hard-fail closed.
+    //
+    // Previously this branch did not exist: on zero retrieval the model received
+    // only the question plus "respond as the textbook/author", with no context and
+    // no refusal instruction, so it answered from general parametric knowledge
+    // while roleplaying as the NCERT textbook. That is a trust failure — the
+    // student cannot tell a grounded answer from an invented one.
+    //
+    // This mirrors the hard-fail in src/lib/ai/langgraph/graph.ts (~line 99),
+    // which returns finalAnswer: undefined with
+    // unsupportedClaims: ['No relevant textbook context found'].
+    message += `NO TEXTBOOK CONTENT WAS RETRIEVED FOR THIS QUESTION.\n\n`;
+    message += `You have NO passages from my pages covering this. You MUST NOT answer `;
+    message += `from general knowledge, outside training, or memory — even if you are `;
+    message += `confident you know the answer, and even though you are speaking as the textbook.\n\n`;
+    message += `Instead, reply in character as the textbook and:\n`;
+    message += `1. Tell ${request.student_name} plainly that you could not find this in your pages.\n`;
+    message += `2. Do NOT state, guess, or imply any subject-matter answer to the question.\n`;
+    message += `3. Do NOT invent a chapter name, page number, or citation of any kind.\n`;
+    message += `4. Suggest a concrete next step — rephrasing the question, naming the `;
+    message += `chapter they are studying, or checking whether this topic is part of `;
+    message += `their ${request.board_type} Class ${request.grade_level} ${request.subject} syllabus.\n`;
     return message;
   }
 
@@ -234,10 +270,15 @@ REMEMBER:
 
   private extractKeyTopics(response: string): string[] {
     const topics: string[] = [];
-    const headingMatches = response.match(/#{1,3}\\s+(.+)/g);
+    // NOTE: these three regexes previously used \\s and \\*\\* inside regex
+    // literals, which match a literal backslash followed by 's'/'*' rather than
+    // whitespace/asterisks. No markdown heading could ever match, so
+    // key_topics_discussed always came back empty. Same double-escaping root
+    // cause as the \\n bug in buildUserMessage.
+    const headingMatches = response.match(/#{1,3}\s+(.+)/g);
     if (headingMatches) {
       headingMatches.forEach(heading => {
-        const topic = heading.replace(/#{1,3}\\s+/, '').replace(/\\*\\*/g, '').trim();
+        const topic = heading.replace(/#{1,3}\s+/, '').replace(/\*\*/g, '').trim();
         if (topic && !topic.includes('Reference') && !topic.includes('Source')) {
           topics.push(topic);
         }

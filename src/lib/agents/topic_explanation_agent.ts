@@ -7,7 +7,7 @@ import { OpenAIService } from '../services/openai_service';
 import { VectorStoreService } from '../services/vector_store_service';
 import { ResponseEnhancementPipeline, EnhancementRequest } from '../ai/enhancement/response-enhancement-pipeline';
 import { buildLanguageDirective, type ResponseLanguage } from '../ai/language/resolve-language';
-import { buildAnswerLengthDirective, answerLengthMaxTokens, getAnswerLengthTier, type AnswerLength } from '../ai/answer-length';
+import { buildAnswerLengthDirective, answerLengthMaxTokens, resolveMaxTokens, getAnswerLengthTier, type AnswerLength } from '../ai/answer-length';
 
 export interface TopicExplanationRequest {
   topic: string;
@@ -240,16 +240,23 @@ export class TopicExplanationTool {
 
       // Length directive (Deep Dive only): sizes the answer to a CBSE question
       // type and OVERRIDES the long multi-section template for short tiers.
-      const lengthDirective = buildAnswerLengthDirective(request.answerLength)
+      // Resolved once and reused: the same language must drive both the directive
+      // text and the token ceiling, or a Hindi answer gets an English-sized budget.
+      const responseLanguage = request.language || 'english'
+      const lengthDirective = buildAnswerLengthDirective(request.answerLength, responseLanguage)
 
       // Generate explanation
       const response = await this.llmService.generateChatCompletion({
         messages: [
-          { role: 'system', content: `${buildLanguageDirective(request.language || 'english')}${lengthDirective ? `\n\n${lengthDirective}` : ''}\n\nYou are an expert ${request.board_type} educator for Class ${request.grade_level} ${request.subject}, targeting the "${this.determineCognitiveLevel(request.grade_level)}" cognitive level.` },
+          { role: 'system', content: `${buildLanguageDirective(responseLanguage)}${lengthDirective ? `\n\n${lengthDirective}` : ''}\n\nYou are an expert ${request.board_type} educator for Class ${request.grade_level} ${request.subject}, targeting the "${this.determineCognitiveLevel(request.grade_level)}" cognitive level.` },
           { role: 'user', content: prompt }
         ],
         temperature: 0.4,
-        maxTokens: answerLengthMaxTokens(request.answerLength) ?? 1500
+        // Was `answerLengthMaxTokens(...) ?? 1500`: a flat 1500 applied identically
+        // to a 1-mark VSA and a 6-mark essay whenever the tier was absent/unknown.
+        // resolveMaxTokens falls back to DEFAULT_ANSWER_LENGTH's budget instead,
+        // and language-scales every branch.
+        maxTokens: resolveMaxTokens(request.answerLength, responseLanguage)
       });
 
       return response.text;

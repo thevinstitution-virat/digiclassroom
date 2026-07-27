@@ -116,3 +116,6 @@ build_output.txt
 docker-compose-resolved.yaml
 lint_report*.log
 tsc_errors*.log
+
+# k8s secrets (never commit real values)
+k8s/secrets.yaml

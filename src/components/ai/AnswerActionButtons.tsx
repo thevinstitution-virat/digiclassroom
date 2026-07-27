@@ -27,6 +27,7 @@ import {
   Loader2,
   Volume2,
   FileText,
+  Lightbulb,
   X
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -37,14 +38,76 @@ import VisualizationRenderer from '@/components/ai/VisualizationRenderer';
 import { markdownToHtml } from '@/lib/utils/markdownToHtml';
 import { addNewPage } from '@/lib/utils/multiPageContent';
 
+/**
+ * user_notes.board is a strict MySQL ENUM('CBSE','ICSE','STATE_BOARD')
+ * (src/db/schema.ts:487). The tutor session carries the board as the lowercase
+ * EducationBoard union 'cbse' | 'icse' | 'state_board'
+ * (src/app/dashboard/user/ai-tutor/_types/index.ts:105), so passing it straight
+ * through would send 'cbse' and the INSERT would reject it.
+ */
+const NOTE_BOARD_ENUM = ['CBSE', 'ICSE', 'STATE_BOARD'] as const;
+type NoteBoard = typeof NOTE_BOARD_ENUM[number];
+
+/**
+ * Normalise a board value to the DB enum, or return null when it cannot be
+ * mapped. Callers must OMIT the field on null rather than sending a bad value —
+ * an unmatched board should never fail the whole note save.
+ */
+function toNoteBoardEnum(board?: string | null): NoteBoard | null {
+  if (!board) return null;
+  const normalised = board.trim().toUpperCase().replace(/[\s-]+/g, '_');
+  return (NOTE_BOARD_ENUM as readonly string[]).includes(normalised)
+    ? (normalised as NoteBoard)
+    : null;
+}
+
+/** Angles for "Explain a different way" — each forces a genuinely different framing. */
+const EXPLANATION_ANGLES = [
+  {
+    id: 'analogy',
+    label: 'By analogy',
+    directive:
+      'Re-explain this using a concrete ANALOGY or metaphor drawn from everyday Indian student life. ' +
+      'Lead with the analogy, then map each part of it back to the concept. ' +
+      'Do NOT reuse the phrasing, structure, or examples of the previous explanation.',
+  },
+  {
+    id: 'real_world',
+    label: 'Real-world example',
+    directive:
+      'Re-explain this through a specific, concrete REAL-WORLD EXAMPLE or application the student ' +
+      'could observe themselves. Start from the example and derive the concept from it, rather than ' +
+      'stating the concept first. Do NOT reuse the previous explanation\'s wording or examples.',
+  },
+  {
+    id: 'simpler',
+    label: 'Simpler words',
+    directive:
+      'Re-explain this using SIMPLER VOCABULARY and shorter sentences, as if to a student two grades ' +
+      'below. Replace every piece of technical jargon with plain language on first use (you may give ' +
+      'the technical term in brackets afterwards). Do NOT reuse the previous explanation\'s wording.',
+  },
+] as const;
+
 interface AnswerActionButtonsProps {
   answer: string;
   query: string;
   currentMedium: 'ENGLISH' | 'HINDI';
   subject?: string;
   classLevel?: string;
+  /**
+   * Tutor session board. Accepts the lowercase EducationBoard values or the
+   * uppercase DB enum; normalised via toNoteBoardEnum before saving.
+   *
+   * ⚠️ NOT YET SUPPLIED BY THE CALL SITE. src/app/dashboard/user/ai-tutor/page.tsx
+   * (~line 456) must pass board={conversationState.context.educationBoard} for
+   * notes to record it. That file was outside this change's scope.
+   */
+  board?: string;
+  /** Optional chapter for the current tutor session; persisted to user_notes.chapter. */
+  chapter?: string;
   onVisualizationGenerated?: (visualization: any) => void;
-  onButtonUsage?: (buttonType: 'translate' | 'word_meanings' | 'visual_aid' | 'add_to_sanchika', metadata?: any) => void;
+  onButtonUsage?: (buttonType: 'translate' | 'word_meanings' | 'visual_aid' | 'add_to_sanchika' | 'explain_differently', metadata?: any) => void;
 }
 
 interface WordMeaning {
@@ -59,10 +122,19 @@ export default function AnswerActionButtons({
   currentMedium,
   subject = 'general',
   classLevel = 'Class 10',
+  board,
+  chapter,
   onVisualizationGenerated,
   onButtonUsage
 }: AnswerActionButtonsProps) {
   const { addNotification } = useNotification();
+
+  // "Explain a different way" state
+  const [isExplaining, setIsExplaining] = useState(false);
+  const [altExplanation, setAltExplanation] = useState<string | null>(null);
+  const [altAngleLabel, setAltAngleLabel] = useState<string | null>(null);
+  const [showAltExplanation, setShowAltExplanation] = useState(false);
+  const [angleIndex, setAngleIndex] = useState(0);
 
   const [isTranslating, setIsTranslating] = useState(false);
   const [translatedText, setTranslatedText] = useState<string | null>(null);
@@ -380,6 +452,87 @@ export default function AnswerActionButtons({
   };
 
   /**
+   * Handle "Explain a different way".
+   *
+   * Deliberately NOT a resample of the same prompt — that mostly returns a
+   * paraphrase. Each press advances through EXPLANATION_ANGLES (analogy →
+   * real-world example → simpler vocabulary) and sends that angle's directive as
+   * a system-level instruction, along with the previous answer so the model can
+   * actively avoid repeating it.
+   *
+   * Self-contained by design: this component does not own the tutor message
+   * list, so the alternative renders inline here (same pattern as Translate and
+   * Visual Aid) rather than requiring a new callback from the parent page.
+   */
+  const handleExplainDifferently = async () => {
+    // Already have one and it's hidden — just toggle it back into view.
+    if (altExplanation && !showAltExplanation) {
+      setShowAltExplanation(true);
+      return;
+    }
+
+    const angle = EXPLANATION_ANGLES[angleIndex % EXPLANATION_ANGLES.length];
+    setIsExplaining(true);
+
+    if (onButtonUsage) {
+      onButtonUsage('explain_differently', { subject, classLevel, query, angle: angle.id });
+    }
+
+    try {
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message:
+            `${angle.directive}\n\n` +
+            `Original question: ${query}\n\n` +
+            `The explanation already given (do NOT repeat its structure, wording, or examples):\n` +
+            `${answer}`,
+          subject,
+          classLevel,
+          medium: currentMedium === 'HINDI' ? 'HINDI' : 'ENGLISH',
+          // Force a fresh generation: a cache hit would return the very answer
+          // the student just told us didn't land.
+          bypassCache: true,
+          roleContext: { role: 'student' }
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Could not generate another explanation (${response.status})`);
+      }
+
+      const data = await response.json();
+      const text = data.response || data.answer || data.content || '';
+
+      if (!text) {
+        throw new Error('The tutor returned an empty explanation.');
+      }
+
+      setAltExplanation(text);
+      setAltAngleLabel(angle.label);
+      setShowAltExplanation(true);
+      setAngleIndex((i) => i + 1);
+
+      addNotification({
+        type: 'success',
+        title: `Explained ${angle.label.toLowerCase()}`,
+        message: 'A different take is shown below. Press again for another angle.'
+      });
+    } catch (error) {
+      console.error('Explain-differently error:', error);
+      addNotification({
+        type: 'error',
+        title: 'Could Not Re-explain',
+        message: error instanceof Error ? error.message : 'Please try again later.'
+      });
+    } finally {
+      setIsExplaining(false);
+    }
+  };
+
+  /**
    * Handle add to notes button click
    */
   const handleAddToNotes = () => {
@@ -523,6 +676,10 @@ export default function AnswerActionButtons({
 
       } else {
         // CREATE NEW NOTE
+        // board is an ENUM — omit the key entirely when it can't be mapped,
+        // rather than sending an invalid value that would fail the INSERT.
+        const noteBoard = toNoteBoardEnum(board);
+
         const response = await fetch('/api/notes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -530,11 +687,21 @@ export default function AnswerActionButtons({
             title: noteTitle,
             content: htmlContent,
             subject,
-            class_level: classLevel,
+            // user_notes.class_level is varchar(20), not an int — always a string.
+            class_level: classLevel != null ? String(classLevel) : null,
+            ...(chapter ? { chapter } : {}),
+            ...(noteBoard ? { board: noteBoard } : {}),
             tags: noteTags,
             folder_id: selectedFolderId !== 'none' ? selectedFolderId : null,
             source_type: 'ai_tutor',
             source_query: query
+            // NOTE: source_answer and source_visualizations are intentionally not
+            // sent. Both columns exist (schema.ts:493-494) but the POST handler in
+            // src/app/api/notes/route.ts does not destructure them from the body —
+            // source_answer is hardcoded to `content` server-side (route.ts:115)
+            // and source_visualizations is never written on create. Sending them
+            // would be silently discarded; persisting them needs a change to that
+            // route, which was outside this change's scope.
           })
         });
 
@@ -665,7 +832,57 @@ export default function AnswerActionButtons({
           <span className="hidden sm:inline text-orange-700 dark:text-orange-300 font-medium">Add to Sanchika</span>
           <span className="sm:hidden text-orange-700 dark:text-orange-300 font-medium">Save</span>
         </Button>
+
+        {/*
+          Explain a Different Way.
+          NOTE: the spec asked for this "next to Regenerate", but no Regenerate
+          button exists anywhere in the tutor UI (searched src/components/ai and
+          src/app/dashboard/user/ai-tutor). Placed at the end of the action row.
+        */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExplainDifferently}
+          disabled={isExplaining}
+          title="Get the same concept explained from a different angle"
+          className="flex items-center gap-2 bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-900/20 dark:to-pink-900/20 border-rose-200 dark:border-rose-700 hover:from-rose-100 hover:to-pink-100 dark:hover:from-rose-900/30 dark:hover:to-pink-900/30 hover:border-rose-300 dark:hover:border-rose-600 transition-all duration-200 hover:shadow-md"
+        >
+          {isExplaining ? (
+            <Loader2 className="h-4 w-4 animate-spin text-rose-600 dark:text-rose-400" />
+          ) : (
+            <Lightbulb className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+          )}
+          <span className="hidden sm:inline text-rose-700 dark:text-rose-300 font-medium">
+            {altExplanation ? 'Another Way' : 'Explain Differently'}
+          </span>
+          <span className="sm:hidden text-rose-700 dark:text-rose-300 font-medium">Differently</span>
+        </Button>
       </div>
+
+      {/* Alternative Explanation Display */}
+      {showAltExplanation && altExplanation && (
+        <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-700 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="text-sm font-semibold text-rose-900 dark:text-rose-100">
+              💡 Another way to see it{altAngleLabel ? ` — ${altAngleLabel}` : ''}
+            </h4>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAltExplanation(false)}
+              className="h-8 w-8 p-0 hover:bg-rose-100 dark:hover:bg-rose-800"
+              title="Hide this explanation"
+            >
+              <X className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+            </Button>
+          </div>
+          <div className="prose prose-sm max-w-none text-gray-700 dark:text-gray-300">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {altExplanation}
+            </ReactMarkdown>
+          </div>
+        </div>
+      )}
 
       {/* Translation Display - Bidirectional with proper script support */}
       {showTranslation && translatedText && (

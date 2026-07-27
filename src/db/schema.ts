@@ -156,6 +156,46 @@ export const aiTutorUsage = mysqlTable('ai_tutor_usage', {
     updatedAt: timestamp('updated_at').defaultNow().onUpdateNow(),
 });
 
+/**
+ * Append-only log of tutor interactions carrying a topic dimension.
+ *
+ * Exists because nothing previously persisted per-student topic signal for the
+ * AI tutor: `ai_tutor_usage` stores only counters (questions_asked,
+ * total_tokens_used) with no question, topic, or outcome; `learning_events`
+ * covers video/quiz/session events only. Quiz correctness lived in
+ * `practest_attempt_events` and `quiz_answers` but was never aggregated by topic.
+ *
+ * One row per chat request. Deliberately does NOT store question text — this is
+ * a frequency signal, not a transcript, and keeping it free of free text avoids
+ * a second copy of student content with its own retention concerns.
+ *
+ * Nullable topic fields on purpose: the tutor profile is assembled from
+ * request-body fields (src/app/api/ai/chat/route.ts:62) that clients do not
+ * always send. A row with a null subject is still useful for doubt-frequency
+ * counts, so a partial row must never fail the write.
+ */
+export const tutorTopicEvents = mysqlTable('tutor_topic_events', {
+    organizationId: varchar('organization_id', { length: 255 }).references(() => organization.id, { onDelete: 'cascade' }),
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),
+    userId: varchar('user_id', { length: 255 }).notNull(),
+    subject: varchar('subject', { length: 100 }),
+    chapter: varchar('chapter', { length: 255 }),
+    topic: varchar('topic', { length: 255 }),
+    board: mysqlEnum('board', ['CBSE', 'ICSE', 'STATE_BOARD']),
+    // varchar (not int) to match user_notes.class_level and the tutor session,
+    // which carry values like 'Class 10' as well as '10'.
+    classLevel: varchar('class_level', { length: 20 }),
+    // Enum rather than varchar so adding a future event type ('quiz_failed',
+    // 're_explained') is a deliberate migration instead of a silent typo.
+    eventType: mysqlEnum('event_type', ['doubt_asked']).notNull().default('doubt_asked'),
+    /** Which tutor persona was active (menuIntent id), for per-agent breakdowns. */
+    agentId: varchar('agent_id', { length: 64 }),
+    createdAt: timestamp('created_at').defaultNow(),
+}, (t) => ({
+    idx_user_time: index('idx_tte_user_time').on(t.userId, t.createdAt),
+    idx_user_topic: index('idx_tte_user_subject_topic').on(t.userId, t.subject, t.topic),
+}));
+
 export const freeTrials = mysqlTable('free_trials', {
     organizationId: varchar('organization_id', { length: 255 }).references(() => organization.id, { onDelete: 'cascade' }),
     id: varchar('id', { length: 36 }).primaryKey().default(sql`(UUID())`),

@@ -286,16 +286,69 @@ export const AGENT_RETRIEVAL_PROFILES: Record<string, AgentRetrievalProfile> = {
 };
 
 /**
- * Get retrieval profile for an agent
+ * UI agent id  ──▶  retrieval profile key.
+ *
+ * The ids rendered by the UI (TUTOR_AGENTS in
+ * src/components/ai/tutor/AgentSelector.tsx, and MenuIntent in
+ * src/lib/ai/menu/menu-router.ts) do NOT all match the keys of
+ * AGENT_RETRIEVAL_PROFILES above. Three of the six diverge:
+ *
+ *   UI id              profile key       previously resolved to
+ *   ─────────────────  ────────────────  ──────────────────────
+ *   selfstudy_buddy →  homework_help     explain_topic (silent fallback)
+ *   clear_doubts    →  doubt_clearing    explain_topic (silent fallback)
+ *   book_structure  →  lets_talk         explain_topic (silent fallback)
+ *   explain_topic   →  explain_topic     correct
+ *   exam_prep       →  exam_prep         correct
+ *   study_tips      →  study_tips        correct
+ *
+ * So "Let's Talk" would have used the Deep Dive retrieval strategy (topK 8,
+ * reranking on, section-level chunks) rather than its own conversational one
+ * (topK 6, minScore 0.6, reranking off, paragraph-level) — and nothing would
+ * have surfaced the mismatch beyond a console warning.
+ */
+const UI_AGENT_ID_TO_PROFILE_KEY: Record<string, keyof typeof AGENT_RETRIEVAL_PROFILES> = {
+  selfstudy_buddy: 'homework_help',
+  explain_topic: 'explain_topic',
+  exam_prep: 'exam_prep',
+  clear_doubts: 'doubt_clearing',
+  study_tips: 'study_tips',
+  book_structure: 'lets_talk',
+  // Profile keys are accepted verbatim too, so callers already passing a
+  // canonical key keep working.
+  homework_help: 'homework_help',
+  doubt_clearing: 'doubt_clearing',
+  lets_talk: 'lets_talk',
+};
+
+/**
+ * Resolve a UI agent id or profile key to its retrieval profile.
+ *
+ * Throws on an unmatched key rather than silently substituting explain_topic:
+ * a wrong-but-plausible retrieval strategy is far harder to notice in
+ * production than a loud failure, and the silent path is exactly how the three
+ * mismatches above went unnoticed.
  */
 export function getAgentRetrievalProfile(agentType: string): AgentRetrievalProfile {
-  const profile = AGENT_RETRIEVAL_PROFILES[agentType];
-  
-  if (!profile) {
-    console.warn(`⚠️ No retrieval profile found for agent: ${agentType}, using default (explain_topic)`);
-    return AGENT_RETRIEVAL_PROFILES.explain_topic;
+  const profileKey = UI_AGENT_ID_TO_PROFILE_KEY[agentType];
+
+  if (!profileKey) {
+    throw new Error(
+      `No retrieval profile mapping for agent id "${agentType}". ` +
+      `Add it to UI_AGENT_ID_TO_PROFILE_KEY in agent-retrieval-profiles.ts. ` +
+      `Known ids: ${Object.keys(UI_AGENT_ID_TO_PROFILE_KEY).join(', ')}.`
+    );
   }
-  
+
+  const profile = AGENT_RETRIEVAL_PROFILES[profileKey];
+
+  if (!profile) {
+    throw new Error(
+      `Agent id "${agentType}" maps to profile key "${profileKey}", which is not ` +
+      `defined in AGENT_RETRIEVAL_PROFILES.`
+    );
+  }
+
   return profile;
 }
 

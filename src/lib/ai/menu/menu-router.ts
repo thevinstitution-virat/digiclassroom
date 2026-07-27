@@ -49,6 +49,14 @@ export interface MenuRoutingContext {
   language?: ResponseLanguage
   // CBSE answer-length tier — Deep Dive (explain_topic) only. See answer-length.ts
   answerLength?: AnswerLength
+  /**
+   * This student's weakest topics, strongest evidence first, as human-readable
+   * labels. Currently supplied for 'exam_prep' only (Ace Your Exams) — see
+   * src/lib/services/topic-weakness-service.ts. Flows into the exam agent's
+   * existing `student_weaknesses` prompt field, which otherwise always renders
+   * as "To be assessed" (exam_preparation_agent.ts:177).
+   */
+  weakTopics?: string[]
 }
 
 export interface MenuRoutingResult {
@@ -271,7 +279,14 @@ export class MenuRouter {
         time_available: 30,
         language: context.language
       },
-      {},
+      {
+        // Previously always `{}`, so exam_preparation_agent.ts:177 rendered
+        // "Student Weaknesses: To be assessed" on every single plan. Now carries
+        // the student's measured weak topics when the caller supplied them.
+        weaknesses: context.weakTopics && context.weakTopics.length
+          ? context.weakTopics
+          : undefined,
+      },
       context.conversationHistory || []
     )
 

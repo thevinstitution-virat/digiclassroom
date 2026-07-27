@@ -65,6 +65,7 @@ export const auth = betterAuth({
     trustedOrigins: [
         'https://desktop-9mdcf0m.taile7a3e3.ts.net',
         'http://localhost:3000',
+        'http://localhost:3001',
         'http://localhost:3334',
         'https://app.vinstitution.com'
     ],
