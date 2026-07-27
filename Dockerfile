@@ -47,12 +47,12 @@ ENV NODE_ENV=production \
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
 
 # Standalone output: a minimal self-contained server (server.js) + traced deps.
-COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-RUN mkdir -p /app/uploads /app/logs /app/tmp && \
-    chown -R nextjs:nodejs /app/uploads /app/logs /app/tmp
+RUN mkdir -p /app/uploads /app/logs /app/tmp /app/.next && \
+    chown -R nextjs:nodejs /app/uploads /app/logs /app/tmp /app/.next /app/public /app
 USER nextjs
 
 EXPOSE 3000
