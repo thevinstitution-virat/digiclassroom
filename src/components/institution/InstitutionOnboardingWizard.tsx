@@ -6,7 +6,7 @@ import {
   Building2, Image as ImageIcon, Palette, Mail, MapPin, Globe, Phone,
   Check, ChevronRight, ChevronLeft, Loader2, AlertCircle, Rocket
 } from 'lucide-react'
-import { api } from '@/lib/trpc/react'
+import { api } from '@/lib/trpc/client'
 import { completeOnboardingSchema } from '@/lib/trpc/routers/institutionProfiles'
 import { toast } from 'sonner'
 
