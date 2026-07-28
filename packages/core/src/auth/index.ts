@@ -11,7 +11,14 @@ import { isDesignatedSuperAdmin } from '../lib/auth/super-admin-guard';
 // Federation toggle — when off, the existing email/password + Google paths are
 // unchanged. See Vidyaverse Pro/docs/identity-federation-design.md §8.
 const FEDERATION_ENABLED = process.env.FEDERATION_ENABLED === 'true';
-const BETTER_AUTH_URL = process.env.BETTER_AUTH_URL || 'http://localhost:3000';
+// API origin — where the better-auth handler is served (api.<domain>).
+const BETTER_AUTH_URL = process.env.BETTER_AUTH_URL || 'http://localhost:3002';
+// Web origin — where user-facing pages live (app.<domain>). Email links
+// (invitations, etc.) must land here, NOT on the API host.
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || process.env.WEB_ORIGIN || 'http://localhost:3001';
+// Parent domain for the session cookie so app.<domain> and api.<domain> share
+// it (e.g. ".vinstitution.com"). Leave unset for same-origin/local dev.
+const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN;
 
 // Two-trio federation: DigiClassroom is a shared service layer for BOTH control
 // planes — Vidyaverse (formal institutions) and VDL (D2C coaching/library). Both
@@ -58,17 +65,26 @@ const federationPlugins =
     FEDERATION_ENABLED && oauthConfigs.length > 0 ? [genericOAuth({ config: oauthConfigs })] : [];
 
 export const auth = betterAuth({
+    // Public URL of the auth handler (api.<domain>). Explicit so generated
+    // links and OAuth callbacks resolve correctly behind the split.
+    baseURL: BETTER_AUTH_URL,
     database: drizzleAdapter(db, {
         provider: 'mysql',
         schema
     }),
     trustedOrigins: [
+        APP_URL,
         'https://desktop-9mdcf0m.taile7a3e3.ts.net',
         'http://localhost:3000',
         'http://localhost:3001',
         'http://localhost:3334',
         'https://app.vinstitution.com'
-    ],
+    ].filter((v, i, a) => a.indexOf(v) === i),
+    // Share the session cookie across app.<domain> and api.<domain> when a
+    // parent COOKIE_DOMAIN is configured (production). No-op for local dev.
+    ...(COOKIE_DOMAIN
+        ? { advanced: { crossSubDomainCookies: { enabled: true, domain: COOKIE_DOMAIN } } }
+        : {}),
     emailAndPassword: {
         enabled: true,
         // Hard gate (B2B2C): users cannot sign in until they verify their email.
@@ -120,7 +136,7 @@ export const auth = betterAuth({
             organizationLimit: 3,
             creatorRole: 'owner',
             async sendInvitationEmail(data) {
-                const acceptUrl = `${BETTER_AUTH_URL}/accept-invitation/${data.invitation.id}`;
+                const acceptUrl = `${APP_URL}/accept-invitation/${data.invitation.id}`;
                 await sendEmail({
                     to: data.email,
                     subject: `You're invited to join ${data.organization.name} on DigiClassroom Pro`,

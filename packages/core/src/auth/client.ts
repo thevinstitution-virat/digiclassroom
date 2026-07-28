@@ -2,13 +2,18 @@ import { createAuthClient } from "better-auth/react";
 import { organizationClient, magicLinkClient } from "better-auth/client/plugins";
 
 export const authClient = createAuthClient({
-    // Talk to the SAME origin that served the page (works on any dev port —
-    // 3000 / 3001). A hard-coded NEXT_PUBLIC_APP_URL drifts from the
-    // actual dev-server port and breaks sign-in with ERR_CONNECTION_REFUSED.
+    // The better-auth handler lives on the API host (api.<domain>). Point the
+    // client there; NEXT_PUBLIC_API_URL is inlined into the web bundle at build
+    // time. Falls back to same-origin for local/proxied dev.
     baseURL:
-        typeof window !== "undefined"
+        process.env.NEXT_PUBLIC_API_URL ||
+        (typeof window !== "undefined"
             ? window.location.origin
-            : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+            : process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3002"),
+    // Send/receive the session cookie across subdomains.
+    fetchOptions: {
+        credentials: "include",
+    },
     plugins: [
         organizationClient(),
         magicLinkClient()

@@ -5,11 +5,14 @@ import superjson from 'superjson'
 import type { AppRouter } from '@/lib/trpc/routers'
 
 const getBaseUrl = () => {
+  // Separate api.<domain> deployment: the frontend calls the API by absolute
+  // origin. NEXT_PUBLIC_API_URL is inlined into the web bundle at build time.
+  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL
   if (typeof window !== 'undefined')
-  return '' // browser should use relative url
+  return '' // same-origin fallback (e.g. local dev with a proxy)
   if (process.env.VERCEL_URL)
   return `https://${process.env.VERCEL_URL}` // SSR should use vercel url
-  return `http://localhost:${process.env.PORT ?? 3000}` // dev SSR should use localhost
+  return `http://localhost:${process.env.PORT ?? 3002}` // dev SSR -> local API port
 }
 
 // Create tRPC React hooks
@@ -28,6 +31,10 @@ export const trpc = createTRPCNext<AppRouter>({
         httpBatchLink({
           url: `${getBaseUrl()}/api/trpc`,
           transformer: superjson,
+          // Send auth cookies to the API on a different subdomain.
+          fetch(url, options) {
+            return fetch(url, { ...options, credentials: 'include' })
+          },
           headers() {
             return {
               // Add any custom headers here
