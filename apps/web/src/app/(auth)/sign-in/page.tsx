@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { authClient } from '@/auth/client'
+import { toAppUrl } from '@/utils/auth-redirect'
 import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -66,7 +67,7 @@ function SignInForm() {
         try {
             await authClient.signIn.social({
                 provider: 'google',
-                callbackURL: redirectUrl,
+                callbackURL: toAppUrl(redirectUrl),
             })
         } catch (err: any) {
             setError(err.message || 'Google sign-in failed')
@@ -81,7 +82,7 @@ function SignInForm() {
             const oauthClient = authClient as unknown as {
                 signIn: { oauth2: (args: { providerId: string; callbackURL?: string }) => Promise<unknown> }
             }
-            await oauthClient.signIn.oauth2({ providerId: 'vidyaverse', callbackURL: redirectUrl })
+            await oauthClient.signIn.oauth2({ providerId: 'vidyaverse', callbackURL: toAppUrl(redirectUrl) })
         } catch (err: any) {
             setError(err.message || 'Vidyaverse sign-in failed')
             setVidyaverseLoading(false)

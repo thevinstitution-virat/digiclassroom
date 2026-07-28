@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { authClient } from '@/auth/client'
+import { toAppUrl } from '@/utils/auth-redirect'
 import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -50,7 +51,7 @@ function SignUpForm() {
                 email,
                 password,
                 name,
-                callbackURL: redirectUrl,
+                callbackURL: toAppUrl(redirectUrl),
             })
 
             if (result.error) {
@@ -72,7 +73,7 @@ function SignUpForm() {
         try {
             await authClient.signIn.social({
                 provider: 'google',
-                callbackURL: redirectUrl,
+                callbackURL: toAppUrl(redirectUrl),
             })
         } catch (err: any) {
             setError(err.message || 'Google sign-up failed')

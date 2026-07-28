@@ -52,7 +52,13 @@ const oauthConfigs = CONTROL_PLANES.filter(
     issuer: cp.issuer,
     scopes: ['openid', 'profile', 'email', 'offline_access', 'memberships', 'entitlements'],
     pkce: true,
-    redirectURI: `${BETTER_AUTH_URL}/api/auth/oauth2/callback/${cp.providerId}`,
+    // MUST be the WEB origin, not BETTER_AUTH_URL. The SPA starts the flow through
+    // the web app's /api/* rewrite, so better-auth's state/PKCE cookie is host-only
+    // on app.<domain>. Sending the IdP callback to api.<domain> would drop that
+    // cookie and fail with state_mismatch — and the session cookie would then be
+    // set on a host the SPA can't read. The rewrite proxies this path to the same
+    // handler, so the whole round-trip stays on one cookie host.
+    redirectURI: `${APP_URL.replace(/\/$/, '')}/api/auth/oauth2/callback/${cp.providerId}`,
     mapProfileToUser: (profile: Record<string, unknown>) => ({
         email: profile.email as string,
         name: (profile.name as string) ?? '',
