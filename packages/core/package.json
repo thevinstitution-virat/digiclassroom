@@ -1,47 +1,9 @@
 {
-  "name": "@repo/web",
+  "name": "@repo/core",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev -p 3001",
-    "typecheck": "tsc --noEmit",
-    "prepare": "husky",
-    "dev:turbo": "next dev --turbo",
-    "dev:analyze": "ANALYZE=true next dev",
-    "build": "next build",
-    "build:no-lint": "next build --no-lint",
-    "build:analyze": "ANALYZE=true next build",
-    "start": "next start",
-    "lint": "next lint",
-    "analyze": "ANALYZE=true next build",
-    "migrate:menu": "node -r ts-node/register src/lib/db/menu-migrate.ts up",
-    "migrate:menu:down": "node -r ts-node/register src/lib/db/menu-migrate.ts down",
-    "migrate:menu:status": "node -r ts-node/register src/lib/db/menu-migrate.ts status",
-    "setup:dictionary": "node -r ts-node/register scripts/setup-dictionary.js",
-    "test": "jest",
-    "test:unit": "jest --no-coverage --forceExit",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "test:e2e": "jest src/__tests__/end-to-end-pipeline.test.ts",
-    "test:integration": "jest src/__tests__/ai-tutor-integration.test.ts",
-    "test:golden": "jest --config jest.golden.config.js --runInBand --forceExit",
-    "test:comprehensive": "node scripts/run-comprehensive-tests.js",
-    "test:validate": "npm run test:comprehensive && echo '✅ All validation tests passed!'",
-    "db:clean": "node scripts/clean-book-database.js",
-    "db:clean:quick": "node scripts/quick-clean.js",
-    "db:clean:force": "node scripts/clean-book-database.js --force",
-    "db:reset": "npm run db:clean && echo '🚀 Database cleaned - ready for fresh upload!'",
-    "fresh-upload": "npm run db:clean:quick && echo '🚀 Ready for fresh textbook upload!'",
-    "worker:audio": "npx tsx --env-file=.env src/lib/workers/audioWorker.ts",
-    "grant-trial": "node -r ts-node/register scripts/grant-trial-access.ts",
-    "db:setup": "node -r ts-node/register scripts/setup-base-schema.ts",
-    "migrate:teacher": "node -r ts-node/register scripts/migrate-teacher-system.ts",
-    "eval:baseline": "npx tsx scripts/eval/run-baseline.ts",
-    "eval:compare": "npx tsx scripts/eval/compare-results.ts",
-    "canary:baseline": "npx tsx --env-file=.env scripts/canary/baseline-snapshot.ts"
-  },
+  "main": "./src/index.ts",
   "dependencies": {
-    "@repo/core": "*",
     "@repo/shared": "*",
     "@anthropic-ai/sdk": "^0.78.0",
     "@aws-sdk/client-s3": "^3.1004.0",
@@ -184,10 +146,5 @@
     "ts-morph": "^27.0.2",
     "ts-node": "^10.9.2",
     "typescript": "^5"
-  },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
-      "eslint --fix"
-    ]
   }
 }

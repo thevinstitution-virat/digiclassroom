@@ -16,8 +16,17 @@
     "incremental": true,
     "plugins": [{ "name": "next" }],
     "paths": {
-      "@/*": ["./src/*"],
-      "@/components/*": ["./src/components/*"]
+      "@/components/*": ["./src/components/*"],
+      "@/lib/*": ["../../packages/core/src/lib/*"],
+      "@/db": ["../../packages/core/src/db"],
+      "@/db/*": ["../../packages/core/src/db/*"],
+      "@/auth": ["../../packages/core/src/auth"],
+      "@/auth/*": ["../../packages/core/src/auth/*"],
+      "@/types": ["../../packages/core/src/types"],
+      "@/types/*": ["../../packages/core/src/types/*"],
+      "@/config": ["../../packages/core/src/config"],
+      "@/config/*": ["../../packages/core/src/config/*"],
+      "@/*": ["./src/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "next-env.d.ts"],
