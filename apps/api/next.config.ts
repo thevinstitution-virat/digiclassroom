@@ -5,8 +5,8 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   // Standalone output for Docker/Coolify (emits .next/standalone/server.js).
   output: 'standalone',
-  // Compile the shared workspace package (TS source) directly.
-  transpilePackages: ['@repo/shared'],
+  // Compile the shared workspace packages (TS source) directly.
+  transpilePackages: ['@repo/shared', '@repo/core'],
   typescript: {
     // Matches the web app: don't fail the production build on type errors.
     ignoreBuildErrors: true,

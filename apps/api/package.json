@@ -7,9 +7,10 @@
     "build": "next build",
     "start": "next start -p 3002",
     "typecheck": "tsc --noEmit",
-    "worker:audio": "npx tsx --env-file=.env src/lib/workers/audioWorker.ts"
+    "worker:audio": "npx tsx --env-file=.env ../../packages/core/src/lib/workers/audioWorker.ts"
   },
   "dependencies": {
+    "@repo/core": "*",
     "@repo/shared": "*",
     "@anthropic-ai/sdk": "^0.78.0",
     "@aws-sdk/client-s3": "^3.1004.0",
