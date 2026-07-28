@@ -1,31 +1,48 @@
 import mysql from 'mysql2/promise'
 
-// Database connection configuration
-const dbConfig = {
-  host: process.env.MYSQL_HOST === 'localhost' ? '127.0.0.1' : (process.env.MYSQL_HOST || '127.0.0.1'),
-  port: parseInt(process.env.MYSQL_PORT || '3306'),
-  user: process.env.MYSQL_USER || 'root',
-  password: process.env.MYSQL_PASSWORD || '',
-  database: process.env.MYSQL_DATABASE || 'virat_gyankosh',
-  waitForConnections: true,
-  // Default lowered 50 → 10: a 50-conn pool (× any leaked HMR pools) exhausts
-  // MySQL's max_connections in dev. Override via DB_CONNECTION_LIMIT if needed.
-  connectionLimit: process.env.DB_CONNECTION_LIMIT ? parseInt(process.env.DB_CONNECTION_LIMIT) : 10,
-  queueLimit: 0,
-}
+function getDbConfig() {
+  const dbUrl = process.env.DATABASE_URL
+  if (dbUrl) {
+    try {
+      const parsedUrl = new URL(dbUrl)
+      const host = parsedUrl.hostname || '127.0.0.1'
+      return {
+        host: host === 'localhost' ? '127.0.0.1' : host,
+        port: parseInt(parsedUrl.port || '3306'),
+        user: decodeURIComponent(parsedUrl.username || 'root'),
+        password: decodeURIComponent(parsedUrl.password || ''),
+        database: parsedUrl.pathname.replace(/^\//, '') || 'virat_gyankosh',
+        waitForConnections: true,
+        connectionLimit: process.env.DB_CONNECTION_LIMIT ? parseInt(process.env.DB_CONNECTION_LIMIT) : 10,
+        queueLimit: 0,
+      }
+    } catch (e) {
+      console.warn('[DB] Failed to parse DATABASE_URL, falling back to individual MYSQL_* variables:', e)
+    }
+  }
 
-// Log connection details (without sensitive info)
-console.log(`[DB] Connecting to ${dbConfig.host}:${dbConfig.port}/${dbConfig.database} as ${dbConfig.user}`);
+  const rawHost = process.env.MYSQL_HOST || '127.0.0.1'
+  return {
+    host: rawHost === 'localhost' ? '127.0.0.1' : rawHost,
+    port: parseInt(process.env.MYSQL_PORT || '3306'),
+    user: process.env.MYSQL_USER || 'root',
+    password: process.env.MYSQL_PASSWORD || '',
+    database: process.env.MYSQL_DATABASE || 'virat_gyankosh',
+    waitForConnections: true,
+    connectionLimit: process.env.DB_CONNECTION_LIMIT ? parseInt(process.env.DB_CONNECTION_LIMIT) : 10,
+    queueLimit: 0,
+  }
+}
 
 // Create connection pool for better performance.
 // Stored on globalThis so Next.js dev HMR reuses ONE pool across hot reloads
-// instead of leaking a fresh pool (and its connections) each time — which is what
-// exhausts MySQL's max_connections ("Too many connections") during long dev sessions.
 const globalForPool = globalThis as unknown as { __dcpMysqlPool?: mysql.Pool }
 
 export function getPool(): mysql.Pool {
   if (!globalForPool.__dcpMysqlPool) {
-    globalForPool.__dcpMysqlPool = mysql.createPool(dbConfig)
+    const config = getDbConfig()
+    console.log(`[DB] Connecting to ${config.host}:${config.port}/${config.database} as ${config.user}`)
+    globalForPool.__dcpMysqlPool = mysql.createPool(config)
   }
   return globalForPool.__dcpMysqlPool
 }
