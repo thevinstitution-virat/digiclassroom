@@ -1,121 +1,30 @@
-# ============================================================================
-# DigiClassroom Pro — .gitignore
-# ============================================================================
-
-# Vendor deps
-vendor/
-vendor
-# ============================================================================
-
-# Dependencies
+# dependencies
 node_modules/
 .pnp
 .pnp.js
-.yarn/install-state.gz
 
-# Environment variables (CRITICAL — never commit secrets)
-/.env
-/.env.local
-/.env.production
-/.env.production.local
-/.env.development.local
-/.env.test.local
-/.env.staging
-!.env.example
-
-# Next.js build output
-.next/
-out/
-
-# Production build
-build/
-dist/
-
-# Testing
-coverage/
-test-results/
-.jest-cache/
-jest-html-report/
-*.lcov
-
-# Debug logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-*.log
-
-# OS files
-.DS_Store
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-
-# IDE / Editor
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-*.sublime-workspace
-*.sublime-project
-
-# Temporary files and uploads
-/tmp/
-/temp/
-/uploads/
-
-# Local database dumps (may contain user data)
-/.backups/
-
-# Vector database data (Qdrant)
-/qdrant_data/
-/qdrant_storage/
-
-# Cache directories
-.cache/
+# turborepo
 .turbo/
 
-# Python virtual environments
-.venv*/
-__pycache__/
-*.py[cod]
-*$py.class
-*.egg-info/
+# builds
+dist/
+.next/
+out/
+build/
 
-# ML/AI model caches (large binary files)
-models/
-*.onnx
-*.bin
-*.safetensors
-*.pt
-*.pth
+# local runtime data (not source)
+qdrant_data/
+uploads/
+logs/
+tmp/
 
-# Vercel
-.vercel
+# env
+.env
+.env.*
+!.env.example
 
-# TypeScript
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
 *.tsbuildinfo
-next-env.d.ts
-
-# Bundle analysis output
-.analyzer/
-stats.json
-
-# Miscellaneous
-*.bak
-*.backup
-*.old
-*.orig
-*.tmp
-
-# Phase 0 additions
-jest-*.log
-jest-*.json
-tsc.log
-build_output.txt
-docker-compose-resolved.yaml
-lint_report*.log
-tsc_errors*.log
-
-# k8s secrets (never commit real values)
-k8s/secrets.yaml
