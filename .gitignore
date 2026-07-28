@@ -28,3 +28,8 @@ tmp/
 *.pem
 npm-debug.log*
 *.tsbuildinfo
+
+# Large local ML assets / Python venvs for the doc-extract services (never tracked)
+.venv*/
+services/models/
+services/**/models/

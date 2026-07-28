@@ -7,9 +7,11 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 
 
 const nextConfig: NextConfig = {
-  // Standalone output for Docker/Coolify: emits .next/standalone, a minimal
-  // self-contained Node server (server.js) that the Dockerfile copies + runs.
-  output: 'standalone',
+  // NOTE: `output: 'standalone'` is intentionally NOT used here. In this
+  // npm-workspace monorepo, standalone tracing can't see the hoisted root
+  // node_modules from apps/web, and the fix (outputFileTracingRoot) conflicts
+  // with this app's custom webpack config. The Docker image instead ships a
+  // pruned node_modules and runs `next start` (see apps/web/Dockerfile).
   // Compile the shared workspace packages (TS source) directly.
   transpilePackages: ['@repo/shared', '@repo/core'],
   typescript: {
@@ -122,26 +124,32 @@ const nextConfig: NextConfig = {
         config.infrastructureLogging = { level: 'warn' }
       }
 
-      // Existing fallbacks for OCR and PDF processing
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        canvas: false,
-        fs: false,
-        path: false,
-        os: false,
-        crypto: false,
-        stream: false,
-        util: false,
-        buffer: false,
-        events: false
-      };
+      // Browser-only polyfill disables for OCR/PDF libs. MUST be scoped to the
+      // client compile: applying fs/path/os: false to the SERVER build breaks
+      // Next's own internals (next/dist/pages/_document.js), which surfaces as
+      // "Module not found: Can't resolve '../shared/lib/utils'" — and blocks
+      // outputFileTracingRoot. Keep these inside `if (!isServer)`.
+      if (!isServer) {
+        config.resolve.fallback = {
+          ...config.resolve.fallback,
+          canvas: false,
+          fs: false,
+          path: false,
+          os: false,
+          crypto: false,
+          stream: false,
+          util: false,
+          buffer: false,
+          events: false
+        };
 
-      // Fix for pdfjs-dist webpack issues in Next.js 15
-      // Prevent "Object.defineProperty called on non-object" error
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        'pdfjs-dist/build/pdf.worker.entry': 'pdfjs-dist/build/pdf.worker.mjs',
-      };
+        // Fix for pdfjs-dist webpack issues in Next.js 15
+        // Prevent "Object.defineProperty called on non-object" error
+        config.resolve.alias = {
+          ...config.resolve.alias,
+          'pdfjs-dist/build/pdf.worker.entry': 'pdfjs-dist/build/pdf.worker.mjs',
+        };
+      }
 
       return config;
     }
