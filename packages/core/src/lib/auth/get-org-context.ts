@@ -2,7 +2,7 @@
 // Phase 1: super_admin gets god-mode bypass; admin ALSO retains bypass (transition safety).
 // Phase 2 will narrow the admin bypass on destructive routes.
 
-import { auth } from '@/auth';
+import { auth, getSafeSession } from '@/auth';
 import { headers } from 'next/headers';
 import { db } from '@/db';
 import { member } from '@/db/schema';
@@ -43,7 +43,7 @@ function normalizeOrgRole(raw: string | null | undefined): OrgRole {
  *   - others      → must have a valid org membership
  */
 export async function getOrgContext(): Promise<OrgContext> {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getSafeSession(await headers());
 
   if (!session?.user) {
     throw new Error('Unauthorized: no active session');

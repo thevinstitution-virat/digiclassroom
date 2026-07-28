@@ -65,6 +65,7 @@ const federationPlugins =
     FEDERATION_ENABLED && oauthConfigs.length > 0 ? [genericOAuth({ config: oauthConfigs })] : [];
 
 export const auth = betterAuth({
+    secret: process.env.BETTER_AUTH_SECRET || 'change-me-to-a-random-64-char-secret',
     // Public URL of the auth handler (api.<domain>). Explicit so generated
     // links and OAuth callbacks resolve correctly behind the split.
     baseURL: BETTER_AUTH_URL,
@@ -77,6 +78,7 @@ export const auth = betterAuth({
         'https://desktop-9mdcf0m.taile7a3e3.ts.net',
         'http://localhost:3000',
         'http://localhost:3001',
+        'http://localhost:3002',
         'http://localhost:3334',
         'https://app.vinstitution.com'
     ].filter((v, i, a) => a.indexOf(v) === i),
@@ -232,3 +234,47 @@ export const auth = betterAuth({
         }
     }
 });
+
+/**
+ * Robust session resolver for monorepo split architecture (@repo/web on 3001, @repo/api on 3002).
+ * Tries in-memory auth.api.getSession first, then falls back to fetching /api/auth/get-session over HTTP.
+ */
+export async function getSafeSession(headersList: any) {
+    try {
+        const session = await auth.api.getSession({ headers: headersList });
+        if (session?.user) {
+            return session;
+        }
+    } catch (err) {
+        // Fallthrough to HTTP fallback
+    }
+
+    const cookieHeader = typeof headersList?.get === 'function'
+        ? headersList.get('cookie')
+        : (headersList?.cookie || '');
+    
+    if (!cookieHeader) {
+        return null;
+    }
+
+    try {
+        const apiUrl = process.env.API_URL || process.env.BETTER_AUTH_URL || 'http://localhost:3002';
+        const res = await fetch(`${apiUrl}/api/auth/get-session`, {
+            headers: {
+                cookie: cookieHeader,
+            },
+            cache: 'no-store',
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data?.user && data?.session) {
+                return data;
+            }
+        }
+    } catch (err) {
+        console.error('[getSafeSession] HTTP fallback failed:', err);
+    }
+
+    return null;
+}
+

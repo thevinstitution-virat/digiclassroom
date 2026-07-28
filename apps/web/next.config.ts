@@ -52,6 +52,17 @@ const nextConfig: NextConfig = {
       { source: '/api/admin/:path*', destination: '/api/super-admin/:path*', permanent: false },
     ];
   },
+  // Proxy all API traffic to the standalone API service. This keeps every
+  // relative `/api/...` call (fetch + tRPC + better-auth) same-origin with the
+  // web app, so cookies and server-side session checks work without CORS or
+  // cross-subdomain cookies. The API remains a separately deployable service;
+  // set API_URL to its origin (defaults to the local api dev port).
+  async rewrites() {
+    const apiUrl = process.env.API_URL || 'http://localhost:3002'
+    return [
+      { source: '/api/:path*', destination: `${apiUrl}/api/:path*` },
+    ]
+  },
   serverExternalPackages: ['mysql2', 'pdf-parse', 'tesseract.js', 'pdf2pic'],
   ...(process.env.TURBOPACK !== '1' ? {
     webpack(config, { isServer, dev }) {

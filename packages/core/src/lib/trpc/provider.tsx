@@ -7,13 +7,12 @@ import { api } from './client'
 import superjson from 'superjson'
 
 function getBaseUrl() {
-  // Separate api.<domain> deployment: call the API by absolute origin.
-  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL
+  // Same-origin: /api/trpc is proxied to the API service by the web rewrite.
   if (typeof window !== 'undefined')
     return ''
   if (process.env.VERCEL_URL)
     return `https://${process.env.VERCEL_URL}`
-  return `http://localhost:${process.env.PORT ?? 3002}`
+  return `http://localhost:${process.env.PORT ?? 3001}`
 }
 
 export function TRPCProvider({ children }: { children: React.ReactNode }) {

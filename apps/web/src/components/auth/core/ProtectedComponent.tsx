@@ -1,4 +1,4 @@
-import { auth } from '@/auth'
+import { auth, getSafeSession } from '@/auth'
 import { headers } from 'next/headers'
 import { UserRole } from '@/lib/validations'
 
@@ -13,7 +13,8 @@ export async function ProtectedComponent({
   roles = [],
   fallback = null,
 }: ProtectedComponentProps) {
-  const session = await auth.api.getSession({ headers: await headers() })
+  const hdrs = await headers()
+  const session = await getSafeSession(hdrs)
   const user = session?.user
   const userRole = (user as any)?.role as UserRole
   const userId = user?.id
@@ -27,9 +28,14 @@ export async function ProtectedComponent({
   let hasAccess = false
   if (user) {
     if (roles.length > 0) {
-      const normalizedRole: string =
-        userRole === 'admin' || userRole === 'super_admin' ? 'admin' : 'user'
-      hasAccess = roles.includes(normalizedRole as UserRole)
+      if (roles.includes('user')) {
+        // 'user' role requirement allows any authenticated account (student, teacher, parent, admin, super_admin)
+        hasAccess = true
+      } else {
+        const normalizedRole: string =
+          userRole === 'admin' || userRole === 'super_admin' ? 'admin' : (userRole || 'student')
+        hasAccess = roles.includes(normalizedRole as UserRole) || roles.includes(userRole as UserRole)
+      }
     } else {
       hasAccess = true
     }

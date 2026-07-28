@@ -31,13 +31,14 @@ export function ClientProtectedComponent({
 
   const userRole = (user as any)?.role as UserRole
 
-  // If no roles specified, allow access to authenticated users
-  if (roles.length === 0) {
+  // If no roles specified or roles include 'user', allow access to any authenticated user
+  if (roles.length === 0 || roles.includes('user')) {
     return user ? <>{children}</> : <>{fallback}</>
   }
 
   // Check if user has required role
-  const hasAccess = userRole && roles.includes(userRole)
+  const normalizedRole = userRole === 'admin' || userRole === 'super_admin' ? 'admin' : userRole
+  const hasAccess = user && (roles.includes(userRole) || roles.includes(normalizedRole as UserRole))
 
   return hasAccess ? <>{children}</> : <>{fallback}</>
 }
