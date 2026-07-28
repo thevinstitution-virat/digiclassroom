@@ -224,7 +224,6 @@ export const auth = betterAuth({
                 after: async (session) => {
                     if (!FEDERATION_ENABLED) return;
                     try {
-        // @ts-ignore
                         await syncFederatedSession(session.userId);
                     } catch (err) {
                         console.error('[federation] syncFederatedSession failed:', err);

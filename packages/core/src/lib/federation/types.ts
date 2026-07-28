@@ -27,6 +27,35 @@ export interface VidyaverseClaims {
   exp?: number;
 }
 
+// ─── OIDC federation contract (current shape emitted by the Vidyaverse IdP) ──
+// Source of truth: Vidyaverse Pro/backend/src/modules/oidc/claims-resolver.ts.
+// This supersedes the flat org_id/org_role fields above (kept only for the
+// legacy ROLE_MAP path). jit.ts reads memberships[] + global_role.
+
+export interface VidyaverseMembershipClaim {
+  institution_id: string;
+  institution_code: string;
+  institution_name: string;
+  institution_type: string;
+  role: string;
+  assigned_classes?: unknown;
+  assigned_sections?: unknown;
+  subscription_tier?: string;
+  subscription_status?: string;
+}
+
+export interface VidyaverseIdTokenClaims {
+  sub: string;
+  email?: string;
+  name?: string;
+  picture?: string;
+  global_role?: string | null;
+  memberships?: VidyaverseMembershipClaim[];
+  entitlements_url?: string;
+  iat?: number;
+  exp?: number;
+}
+
 // ─── Vidyaverse → DCP global role mapping ────────────────────────────────────
 //
 // Precedence chain applied in jit.ts:

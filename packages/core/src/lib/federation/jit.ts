@@ -1,196 +1,189 @@
 // src/lib/federation/jit.ts
-// Phase 1: reads global_role claim from Vidyaverse id_token;
-// applies precedence: globalRole ?? primaryMembershipRole ?? existing user.role
+//
+// JIT (just-in-time) provisioning for federated Vidyaverse sign-ins.
+//
+// Called from databaseHooks.session.create.after with the user's id. Reads the
+// user's stored vidyaverse Account row, decodes the ID token, and reconciles:
+//   1. the user's global role (precedence: global_role ?? primary membership ?? existing ?? student)
+//   2. one member row per membership[] entry, auto-creating the org if missing
+//
+// The claim contract (global_role + memberships[]) is emitted by the Vidyaverse
+// IdP — see Vidyaverse Pro/backend/src/modules/oidc/claims-resolver.ts and
+// docs/identity-federation-design.md §6, §9. This mirrors the working PDLMS
+// implementation (PDLMS_Pro/lib/federation/jit.ts).
 
 import { db } from '@/db';
-import { user as userTable, member as memberTable, organization as orgTable } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import {
+  user as userTable,
+  account as accountTable,
+  organization as orgTable,
+  member as memberTable,
+} from '@/db/schema';
+import { eq, and, desc } from 'drizzle-orm';
 import {
   mapGlobalRole,
   mapPrimaryMembershipRole,
   mapToOrgRole,
-  type VidyaverseClaims,
+  type VidyaverseIdTokenClaims,
+  type VidyaverseMembershipClaim,
 } from './types';
 import type { Role } from '@/auth/permissions';
 import { isDesignatedSuperAdmin } from '@/lib/auth/super-admin-guard';
 
-// ─── Inline Helpers (since helpers.ts is missing) ──────────────────────────────
-export function decodeIdToken(token: string): any {
+// Providers that emit the shared OIDC federation contract. `vdl` is the second
+// control plane (inert until its env vars exist) — both emit identical claims.
+const FEDERATION_PROVIDER_IDS = ['vidyaverse', 'vdl'];
+
+/**
+ * JWT decode WITHOUT verification. Better Auth already verified the signature
+ * during the OAuth callback before storing the token, so it is safe to trust.
+ */
+function decodeIdToken(idToken: string | null | undefined): VidyaverseIdTokenClaims | null {
+  if (!idToken) return null;
   try {
-    return JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+    const parts = idToken.split('.');
+    if (parts.length !== 3) return null;
+    const payload = Buffer.from(
+      parts[1].replace(/-/g, '+').replace(/_/g, '/'),
+      'base64',
+    ).toString('utf-8');
+    return JSON.parse(payload) as VidyaverseIdTokenClaims;
   } catch {
-    return {};
+    return null;
   }
 }
 
-export async function resolveOrCreateOrg(orgId: string, claims: any): Promise<string> {
-  // Basic implementation to ensure the org exists before adding a member
-  const existingOrgs = await db.select().from(orgTable).where(eq(orgTable.id, orgId)).limit(1);
-  if (existingOrgs.length === 0) {
-    await db.insert(orgTable).values({
-      id: orgId,
-      name: claims.org_name || 'Federated Organization',
-      slug: (claims.org_name || 'org').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.random().toString(36).substring(2, 6),
-      createdAt: new Date(),
-    });
-  }
-  return orgId;
+function orgSlugFor(m: VidyaverseMembershipClaim): string {
+  const code = m.institution_code.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  // Namespace by control plane origin so two IdPs can't collide on a shared code.
+  return `vidyaverse-${code}`;
 }
-// ───────────────────────────────────────────────────────────────────────────────
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+/**
+ * Resolves a Vidyaverse institution to a local DCP organization.
+ * Match order: metadata.vidyaverse_institution_id → slug → create.
+ */
+async function resolveOrCreateOrg(m: VidyaverseMembershipClaim): Promise<string> {
+  const slug = orgSlugFor(m);
+
+  // Prefer a stable subject-id match (survives an institution rename).
+  const bySlug = await db.select().from(orgTable).where(eq(orgTable.slug, slug)).limit(1);
+  const matched = bySlug.find((o) => {
+    if (o.slug === slug) return true;
+    if (!o.metadata) return false;
+    try {
+      const meta = JSON.parse(o.metadata) as Record<string, unknown>;
+      return meta.vidyaverse_institution_id === m.institution_id;
+    } catch {
+      return false;
+    }
+  });
+  if (matched) return matched.id;
+
+  const id = crypto.randomUUID();
+  await db.insert(orgTable).values({
+    id,
+    name: m.institution_name,
+    slug,
+    metadata: JSON.stringify({
+      vidyaverse_institution_id: m.institution_id,
+      institution_type: m.institution_type,
+    }),
+    createdAt: new Date(),
+  });
+  return id;
+}
 
 export interface JitSyncResult {
   userId: string;
   globalRole: Role;
-  orgId: string;
-  orgRole: string;
-  isNewUser: boolean;
+  orgCount: number;
 }
 
-// ─── Main JIT sync ────────────────────────────────────────────────────────────
-
 /**
- * Syncs a federated Vidyaverse session into DCP's user + member tables.
- *
- * Role precedence (Phase 1):
- *   1. global_role claim  → mapGlobalRole()   (platform-level, highest priority)
- *   2. org_role claim     → mapPrimaryMembershipRole() (membership-derived)
- *   3. existing user.role (unchanged if neither claim present)
- *   4. fallback: 'student'
- *
- * Org membership:
- *   org_role claim → mapToOrgRole() → member.role (always set, independent of global role)
+ * Public entry point — called from databaseHooks.session.create.after with the
+ * user's id. Reconciles global role + org memberships from the stored ID token.
+ * Returns null when there is nothing to sync (no federated account / no claims).
  */
-export async function syncFederatedSession(
-  claims: VidyaverseClaims,
-): Promise<JitSyncResult> {
-  const { sub, email, name, picture, global_role, org_role, org_id } = claims;
-
-  // ── 1. Resolve or create the DCP org ───────────────────────────────────────
-  const orgId = org_id
-    ? await resolveOrCreateOrg(org_id, claims)
-    : 'system';
-
-  // ── 2. Resolve the target DCP global role (precedence chain) ───────────────
-  const fromGlobalClaim   = mapGlobalRole(global_role);             // step 1
-  const fromMembership    = mapPrimaryMembershipRole(org_role);     // step 2
-  // Step 3 (existing role) is applied below after we fetch/create the user
-
-  // ── 3. Upsert the user row ─────────────────────────────────────────────────
-  const existingUsers = await db
+export async function syncFederatedSession(userId: string): Promise<JitSyncResult | null> {
+  // Newest federated account wins, regardless of which control plane it came from.
+  const accounts = await db
     .select()
-    .from(userTable)
-    .where(eq(userTable.email, email))
-    .limit(1);
+    .from(accountTable)
+    .where(eq(accountTable.userId, userId))
+    .orderBy(desc(accountTable.updatedAt));
+  const account = accounts.find((a) => FEDERATION_PROVIDER_IDS.includes(a.providerId));
+  if (!account) return null;
 
-  const existingUser = existingUsers[0];
-  const isNewUser = !existingUser;
+  const claims = decodeIdToken(account.idToken);
+  if (!claims) return null;
 
-  // Step 3: existing role (used as fallback if neither claim overrides)
-  const existingRole = (existingUser?.role ?? null) as Role | null;
+  const memberships: VidyaverseMembershipClaim[] = Array.isArray(claims.memberships)
+    ? claims.memberships
+    : [];
 
-  // Apply precedence: globalRole ?? membershipRole ?? existingRole ?? 'student'
+  const users = await db.select().from(userTable).where(eq(userTable.id, userId)).limit(1);
+  const existingUser = users[0];
+  if (!existingUser) return null;
+  const existingRole = (existingUser.role ?? null) as Role | null;
+
+  // ── Global role precedence: global_role ?? primary membership ?? existing ?? student
+  const primaryOrgRole = memberships[0]?.role;
   let resolvedGlobalRole: Role =
-    fromGlobalClaim ?? fromMembership ?? existingRole ?? 'student';
+    mapGlobalRole(claims.global_role) ??
+    mapPrimaryMembershipRole(primaryOrgRole) ??
+    existingRole ??
+    'student';
 
   // SECURITY: federation can NEVER confer super_admin on a non-owner email, no
-  // matter what the hub's global_role claim asserts. Downgrade to the membership
-  // role (if any) or student.
-  if (resolvedGlobalRole === 'super_admin' && !isDesignatedSuperAdmin(email)) {
-    resolvedGlobalRole = (fromMembership && fromMembership !== 'super_admin'
-      ? fromMembership
-      : 'student') as Role;
+  // matter what the hub's global_role claim asserts.
+  if (resolvedGlobalRole === 'super_admin' && !isDesignatedSuperAdmin(existingUser.email)) {
+    const fromMembership = mapPrimaryMembershipRole(primaryOrgRole);
+    resolvedGlobalRole = (fromMembership && fromMembership !== 'super_admin' ? fromMembership : 'student') as Role;
   }
 
-  let userId: string;
+  // Only move the global role when a claim explicitly resolves one, and never
+  // silently downgrade an existing super_admin/admin.
+  const claimResolvedRole =
+    mapGlobalRole(claims.global_role) !== null || mapPrimaryMembershipRole(primaryOrgRole) !== null;
+  const protectedRole = existingRole === 'super_admin' || existingRole === 'admin';
 
-  if (isNewUser) {
-    // Create new user
-    const newId = crypto.randomUUID();
-    await db.insert(userTable).values({
-      id: newId,
-      email,
-      name: name ?? email.split('@')[0],
-      image: picture ?? null,
-      role: resolvedGlobalRole,
-      emailVerified: true, // Federated identity — email already verified by hub
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-    userId = newId;
+  if (claimResolvedRole && !protectedRole && resolvedGlobalRole !== existingRole) {
+    await db
+      .update(userTable)
+      .set({ role: resolvedGlobalRole, lastLogin: new Date(), updatedAt: new Date() })
+      .where(eq(userTable.id, userId));
   } else {
-    userId = existingUser.id;
-
-    // Only update role if a claim explicitly overrides it.
-    // Never silently downgrade an existing super_admin.
-    const shouldUpdateRole =
-      (fromGlobalClaim !== null) ||
-      (fromMembership !== null && existingRole !== 'super_admin' && existingRole !== 'admin');
-
-    if (shouldUpdateRole && resolvedGlobalRole !== existingRole) {
-      await db
-        .update(userTable)
-        .set({
-          role: resolvedGlobalRole,
-          name: name ?? existingUser.name,
-          image: picture ?? existingUser.image,
-          updatedAt: new Date(),
-        })
-        .where(eq(userTable.id, userId));
-    } else {
-      // Still sync name/picture even if role is unchanged
-      await db
-        .update(userTable)
-        .set({ name: name ?? existingUser.name, image: picture ?? existingUser.image, updatedAt: new Date() })
-        .where(eq(userTable.id, userId));
-    }
+    await db.update(userTable).set({ lastLogin: new Date() }).where(eq(userTable.id, userId));
+    resolvedGlobalRole = (existingRole ?? resolvedGlobalRole) as Role;
   }
 
-  // ── 4. Upsert the org member row ───────────────────────────────────────────
-  const dcpOrgRole = mapToOrgRole(org_role);
+  // ── One member row per membership; auto-create the org if missing.
+  for (const m of memberships) {
+    const orgId = await resolveOrCreateOrg(m);
+    const orgRole = mapToOrgRole(m.role);
 
-  if (orgId !== 'system') {
-    const existingMembers = await db
+    const existingMember = await db
       .select()
       .from(memberTable)
-      .where(
-        and(
-          eq(memberTable.userId, userId),
-          eq(memberTable.organizationId, orgId),
-        ),
-      )
+      .where(and(eq(memberTable.userId, userId), eq(memberTable.organizationId, orgId)))
       .limit(1);
 
-    if (existingMembers.length === 0) {
+    if (existingMember.length === 0) {
       await db.insert(memberTable).values({
         id: crypto.randomUUID(),
-        userId,
         organizationId: orgId,
-        role: dcpOrgRole,
+        userId,
+        role: orgRole,
         createdAt: new Date(),
       });
-    } else {
-      // Update org role if the claim changed (e.g. school_admin promoted to owner)
-      if (existingMembers[0].role !== dcpOrgRole) {
-        await db
-          .update(memberTable)
-          .set({ role: dcpOrgRole })
-          .where(
-            and(
-              eq(memberTable.userId, userId),
-              eq(memberTable.organizationId, orgId),
-            ),
-          );
-      }
+    } else if (existingMember[0].role !== orgRole) {
+      await db
+        .update(memberTable)
+        .set({ role: orgRole })
+        .where(and(eq(memberTable.userId, userId), eq(memberTable.organizationId, orgId)));
     }
   }
 
-  return {
-    userId,
-    globalRole: resolvedGlobalRole,
-    orgId,
-    orgRole: dcpOrgRole,
-    isNewUser,
-  };
+  return { userId, globalRole: resolvedGlobalRole, orgCount: memberships.length };
 }
