@@ -10,6 +10,8 @@ const nextConfig: NextConfig = {
   // Standalone output for Docker/Coolify: emits .next/standalone, a minimal
   // self-contained Node server (server.js) that the Dockerfile copies + runs.
   output: 'standalone',
+  // Compile the shared workspace package (TS source) directly.
+  transpilePackages: ['@repo/shared'],
   typescript: {
     // !! WARN !!
     // Dangerously allow production builds to successfully complete even if

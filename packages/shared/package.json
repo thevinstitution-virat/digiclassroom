@@ -1,0 +1,20 @@
+{
+  "name": "@repo/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./utils": "./src/utils.ts",
+    "./validations": "./src/validations.ts",
+    "./types/*": "./src/types/*.ts"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.3.1",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.1",
+    "typescript": "^5"
+  }
+}
