@@ -4,7 +4,7 @@ import { organization, magicLink } from 'better-auth/plugins';
 import { genericOAuth } from 'better-auth/plugins/generic-oauth';
 import { db } from '../db';
 import * as schema from '../db/schema';
-import { syncFederatedSession, retireUnprovenCredential } from '../lib/federation/jit';
+import { syncFederatedSession } from '../lib/federation/jit';
 import { sendEmail, emailLayout } from '../lib/email/send-email';
 import { isDesignatedSuperAdmin } from '../lib/auth/super-admin-guard';
 
@@ -249,7 +249,6 @@ export const auth = betterAuth({
                 after: async (session) => {
                     if (!FEDERATION_ENABLED) return;
                     try {
-                        await retireUnprovenCredential(session.userId);
                         await syncFederatedSession(session.userId);
                     } catch (err) {
                         console.error('[federation] syncFederatedSession failed:', err);

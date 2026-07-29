@@ -94,42 +94,6 @@ async function resolveOrCreateOrg(m: VidyaverseMembershipClaim): Promise<string>
   return id;
 }
 
-/**
- * Closes the gap that account-linking-by-email opens.
- *
- * requireEmailVerification blocks sign-in until an address is confirmed, but the
- * unverified user row still exists — so someone can register with an address they
- * don't own and sit on it. When the real owner later arrives via Vidyaverse,
- * linking would attach their federated identity to that squatted row, and the
- * squatter's password would still work.
- *
- * An unverified local user at this point is exactly that case: only the IdP has
- * proven control. Retire the local password and mark the address verified.
- */
-export async function retireUnprovenCredential(userId: string): Promise<void> {
-    // Only a FEDERATED sign-in may retire a local password. This runs from
-    // session.create.after, which fires for every session — including ones a local
-    // signup flow creates for itself. Without this gate it would delete the
-    // credential that signup had just created (a fresh local user is unverified by
-    // definition), leaving an account nobody can log into.
-    const accounts = await db
-        .select()
-        .from(accountTable)
-        .where(eq(accountTable.userId, userId));
-    if (!accounts.some((a) => FEDERATION_PROVIDER_IDS.includes(a.providerId))) return;
-
-    const rows = await db.select().from(userTable).where(eq(userTable.id, userId)).limit(1);
-    if (!rows[0] || rows[0].emailVerified) return;
-
-    await db
-        .delete(accountTable)
-        .where(and(eq(accountTable.userId, userId), eq(accountTable.providerId, 'credential')));
-    await db
-        .update(userTable)
-        .set({ emailVerified: true, updatedAt: new Date() })
-        .where(eq(userTable.id, userId));
-}
-
 export interface JitSyncResult {
   userId: string;
   globalRole: Role;
