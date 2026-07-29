@@ -107,6 +107,17 @@ async function resolveOrCreateOrg(m: VidyaverseMembershipClaim): Promise<string>
  * proven control. Retire the local password and mark the address verified.
  */
 export async function retireUnprovenCredential(userId: string): Promise<void> {
+    // Only a FEDERATED sign-in may retire a local password. This runs from
+    // session.create.after, which fires for every session — including ones a local
+    // signup flow creates for itself. Without this gate it would delete the
+    // credential that signup had just created (a fresh local user is unverified by
+    // definition), leaving an account nobody can log into.
+    const accounts = await db
+        .select()
+        .from(accountTable)
+        .where(eq(accountTable.userId, userId));
+    if (!accounts.some((a) => FEDERATION_PROVIDER_IDS.includes(a.providerId))) return;
+
     const rows = await db.select().from(userTable).where(eq(userTable.id, userId)).limit(1);
     if (!rows[0] || rows[0].emailVerified) return;
 
