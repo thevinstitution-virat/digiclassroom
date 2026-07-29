@@ -7,6 +7,8 @@ import * as schema from '../db/schema';
 import { syncFederatedSession } from '../lib/federation/jit';
 import { sendEmail, emailLayout } from '../lib/email/send-email';
 import { isDesignatedSuperAdmin } from '../lib/auth/super-admin-guard';
+import { normaliseEmail } from '../lib/email/normalise';
+import { AUTH_COOKIE_PREFIX } from '../lib/auth/auth-cookies';
 
 // Federation toggle — when off, the existing email/password + Google paths are
 // unchanged. See Vidyaverse Pro/docs/identity-federation-design.md §8.
@@ -107,11 +109,18 @@ export const auth = betterAuth({
         'http://localhost:3334',
         'https://app.vinstitution.com'
     ].filter((v, i, a) => a.indexOf(v) === i),
-    // Share the session cookie across app.<domain> and api.<domain> when a
-    // parent COOKIE_DOMAIN is configured (production). No-op for local dev.
-    ...(COOKIE_DOMAIN
-        ? { advanced: { crossSubDomainCookies: { enabled: true, domain: COOKIE_DOMAIN } } }
-        : {}),
+    advanced: {
+        // Distinct per app across the trio. Especially relevant here: once
+        // crossSubDomainCookies is on, all three apps' cookies live on the same
+        // parent domain, where better-auth's shared default name would collide.
+        // Read everywhere via lib/auth/auth-cookies.ts — keep the two in step.
+        cookiePrefix: AUTH_COOKIE_PREFIX,
+        // Share the session cookie across app.<domain> and api.<domain> when a
+        // parent COOKIE_DOMAIN is configured (production). No-op for local dev.
+        ...(COOKIE_DOMAIN
+            ? { crossSubDomainCookies: { enabled: true, domain: COOKIE_DOMAIN } }
+            : {}),
+    },
     emailAndPassword: {
         enabled: true,
         // Hard gate (B2B2C): users cannot sign in until they verify their email.
@@ -212,11 +221,19 @@ export const auth = betterAuth({
     databaseHooks: {
         user: {
             create: {
-                before: async (user: {
+                before: async (rawUser: {
                     email: string;
                     role?: string;
                     [key: string]: unknown;
                 }) => {
+                    // 0. Store the address canonically. Harmless on MySQL (already
+                    //    case-insensitive by collation) and load-bearing on Postgres,
+                    //    where a mixed-case row would make link-by-email miss and
+                    //    duplicate the account instead of linking it.
+                    //    (isDesignatedSuperAdmin below already compares case-
+                    //    insensitively on its own — it does not depend on this.)
+                    const user = { ...rawUser, email: normaliseEmail(rawUser.email) };
+
                     // 1. Platform owner from env — the ONLY way to ever become super_admin.
                     //    For an existing account use scripts/set-super-admin.ts (one-time).
                     if (isDesignatedSuperAdmin(user.email)) {

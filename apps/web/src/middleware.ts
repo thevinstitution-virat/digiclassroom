@@ -13,6 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionCookie } from 'better-auth/cookies';
+import { ACTIVE_ORG_COOKIE_NAMES } from '@/lib/auth/auth-cookies';
 
 // ── Dev/test route prefixes — blocked in production with 404 ─────────────────
 const DEV_ROUTE_PREFIXES = [
@@ -103,8 +104,11 @@ export async function middleware(req: NextRequest) {
   //
   // Phase 2c will replace this with server-side membership verification
   // (stop trusting the header alone — a user can forge x-org-id).
-  const orgCookie = req.cookies.get('better-auth.active_organization');
-  const orgId = orgCookie?.value ?? '';
+  // Try both spellings: better-auth prefixes its cookies with `__Secure-` over
+  // HTTPS, so the plain name does not exist in production — reading only it left
+  // x-org-id empty on every production request.
+  const orgId =
+    ACTIVE_ORG_COOKIE_NAMES.map((name) => req.cookies.get(name)?.value).find(Boolean) ?? '';
 
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set('x-org-id', orgId);
