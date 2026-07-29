@@ -4,7 +4,7 @@ import { organization, magicLink } from 'better-auth/plugins';
 import { genericOAuth } from 'better-auth/plugins/generic-oauth';
 import { db } from '../db';
 import * as schema from '../db/schema';
-import { syncFederatedSession } from '../lib/federation/jit';
+import { syncFederatedSession, retireUnprovenCredential } from '../lib/federation/jit';
 import { sendEmail, emailLayout } from '../lib/email/send-email';
 import { isDesignatedSuperAdmin } from '../lib/auth/super-admin-guard';
 
@@ -59,12 +59,20 @@ const oauthConfigs = CONTROL_PLANES.filter(
     // set on a host the SPA can't read. The rewrite proxies this path to the same
     // handler, so the whole round-trip stays on one cookie host.
     redirectURI: `${APP_URL.replace(/\/$/, '')}/api/auth/oauth2/callback/${cp.providerId}`,
-    mapProfileToUser: (profile: Record<string, unknown>) => ({
-        email: profile.email as string,
-        name: (profile.name as string) ?? '',
-        image: (profile.picture as string) ?? null,
-        emailVerified: !!profile.email_verified,
-    }),
+    mapProfileToUser: (profile: Record<string, unknown>) => {
+        // This app requires verified email for its own signups, so a federated
+        // identity must clear the same bar — otherwise SSO is a way around a gate
+        // enforced everywhere else. It also makes linking-by-email safe below.
+        if (!profile.email_verified) {
+            throw new Error('This email address has not been verified with Vidyaverse.');
+        }
+        return {
+            email: profile.email as string,
+            name: (profile.name as string) ?? '',
+            image: (profile.picture as string) ?? null,
+            emailVerified: true,
+        };
+    },
 }));
 
 const federationPlugins =
@@ -79,6 +87,17 @@ export const auth = betterAuth({
         provider: 'mysql',
         schema
     }),
+    // A user who signed up here directly and later arrives via Vidyaverse must
+    // land on the SAME account, not a duplicate that strands their progress and
+    // org membership. Safe because these are the trio's own IdPs and any identity
+    // they haven't verified is rejected in mapProfileToUser above.
+    account: {
+        accountLinking: {
+            enabled: true,
+            trustedProviders: ['vidyaverse', 'vdl'],
+            allowDifferentEmails: false,
+        },
+    },
     trustedOrigins: [
         APP_URL,
         'https://desktop-9mdcf0m.taile7a3e3.ts.net',
@@ -230,6 +249,7 @@ export const auth = betterAuth({
                 after: async (session) => {
                     if (!FEDERATION_ENABLED) return;
                     try {
+                        await retireUnprovenCredential(session.userId);
                         await syncFederatedSession(session.userId);
                     } catch (err) {
                         console.error('[federation] syncFederatedSession failed:', err);
