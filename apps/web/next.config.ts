@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import path from 'path'
 
 // Bundle analyzer setup
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
@@ -7,11 +8,17 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 
 
 const nextConfig: NextConfig = {
-  // NOTE: `output: 'standalone'` is intentionally NOT used here. In this
-  // npm-workspace monorepo, standalone tracing can't see the hoisted root
-  // node_modules from apps/web, and the fix (outputFileTracingRoot) conflicts
-  // with this app's custom webpack config. The Docker image instead ships a
-  // pruned node_modules and runs `next start` (see apps/web/Dockerfile).
+  // Standalone output: Next traces the files actually reachable at runtime and
+  // emits a self-contained server, instead of the image shipping the whole
+  // hoisted node_modules. `outputFileTracingRoot` points at the workspace root
+  // so the tracer can follow deps hoisted above apps/web — without it, tracing
+  // starts at apps/web and misses them.
+  //
+  // (An earlier note here claimed this conflicted with the custom webpack
+  // config below. It does not: tracing runs after bundling and is independent
+  // of splitChunks / output.globalObject.)
+  output: 'standalone',
+  outputFileTracingRoot: path.join(__dirname, '../../'),
   // Compile the shared workspace packages (TS source) directly.
   transpilePackages: ['@repo/shared', '@repo/core'],
   typescript: {
@@ -52,6 +59,26 @@ const nextConfig: NextConfig = {
       { source: '/dashboard/admin/:path*', destination: '/dashboard/super-admin/:path*', permanent: false },
       { source: '/api/admin', destination: '/api/super-admin', permanent: false },
       { source: '/api/admin/:path*', destination: '/api/super-admin/:path*', permanent: false },
+    ];
+  },
+  // Security headers on every response. CSP is omitted here on purpose — it must
+  // be tuned against inline scripts/styles and the RAG/embed widgets, so it
+  // belongs in its own tested change. These are safe to apply unconditionally.
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+          },
+        ],
+      },
     ];
   },
   // Proxy all API traffic to the standalone API service. This keeps every

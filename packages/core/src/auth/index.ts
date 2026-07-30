@@ -156,12 +156,19 @@ export const auth = betterAuth({
             });
         }
     },
-    socialProviders: {
-        google: {
-            clientId: process.env.GOOGLE_DRIVE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID as string,
-            clientSecret: process.env.GOOGLE_DRIVE_CLIENT_SECRET as string,
-        },
-    },
+    // Only register Google when REAL credentials are configured. Registering it
+    // unconditionally makes better-auth render the sign-in button and send users
+    // to Google with a placeholder client_id — a broken, confusing auth path.
+    socialProviders: (() => {
+        const clientId =
+            process.env.GOOGLE_DRIVE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+        const clientSecret = process.env.GOOGLE_DRIVE_CLIENT_SECRET;
+        const isReal = (v?: string) =>
+            Boolean(v && !v.startsWith('your_') && !v.toLowerCase().includes('placeholder'));
+        return isReal(clientId) && isReal(clientSecret)
+            ? { google: { clientId: clientId as string, clientSecret: clientSecret as string } }
+            : {};
+    })(),
     plugins: [
         ...federationPlugins,
         organization({

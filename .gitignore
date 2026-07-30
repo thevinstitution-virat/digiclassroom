@@ -33,3 +33,12 @@ npm-debug.log*
 .venv*/
 services/models/
 services/**/models/
+
+# --- Security hardening (added 2026-07-30): never commit secrets/dumps ---
+*.env.bak*
+.env.bak*
+*-dump.md
+*.dump
+db-dump*
+TEST_ACCOUNTS.md
+update-password*.ts
