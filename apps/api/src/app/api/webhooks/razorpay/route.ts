@@ -80,7 +80,7 @@ export async function POST(req: Request) {
             role: 'student',
             createdAt: new Date(),
           })
-          .onDuplicateKeyUpdate({ set: { organizationId: order.orgId } });
+          .onConflictDoUpdate({ target: [schema.member.userId, schema.member.organizationId], set: { organizationId: order.orgId } });
 
         // d. Update enrollment
         await tx.update(schema.enrollments)

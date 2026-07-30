@@ -26,7 +26,8 @@ export const videoProgressRouter = createTRPCRouter({
         completionPercentage: input.completionPercentage.toFixed(2),
         lastWatchedAt: new Date(),
       })
-      .onDuplicateKeyUpdate({
+      .onConflictDoUpdate({
+        target: [schema.studentVideoProgress.userId, schema.studentVideoProgress.videoId],
         set: {
           // Only update if new value is greater (prevent rewind from wiping progress)
           maxWatchedSeconds: sql`GREATEST(max_watched_seconds, ${input.watchedSeconds})`,

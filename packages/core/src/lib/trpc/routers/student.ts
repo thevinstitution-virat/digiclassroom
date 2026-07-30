@@ -188,7 +188,7 @@ export const studentRouter = createTRPCRouter({
             batchId: batch.id,
             userId: ctx.userId,
             orgId: org.id
-          }).onDuplicateKeyUpdate({ set: { batchId: batch.id } });
+          }).onConflictDoUpdate({ target: [schema.batchWaitlist.batchId, schema.batchWaitlist.userId], set: { batchId: batch.id } });
           throw new TRPCError({ code: 'FORBIDDEN', message: 'This batch is full. You have been added to the waitlist.' });
         }
       }
@@ -271,7 +271,7 @@ export const studentRouter = createTRPCRouter({
               role: 'student',
               createdAt: new Date(),
             })
-            .onDuplicateKeyUpdate({ set: { organizationId: batch.orgId } });
+            .onConflictDoUpdate({ target: [schema.member.userId, schema.member.organizationId], set: { organizationId: batch.orgId } });
 
           await tx.insert(schema.enrollments)
             .values({
@@ -280,7 +280,7 @@ export const studentRouter = createTRPCRouter({
               orgId: batch.orgId,
               status: 'active',
             })
-            .onDuplicateKeyUpdate({ set: { status: 'active' } });
+            .onConflictDoUpdate({ target: [schema.enrollments.batchId, schema.enrollments.userId], set: { status: 'active' } });
         });
 
         return { success: true, batchId: batch.id, alreadyEnrolled: false, amountPaise: 0 };
@@ -357,7 +357,7 @@ export const studentRouter = createTRPCRouter({
             orgId: batch.orgId,
             status: 'pending_payment',
           })
-          .onDuplicateKeyUpdate({ set: { status: 'pending_payment' } });
+          .onConflictDoUpdate({ target: [schema.enrollments.batchId, schema.enrollments.userId], set: { status: 'pending_payment' } });
 
         // Insert Order
         await tx.insert(schema.orders)
@@ -774,7 +774,8 @@ export const studentRouter = createTRPCRouter({
           completionPercentage: completionString,
           lastWatchedAt: new Date(),
         })
-        .onDuplicateKeyUpdate({
+        .onConflictDoUpdate({
+          target: [schema.studentVideoProgress.userId, schema.studentVideoProgress.videoId],
           set: {
             maxWatchedSeconds: sql`GREATEST(max_watched_seconds, ${input.watchedSeconds})`,
             completionPercentage: sql`GREATEST(completion_percentage, ${completionString})`,

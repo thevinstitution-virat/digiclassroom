@@ -72,7 +72,8 @@ export const POST = withOrgContext(
           accessedAt:     new Date(),
           accessCount:    1,
         })
-        .onDuplicateKeyUpdate({
+        .onConflictDoUpdate({
+          target: [userMaterialAccess.userId, userMaterialAccess.materialId],
           set: {
         // @ts-ignore
             accessedAt:  new Date(),
