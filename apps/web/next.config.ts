@@ -1,5 +1,4 @@
 import type { NextConfig } from 'next'
-import path from 'path'
 
 // Bundle analyzer setup
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
@@ -8,17 +7,11 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 
 
 const nextConfig: NextConfig = {
-  // Standalone output: Next traces the files actually reachable at runtime and
-  // emits a self-contained server, instead of the image shipping the whole
-  // hoisted node_modules. `outputFileTracingRoot` points at the workspace root
-  // so the tracer can follow deps hoisted above apps/web — without it, tracing
-  // starts at apps/web and misses them.
-  //
-  // (An earlier note here claimed this conflicted with the custom webpack
-  // config below. It does not: tracing runs after bundling and is independent
-  // of splitChunks / output.globalObject.)
-  output: 'standalone',
-  outputFileTracingRoot: path.join(__dirname, '../../'),
+  // NOTE: `output: 'standalone'` is intentionally NOT used here. In this
+  // npm-workspace monorepo, standalone tracing can't see the hoisted root
+  // node_modules from apps/web, and the fix (outputFileTracingRoot) conflicts
+  // with this app's custom webpack config. The Docker image instead ships a
+  // pruned node_modules and runs `next start` (see apps/web/Dockerfile).
   // Compile the shared workspace packages (TS source) directly.
   transpilePackages: ['@repo/shared', '@repo/core'],
   typescript: {
