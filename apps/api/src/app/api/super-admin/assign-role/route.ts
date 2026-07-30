@@ -2,6 +2,7 @@ import { auth } from '@/auth';
 import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server'
 import { requirePlatformOwner } from '@/lib/auth/require-platform-staff'
+import { isDesignatedSuperAdmin } from '@/lib/auth/super-admin-guard'
 export async function POST(request: NextRequest) {
   try {
     // Privilege escalation (assigning roles) — super_admin only.
@@ -23,17 +24,12 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Special check for your email to allow self-assignment
-    // User data is already available from session
-    const currentUser = session?.user as any;
-    const isTargetEmail = email === 'bhaarat2050@gmail.com'
-    const isCurrentUserTargetEmail = currentUser.emailAddresses?.some(
-      (emailAddr: any) => emailAddr.emailAddress === 'bhaarat2050@gmail.com'
-    )
-
-    if (!isCurrentUserTargetEmail && !isTargetEmail) {
+    // SECURITY: super_admin is the platform-owner role and is not assignable
+    // here — only the configured SUPER_ADMIN_EMAIL may ever hold it. This
+    // replaced a hardcoded address that no longer exists on the platform.
+    if (role === 'super_admin' && !isDesignatedSuperAdmin(email)) {
       return NextResponse.json({
-        error: 'Only bhaarat2050@gmail.com can assign admin roles'
+        error: 'super_admin is reserved for the platform owner and cannot be assigned'
       }, { status: 403 })
     }
 
