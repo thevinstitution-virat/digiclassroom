@@ -50,6 +50,12 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
 
 RUN npm run build --workspace=@repo/web
 
+# `.next/cache` is webpack's build-time cache — measured at ~950 MB here — and is
+# dead weight at runtime. It is dropped HERE, in the builder, rather than in the
+# runner: image layers are additive, so deleting it after the COPY would leave it
+# in the layer below and save nothing.
+RUN rm -rf /app/apps/web/.next/cache
+
 # ---- pruner: strip devDependencies, keep only runtime deps ------------------
 FROM node:20-slim AS pruner
 WORKDIR /app
