@@ -161,7 +161,7 @@ export async function getTopWeakTopics(
          qb.chapter                AS chapter,
          qb.topic                  AS topic,
          COUNT(*)                  AS attempts,
-         SUM(CASE WHEN pae.is_correct = 0 THEN 1 ELSE 0 END) AS incorrect
+         SUM(CASE WHEN pae.is_correct = FALSE THEN 1 ELSE 0 END) AS incorrect
        FROM practest_attempt_events pae
        JOIN practest_question_bank qb ON qb.id = pae.question_id
        WHERE pae.user_id = ?

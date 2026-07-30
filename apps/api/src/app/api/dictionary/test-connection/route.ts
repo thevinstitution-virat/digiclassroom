@@ -33,35 +33,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Test 2: Database existence
+    // Test 2: report which database we are actually connected to.
+    // On Postgres the database is fixed by DATABASE_URL — an app cannot create
+    // it on demand (CREATE DATABASE cannot run in a transaction and needs
+    // rights the app role deliberately does not have). If it were missing,
+    // Test 1 above would already have failed to connect.
     try {
-      const [databases] = await executeQuery(`
-        SELECT SCHEMA_NAME 
-        FROM INFORMATION_SCHEMA.SCHEMATA 
-        WHERE SCHEMA_NAME = 'virat_gyankosh'
-      `)
-      
-      const databaseExists = databases && (databases as any).length > 0
-      console.log(`📊 Database 'virat_gyankosh' exists: ${databaseExists}`)
-      
-      if (!databaseExists) {
-        // Try to create the database
-        try {
-          await executeQuery('CREATE DATABASE IF NOT EXISTS virat_gyankosh')
-          console.log('✅ Created virat_gyankosh database')
-        } catch (createError: any) {
-          console.error('❌ Failed to create database:', createError)
-          return NextResponse.json({
-            success: false,
-            error: 'Database does not exist and could not be created',
-            details: createError.message,
-            suggestions: [
-              'Create the virat_gyankosh database manually in phpMyAdmin',
-              'Or run: CREATE DATABASE virat_gyankosh; in MySQL'
-            ]
-          }, { status: 500 })
-        }
-      }
+      const rows = await executeQuery<{ db: string }>('SELECT current_database() AS db')
+      const dbName = rows?.[0]?.db
+      console.log(`📊 Connected to database: ${dbName}`)
     } catch (error: any) {
       console.error('❌ Database check failed:', error)
       return NextResponse.json({

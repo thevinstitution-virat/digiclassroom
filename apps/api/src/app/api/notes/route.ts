@@ -115,9 +115,9 @@ export async function POST(req: Request) {
       content, // source_answer - store original content as answer
       cover_design || 'solid-blue',
       spine_color || '#3B82F6',
-      is_favorite ? 1 : 0,
-      is_pinned ? 1 : 0,
-      0, // is_archived
+      Boolean(is_favorite),
+      Boolean(is_pinned),
+      false, // is_archived
       now,
       now,
       now,
@@ -339,7 +339,7 @@ export async function GET(req: Request) {
       FROM user_notes n
       LEFT JOIN note_folders f ON n.folder_id = f.id
       WHERE n.user_id = ?
-        AND n.is_archived = 0
+        AND n.is_archived = FALSE
         ${searchClause}
       ORDER BY n.updated_at DESC
       LIMIT ?
@@ -453,9 +453,9 @@ export async function PUT(req: Request) {
       board || null,
       class_level || null,
       JSON.stringify(tags || []),
-      is_favorite ? 1 : 0,
-      is_pinned ? 1 : 0,
-      is_archived ? 1 : 0,
+      Boolean(is_favorite),
+      Boolean(is_pinned),
+      Boolean(is_archived),
       now,
       id,
       userId,

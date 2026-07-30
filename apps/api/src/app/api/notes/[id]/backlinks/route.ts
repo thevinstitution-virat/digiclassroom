@@ -21,7 +21,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       `SELECT n.id, n.title, n.subject, n.updated_at, nl.link_text
        FROM note_links nl
        JOIN user_notes n ON n.id = nl.source_note_id
-       WHERE nl.target_note_id = ? AND nl.user_id = ? AND n.is_archived = 0
+       WHERE nl.target_note_id = ? AND nl.user_id = ? AND n.is_archived = FALSE
        ORDER BY n.updated_at DESC`,
       [noteId, userId]
     );

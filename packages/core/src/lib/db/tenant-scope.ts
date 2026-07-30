@@ -101,7 +101,7 @@ export type TenantScope = ReturnType<typeof tenantScope>;
  *   const t = tenantSql(ctx, 'm');                 // 'm' = table alias
  *   const org = t.orgOrGlobal();
  *   const rows = await executeQuery(
- *     `SELECT * FROM materials m WHERE ${org.clause} AND m.is_active = 1`,
+ *     `SELECT * FROM materials m WHERE ${org.clause} AND m.is_active = TRUE`,
  *     [...org.params],
  *   );
  */

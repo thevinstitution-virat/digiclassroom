@@ -135,7 +135,7 @@ export async function PUT(
 
         // Handle special cases
         if (key === 'is_favorite' || key === 'is_pinned' || key === 'is_archived') {
-          updateParams.push(body[key] ? 1 : 0);
+          updateParams.push(Boolean(body[key]));
         } else {
           updateParams.push(body[key]);
         }

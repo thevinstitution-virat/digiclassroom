@@ -17,15 +17,15 @@ export async function GET() {
 
     const nodes = await executeQuery(
       `SELECT id, title, subject, folder_id FROM user_notes
-       WHERE user_id = ? AND is_archived = 0`,
+       WHERE user_id = ? AND is_archived = FALSE`,
       [userId]
     );
 
     const links = await executeQuery(
       `SELECT DISTINCT nl.source_note_id AS source, nl.target_note_id AS target
        FROM note_links nl
-       JOIN user_notes s ON s.id = nl.source_note_id AND s.is_archived = 0
-       JOIN user_notes t ON t.id = nl.target_note_id AND t.is_archived = 0
+       JOIN user_notes s ON s.id = nl.source_note_id AND s.is_archived = FALSE
+       JOIN user_notes t ON t.id = nl.target_note_id AND t.is_archived = FALSE
        WHERE nl.user_id = ?
          AND nl.target_note_id IS NOT NULL
          AND nl.source_note_id <> nl.target_note_id`,

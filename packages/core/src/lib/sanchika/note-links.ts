@@ -62,7 +62,7 @@ export async function syncNoteLinks(userId: string, sourceNoteId: string, conten
   for (const link of links) {
     if (!link.target && link.label) {
       const rows = await executeQuery<{ id: string }>(
-        'SELECT id FROM user_notes WHERE user_id = ? AND LOWER(title) = LOWER(?) AND is_archived = 0 LIMIT 1',
+        'SELECT id FROM user_notes WHERE user_id = ? AND LOWER(title) = LOWER(?) AND is_archived = FALSE LIMIT 1',
         [userId, link.label]
       );
       if (rows && rows.length) link.target = rows[0].id;

@@ -187,7 +187,7 @@ export const tenantFeaturesRouter = createTRPCRouter({
           Object.entries(features).forEach(([key, val]) => {
             if (val !== undefined) {
               updates.push(`${key} = ?`);
-              values.push(val ? 1 : 0);
+              values.push(Boolean(val));
             }
           });
           
@@ -213,14 +213,14 @@ export const tenantFeaturesRouter = createTRPCRouter({
           `;
           await executeQuery(insertSql, [
             tenantId,
-            features.enable_live_classes ? 1 : 0,
-            features.enable_video_library ? 1 : 0,
-            features.enable_homework ? 1 : 0,
-            features.enable_notices ? 1 : 0,
-            features.enable_doubts ? 1 : 0,
-            features.teacher_can_upload_videos ? 1 : 0,
-            features.teacher_can_schedule_live ? 1 : 0,
-            features.admin_can_manage_zoom === false ? 0 : 1, // Default true
+            Boolean(features.enable_live_classes),
+            Boolean(features.enable_video_library),
+            Boolean(features.enable_homework),
+            Boolean(features.enable_notices),
+            Boolean(features.enable_doubts),
+            Boolean(features.teacher_can_upload_videos),
+            Boolean(features.teacher_can_schedule_live),
+            features.admin_can_manage_zoom !== false, // Default true
           ]);
         }
 

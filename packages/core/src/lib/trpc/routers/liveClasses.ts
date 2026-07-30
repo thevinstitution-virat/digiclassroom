@@ -46,7 +46,7 @@ export const liveClassesRouter = createTRPCRouter({
         const classCheck = await executeQuerySingle<{ id: string }>(
           `SELECT c.id FROM classes c 
            JOIN teacher_class_assignments tca ON c.id = tca.class_id 
-           WHERE c.id = ? AND c.organization_id = ? AND tca.teacher_id = ? AND tca.is_active = 1`,
+           WHERE c.id = ? AND c.organization_id = ? AND tca.teacher_id = ? AND tca.is_active = TRUE`,
           [input.classId, tenantId, ctx.userId]
         );
         if (!classCheck) throw new TRPCError({ code: 'NOT_FOUND', message: 'Class not found or not assigned to you' });
