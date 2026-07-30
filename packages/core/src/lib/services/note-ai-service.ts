@@ -17,6 +17,7 @@
  */
 
 import { openrouter as openai } from '@/lib/openrouter/client';
+import { executeQuery } from '@/lib/db/connection';
 
 /**
  * Flashcard interface
@@ -279,12 +280,15 @@ Make flashcards exam-focused and suitable for Class ${metadata.classLevel || '10
 
     for (const card of flashcards) {
       try {
-        // @ts-ignore
-        const result = await executeQuery(
-          `INSERT INTO note_flashcards 
-           (id, note_id, question, answer, card_type, difficulty_level, auto_generated, generation_confidence, is_active, created_at)
-           VALUES (UUID(), ?, ?, ?, ?, ?, ?, TRUE, ?, TRUE, NOW())`,
+        // The primary key is a uuid, so there is no insert id to read back —
+        // generate it here and use that value directly.
+        const flashcardId = crypto.randomUUID();
+        await executeQuery(
+          `INSERT INTO note_flashcards
+           (id, note_id, clerk_id, question, answer, card_type, difficulty_level, auto_generated, generation_confidence, is_active, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, TRUE, ?, TRUE, NOW())`,
           [
+            flashcardId,
             noteId,
             clerkId,
             card.question,
@@ -295,8 +299,7 @@ Make flashcards exam-focused and suitable for Class ${metadata.classLevel || '10
           ]
         );
 
-        // @ts-ignore
-        flashcardIds.push((result as unknown).insertId);
+        flashcardIds.push(flashcardId);
       } catch (error) {
         // @ts-ignore
         logger.error({ error: error }, 'âŒ Failed to save flashcard:');
@@ -367,7 +370,7 @@ Make flashcards exam-focused and suitable for Class ${metadata.classLevel || '10
       await executeQuery(
         `INSERT INTO note_insights 
          (id, note_id, insight_type, content, model_used, confidence_score, tokens_used, content_hash, is_valid, generated_at)
-         VALUES (UUID(), ?, 'batch_analysis', ?, 'gpt-4o-mini', ?, ?, ?, TRUE, NOW())`,
+         VALUES (gen_random_uuid()::text, ?, 'batch_analysis', ?, 'gpt-4o-mini', ?, ?, ?, TRUE, NOW())`,
         [
           noteId,
           JSON.stringify(analysis),

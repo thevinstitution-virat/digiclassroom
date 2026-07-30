@@ -2,18 +2,9 @@ import { auth } from '@/auth';
 import { isPlatformStaff, type Role } from '@/auth/permissions';
 import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server'
-import mysql from 'mysql2/promise'
+import { getConnection } from '@/lib/db/connection'
 import { z } from 'zod'
 import type { EnhancedMaterial, MaterialSearchFilters, MaterialsListResponse } from '@/types/google-drive'
-
-// Database connection configuration
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'virat_gyankosh',
-  port: parseInt(process.env.DB_PORT || '3306')
-}
 
 // Validation schema for admin materials request
 const AdminMaterialsRequestSchema = z.object({
@@ -75,7 +66,7 @@ export async function GET(request: NextRequest) {
     const validatedParams = AdminMaterialsRequestSchema.parse(queryParams)
 
     // Create database connection
-    const connection = await mysql.createConnection(dbConfig)
+    const connection = await getConnection()
 
     try {
       // Build WHERE clause based on filters
@@ -266,7 +257,7 @@ export async function GET(request: NextRequest) {
       })
 
     } finally {
-      await connection.end()
+      connection.release()
     }
 
   } catch (error) {
@@ -327,7 +318,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Create database connection
-    const connection = await mysql.createConnection(dbConfig)
+    const connection = await getConnection()
 
     try {
       // Build update query
@@ -388,7 +379,7 @@ export async function PUT(request: NextRequest) {
       })
 
     } finally {
-      await connection.end()
+      connection.release()
     }
 
   } catch (error) {

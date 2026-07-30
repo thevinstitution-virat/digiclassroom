@@ -89,10 +89,10 @@ export const zoomCredentialsRouter = createTRPCRouter({
       await executeQuery(
         `INSERT INTO zoom_credentials (tenant_id, account_id, client_id, client_secret, status)
          VALUES (?, ?, ?, ?, 'active')
-         ON DUPLICATE KEY UPDATE
-         account_id = VALUES(account_id),
-         client_id = VALUES(client_id),
-         client_secret = VALUES(client_secret),
+         ON CONFLICT (tenant_id) DO UPDATE SET
+         account_id = excluded.account_id,
+         client_id = excluded.client_id,
+         client_secret = excluded.client_secret,
          status = 'active'`,
         [tenantId, encryptedAccountId, encryptedClientId, encryptedClientSecret]
       )

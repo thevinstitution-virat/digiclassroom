@@ -1,6 +1,5 @@
 // VG Kosh Practest Engine - Test Session Database Queries
 
-import mysql from 'mysql2/promise'
 import {
   TestSession,
   UserResponse,

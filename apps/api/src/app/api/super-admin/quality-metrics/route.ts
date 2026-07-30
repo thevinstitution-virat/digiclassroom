@@ -228,7 +228,7 @@ async function fetchTrends(hours: number): Promise<any> {
   
   const results = await executeQuery<any>(
     `SELECT 
-      DATE_FORMAT(created_at, ${interval === 'HOUR' ? "'%Y-%m-%d %H:00'" : "'%Y-%m-%d'"}) as date,
+      to_char(created_at, ${interval === 'HOUR' ? "'YYYY-MM-DD HH24:00'" : "'YYYY-MM-DD'"}) as date,
       AVG(star_rating) as avg_rating,
       AVG(faithfulness_score) as avg_faithfulness,
       AVG(relevance_score) as avg_relevance

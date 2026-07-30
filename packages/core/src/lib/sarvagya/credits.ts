@@ -66,13 +66,10 @@ export async function deductSarvagyaCredits(
     queryId: string
 ): Promise<void> {
     await db.transaction(async (tx) => {
-        // In MySQL drizzle, update doesn't support returning natively in the same way,
-        // but we can query then update or just do a raw where clause.
-        // For simplicity, we assume BetterAuth's setup or manual management works here.
-        // Actually, returning isn't natively supported in mysql-core update directly!
-        // We'll update first and then check if affected rows > 0, but Drizzle MySQL doesn't have .returning()
-
-        const [updateResult] = await tx
+        // The conditional WHERE is the concurrency guard: the row only matches
+        // while the balance is still sufficient. node-postgres returns a
+        // QueryResult (not a [rows, fields] tuple), so read `rowCount`.
+        const updateResult = await tx
             .update(userSubscriptions)
             .set({
                 sarvagyaCredits: sql`${userSubscriptions.sarvagyaCredits} - ${amount}`
@@ -81,7 +78,7 @@ export async function deductSarvagyaCredits(
                 sql`${userSubscriptions.userId} = ${userId} AND ${userSubscriptions.sarvagyaCredits} >= ${amount}`
             );
 
-        if ((updateResult as any).affectedRows === 0) {
+        if ((updateResult as any).rowCount === 0) {
             if (process.env.NODE_ENV === 'development') {
                 return; // Bypass deduction for dev testing
             }

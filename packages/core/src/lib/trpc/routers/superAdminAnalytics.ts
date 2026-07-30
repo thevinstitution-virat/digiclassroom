@@ -101,7 +101,7 @@ export const superAdminAnalyticsRouter = createTRPCRouter({
       // ── Monthly aggregates (last 12 months) ─────────────────────────────
       db
         .select({
-          month:                sql<string>`DATE_FORMAT(${schema.payments.capturedAt}, '%Y-%m')`.as('month'),
+          month:                sql<string>`to_char(${schema.payments.capturedAt}, 'YYYY-MM')`.as('month'),
           totalRevenuePaise:    sql<number>`SUM(${schema.orders.amountPaise})`.as('totalRevenuePaise'),
           platformFeePaise:     sql<number>`SUM(${schema.orders.platformFeePaise})`.as('platformFeePaise'),
           institutionPaise:     sql<number>`SUM(${schema.orders.institutionPaise})`.as('institutionPaise'),
@@ -110,7 +110,7 @@ export const superAdminAnalyticsRouter = createTRPCRouter({
         .from(schema.payments)
         .innerJoin(schema.orders, eq(schema.orders.id, schema.payments.orderId))
         .where(eq(schema.payments.status, 'captured'))
-        .groupBy(sql`DATE_FORMAT(${schema.payments.capturedAt}, '%Y-%m')`)
+        .groupBy(sql`to_char(${schema.payments.capturedAt}, 'YYYY-MM')`)
         .orderBy(sql`month DESC`)
         .limit(12),
 

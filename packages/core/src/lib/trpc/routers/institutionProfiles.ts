@@ -76,7 +76,8 @@ export const institutionProfilesRouter = createTRPCRouter({
           establishedYear: input.establishedYear || null,
           onboardingCompleted: true,
         })
-        .onDuplicateKeyUpdate({
+        .onConflictDoUpdate({
+          target: institutionProfiles.organizationId,
           set: {
             contactPhone: input.contactPhone,
             address: input.address || null,

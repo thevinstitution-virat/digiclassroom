@@ -2,19 +2,10 @@ import { auth } from '@/auth';
 import { isPlatformStaff, type Role } from '@/auth/permissions';
 import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server'
-import mysql from 'mysql2/promise'
+import { getConnection, type CompatConnection } from '@/lib/db/connection'
 import { GoogleDriveService } from '@/lib/services/google-drive'
 import { v4 as uuidv4 } from 'uuid'
 import type { MaterialUploadData, EnhancedMaterial } from '@/types/google-drive'
-
-// Database connection configuration
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'virat_gyankosh',
-  port: parseInt(process.env.DB_PORT || '3306')
-}
 
 /**
  * POST /api/super-admin/materials/upload
@@ -91,7 +82,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create database connection
-    const connection = await mysql.createConnection(dbConfig)
+    const connection = await getConnection()
 
     try {
       // Initialize Google Drive service
@@ -217,7 +208,7 @@ export async function POST(request: NextRequest) {
       })
 
     } finally {
-      await connection.end()
+      connection.release()
     }
 
   } catch (error) {
@@ -234,7 +225,7 @@ export async function POST(request: NextRequest) {
  */
 async function createFolderStructure(
   driveService: GoogleDriveService,
-  connection: mysql.Connection,
+  connection: CompatConnection,
   metadata: MaterialUploadData
 ): Promise<string> {
   const folders = [

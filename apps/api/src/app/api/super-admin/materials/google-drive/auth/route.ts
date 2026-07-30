@@ -3,16 +3,7 @@ import { isPlatformStaff, type Role } from '@/auth/permissions';
 import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleDriveService } from '@/lib/services/google-drive'
-import mysql from 'mysql2/promise'
-
-// Database connection configuration
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'virat_gyankosh',
-  port: parseInt(process.env.DB_PORT || '3306')
-}
+import { getConnection } from '@/lib/db/connection'
 
 /**
  * POST /api/super-admin/materials/google-drive/auth
@@ -72,7 +63,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Store tokens securely (in production, use encrypted storage)
-    const connection = await mysql.createConnection(dbConfig)
+    const connection = await getConnection()
 
     try {
       // Create or update Google Drive configuration
@@ -82,13 +73,13 @@ export async function POST(request: NextRequest) {
           configured_by, created_at, updated_at
         ) VALUES (
           'main', ?, ?, ?, ?, ?, ?, NOW(), NOW()
-        ) ON DUPLICATE KEY UPDATE
-          access_token = VALUES(access_token),
-          refresh_token = VALUES(refresh_token),
-          token_type = VALUES(token_type),
-          scope = VALUES(scope),
-          expiry_date = VALUES(expiry_date),
-          configured_by = VALUES(configured_by),
+        ) ON CONFLICT (id) DO UPDATE SET
+          access_token = excluded.access_token,
+          refresh_token = excluded.refresh_token,
+          token_type = excluded.token_type,
+          scope = excluded.scope,
+          expiry_date = excluded.expiry_date,
+          configured_by = excluded.configured_by,
           updated_at = NOW()
       `, [
         tokens.access_token,
@@ -113,7 +104,7 @@ export async function POST(request: NextRequest) {
       ])
 
     } finally {
-      await connection.end()
+      connection.release()
     }
 
     return NextResponse.json({
@@ -133,7 +124,7 @@ export async function POST(request: NextRequest) {
       const session = await auth.api.getSession({ headers: await headers() });
       const userId = session?.user?.id;
       if (userId) {
-        const connection = await mysql.createConnection(dbConfig)
+        const connection = await getConnection()
         try {
           await connection.execute(`
             INSERT INTO admin_activity_log (
@@ -147,7 +138,7 @@ export async function POST(request: NextRequest) {
             request.headers.get('user-agent') || 'unknown'
           ])
         } finally {
-          await connection.end()
+          connection.release()
         }
       }
     } catch (logError) {
@@ -185,7 +176,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const connection = await mysql.createConnection(dbConfig)
+    const connection = await getConnection()
 
     try {
       // Get current Google Drive configuration
@@ -219,7 +210,7 @@ export async function GET(request: NextRequest) {
       })
 
     } finally {
-      await connection.end()
+      connection.release()
     }
 
   } catch (error) {

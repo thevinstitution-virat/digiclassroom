@@ -246,7 +246,7 @@ export const studentRouter = createTRPCRouter({
       if (amountPaise <= 0) {
         await db.transaction(async (tx) => {
           if (couponId) {
-            const [result] = await tx
+            const result = await tx
               .update(schema.batchCoupons)
               .set({ usageCount: sql`${schema.batchCoupons.usageCount} + 1` })
               .where(
@@ -258,7 +258,7 @@ export const studentRouter = createTRPCRouter({
                   )
                 )
               );
-            if (result.affectedRows === 0) {
+            if ((result as any).rowCount === 0) {
               throw new TRPCError({ code: 'CONFLICT', message: 'Coupon is fully used' });
             }
           }
@@ -332,7 +332,7 @@ export const studentRouter = createTRPCRouter({
       const orderId = crypto.randomUUID();
       await db.transaction(async (tx) => {
         if (couponId) {
-          const [result] = await tx
+          const result = await tx
             .update(schema.batchCoupons)
             .set({ usageCount: sql`${schema.batchCoupons.usageCount} + 1` })
             .where(
@@ -344,7 +344,7 @@ export const studentRouter = createTRPCRouter({
                 )
               )
             );
-          if (result.affectedRows === 0) {
+          if ((result as any).rowCount === 0) {
             throw new TRPCError({ code: 'CONFLICT', message: 'Coupon is fully used' });
           }
         }

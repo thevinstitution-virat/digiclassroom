@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getPool } from '@/lib/db/connection';
+import { getConnection } from '@/lib/db/connection';
 import { db } from '@/db';
 import { answerFeedback } from '@/db/schema';
 import {
@@ -51,8 +51,7 @@ export async function POST(req: NextRequest) {
     const data = validation.data;
 
     // Get database connection
-    const pool = getPool();
-    connection = await pool.getConnection();
+    connection = await getConnection();
 
     // Insert feedback into database using Drizzle
     const [result] = await db.insert(answerFeedback).values({
@@ -65,9 +64,9 @@ export async function POST(req: NextRequest) {
       starRating: data.starRating || null,
       thumbsRating: data.thumbsRating || null,
       feedbackText: data.feedbackText || null,
-    });
+    }).returning({ id: answerFeedback.id });
 
-    const feedbackId = result.insertId.toString();
+    const feedbackId = result.id.toString();
     console.log(`✅ Feedback submitted with ID: ${feedbackId}`);
 
     // Create quality alerts if needed

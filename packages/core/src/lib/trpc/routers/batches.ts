@@ -89,7 +89,7 @@ function buildUpdates(fields: Record<string, any>) {
   if (fields.description !== undefined) updates.description = fields.description;
   if (fields.levelId     !== undefined) updates.levelId     = fields.levelId;
   if (fields.price       !== undefined) updates.price       = String(fields.price);
-  if (fields.startDate   !== undefined) updates.startDate   = fields.startDate ? new Date(fields.startDate) : null;
+  if (fields.startDate   !== undefined) updates.startDate   = fields.startDate ? fields.startDate.slice(0, 10) : null;
   if (fields.isActive    !== undefined) updates.isActive    = fields.isActive;
   if (fields.maxStudents !== undefined) updates.maxStudents = fields.maxStudents;
   if (Object.keys(updates).length === 0)
@@ -146,7 +146,7 @@ export const batchesRouter = createTRPCRouter({
             description: input.description,
             levelId:     input.levelId,
             price:       String(input.price),
-            startDate:   input.startDate ? new Date(input.startDate) : null,
+            startDate:   input.startDate ? input.startDate.slice(0, 10) : null,
             isActive:    input.isActive,
             maxStudents: input.maxStudents ?? null,
             joinCode:    code,
@@ -221,7 +221,7 @@ export const batchesRouter = createTRPCRouter({
       .input(z.object({ targetOrgId: uuid, ...WRITE }))
       .mutation(async ({ ctx, input }) => {
         requireSuperAdmin(ctx.userRole);
-        const [row] = await db
+        await db
           .insert(batches)
           .values({
             orgId: input.targetOrgId,
@@ -229,7 +229,7 @@ export const batchesRouter = createTRPCRouter({
             description: input.description,
             levelId:     input.levelId,
             price:       String(input.price),
-            startDate:   input.startDate ? new Date(input.startDate) : null,
+            startDate:   input.startDate ? input.startDate.slice(0, 10) : null,
             isActive:    input.isActive,
             maxStudents: input.maxStudents ?? null,
           });

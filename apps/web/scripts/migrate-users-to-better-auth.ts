@@ -60,7 +60,7 @@ async function main() {
             `INSERT INTO \`user\`
                (id, name, email, role, email_verified, created_at, updated_at)
              VALUES (?, ?, ?, ?, 1, NOW(), NOW())
-             ON DUPLICATE KEY UPDATE id = id`,   // safety: skip if email already exists
+             ON CONFLICT (email) DO NOTHING`,   // safety: skip if email already exists
             [newId, legacy.name, legacy.email, legacy.role ?? 'student'],
           );
           migrated++;

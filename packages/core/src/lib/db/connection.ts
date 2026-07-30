@@ -42,12 +42,42 @@ function getDbConfig() {
   }
 }
 
+// MySQL interval units -> make_interval() argument names.
+const INTERVAL_FIELDS: Record<string, string> = {
+  SECOND: 'secs',
+  MINUTE: 'mins',
+  HOUR: 'hours',
+  DAY: 'days',
+  WEEK: 'weeks',
+  MONTH: 'months',
+  YEAR: 'years',
+}
+
+/**
+ * `DATE_SUB(NOW(), INTERVAL <expr> <UNIT>)` -> `(NOW() - make_interval(<field> => (<expr>)::int))`.
+ *
+ * Any `?` in <expr> is left in place so the positional-placeholder pass below
+ * still numbers it correctly. An unrecognised unit is deliberately left alone:
+ * Postgres will then raise a loud error rather than compute a wrong date.
+ */
+function rewriteDateSub(sql: string): string {
+  return sql.replace(
+    /DATE_SUB\(\s*NOW\(\)\s*,\s*INTERVAL\s+([^)]+?)\s+(SECOND|MINUTE|HOUR|DAY|WEEK|MONTH|YEAR)S?\s*\)/gi,
+    (whole, expr: string, unit: string) => {
+      const field = INTERVAL_FIELDS[unit.toUpperCase()]
+      if (!field) return whole
+      return `(NOW() - make_interval(${field} => (${expr.trim()})::int))`
+    }
+  )
+}
+
 /**
  * Translate a MySQL-dialect query to Postgres: backtick identifiers -> double
- * quotes, and `?` placeholders -> `$N` (ignoring `?` inside single-quoted literals).
+ * quotes, DATE_SUB intervals -> interval arithmetic, and `?` placeholders -> `$N`
+ * (ignoring `?` inside single-quoted literals).
  */
 export function toPg(sql: string): string {
-  const s = sql.replace(/`/g, '"')
+  const s = rewriteDateSub(sql.replace(/`/g, '"'))
   let out = ''
   let n = 0
   let inSingle = false
@@ -93,6 +123,10 @@ function wrap(client: PoolClient): CompatConnection {
     // also carries affectedRows. Emulate that so `[result]` callers keep working.
     const rowsWithMeta: any = res.rows
     ;(rowsWithMeta as any).affectedRows = res.rowCount ?? 0
+    // Mirror executeUpdate's contract: `insertId` is populated only when the
+    // statement carries `RETURNING id`. Left untyped/uncoerced on purpose —
+    // DCP has both serial (number) and uuid-text (string) primary keys.
+    ;(rowsWithMeta as any).insertId = res.rows?.[0]?.id ?? 0
     return [rowsWithMeta, res.fields]
   }
   return {
@@ -120,15 +154,15 @@ export async function executeQuery<T = any>(query: string, params?: any[]): Prom
 
 // Execute an INSERT/UPDATE/DELETE and return result info.
 // NOTE: Postgres has no LAST_INSERT_ID. `insertId` is only populated when the query
-// includes `RETURNING id`; otherwise it is 0. Serial-PK inserts that need the new id
-// must add `RETURNING id`.
+// includes `RETURNING id`; otherwise it is 0. Inserts that need the new id must add
+// `RETURNING id`. The value is NOT coerced to a number: DCP has 9 serial primary keys
+// but most tables use varchar(36) uuid ids, and coercing those yields NaN.
 export async function executeUpdate(
   query: string,
   params?: any[]
-): Promise<{ affectedRows: number; insertId: number }> {
+): Promise<{ affectedRows: number; insertId: number | string }> {
   const res = await getPool().query(toPg(query), params)
-  const insertId = res.rows?.[0]?.id ?? 0
-  return { affectedRows: res.rowCount ?? 0, insertId: Number(insertId) || 0 }
+  return { affectedRows: res.rowCount ?? 0, insertId: res.rows?.[0]?.id ?? 0 }
 }
 
 // Execute a single query and return first result.

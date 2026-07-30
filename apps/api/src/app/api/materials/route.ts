@@ -196,7 +196,7 @@ async function createDefaultUserProfile(userId: string, orgId: string | null) {
     // Create a default profile for testing
     await connection.execute(`
       INSERT INTO user_profiles (id, user_id, organization_id, board, medium, class, stream, is_onboarding_complete)
-      VALUES (UUID(), ?, ?, 'CBSE', 'ENGLISH', 10, NULL, TRUE)
+      VALUES (gen_random_uuid()::text, ?, ?, 'CBSE', 'ENGLISH', 10, NULL, TRUE)
     `, [userId, orgId])
 
     logger.info(`Default user profile created for user: ${userId} in org: ${orgId}`)

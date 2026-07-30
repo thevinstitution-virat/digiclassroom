@@ -10,7 +10,7 @@
  * });
  */
 import { lt, desc, asc, gt, SQL, eq, and, or } from 'drizzle-orm';
-import { AnyMySqlSelect } from 'drizzle-orm/mysql-core';
+import { AnyPgSelect } from 'drizzle-orm/pg-core';
 
 export interface PaginationArgs {
   cursor?: string | null;
@@ -25,7 +25,7 @@ export interface PaginatedResult<T> {
   hasMore: boolean;
 }
 
-export async function getPaginated<T extends AnyMySqlSelect>(
+export async function getPaginated<T extends AnyPgSelect>(
   query: T,
   options: PaginationArgs
 ): Promise<PaginatedResult<Awaited<T>[number]>> {

@@ -53,7 +53,8 @@ export class ChatHistoryService {
       const result = await executeQuery(
         `INSERT INTO conversations 
          (user_id, user_id, role, intent, topic, subject, class_level, session_id, status, metadata, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, NOW(), NOW())`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, NOW(), NOW())
+         RETURNING id`,
         [
           params.userId,
           params.userId,

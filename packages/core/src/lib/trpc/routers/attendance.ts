@@ -80,22 +80,24 @@ export const attendanceRouter = createTRPCRouter({
         });
       }
 
-      // We'll do an UPSERT (ON DUPLICATE KEY UPDATE) for each record
-      // In MySQL: INSERT INTO ... ON DUPLICATE KEY UPDATE status = VALUES(status), updated_at = NOW()
-      
-      const values = records.map(r => [
+      // Upsert every record in one statement. Postgres has no mysql2 `VALUES ?`
+      // bulk-expansion, so build the placeholder groups explicitly and flatten
+      // the parameters; the natural key is (tenant, class, user, date).
+      const rows = records.map(r => [
         ctx.tenantId, classId, r.userId, date, r.status, type, ctx.userId
       ]);
 
+      const rowPlaceholders = rows.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(', ');
+
       const sql = `
         INSERT INTO attendance_records (tenant_id, class_id, user_id, date, status, type, created_by)
-        VALUES ?
-        ON DUPLICATE KEY UPDATE 
-          status = VALUES(status), 
-          created_by = VALUES(created_by)
+        VALUES ${rowPlaceholders}
+        ON CONFLICT (tenant_id, class_id, user_id, date) DO UPDATE SET
+          status = excluded.status,
+          created_by = excluded.created_by
       `;
 
-      await executeQuery(sql, [values]);
+      await executeQuery(sql, rows.flat());
 
       return { success: true }
     }),

@@ -503,7 +503,7 @@ export const institutionAdminRouter = createTRPCRouter({
     const [monthly, byBatch] = await Promise.all([
       db
         .select({
-          month:           sql<string>`DATE_FORMAT(${schema.payments.capturedAt}, '%Y-%m')`.as('month'),
+          month:           sql<string>`to_char(${schema.payments.capturedAt}, 'YYYY-MM')`.as('month'),
           institutionPaise: sql<number>`SUM(${schema.orders.institutionPaise})`.as('institutionPaise'),
           paymentCount:    sql<number>`COUNT(${schema.payments.id})`.as('paymentCount'),
         })
@@ -515,7 +515,7 @@ export const institutionAdminRouter = createTRPCRouter({
             eq(schema.orders.orgId, ctx.tenantId!),
           )
         )
-        .groupBy(sql`DATE_FORMAT(${schema.payments.capturedAt}, '%Y-%m')`)
+        .groupBy(sql`to_char(${schema.payments.capturedAt}, 'YYYY-MM')`)
         .orderBy(sql`month DESC`)
         .limit(12),
 

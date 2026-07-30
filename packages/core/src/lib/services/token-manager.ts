@@ -3,7 +3,7 @@
  * Automatically refreshes tokens before they expire to prevent upload failures
  */
 
-import mysql from 'mysql2/promise'
+import { getConnection } from '@/lib/db/connection'
 import { GoogleDriveService } from './google-drive'
 
 interface TokenInfo {
@@ -17,19 +17,10 @@ export class TokenManager {
   private refreshInterval: number
   private intervalId: NodeJS.Timeout | null = null
   private isRefreshing: boolean = false
-  private dbConfig: any
 
   constructor() {
     // Refresh every 50 minutes (tokens expire in 60 minutes)
     this.refreshInterval = 50 * 60 * 1000
-    
-    this.dbConfig = {
-      host: process.env.DB_HOST || 'localhost',
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME || 'virat_gyankosh',
-      port: parseInt(process.env.DB_PORT || '3306')
-    }
   }
 
   /**
@@ -114,7 +105,7 @@ export class TokenManager {
    * Get stored tokens from database
    */
   private async getStoredTokens(): Promise<TokenInfo | null> {
-    const connection = await mysql.createConnection(this.dbConfig)
+    const connection = await getConnection()
     
     try {
       const [result] = await connection.execute(
@@ -128,7 +119,7 @@ export class TokenManager {
 
       return result[0] as TokenInfo
     } finally {
-      await connection.end()
+      connection.release()
     }
   }
 
@@ -162,7 +153,7 @@ export class TokenManager {
    * Update tokens in database
    */
   private async updateStoredTokens(tokens: any): Promise<void> {
-    const connection = await mysql.createConnection(this.dbConfig)
+    const connection = await getConnection()
     
     try {
       const expiryDate = new Date(tokens.expiry_date || Date.now() + 3600000) // 1 hour default
@@ -174,7 +165,7 @@ export class TokenManager {
       `, [tokens.access_token, expiryDate, 'main'])
       
     } finally {
-      await connection.end()
+      connection.release()
     }
   }
 
@@ -183,7 +174,7 @@ export class TokenManager {
    */
   private async logTokenError(error: any): Promise<void> {
     try {
-      const connection = await mysql.createConnection(this.dbConfig)
+      const connection = await getConnection()
       
       await connection.execute(`
         INSERT INTO admin_activity_log (admin_id, action, details, created_at)
@@ -198,7 +189,7 @@ export class TokenManager {
         })
       ])
       
-      await connection.end()
+      connection.release()
     } catch (logError) {
       console.error('Failed to log token error:', logError)
     }

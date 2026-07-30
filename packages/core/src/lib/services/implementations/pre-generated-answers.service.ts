@@ -95,8 +95,8 @@ export class PreGeneratedAnswersService implements IPreGeneratedAnswersService {
         `INSERT INTO pre_generated_answers 
          (question_hash, question_text, answer_text, subject, class_level, board, content_type)
          VALUES (?, ?, ?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE 
-           answer_text = VALUES(answer_text),
+         ON CONFLICT (question_hash) DO UPDATE SET
+           answer_text = excluded.answer_text,
            updated_at = NOW()`,
         [
           hash,

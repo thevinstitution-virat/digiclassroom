@@ -4,10 +4,9 @@
  * 🛡️ ENHANCED: Defensive defaults and comprehensive schema validation
  */
 
-import { getPool, executeQuery, executeQuerySingle } from '@/lib/db/connection';
+import { executeQuery, executeQuerySingle, executeUpdate } from '@/lib/db/connection';
 import { z } from 'zod';
 import { ServiceLifecycleManager, cacheUserContext, getCachedUserContext } from './service-lifecycle-manager';
-import { ResultSetHeader } from 'mysql2';
 
 export type UserRole = 'student' | 'teacher' | 'parent_guardian';
 export type BoardType = 'CBSE' | 'ICSE' | 'State';
@@ -252,6 +251,7 @@ export class UserProfileService {
           teaching_experience_years, specialization_subjects, classroom_size_preference,
           child_grade_levels, involvement_level, support_preferences
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        RETURNING id
       `;
 
       const values = [
@@ -272,9 +272,8 @@ export class UserProfileService {
         profileData.support_preferences ? JSON.stringify(profileData.support_preferences) : null
       ];
 
-      const pool = getPool();
-      const [result] = await pool.execute(query, values);
-      return (result as ResultSetHeader).insertId.toString();
+      const { insertId } = await executeUpdate(query, values);
+      return insertId.toString();
     } catch (error) {
       console.error('Error creating user profile:', error);
       throw error;
@@ -310,9 +309,8 @@ export class UserProfileService {
       const query = `UPDATE enhanced_user_profiles SET ${setClause.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?`;
       values.push(userId);
 
-      const pool = getPool();
-      const [result] = await pool.execute(query, values);
-      return (result as ResultSetHeader).affectedRows > 0;
+      const { affectedRows } = await executeUpdate(query, values);
+      return affectedRows > 0;
     } catch (error) {
       console.error('Error updating user profile:', error);
       return false;

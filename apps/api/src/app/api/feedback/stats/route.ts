@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getPool } from '@/lib/db/connection';
+import { getConnection } from '@/lib/db/connection';
 import {
   GetFeedbackStatsRequestSchema,
   validateRequest,
@@ -52,8 +52,7 @@ export async function GET(req: NextRequest) {
     const params = validation.data;
 
     // Get database connection
-    const pool = getPool();
-    connection = await pool.getConnection();
+    connection = await getConnection();
 
     // Build WHERE clause
         // @ts-ignore

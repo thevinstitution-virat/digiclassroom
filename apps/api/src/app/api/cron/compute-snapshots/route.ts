@@ -33,8 +33,9 @@ export async function GET(req: NextRequest) {
   }
 
   const today = new Date();
-  const weekOfDate = isoWeekMonday(today); // FIX #3 — Date object for Drizzle
-  const weekOf = weekOfDate.toISOString().split('T')[0]; // string for JSON response only
+  const weekOfDate = isoWeekMonday(today);
+  // Postgres `date` columns take a 'YYYY-MM-DD' string in Drizzle, not a Date.
+  const weekOf = weekOfDate.toISOString().split('T')[0];
   const isBackfill = req.nextUrl.searchParams.get('backfill') === 'true';
 
   // 28-day lookback window for event queries
@@ -212,7 +213,7 @@ export async function GET(req: NextRequest) {
           userId: enrollment.userId,
           batchId: enrollment.batchId,
           orgId: enrollment.orgId,        // FIX #6
-          weekOf: weekOfDate,
+          weekOf,
           engagementScore: engagementScore.toFixed(2),
           riskScore: riskScore.toFixed(2),
           videosWatched,                  // FIX #2
@@ -227,16 +228,21 @@ export async function GET(req: NextRequest) {
         await db
           .insert(studentEngagementSnapshots)
           .values(rows)
-          .onDuplicateKeyUpdate({
+          .onConflictDoUpdate({
+            target: [
+              studentEngagementSnapshots.userId,
+              studentEngagementSnapshots.batchId,
+              studentEngagementSnapshots.weekOf,
+            ],
             // FIX #2 — upsert ALL computed columns, not just scores
             set: {
-              engagementScore: sql`VALUES(engagement_score)`,
-              riskScore: sql`VALUES(risk_score)`,
-              videosWatched: sql`VALUES(videos_watched)`,
-              quizzesTaken: sql`VALUES(quizzes_taken)`,
-              avgQuizScore: sql`VALUES(avg_quiz_score)`,
-              minutesActive: sql`VALUES(minutes_active)`,
-              streakDays: sql`VALUES(streak_days)`,
+              engagementScore: sql`excluded.engagement_score`,
+              riskScore: sql`excluded.risk_score`,
+              videosWatched: sql`excluded.videos_watched`,
+              quizzesTaken: sql`excluded.quizzes_taken`,
+              avgQuizScore: sql`excluded.avg_quiz_score`,
+              minutesActive: sql`excluded.minutes_active`,
+              streakDays: sql`excluded.streak_days`,
             },
           });
         snapshotsProcessed += rows.length;
@@ -327,14 +333,15 @@ export async function GET(req: NextRequest) {
           await db
             .insert(studentYearlyGrowth)
             .values(chunk)
-            .onDuplicateKeyUpdate({
+            .onConflictDoUpdate({
+              target: [studentYearlyGrowth.userId, studentYearlyGrowth.year],
               set: {
-                totalMinutes: sql`VALUES(total_minutes)`,
-                coursesEnrolled: sql`VALUES(courses_enrolled)`,
-                coursesCompleted: sql`VALUES(courses_completed)`,
-                avgQuizScore: sql`VALUES(avg_quiz_score)`,
-                certificatesEarned: sql`VALUES(certificates_earned)`,
-                computedAt: sql`VALUES(computed_at)`,
+                totalMinutes: sql`excluded.total_minutes`,
+                coursesEnrolled: sql`excluded.courses_enrolled`,
+                coursesCompleted: sql`excluded.courses_completed`,
+                avgQuizScore: sql`excluded.avg_quiz_score`,
+                certificatesEarned: sql`excluded.certificates_earned`,
+                computedAt: sql`excluded.computed_at`,
               },
             });
         }

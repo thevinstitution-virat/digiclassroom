@@ -33,15 +33,15 @@ export async function recordQdrantVectorIds(rows: QdrantVectorIdRow[]): Promise<
   const values: unknown[] = [];
   const placeholders = rows.map((r) => {
     values.push(r.materialId, String(r.pointId), r.collection, r.chunkIndex);
-    return '(UUID(), ?, ?, ?, ?, NOW())';
+    return '(gen_random_uuid()::text, ?, ?, ?, ?, NOW())';
   });
 
   const sql = `
     INSERT INTO qdrant_vector_ids (id, material_id, point_id, collection, chunk_index, created_at)
     VALUES ${placeholders.join(', ')}
-    ON DUPLICATE KEY UPDATE
-      material_id = VALUES(material_id),
-      chunk_index = VALUES(chunk_index)
+    ON CONFLICT (collection, point_id) DO UPDATE SET
+      material_id = excluded.material_id,
+      chunk_index = excluded.chunk_index
   `;
 
   const { affectedRows } = await executeUpdate(sql, values);

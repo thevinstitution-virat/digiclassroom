@@ -19,7 +19,7 @@ import type {
   UpgradeSubscriptionRequest,
   SubscriptionPlan
 } from '@/types/subscription'
-import type { PoolConnection } from 'mysql2/promise'
+import type { CompatConnection } from '@/lib/db/connection'
 
 export class SubscriptionManagementService {
 
@@ -164,7 +164,7 @@ export class SubscriptionManagementService {
       const nextBillingDate = new Date(expiryDate)
 
       // Use transaction to ensure atomicity
-      return await withTransaction(async (connection: PoolConnection) => {
+      return await withTransaction(async (connection: CompatConnection) => {
         // Create subscription
         const [result] = await connection.execute(
           `INSERT INTO user_subscriptions (
@@ -173,7 +173,8 @@ export class SubscriptionManagementService {
             plan_name, plan_code, monthly_price, billing_cycle, daily_question_limit,
             start_date, expiry_date, next_billing_date, payment_status, payment_gateway,
             transaction_id, payment_metadata, auto_renew
-          ) VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid', ?, ?, ?, TRUE)`,
+          ) VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid', ?, ?, ?, TRUE)
+          RETURNING id`,
           [
             user_id, clerk_id, plan.id, plan.plan_type, plan.board, plan.class_level,
             plan.class_access_type, plan.included_subjects ? JSON.stringify(plan.included_subjects) : null,
@@ -271,7 +272,7 @@ export class SubscriptionManagementService {
           break
       }
 
-      return await withTransaction(async (connection: PoolConnection) => {
+      return await withTransaction(async (connection: CompatConnection) => {
         // Cancel old subscription
         await connection.execute(
           `UPDATE user_subscriptions
@@ -291,7 +292,8 @@ export class SubscriptionManagementService {
             plan_name, plan_code, monthly_price, billing_cycle, daily_question_limit,
             start_date, expiry_date, next_billing_date, payment_status, payment_gateway,
             transaction_id, auto_renew
-          ) VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid', ?, ?, TRUE)`,
+          ) VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid', ?, ?, TRUE)
+          RETURNING id`,
           [
             user_id, currentSubscription.clerk_id, newPlan.id, newPlan.plan_type, newPlan.board,
             newPlan.class_level, newPlan.class_access_type,
@@ -354,7 +356,7 @@ export class SubscriptionManagementService {
         return false
       }
 
-      return await withTransaction(async (connection: PoolConnection) => {
+      return await withTransaction(async (connection: CompatConnection) => {
         // Update subscription status
         await connection.execute(
           `UPDATE user_subscriptions

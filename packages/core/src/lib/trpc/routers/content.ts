@@ -6,7 +6,7 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { createTRPCRouter, baseProcedure, protectedProcedure } from '../server';
-import { executeQuery } from '@/lib/db/connection';
+import { executeQuery, executeUpdate } from '@/lib/db/connection';
 import { 
   validateChunkBatch, 
   ChunkMetadataSchema,
@@ -183,8 +183,8 @@ export const contentRouter = createTRPCRouter({
           ? chunksValidated / chunksCreated 
           : 0;
 
-        // Insert metrics into MySQL
-        const result = await executeQuery(
+        // Insert metrics
+        const result = await executeUpdate(
           `INSERT INTO pipeline_metrics (
             tenant_id,
             pdf_id,
@@ -200,7 +200,8 @@ export const contentRouter = createTRPCRouter({
             total_time_ms,
             embedding_time_ms,
             indexing_time_ms
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          RETURNING id`,
           [
             tenantId,
             pdfId,

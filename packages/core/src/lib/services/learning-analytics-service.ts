@@ -4,7 +4,7 @@
  */
 
 import { UserContext, ComplexityLevel } from './user-profile-service';
-import { getPool, executeQuery, executeQuerySingle } from '@/lib/db/connection';
+import { executeQuery, executeQuerySingle, executeUpdate } from '@/lib/db/connection';
 
 export interface LearningInsights {
   learningVelocity: number; // Rate of learning progress (0-1)
@@ -165,8 +165,7 @@ export class LearningAnalyticsService {
         responseData.menuAction || 'general_query'
       ];
 
-      const pool = getPool();
-      await pool.execute(query, values);
+      await executeUpdate(query, values);
     } catch (error) {
       console.error('Error recording interaction:', error);
     }

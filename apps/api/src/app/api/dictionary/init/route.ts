@@ -29,121 +29,142 @@ export async function POST(request: NextRequest) {
       }, { status: 503 })
     }
 
+    // These three tables are also declared in the Drizzle schema and created by
+    // drizzle/0000_pg_baseline.sql. The statements below are the Postgres port of
+    // the original MySQL bootstrap and are kept IF NOT EXISTS so they never fight
+    // the migration; the column types mirror the baseline exactly. MySQL enums
+    // become plain text (as pg-core does), and indexes are separate statements.
+
     // Create dictionary_words table
     await executeQuery(`
       CREATE TABLE IF NOT EXISTS dictionary_words (
-        id INT PRIMARY KEY AUTO_INCREMENT,
+        id SERIAL PRIMARY KEY,
         word VARCHAR(255) NOT NULL UNIQUE,
         pronunciation VARCHAR(255),
-        part_of_speech ENUM('noun', 'verb', 'adjective', 'adverb', 'pronoun', 'preposition', 'conjunction', 'interjection') NOT NULL,
-        
+        part_of_speech TEXT NOT NULL,
+
         english_definition TEXT NOT NULL,
         english_synonyms JSON DEFAULT '[]',
         english_antonyms JSON DEFAULT '[]',
-        
+
         hindi_translation VARCHAR(500) NOT NULL,
         hindi_synonyms JSON DEFAULT '[]',
         devanagari_script VARCHAR(500),
-        
+
         amarkosha_category VARCHAR(100),
         semantic_cluster VARCHAR(100),
         etymology TEXT,
-        
+
         examples JSON DEFAULT '[]',
         cultural_context TEXT,
         regional_usage JSON DEFAULT '[]',
-        
+
         audio_url VARCHAR(500),
-        audio_accent ENUM('indian', 'british', 'american') DEFAULT 'indian',
-        
-        difficulty_level ENUM('beginner', 'intermediate', 'advanced') DEFAULT 'intermediate',
-        frequency_rank INT,
-        
+        audio_accent TEXT DEFAULT 'indian',
+
+        difficulty_level TEXT DEFAULT 'intermediate',
+        frequency_rank INTEGER,
+
         source VARCHAR(100) DEFAULT 'system',
         is_active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        
-        INDEX idx_word (word),
-        INDEX idx_hindi_translation (hindi_translation),
-        INDEX idx_amarkosha_category (amarkosha_category),
-        INDEX idx_difficulty_level (difficulty_level),
-        FULLTEXT idx_search_content (word, english_definition, hindi_translation, cultural_context)
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
       )
     `)
+
+    // The MySQL original carried a FULLTEXT index over the word/definition
+    // columns. Postgres has no direct equivalent; dictionary search uses LIKE
+    // matching, so no index is created in its place.
+    for (const idx of [
+      `CREATE INDEX IF NOT EXISTS idx_word ON dictionary_words (word)`,
+      `CREATE INDEX IF NOT EXISTS idx_hindi_translation ON dictionary_words (hindi_translation)`,
+      `CREATE INDEX IF NOT EXISTS idx_amarkosha_category ON dictionary_words (amarkosha_category)`,
+      `CREATE INDEX IF NOT EXISTS idx_difficulty_level ON dictionary_words (difficulty_level)`,
+    ]) {
+      await executeQuery(idx)
+    }
 
     // Create user_vocab_progress table
     await executeQuery(`
       CREATE TABLE IF NOT EXISTS user_vocab_progress (
-        id INT PRIMARY KEY AUTO_INCREMENT,
+        id SERIAL PRIMARY KEY,
         user_id VARCHAR(255) NOT NULL,
         clerk_user_id VARCHAR(255) NOT NULL,
-        word_id INT NOT NULL,
-        
+        word_id INTEGER NOT NULL,
+
         efactor DECIMAL(3,2) DEFAULT 2.50,
-        interval_days INT DEFAULT 1,
-        repetitions INT DEFAULT 0,
+        interval_days INTEGER DEFAULT 1,
+        repetitions INTEGER DEFAULT 0,
         next_due_date DATE NOT NULL,
         last_reviewed TIMESTAMP NULL,
-        
-        correct_attempts INT DEFAULT 0,
-        total_attempts INT DEFAULT 0,
+
+        correct_attempts INTEGER DEFAULT 0,
+        total_attempts INTEGER DEFAULT 0,
         accuracy_percentage DECIMAL(5,2) DEFAULT 0.00,
-        
-        status ENUM('new', 'learning', 'review', 'mastered') DEFAULT 'new',
+
+        status TEXT DEFAULT 'new',
         first_learned_at TIMESTAMP NULL,
         mastered_at TIMESTAMP NULL,
-        
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        
-        UNIQUE KEY unique_user_word (user_id, word_id),
-        INDEX idx_user_id (user_id),
-        INDEX idx_word_id (word_id),
-        INDEX idx_next_due_date (next_due_date),
-        INDEX idx_status (status)
+
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+
+        CONSTRAINT unique_user_word UNIQUE (user_id, word_id)
       )
     `)
+
+    for (const idx of [
+      `CREATE INDEX IF NOT EXISTS idx_user_id ON user_vocab_progress (user_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_word_id ON user_vocab_progress (word_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_next_due_date ON user_vocab_progress (next_due_date)`,
+      `CREATE INDEX IF NOT EXISTS idx_status ON user_vocab_progress (status)`,
+    ]) {
+      await executeQuery(idx)
+    }
 
     // Create dictionary_user_stats table
     await executeQuery(`
       CREATE TABLE IF NOT EXISTS dictionary_user_stats (
-        id INT PRIMARY KEY AUTO_INCREMENT,
+        id SERIAL PRIMARY KEY,
         user_id VARCHAR(255) NOT NULL UNIQUE,
         clerk_user_id VARCHAR(255) NOT NULL UNIQUE,
-        
-        total_words_learned INT DEFAULT 0,
-        words_mastered INT DEFAULT 0,
-        current_streak_days INT DEFAULT 0,
-        longest_streak_days INT DEFAULT 0,
+
+        total_words_learned INTEGER DEFAULT 0,
+        words_mastered INTEGER DEFAULT 0,
+        current_streak_days INTEGER DEFAULT 0,
+        longest_streak_days INTEGER DEFAULT 0,
         last_activity_date DATE NULL,
-        
-        total_quiz_attempts INT DEFAULT 0,
-        correct_quiz_answers INT DEFAULT 0,
+
+        total_quiz_attempts INTEGER DEFAULT 0,
+        correct_quiz_answers INTEGER DEFAULT 0,
         average_accuracy DECIMAL(5,2) DEFAULT 0.00,
-        
-        total_points INT DEFAULT 0,
-        level INT DEFAULT 1,
+
+        total_points INTEGER DEFAULT 0,
+        level INTEGER DEFAULT 1,
         badges_earned JSON DEFAULT '[]',
         achievements JSON DEFAULT '[]',
-        
-        phrases_contributed INT DEFAULT 0,
-        phrases_approved INT DEFAULT 0,
-        community_reputation INT DEFAULT 0,
-        
-        daily_goal_words INT DEFAULT 5,
-        preferred_difficulty ENUM('beginner', 'intermediate', 'advanced', 'mixed') DEFAULT 'mixed',
+
+        phrases_contributed INTEGER DEFAULT 0,
+        phrases_approved INTEGER DEFAULT 0,
+        community_reputation INTEGER DEFAULT 0,
+
+        daily_goal_words INTEGER DEFAULT 5,
+        preferred_difficulty TEXT DEFAULT 'mixed',
         notification_preferences JSON DEFAULT '{}',
-        
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        
-        INDEX idx_user_id (user_id),
-        INDEX idx_total_points (total_points),
-        INDEX idx_level (level),
-        INDEX idx_current_streak (current_streak_days)
+
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
       )
     `)
+
+    for (const idx of [
+      `CREATE INDEX IF NOT EXISTS idx_stats_user_id ON dictionary_user_stats (user_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_total_points ON dictionary_user_stats (total_points)`,
+      `CREATE INDEX IF NOT EXISTS idx_level ON dictionary_user_stats (level)`,
+      `CREATE INDEX IF NOT EXISTS idx_current_streak ON dictionary_user_stats (current_streak_days)`,
+    ]) {
+      await executeQuery(idx)
+    }
 
     console.log('✅ Dictionary tables created')
 

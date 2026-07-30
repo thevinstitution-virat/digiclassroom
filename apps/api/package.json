@@ -10,8 +10,6 @@
     "worker:audio": "npx tsx --env-file=.env ../../packages/core/src/lib/workers/audioWorker.ts"
   },
   "dependencies": {
-    "@repo/core": "*",
-    "@repo/shared": "*",
     "@anthropic-ai/sdk": "^0.78.0",
     "@aws-sdk/client-s3": "^3.1004.0",
     "@aws-sdk/s3-request-presigner": "^3.1004.0",
@@ -36,6 +34,8 @@
     "@radix-ui/react-select": "^2.2.5",
     "@radix-ui/react-separator": "^1.1.7",
     "@radix-ui/react-tabs": "^1.1.12",
+    "@repo/core": "*",
+    "@repo/shared": "*",
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/react-query": "^5.80.7",
     "@tiptap/core": "^3.11.0",
@@ -96,6 +96,7 @@
     "openai": "^4.104.0",
     "p-limit": "^3.1.0",
     "pdf.js-extract": "^0.2.1",
+    "pg": "^8.13.1",
     "pino": "^10.3.1",
     "pino-pretty": "^13.1.3",
     "posthog-js": "^1.357.1",
@@ -132,6 +133,7 @@
     "@next/bundle-analyzer": "^15.4.3",
     "@types/jest": "^30.0.0",
     "@types/node": "^20.19.1",
+    "@types/pg": "^8.11.10",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/redis": "^4.0.10",

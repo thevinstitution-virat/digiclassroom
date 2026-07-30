@@ -150,7 +150,8 @@ async function createTrialSubscription(
         transaction_id, auto_renew
       ) VALUES (?, ?, NULL, 'full_access', 'active', 'ALL', NULL, 'all', NULL, 
         'Full Access Trial', 'TRIAL_FULL_ACCESS', 0.00, 'monthly', 30, 
-        ?, ?, ?, 'paid', 'manual', ?, FALSE)`,
+        ?, ?, ?, 'paid', 'manual', ?, FALSE)
+      RETURNING id`,
       [
         user_id,
         clerk_id,

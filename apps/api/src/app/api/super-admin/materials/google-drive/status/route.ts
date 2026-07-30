@@ -3,17 +3,8 @@ import { isPlatformStaff, type Role } from '@/auth/permissions';
 import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server'
 import { GoogleDriveService } from '@/lib/services/google-drive'
-import mysql from 'mysql2/promise'
+import { getConnection } from '@/lib/db/connection'
 import type { SystemHealthCheck } from '@/types/google-drive'
-
-// Database connection configuration
-const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'virat_gyankosh',
-  port: parseInt(process.env.DB_PORT || '3306')
-}
 
 /**
  * GET /api/super-admin/materials/google-drive/status
@@ -65,7 +56,7 @@ export async function GET(request: NextRequest) {
 
     // Check for stored authentication tokens in database
     let storedCredentials = null
-    const connection = await mysql.createConnection(dbConfig)
+    const connection = await getConnection()
 
     try {
       const [result] = await connection.execute(
@@ -80,7 +71,7 @@ export async function GET(request: NextRequest) {
         // @ts-ignore
       console.warn('Could not check stored credentials:', error.message)
     } finally {
-      await connection.end()
+      connection.release()
     }
 
     // Initialize Google Drive service with stored credentials if available
