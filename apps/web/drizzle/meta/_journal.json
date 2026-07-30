@@ -1,19 +1,12 @@
 {
   "version": "7",
-  "dialect": "mysql",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "5",
-      "when": 1785326978402,
-      "tag": "0000_baseline",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1785327803529,
-      "tag": "0001_drift_from_baseline",
+      "version": "7",
+      "when": 1785386228106,
+      "tag": "0000_pg_baseline",
       "breakpoints": true
     }
   ]

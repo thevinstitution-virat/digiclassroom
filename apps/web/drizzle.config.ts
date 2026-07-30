@@ -9,9 +9,9 @@ export default defineConfig({
     // drifted away from the database. See drizzle/0000_baseline.sql.
     schema: '../../packages/core/src/db/schema.ts',
     out: './drizzle',
-    dialect: 'mysql',
+    dialect: 'postgresql',
     dbCredentials: {
-        url: process.env.DATABASE_URL || `mysql://root:rootpassword123@localhost:3310/virat_gyankosh`,
+        url: process.env.DATABASE_URL || `postgresql://postgres:trio_dev_pass@localhost:5439/virat_gyankosh`,
     },
     verbose: true,
     strict: false,

@@ -1,117 +1,160 @@
-import mysql from 'mysql2/promise'
+import { Pool, PoolClient } from 'pg'
+
+/**
+ * Postgres connection layer (migrated from mysql2 in Phase 4).
+ *
+ * The whole app's raw SQL flows through here, so the MySQL->Postgres dialect gap
+ * is bridged in ONE place rather than at 319 call sites:
+ *   - `?` positional placeholders  -> `$1, $2, ...`
+ *   - backtick identifier quotes    -> double quotes
+ *   - mysql2's `[rows]` result shape is preserved by wrapping the pg client, so
+ *     existing `const [rows] = await conn.query(...)` call sites keep working.
+ * Genuinely MySQL-specific SQL (ON DUPLICATE KEY, NOW(3), CURDATE(), LAST_INSERT_ID)
+ * still needs per-site fixes.
+ */
 
 function getDbConfig() {
   const dbUrl = process.env.DATABASE_URL
   if (dbUrl) {
     try {
-      const parsedUrl = new URL(dbUrl)
-      const host = parsedUrl.hostname || '127.0.0.1'
+      const u = new URL(dbUrl)
+      const host = u.hostname || '127.0.0.1'
       return {
         host: host === 'localhost' ? '127.0.0.1' : host,
-        port: parseInt(parsedUrl.port || '3306'),
-        user: decodeURIComponent(parsedUrl.username || 'root'),
-        password: decodeURIComponent(parsedUrl.password || ''),
-        database: parsedUrl.pathname.replace(/^\//, '') || 'virat_gyankosh',
-        waitForConnections: true,
-        connectionLimit: process.env.DB_CONNECTION_LIMIT ? parseInt(process.env.DB_CONNECTION_LIMIT) : 10,
-        queueLimit: 0,
+        port: parseInt(u.port || '5432'),
+        user: decodeURIComponent(u.username || 'postgres'),
+        password: decodeURIComponent(u.password || ''),
+        database: u.pathname.replace(/^\//, '') || 'virat_gyankosh',
+        max: process.env.DB_CONNECTION_LIMIT ? parseInt(process.env.DB_CONNECTION_LIMIT) : 10,
       }
     } catch (e) {
-      console.warn('[DB] Failed to parse DATABASE_URL, falling back to individual MYSQL_* variables:', e)
+      console.warn('[DB] Failed to parse DATABASE_URL, falling back to individual PG*/MYSQL_* vars:', e)
     }
   }
-
-  const rawHost = process.env.MYSQL_HOST || '127.0.0.1'
+  const rawHost = process.env.PGHOST || process.env.MYSQL_HOST || '127.0.0.1'
   return {
     host: rawHost === 'localhost' ? '127.0.0.1' : rawHost,
-    port: parseInt(process.env.MYSQL_PORT || '3306'),
-    user: process.env.MYSQL_USER || 'root',
-    password: process.env.MYSQL_PASSWORD || '',
-    database: process.env.MYSQL_DATABASE || 'virat_gyankosh',
-    waitForConnections: true,
-    connectionLimit: process.env.DB_CONNECTION_LIMIT ? parseInt(process.env.DB_CONNECTION_LIMIT) : 10,
-    queueLimit: 0,
+    port: parseInt(process.env.PGPORT || process.env.MYSQL_PORT || '5432'),
+    user: process.env.PGUSER || process.env.MYSQL_USER || 'postgres',
+    password: process.env.PGPASSWORD || process.env.MYSQL_PASSWORD || '',
+    database: process.env.PGDATABASE || process.env.MYSQL_DATABASE || 'virat_gyankosh',
+    max: process.env.DB_CONNECTION_LIMIT ? parseInt(process.env.DB_CONNECTION_LIMIT) : 10,
   }
 }
 
-// Create connection pool for better performance.
-// Stored on globalThis so Next.js dev HMR reuses ONE pool across hot reloads
-const globalForPool = globalThis as unknown as { __dcpMysqlPool?: mysql.Pool }
+/**
+ * Translate a MySQL-dialect query to Postgres: backtick identifiers -> double
+ * quotes, and `?` placeholders -> `$N` (ignoring `?` inside single-quoted literals).
+ */
+export function toPg(sql: string): string {
+  const s = sql.replace(/`/g, '"')
+  let out = ''
+  let n = 0
+  let inSingle = false
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i]
+    if (c === "'") { inSingle = !inSingle; out += c; continue }
+    if (c === '?' && !inSingle) { out += '$' + (++n); continue }
+    out += c
+  }
+  return out
+}
 
-export function getPool(): mysql.Pool {
-  if (!globalForPool.__dcpMysqlPool) {
+const globalForPool = globalThis as unknown as { __dcpPgPool?: Pool }
+
+export function getPool(): Pool {
+  if (!globalForPool.__dcpPgPool) {
     const config = getDbConfig()
-    console.log(`[DB] Connecting to ${config.host}:${config.port}/${config.database} as ${config.user}`)
-    globalForPool.__dcpMysqlPool = mysql.createPool(config)
+    console.log(`[DB] Connecting (pg) to ${config.host}:${config.port}/${config.database} as ${config.user}`)
+    globalForPool.__dcpPgPool = new Pool(config)
   }
-  return globalForPool.__dcpMysqlPool
+  return globalForPool.__dcpPgPool
 }
 
-// Get a single connection from the pool
-export async function getConnection(): Promise<mysql.PoolConnection> {
-  const pool = getPool()
-  return await pool.getConnection()
+/**
+ * A mysql2-compatible view over a pg PoolClient: `.query()`/`.execute()` translate
+ * the SQL and return the `[rows, fields]` tuple existing call sites destructure,
+ * plus beginTransaction/commit/rollback/release.
+ */
+export interface CompatConnection {
+  query: (sql: string, params?: any[]) => Promise<[any[], any]>
+  execute: (sql: string, params?: any[]) => Promise<[any[], any]>
+  beginTransaction: () => Promise<void>
+  commit: () => Promise<void>
+  rollback: () => Promise<void>
+  release: () => void
+  pg: PoolClient
 }
 
-// Execute a query with automatic connection management
-// Uses .query() instead of .execute() to avoid mysql2 prepared statement
-// bugs with integer params for LIMIT/OFFSET clauses
-export async function executeQuery<T = any>(
-  query: string,
-  params?: any[]
-): Promise<T[]> {
-  const connection = await getConnection()
-  try {
-    const [rows] = await connection.query(query, params)
-    return rows as T[]
-  } finally {
-    connection.release()
+function wrap(client: PoolClient): CompatConnection {
+  const run = async (sql: string, params?: any[]): Promise<[any[], any]> => {
+    const res = await client.query(toPg(sql), params)
+    // mysql2 returns [rows, fields]; for INSERT/UPDATE/DELETE the "rows" object
+    // also carries affectedRows. Emulate that so `[result]` callers keep working.
+    const rowsWithMeta: any = res.rows
+    ;(rowsWithMeta as any).affectedRows = res.rowCount ?? 0
+    return [rowsWithMeta, res.fields]
+  }
+  return {
+    query: run,
+    execute: run,
+    beginTransaction: async () => { await client.query('BEGIN') },
+    commit: async () => { await client.query('COMMIT') },
+    rollback: async () => { await client.query('ROLLBACK') },
+    release: () => client.release(),
+    pg: client,
   }
 }
 
-// Execute an INSERT/UPDATE/DELETE and return result info
+// Get a single (wrapped, mysql2-compatible) connection from the pool.
+export async function getConnection(): Promise<CompatConnection> {
+  const client = await getPool().connect()
+  return wrap(client)
+}
+
+// Execute a query with automatic connection management.
+export async function executeQuery<T = any>(query: string, params?: any[]): Promise<T[]> {
+  const res = await getPool().query(toPg(query), params)
+  return res.rows as T[]
+}
+
+// Execute an INSERT/UPDATE/DELETE and return result info.
+// NOTE: Postgres has no LAST_INSERT_ID. `insertId` is only populated when the query
+// includes `RETURNING id`; otherwise it is 0. Serial-PK inserts that need the new id
+// must add `RETURNING id`.
 export async function executeUpdate(
   query: string,
   params?: any[]
 ): Promise<{ affectedRows: number; insertId: number }> {
-  const connection = await getConnection()
-  try {
-    const [result] = await connection.query(query, params)
-    const res = result as any
-    return { affectedRows: res.affectedRows ?? 0, insertId: res.insertId ?? 0 }
-  } finally {
-    connection.release()
-  }
+  const res = await getPool().query(toPg(query), params)
+  const insertId = res.rows?.[0]?.id ?? 0
+  return { affectedRows: res.rowCount ?? 0, insertId: Number(insertId) || 0 }
 }
 
-// Execute a single query and return first result
-export async function executeQuerySingle<T = any>(
-  query: string,
-  params?: any[]
-): Promise<T | null> {
+// Execute a single query and return first result.
+export async function executeQuerySingle<T = any>(query: string, params?: any[]): Promise<T | null> {
   const results = await executeQuery<T>(query, params)
   return results.length > 0 ? results[0] : null
 }
 
-// Transaction helper
+// Transaction helper — callback receives a mysql2-compatible wrapped connection.
 export async function withTransaction<T>(
-  callback: (connection: mysql.PoolConnection) => Promise<T>
+  callback: (connection: CompatConnection) => Promise<T>
 ): Promise<T> {
-  const connection = await getConnection()
+  const conn = await getConnection()
   try {
-    await connection.beginTransaction()
-    const result = await callback(connection)
-    await connection.commit()
+    await conn.beginTransaction()
+    const result = await callback(conn)
+    await conn.commit()
     return result
   } catch (error) {
-    await connection.rollback()
+    await conn.rollback()
     throw error
   } finally {
-    connection.release()
+    conn.release()
   }
 }
 
-// Health check function
 export async function checkDatabaseHealth(): Promise<boolean> {
   try {
     await executeQuery('SELECT 1')
@@ -122,10 +165,9 @@ export async function checkDatabaseHealth(): Promise<boolean> {
   }
 }
 
-// Close all connections (useful for graceful shutdown)
 export async function closePool(): Promise<void> {
-  if (globalForPool.__dcpMysqlPool) {
-    await globalForPool.__dcpMysqlPool.end()
-    globalForPool.__dcpMysqlPool = undefined
+  if (globalForPool.__dcpPgPool) {
+    await globalForPool.__dcpPgPool.end()
+    globalForPool.__dcpPgPool = undefined
   }
 }
