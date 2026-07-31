@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import { withSentryConfig } from '@sentry/nextjs'
 
 // Headless API app: serves only route handlers under src/app/api (REST + tRPC
 // + better-auth). No UI pages. Deploys independently as api.<domain>.
@@ -30,4 +31,11 @@ const nextConfig: NextConfig = {
     : {}),
 }
 
-export default nextConfig
+// GlitchTip is self-hosted and needs no source-map upload, so it is disabled
+// (also avoids requiring @sentry/cli / an auth token at build time).
+export default withSentryConfig(nextConfig, {
+  silent: true,
+  telemetry: false,
+  sourcemaps: { disable: true },
+  disableLogger: true,
+})
