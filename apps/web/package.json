@@ -67,6 +67,7 @@
     "@radix-ui/react-tabs": "^1.1.12",
     "@repo/core": "*",
     "@repo/shared": "*",
+    "@sentry/nextjs": "^10.69.0",
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/react-query": "^5.80.7",
     "@tiptap/core": "^3.11.0",

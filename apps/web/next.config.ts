@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import { withSentryConfig } from '@sentry/nextjs'
 
 // Bundle analyzer setup
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
@@ -176,4 +177,11 @@ const nextConfig: NextConfig = {
   } : {})
 }
 
-export default withBundleAnalyzer(nextConfig)
+// GlitchTip is self-hosted and needs no source-map upload, so it is disabled
+// (also avoids requiring @sentry/cli / an auth token at build time).
+export default withSentryConfig(withBundleAnalyzer(nextConfig), {
+  silent: true,
+  telemetry: false,
+  sourcemaps: { disable: true },
+  disableLogger: true,
+})
