@@ -88,7 +88,7 @@ export default function BaseSidebar({
 
       {/* Brand header */}
       <div className="flex h-16 shrink-0 items-center gap-3 px-4">
-        <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 via-indigo-500 to-blue-600 text-white shadow-lg shadow-blue-600/25 ring-1 ring-white/20">
+        <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--accent-primary)] to-[var(--accent-strong)] text-white shadow-lg shadow-[var(--accent-strong)]/25 ring-1 ring-white/20">
           <BrandIcon className="h-5 w-5" />
         </div>
         {!isCollapsed && (
@@ -131,17 +131,17 @@ export default function BaseSidebar({
                 aria-current={isActive ? 'page' : undefined}
                 className={`group relative flex items-center rounded-xl text-sm font-medium transition-all duration-200 ${isCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2'} ${
                   isActive
-                    ? 'bg-gradient-to-r from-orange-500/12 to-blue-500/12 text-foreground shadow-sm ring-1 ring-primary/10'
+                    ? 'bg-gradient-to-r from-[var(--accent-primary)]/12 to-[var(--accent-strong)]/12 text-foreground shadow-sm ring-1 ring-[var(--accent-primary)]/20'
                     : 'text-muted-foreground hover:bg-accent/70 hover:text-foreground'
                 }`}
               >
                 {isActive && !isCollapsed && (
-                  <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-full bg-gradient-to-b from-orange-500 to-blue-600" />
+                  <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-full bg-gradient-to-b from-[var(--accent-primary)] to-[var(--accent-strong)]" />
                 )}
-                <Icon className={`h-[18px] w-[18px] shrink-0 transition-colors ${isActive ? 'text-orange-600 dark:text-orange-400' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200'}`} />
+                <Icon className={`h-[18px] w-[18px] shrink-0 transition-colors ${isActive ? 'text-[var(--accent-strong)] dark:text-[var(--accent-primary-dark)]' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200'}`} />
                 {!isCollapsed && <span className="flex-1 truncate">{item.name}</span>}
                 {!isCollapsed && item.badge != null && (
-                  <span className="rounded-full bg-orange-500/15 px-1.5 py-0.5 text-[10px] font-bold text-orange-600 dark:text-orange-400">{item.badge}</span>
+                  <span className="rounded-full bg-[var(--accent-primary)]/15 px-1.5 py-0.5 text-[10px] font-bold text-[var(--accent-strong)] dark:text-[var(--accent-primary-dark)]">{item.badge}</span>
                 )}
               </Link>
             </React.Fragment>
@@ -202,7 +202,7 @@ export function createNavigationItem(
   name: string,
   href: string,
   icon: React.ComponentType<{ className?: string }>,
-  options: { description?: string; featured?: boolean; badge?: string | number; gradient?: string } = {},
+  options: { description?: string; featured?: boolean; badge?: string | number; gradient?: string; section?: string } = {},
 ): NavigationItem {
   return { name, href, icon, ...options }
 }

@@ -23,8 +23,8 @@ function DashboardLayoutInner({ children, sidebar, header }: DashboardLayoutProp
     <div className="dc-app-bg dc-grid relative min-h-screen">
       {/* Decorative animated aurora accents */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        <div className="absolute -left-32 -top-32 h-[30rem] w-[30rem] rounded-full bg-orange-400/10 blur-3xl animate-float-slow dark:bg-orange-500/[0.08]" />
-        <div className="absolute -bottom-44 right-0 h-[34rem] w-[34rem] rounded-full bg-blue-500/10 blur-3xl animate-aurora dark:bg-blue-600/[0.08]" />
+        <div className="absolute -left-32 -top-32 h-[30rem] w-[30rem] rounded-full bg-[var(--accent-primary)]/10 blur-3xl animate-float-slow dark:bg-[var(--accent-primary)]/[0.08]" />
+        <div className="absolute -bottom-44 right-0 h-[34rem] w-[34rem] rounded-full bg-[var(--peacock-teal)]/10 blur-3xl animate-aurora dark:bg-[var(--peacock-teal)]/[0.08]" />
       </div>
 
       <div className="relative z-10 flex min-h-screen lg:h-screen">

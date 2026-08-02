@@ -33,83 +33,91 @@ interface UserSidebarProps {
 export default function UserSidebar({ user }: UserSidebarProps) {
   const persona = user?.persona || 'student'
 
-  // Create navigation items using the utility function with matching gradients
+  // Grouped by use case (mirrors the section pattern already shipped on PDLMS's
+  // super-admin sidebar). BaseSidebar renders a header above the first item of
+  // each new `section` value, so items sharing a section must stay contiguous.
   const navigation = [
     createNavigationItem('Dashboard', '/dashboard/user', Home, {
       description: 'Overview and activities',
-      gradient: 'from-slate-500 to-gray-600'
     }),
+
+    // Learn
     createNavigationItem('My Classroom', '/dashboard/student', MonitorPlay, {
       description: 'Your batches and video lectures',
       featured: true,
-      gradient: 'from-violet-500 to-purple-600'
-    }),
-
-    createNavigationItem('Virat Gyankosh', '/dashboard/user/ai-tutor', Brain, {
-      description: 'Chat with your AI teacher',
-      featured: true,
-      gradient: 'from-purple-500 to-indigo-600'
-    }),
-    createNavigationItem('Sarvagya', '/dashboard/sarvagya', Search, {
-      description: 'AI Research Assistant',
-      featured: true,
-      gradient: 'from-amber-500 to-orange-500'
+      section: 'Learn',
     }),
     createNavigationItem('Study Materials', '/dashboard/user/materials', BookOpen, {
       description: 'Access course content',
       featured: true,
-      gradient: 'from-green-500 to-emerald-500'
+      section: 'Learn',
     }),
     createNavigationItem('e-Learning Practest', '/dashboard/user/practest', FileText, {
       description: 'AI-powered assessment engine',
       featured: true,
-      gradient: 'from-blue-500 to-cyan-500'
+      section: 'Learn',
     }),
     createNavigationItem('Sanchika', '/dashboard/user/sanchika', FolderTree, {
       description: 'Smart Workspace',
       featured: true,
-      gradient: 'from-cyan-500 to-blue-600'
+      section: 'Learn',
     }),
-    createNavigationItem('Shabdakosh', '/dashboard/user/dictionary', Bookmark, {
-      description: 'English-Hindi Dictionary',
+
+    // AI & Research
+    createNavigationItem('Virat Gyankosh', '/dashboard/user/ai-tutor', Brain, {
+      description: 'Chat with your AI teacher',
       featured: true,
-      gradient: 'from-pink-500 to-rose-500'
+      section: 'AI & Research',
+    }),
+    createNavigationItem('Sarvagya', '/dashboard/sarvagya', Search, {
+      description: 'AI Research Assistant',
+      featured: true,
+      section: 'AI & Research',
     }),
     createNavigationItem('Mitram', '/dashboard/user/mitram', Heart, {
       description: 'Psychological & Aptitude Assessment',
       featured: true,
-      gradient: 'from-teal-500 to-blue-500'
+      section: 'AI & Research',
+    }),
+
+    // Tools & Reference
+    createNavigationItem('Shabdakosh', '/dashboard/user/dictionary', Bookmark, {
+      description: 'English-Hindi Dictionary',
+      featured: true,
+      section: 'Tools & Reference',
     }),
     createNavigationItem('Productivity Tools', '/dashboard/user/productivity', Rocket, {
       description: 'Revolutionary study features',
       featured: true,
-      gradient: 'from-orange-500 to-red-500'
-    }),
-    createNavigationItem('Subscription', '/dashboard/user/pricing', CreditCard, {
-      description: 'Manage Plan & Billing',
-      featured: false,
-      gradient: 'from-slate-400 to-slate-500'
-    }),
-    createNavigationItem('Profile', '/dashboard/user/profile', User, {
-      description: 'Settings and preferences',
-      featured: true,
-      gradient: 'from-indigo-500 to-purple-500'
+      section: 'Tools & Reference',
     }),
 
+    // Progress
     createNavigationItem('Certificates', '/dashboard/student/certificates', Award, {
       description: 'Course completion certificates',
       featured: true,
-      gradient: 'from-yellow-500 to-amber-500'
+      section: 'Progress',
     }),
     createNavigationItem('My analytics', '/dashboard/student/my-analytics', TrendingUp, {
       description: 'Performance and growth metrics',
       featured: true,
-      gradient: 'from-blue-600 to-indigo-600'
+      section: 'Progress',
+    }),
+
+    // Account
+    createNavigationItem('Subscription', '/dashboard/user/pricing', CreditCard, {
+      description: 'Manage Plan & Billing',
+      section: 'Account',
     }),
     createNavigationItem('My purchases', '/dashboard/student/purchases', Receipt, {
       description: 'Payment history and receipts',
-      featured: false,
-    })
+      section: 'Account',
+    }),
+    createNavigationItem('Profile', '/dashboard/user/profile', User, {
+      description: 'Settings and preferences',
+      featured: true,
+      section: 'Account',
+    }),
   ]
 
   const getPersonaColor = () => {
