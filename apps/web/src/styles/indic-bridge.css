@@ -1,0 +1,38 @@
+/* ============================================================
+   INDIC → shadcn BRIDGE (DigiClassroom)
+
+   App-local wiring, deliberately NOT part of the synced design system: it maps
+   this app's Indic accent onto the shadcn semantic tokens that every existing
+   ui/ primitive already consumes via `hsl(var(--primary))`.
+
+   This is the highest-leverage file in the restyle. Because tailwind.config.ts
+   already maps primary/ring/accent to `hsl(var(--x))`, these few lines re-accent
+   every Button, Badge, Input focus ring, Tabs indicator and Card border in the
+   entire app — without touching a single component.
+
+   ⚠ These values MUST stay bare "H S% L%" channel triplets. Tailwind compiles
+   `bg-primary/50` into `hsl(var(--primary) / 0.5)`. If anyone "simplifies"
+   --primary to a full colour (#F5A623 or hsl(37 91% 55%)), every opacity
+   modifier across the codebase silently produces an invalid colour and the
+   declaration is dropped — with no build error.
+
+   Must be imported AFTER globals.css so it overrides the base brand-blue.
+   ============================================================ */
+
+:root {
+  --primary: var(--accent-primary-hsl);
+  --ring: var(--accent-primary-hsl);
+  --accent: var(--accent-soft-hsl);
+  --accent-foreground: var(--accent-contrast-hsl);
+  --sidebar-primary: var(--accent-strong-hsl);
+  --sidebar-ring: var(--accent-primary-hsl);
+}
+
+/* Turmeric at 55% lightness goes muddy on a near-black surface, so dark mode
+   uses the lifted accent rather than the base pigment. */
+.dark {
+  --primary: var(--accent-primary-dark-hsl);
+  --ring: var(--accent-primary-dark-hsl);
+  --sidebar-primary: var(--accent-primary-dark-hsl);
+  --sidebar-ring: var(--accent-primary-dark-hsl);
+}

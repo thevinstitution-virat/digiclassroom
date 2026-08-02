@@ -1,0 +1,86 @@
+/* GENERATED — canonical: PDLMS_Pro/shared/design/indic/indic-tokens.css
+   DO NOT EDIT HERE. Edit the canonical file and re-run sync-indic.mjs.
+   sha256:a2b98a92fd0cf301 */
+/* ============================================================
+   GENERATED FILE — DO NOT EDIT.
+   Source:     shared/design/indic/indic.tokens.mjs
+   Regenerate: node shared/design/indic/build-indic-css.mjs
+   ============================================================ */
+
+:root {
+  /* ── pigments ─────────────────────────────── */
+  --saffron: #FF6B35;
+  --saffron-rgb: 255 107 53;
+  --saffron-hsl: 16 100% 60.4%;
+  --deep-saffron: #FF9933;
+  --deep-saffron-rgb: 255 153 51;
+  --deep-saffron-hsl: 30 100% 60%;
+  --turmeric: #F5A623;
+  --turmeric-rgb: 245 166 35;
+  --turmeric-hsl: 37.4 91.3% 54.9%;
+  --kumkum: #C0392B;
+  --kumkum-rgb: 192 57 43;
+  --kumkum-hsl: 5.6 63.4% 46.1%;
+  --gold: #FFD700;
+  --gold-rgb: 255 215 0;
+  --gold-hsl: 50.6 100% 50%;
+  --temple-stone: #B8860B;
+  --temple-stone-rgb: 184 134 11;
+  --temple-stone-hsl: 42.7 88.7% 38.2%;
+  --peacock-teal: #006A6E;
+  --peacock-teal-rgb: 0 106 110;
+  --peacock-teal-hsl: 182.2 100% 21.6%;
+  --teal-light: #00897B;
+  --teal-light-rgb: 0 137 123;
+  --teal-light-hsl: 173.9 100% 26.9%;
+  --indigo-deep: #0D1B6E;
+  --indigo-deep-rgb: 13 27 110;
+  --indigo-deep-hsl: 231.3 78.9% 24.1%;
+  --indigo-ink: #1A237E;
+  --indigo-ink-rgb: 26 35 126;
+  --indigo-ink-hsl: 234.6 65.8% 29.8%;
+  --lotus-pink: #E91E8C;
+  --lotus-pink-rgb: 233 30 140;
+  --lotus-pink-hsl: 327.5 82.2% 51.6%;
+  --lotus-deep: #AD1457;
+  --lotus-deep-rgb: 173 20 87;
+  --lotus-deep-hsl: 333.7 79.3% 37.8%;
+
+  /* ── surfaces & inks ──────────────────────── */
+  --night-ink: #0A0F1E;
+  --night-ink-rgb: 10 15 30;
+  --night-ink-hsl: 225 50% 7.8%;
+  --navy-deep: #0B1233;
+  --navy-deep-rgb: 11 18 51;
+  --navy-deep-hsl: 229.5 64.5% 12.2%;
+  --slate-night: #1A1A2E;
+  --slate-night-rgb: 26 26 46;
+  --slate-night-hsl: 240 27.8% 14.1%;
+  --slate-blue: #16213E;
+  --slate-blue-rgb: 22 33 62;
+  --slate-blue-hsl: 223.5 47.6% 16.5%;
+  --ocean-deep: #0F3460;
+  --ocean-deep-rgb: 15 52 96;
+  --ocean-deep-hsl: 212.6 73% 21.8%;
+  --ivory-cream: #FFF8F0;
+  --ivory-cream-rgb: 255 248 240;
+  --ivory-cream-hsl: 32 100% 97.1%;
+  --parchment: #FFFCF7;
+  --parchment-rgb: 255 252 247;
+  --parchment-hsl: 37.5 100% 98.4%;
+  --sand-light: #FFF3E6;
+  --sand-light-rgb: 255 243 230;
+  --sand-light-hsl: 31.2 100% 95.1%;
+  --clay-soft: #D4764E;
+  --clay-soft-rgb: 212 118 78;
+  --clay-soft-hsl: 17.9 60.9% 56.9%;
+  --clay-mid: #C87533;
+  --clay-mid-rgb: 200 117 51;
+  --clay-mid-hsl: 26.6 59.4% 49.2%;
+  --bark: #5A4E3C;
+  --bark-rgb: 90 78 60;
+  --bark-hsl: 36 20% 29.4%;
+
+  /* ── shape ────────────────────────────────── */
+  --radius: 0.75rem;
+}

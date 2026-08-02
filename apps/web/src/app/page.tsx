@@ -24,15 +24,14 @@ export default function Home() {
   // Show loading state while checking authentication
   if (!isLoaded) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-orange-500 mx-auto"></div>
-          <h2 className="mt-4 text-xl font-semibold text-gray-900 dark:text-gray-100">
-            Loading Digi Classroom...
-          </h2>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Preparing your personalized learning experience
-          </p>
+      <div className="indic-landing indic-hero-canvas min-h-screen flex items-center justify-center">
+        <div className="relative z-10 text-center">
+          <div
+            className="animate-spin rounded-full h-24 w-24 mx-auto border-4 border-transparent"
+            style={{ borderBottomColor: 'var(--accent-strong)', borderRightColor: 'var(--gold)' }}
+          />
+          <h2 className="mt-6 text-xl">Loading Digi Classroom…</h2>
+          <p className="indic-muted mt-2">Preparing your personalized learning experience</p>
         </div>
       </div>
     )
@@ -45,10 +44,13 @@ export default function Home() {
 
   // Fallback loading state during redirect for authenticated users
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
+    <div className="indic-landing min-h-screen flex items-center justify-center">
       <div className="flex flex-col items-center space-y-4">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-orange-500"></div>
-        <p className="text-gray-600 dark:text-gray-300 font-medium">Processing authentication...</p>
+        <div
+          className="animate-spin rounded-full h-16 w-16 border-4 border-transparent"
+          style={{ borderBottomColor: 'var(--accent-strong)', borderRightColor: 'var(--gold)' }}
+        />
+        <p className="indic-muted font-medium">Processing authentication…</p>
       </div>
     </div>
   )

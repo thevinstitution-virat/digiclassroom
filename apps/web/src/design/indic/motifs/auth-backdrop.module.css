@@ -1,0 +1,117 @@
+/* GENERATED — canonical: PDLMS_Pro/shared/design/indic/auth-backdrop.module.css
+   DO NOT EDIT HERE. Edit the canonical file and re-run sync-indic.mjs.
+   sha256:0d6090cc7440d35c */
+/* Shared backdrop for every auth page (login, register, forgot-password,
+   reset-password) so they read as one cohesive Indian door — across all three
+   apps, not just this one.
+
+   Every tint here is derived from --accent-primary rather than a fixed cream,
+   so the same file produces a saffron wash in PDLMS, kumkum in Vidyaverse and
+   turmeric in DCP. A literal peach here would have followed the shared motif
+   into the other two apps and fought their accents. */
+
+.page {
+  position: relative;
+  min-height: 100vh;
+  /* width:100% matters when the backdrop is used as one column of a split auth
+     layout (DCP's sign-in) rather than as a whole page — without it the div
+     shrinks to its content and the mandala gets cropped. */
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  overflow: hidden;
+  background-color: var(--parchment);
+  background-image:
+    radial-gradient(circle at 50% 40%, rgb(var(--accent-primary-rgb) / 0.10) 0%, rgb(var(--accent-primary-rgb) / 0) 65%),
+    linear-gradient(160deg,
+      rgb(var(--lotus-pink-rgb) / 0.04) 0%,
+      var(--parchment) 48%,
+      rgb(var(--accent-primary-rgb) / 0.07) 100%);
+}
+
+/* The large lotus mandala centred behind the card.
+   Softness lives in the SVG's own fill alphas, so the wrapper stays near-opaque. */
+.mandala {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(96vh, 1000px);
+  height: min(96vh, 1000px);
+  transform: translate(-50%, -50%);
+  opacity: 0.9;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Soft saffron corner glows for depth */
+.glow {
+  position: absolute;
+  width: 22rem;
+  height: 22rem;
+  border-radius: 9999px;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.glowTop {
+  top: -7rem;
+  right: -7rem;
+  background: radial-gradient(circle, rgb(var(--accent-primary-rgb) / 0.14), transparent 70%);
+}
+
+.glowBottom {
+  bottom: -7rem;
+  left: -7rem;
+  background: radial-gradient(circle, rgb(var(--indigo-ink-rgb) / 0.10), transparent 70%);
+}
+
+/* Golden brass shimmer halo behind the logo (temple-brass feel) */
+.iconHalo {
+  position: relative;
+}
+
+.iconHalo::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  background: conic-gradient(from 0deg, var(--gold) 0%, var(--parchment) 25%, var(--gold) 50%, var(--temple-stone) 75%, var(--gold) 100%);
+  opacity: 0.8;
+  z-index: -1;
+  filter: blur(2px);
+  animation: brassShimmer 4s linear infinite;
+}
+
+@keyframes brassShimmer {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iconHalo::before {
+    animation: none;
+  }
+}
+
+/* Warm parchment card shared by all auth cards */
+.card {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 28rem;
+  /* Let the card shrink with the viewport rather than sit at its min-content
+     width, and keep the border inside the declared width. */
+  min-width: 0;
+  box-sizing: border-box;
+  background: rgba(255, 253, 251, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgb(var(--temple-stone-rgb) / 0.25);
+  border-radius: 1.25rem;
+  box-shadow:
+    0 18px 48px rgba(150, 110, 90, 0.10),
+    0 2px 8px rgba(150, 110, 90, 0.06);
+}

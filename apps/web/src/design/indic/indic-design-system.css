@@ -1,0 +1,1212 @@
+/* GENERATED — canonical: PDLMS_Pro/shared/design/indic/indic-design-system.css
+   DO NOT EDIT HERE. Edit the canonical file and re-run sync-indic.mjs.
+   sha256:25ec922357c08a2a */
+/* ============================================================
+   INDIC DESIGN SYSTEM — Indian-Inspired UI Foundation
+   Philosophy: "Familiar, legible, modern — grounded in India 
+   without nostalgia"
+   ============================================================ */
+
+/* Pigments (--saffron, --gold, …) come from indic-tokens.css.
+   Font stacks and the h1/h2 rule come from indic-fonts.css.
+   Per-app accents (--accent-*) come from indic-app.<app>.css.
+   All three must be loaded BEFORE this file. */
+
+/* ----- Brand mark (MandalaMark) -----
+   Replaces the old rounded-square icon tile. Everything here is circular: the
+   previous halo inherited a square border-radius, so what rotated read as a
+   spinning box rather than a glow.
+
+   The halo is a static radial glow; only the mandala itself turns. Rotating the
+   glow too would make the whole mark look like it was wobbling. */
+.mandala-mark {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+
+.mandala-mark::before {
+  content: '';
+  position: absolute;
+  inset: -22%;
+  border-radius: 9999px;
+  background: radial-gradient(circle,
+      rgb(var(--gold-rgb) / 0.55) 0%,
+      rgb(var(--accent-primary-rgb) / 0.32) 45%,
+      rgb(var(--accent-primary-rgb) / 0) 72%);
+  filter: blur(6px);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.mandala-mark svg {
+  border-radius: 9999px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgb(var(--accent-strong-rgb) / 0.30);
+}
+
+.mandala-mark--spin .mandala-mark__petals {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: spinCW 28s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mandala-mark--spin .mandala-mark__petals {
+    animation: none;
+  }
+}
+
+/* ----- Auth marketing panel -----
+   The dark half of a split auth screen. Night-ink through indigo into the app
+   accent, so the panel reads Indic rather than generic-SaaS-blue, and picks up
+   each app's signature pigment at the warm end. */
+.indic-auth-aside {
+  background: linear-gradient(140deg,
+      var(--night-ink) 0%,
+      var(--navy-deep) 30%,
+      var(--indigo-deep) 62%,
+      rgb(var(--accent-strong-rgb) / 0.85) 100%);
+}
+
+/* ----- Semantic gradient stops ----- */
+:root {
+  --grad-start: var(--indigo-ink);
+  --grad-mid: var(--peacock-teal);
+  --grad-end: var(--saffron);
+}
+
+/* ----- Display headings -----
+   Yatra One carries the Indic character and applies to every h1/h2 across all
+   three apps. It needs guardrails, being a heavy single-weight display face:
+
+   1. font-weight MUST stay 400. Yatra One ships weight 400 only, so a
+      `font-bold` heading makes the browser synthesise faux-bold, which reads
+      as a rendering defect rather than emphasis.
+   2. A size floor keeps it legible. Below ~20px this face is markedly harder
+      to scan than a UI sans, which matters on dense admin tables. clamp()
+      enforces the floor while still allowing responsive growth.
+   3. Positive tracking. The previous rule used -0.02em; negative tracking on
+      an already-tight display face crowds the conjuncts.
+
+   If a heading looks wrong at small size, the fix is almost always the markup —
+   an <h2>/<h3> used as a table column header or stat label should be a
+   <th>/<span>. Fix the semantics, not this rule. */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  line-height: 1.3;
+  letter-spacing: 0.005em;
+
+  /* Load-bearing. Yatra One ships weight 400 only, and a Tailwind `font-bold`
+     on a heading beats the element-selector rule above (class > element). The
+     browser then SYNTHESISES bold by smearing the glyphs, which on a heavy
+     display face reads as a rendering defect.
+     font-synthesis-weight tells the browser to render the real 400 face
+     instead of faking a bolder one — so an existing `font-bold` heading
+     degrades gracefully rather than looking broken. That avoids both an
+     !important arms race and a rename sweep across hundreds of components. */
+  font-synthesis-weight: none;
+  -webkit-font-synthesis: none;
+}
+
+h1 {
+  font-size: clamp(1.5rem, 2.5vw, 2.5rem);
+}
+
+h2 {
+  font-size: clamp(1.25rem, 1.8vw, 1.875rem);
+}
+
+/* h3 joins the display face because the owner's decision is Yatra One on ALL
+   headings, dashboards included — card titles and section sub-heads are where
+   the Indic character is most visible day to day.
+
+   No size floor here on purpose: an h3 is far more often given an explicit
+   Tailwind size than an h1 is, so a clamp() would just be overridden, and
+   forcing a minimum would blow up the many h3s that are really 14px labels.
+   The rule below is the guard instead — anything genuinely small stays on the
+   body face, where Yatra One would be hard to scan. */
+h3 {
+  font-size: 1.125rem;
+}
+
+/* Escape hatch, and the correct fix for an h3 used as a table column header or
+   a stat caption: the markup is the problem, but this makes the transition
+   survivable without a rename sweep across ~550 files. */
+h3.font-sans,
+h3[data-heading='label'] {
+  font-family: var(--font-body);
+  font-weight: 600;
+}
+
+/* Devanagari-script content opts in explicitly. */
+.font-deva,
+[lang='hi'],
+[lang='sa'] {
+  font-family: var(--font-deva, 'Noto Sans Devanagari', sans-serif);
+}
+
+.gradient-text-indic {
+  background: linear-gradient(135deg, var(--gold) 0%, var(--saffron) 50%, var(--lotus-pink) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-saffron {
+  background: linear-gradient(135deg, var(--deep-saffron) 0%, var(--saffron) 50%, var(--turmeric) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ----- Animated Hero Background ----- */
+.hero-indic {
+  background: linear-gradient(135deg,
+      var(--night-ink) 0%,
+      var(--indigo-deep) 30%,
+      var(--peacock-teal) 60%,
+      var(--saffron) 100%);
+  background-size: 400% 400%;
+  animation: indicShift 10s ease infinite;
+}
+
+@keyframes indicShift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* ----- Mesh / Radial Glow Background ----- */
+.mesh-bg-indic {
+  background:
+    radial-gradient(ellipse at 20% 50%, rgb(var(--indigo-ink-rgb) / 0.8) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgb(var(--saffron-rgb) / 0.6) 0%, transparent 50%),
+    radial-gradient(ellipse at 60% 80%, rgb(var(--peacock-teal-rgb) / 0.7) 0%, transparent 50%),
+    var(--night-ink);
+  animation: meshPulse 12s ease-in-out infinite alternate;
+}
+
+@keyframes meshPulse {
+  0% {
+    filter: hue-rotate(0deg) brightness(1);
+  }
+
+  100% {
+    filter: hue-rotate(15deg) brightness(1.1);
+  }
+}
+
+/* ----- Rangoli Dot Pattern Texture ----- */
+.rangoli-texture {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, rgb(var(--gold-rgb) / 0.4) 1.5px, transparent 1.5px),
+    radial-gradient(circle, rgb(var(--saffron-rgb) / 0.2) 1px, transparent 1px);
+  background-size: 40px 40px, 20px 20px;
+  background-position: 0 0, 10px 10px;
+  animation: rangoliFade 6s ease-in-out infinite alternate;
+}
+
+@keyframes rangoliFade {
+  from {
+    opacity: 0.15;
+  }
+
+  to {
+    opacity: 0.35;
+  }
+}
+
+/* ----- Gateway / Toran Arch ----- */
+.gateway-header {
+  position: relative;
+  text-align: center;
+  padding: 3rem 2rem;
+}
+
+.gateway-header::before,
+.gateway-header::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(to bottom,
+      transparent 0%,
+      var(--gold) 20%,
+      var(--saffron) 50%,
+      var(--gold) 80%,
+      transparent 100%);
+}
+
+.gateway-header::before {
+  left: 10%;
+}
+
+.gateway-header::after {
+  right: 10%;
+}
+
+.toran-arch {
+  clip-path: path('M0,60 Q50,0 100,60 L100,100 L0,100 Z');
+  background: linear-gradient(var(--gold), var(--saffron));
+  height: 80px;
+  width: 100px;
+  margin: 0 auto;
+}
+
+/* ----- Indian Glassmorphism Cards ----- */
+.indic-card {
+  background: rgb(var(--ivory-cream-rgb) / 0.06);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgb(var(--gold-rgb) / 0.2);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px rgb(var(--saffron-rgb) / 0.1),
+    inset 0 1px 0 rgb(var(--gold-rgb) / 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.indic-card:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow:
+    0 20px 60px rgb(var(--saffron-rgb) / 0.2),
+    0 0 80px rgb(var(--gold-rgb) / 0.08);
+  border-color: rgb(var(--deep-saffron-rgb) / 0.5);
+}
+
+/* Dark variant on light backgrounds */
+.indic-card-light {
+  background: rgb(var(--ivory-cream-rgb) / 0.85);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgb(var(--gold-rgb) / 0.25);
+  border-radius: 16px;
+  box-shadow:
+    0 8px 32px rgb(var(--indigo-deep-rgb) / 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.indic-card-light:hover {
+  transform: translateY(-6px) scale(1.01);
+  box-shadow:
+    0 20px 60px rgb(var(--indigo-deep-rgb) / 0.12),
+    0 0 40px rgb(var(--gold-rgb) / 0.08);
+  border-color: rgb(var(--deep-saffron-rgb) / 0.5);
+}
+
+/* ----- Mandala SVG Wrapper & Ring Spins ----- */
+.mandala-wrapper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.25;
+  pointer-events: none;
+  width: 600px;
+  height: 600px;
+  max-width: 100vw;
+  overflow: hidden;
+}
+
+.mandala-wrapper svg {
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 640px) {
+  .mandala-wrapper svg {
+    width: 280px;
+    height: 280px;
+  }
+}
+
+.mandala-ring-1 {
+  animation: spinCW 25s linear infinite;
+  transform-origin: 200px 200px;
+}
+
+.mandala-ring-2 {
+  animation: spinCCW 18s linear infinite;
+  transform-origin: 200px 200px;
+}
+
+.mandala-ring-3 {
+  animation: spinCW 12s linear infinite;
+  transform-origin: 200px 200px;
+}
+
+@keyframes spinCW {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spinCCW {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+/* Mandala breathing pulse */
+.mandala-breathe {
+  animation: mandalaBreathe 4s ease-in-out infinite alternate;
+}
+
+@keyframes mandalaBreathe {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.2;
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(1.08);
+    opacity: 0.35;
+  }
+}
+
+/* ----- Indic Gradient Backgrounds ----- */
+.bg-indic-gradient {
+  background: linear-gradient(135deg, var(--night-ink) 0%, var(--indigo-deep) 40%, var(--peacock-teal) 100%);
+}
+
+.bg-indic-gradient-warm {
+  background: linear-gradient(135deg, var(--indigo-deep) 0%, var(--peacock-teal) 40%, var(--saffron) 100%);
+}
+
+.bg-indic-cta {
+  background: linear-gradient(135deg,
+      var(--night-ink) 0%,
+      var(--indigo-deep) 25%,
+      var(--peacock-teal) 60%,
+      var(--saffron) 100%);
+}
+
+/* ----- Indic Sidebar Theme (Dark — Legacy) ----- */
+.sidebar-indic-dark {
+  background: linear-gradient(180deg,
+      var(--night-ink) 0%,
+      var(--navy-deep) 30%,
+      var(--indigo-deep) 100%);
+  border-right: 1px solid rgb(var(--gold-rgb) / 0.1);
+}
+
+/* ----- Indic Sidebar Theme (Light — Educational) ----- */
+.sidebar-indic {
+  background: linear-gradient(180deg,
+      var(--parchment) 0%,
+      var(--ivory-cream) 40%,
+      var(--sand-light) 100%);
+  border-right: 2px solid rgb(var(--deep-saffron-rgb) / 0.18);
+  box-shadow: 4px 0 24px rgb(var(--deep-saffron-rgb) / 0.06);
+}
+
+.dark .sidebar-indic {
+  background: linear-gradient(180deg,
+      var(--slate-night) 0%,
+      var(--slate-blue) 40%,
+      var(--ocean-deep) 100%);
+  border-right: 2px solid rgb(var(--deep-saffron-rgb) / 0.15);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar-indic-active {
+  background: linear-gradient(90deg,
+      rgb(var(--deep-saffron-rgb) / 0.12) 0%,
+      rgb(var(--saffron-rgb) / 0.08) 100%);
+  border-left: 3px solid var(--deep-saffron);
+  color: var(--night-ink);
+  box-shadow: 0 2px 12px rgb(var(--deep-saffron-rgb) / 0.1);
+}
+
+.dark .sidebar-indic-active {
+  background: linear-gradient(90deg,
+      rgb(var(--deep-saffron-rgb) / 0.18) 0%,
+      rgb(var(--saffron-rgb) / 0.1) 100%);
+  color: var(--ivory-cream);
+  box-shadow: 0 2px 16px rgb(var(--deep-saffron-rgb) / 0.15);
+}
+
+.sidebar-indic-inactive {
+  background: transparent;
+  border: 1px solid transparent;
+  border-left: 3px solid transparent;
+  color: var(--bark);
+  transition: all 0.3s ease;
+}
+
+.dark .sidebar-indic-inactive {
+  color: rgb(var(--ivory-cream-rgb) / 0.65);
+}
+
+.sidebar-indic-inactive:hover {
+  background: rgb(var(--deep-saffron-rgb) / 0.06);
+  border-color: transparent;
+  border-left-color: rgb(var(--deep-saffron-rgb) / 0.4);
+  color: var(--night-ink);
+  box-shadow: 0 1px 8px rgb(var(--deep-saffron-rgb) / 0.08);
+}
+
+.dark .sidebar-indic-inactive:hover {
+  background: rgb(var(--deep-saffron-rgb) / 0.1);
+  color: var(--ivory-cream);
+  box-shadow: 0 1px 8px rgb(var(--deep-saffron-rgb) / 0.12);
+}
+
+/* ----- Indian Decorative Motifs ----- */
+
+/* Mandala watermark — subtle background pattern.
+
+   Shape comes from a mask, colour from background-color. A `url("data:…")`
+   used as background-image is opaque to the cascade: the pigment is frozen
+   inside the URI and can never follow a per-app accent. As a mask the browser
+   reads only the alpha channel, so the same data URI renders saffron in PDLMS,
+   kumkum in Vidyaverse and turmeric in DCP. The per-path `opacity` values are
+   what shape the falloff — they survive as mask alpha. */
+.mandala-watermark {
+  position: relative;
+}
+
+.mandala-watermark::before {
+  content: '';
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 180px;
+  height: 180px;
+  background-color: var(--accent-primary);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Ccircle cx='100' cy='100' r='90' fill='none' stroke='%23fff' stroke-width='0.5' opacity='0.3'/%3E%3Ccircle cx='100' cy='100' r='70' fill='none' stroke='%23fff' stroke-width='0.5' opacity='0.25'/%3E%3Ccircle cx='100' cy='100' r='50' fill='none' stroke='%23fff' stroke-width='0.5' opacity='0.2'/%3E%3Ccircle cx='100' cy='100' r='30' fill='none' stroke='%23fff' stroke-width='0.5' opacity='0.15'/%3E%3Cpath d='M100 10 L100 190 M10 100 L190 100 M29 29 L171 171 M171 29 L29 171' stroke='%23fff' stroke-width='0.3' opacity='0.15'/%3E%3Cpath d='M100 20 Q120 50 100 80 Q80 50 100 20 M100 120 Q120 150 100 180 Q80 150 100 120 M20 100 Q50 120 80 100 Q50 80 20 100 M120 100 Q150 120 180 100 Q150 80 120 100' fill='%23fff' opacity='0.06'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Ccircle cx='100' cy='100' r='90' fill='none' stroke='%23fff' stroke-width='0.5' opacity='0.3'/%3E%3Ccircle cx='100' cy='100' r='70' fill='none' stroke='%23fff' stroke-width='0.5' opacity='0.25'/%3E%3Ccircle cx='100' cy='100' r='50' fill='none' stroke='%23fff' stroke-width='0.5' opacity='0.2'/%3E%3Ccircle cx='100' cy='100' r='30' fill='none' stroke='%23fff' stroke-width='0.5' opacity='0.15'/%3E%3Cpath d='M100 10 L100 190 M10 100 L190 100 M29 29 L171 171 M171 29 L29 171' stroke='%23fff' stroke-width='0.3' opacity='0.15'/%3E%3Cpath d='M100 20 Q120 50 100 80 Q80 50 100 20 M100 120 Q120 150 100 180 Q80 150 100 120 M20 100 Q50 120 80 100 Q50 80 20 100 M120 100 Q150 120 180 100 Q150 80 120 100' fill='%23fff' opacity='0.06'/%3E%3C/svg%3E");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+}
+
+.dark .mandala-watermark::before {
+  opacity: 0.2;
+  filter: brightness(1.5);
+}
+
+/* Dharma Chakra icon accent */
+.dharma-chakra-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--deep-saffron);
+  opacity: 0.7;
+}
+
+/* Arch-shaped section header */
+.arch-section-header {
+  position: relative;
+  padding-bottom: 1rem;
+}
+
+.arch-section-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgb(var(--deep-saffron-rgb) / 0.15) 15%,
+      rgb(var(--deep-saffron-rgb) / 0.35) 50%,
+      rgb(var(--deep-saffron-rgb) / 0.15) 85%,
+      transparent 100%);
+  border-radius: 4px 4px 0 0;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 8'%3E%3Cpath d='M0 8 Q100 0 200 8' fill='white'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 8'%3E%3Cpath d='M0 8 Q100 0 200 8' fill='white'/%3E%3C/svg%3E");
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+}
+
+/* Soft gradient text for lighter backgrounds */
+.gradient-text-indic-soft {
+  background: linear-gradient(135deg,
+      var(--clay-mid) 0%,
+      var(--deep-saffron) 40%,
+      var(--saffron) 70%,
+      var(--clay-soft) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.dark .gradient-text-indic-soft {
+  background: linear-gradient(135deg,
+      var(--gold) 0%,
+      var(--deep-saffron) 50%,
+      var(--saffron) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Sidebar border accent — toran-style top arch */
+.sidebar-toran-top {
+  position: relative;
+}
+
+.sidebar-toran-top::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg,
+      var(--deep-saffron),
+      var(--gold),
+      var(--deep-saffron));
+  z-index: 10;
+}
+
+/* ----- Indic Stat Card Accents ----- */
+.stat-icon-saffron {
+  background: linear-gradient(135deg, var(--deep-saffron), var(--saffron));
+}
+
+.stat-icon-teal {
+  background: linear-gradient(135deg, var(--peacock-teal), var(--teal-light));
+}
+
+.stat-icon-gold {
+  background: linear-gradient(135deg, var(--gold), var(--turmeric));
+}
+
+.stat-icon-indigo {
+  background: linear-gradient(135deg, var(--indigo-deep), var(--indigo-ink));
+}
+
+.stat-icon-lotus {
+  background: linear-gradient(135deg, var(--lotus-pink), var(--lotus-deep));
+}
+
+/* ----- Indian Badge ----- */
+.indic-badge {
+  background: rgb(var(--gold-rgb) / 0.12);
+  border: 1px solid rgb(var(--gold-rgb) / 0.3);
+  color: var(--gold);
+  padding: 0.5rem 1.25rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+}
+
+/* ----- Scroll Reveal — Temple Bell Easing ----- */
+.indic-reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    transform 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.indic-reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ----- Stagger Children ----- */
+.indic-stagger>*:nth-child(1) {
+  transition-delay: 0.1s;
+}
+
+.indic-stagger>*:nth-child(2) {
+  transition-delay: 0.2s;
+}
+
+.indic-stagger>*:nth-child(3) {
+  transition-delay: 0.3s;
+}
+
+.indic-stagger>*:nth-child(4) {
+  transition-delay: 0.4s;
+}
+
+.indic-stagger>*:nth-child(5) {
+  transition-delay: 0.5s;
+}
+
+.indic-stagger>*:nth-child(6) {
+  transition-delay: 0.6s;
+}
+
+/* ----- Decorative Petal Shapes ----- */
+.petal-glow {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+      rgb(var(--deep-saffron-rgb) / 0.4) 0%,
+      rgb(var(--saffron-rgb) / 0.1) 50%,
+      transparent 70%);
+  filter: blur(30px);
+  animation: petalFloat 8s ease-in-out infinite alternate;
+}
+
+@keyframes petalFloat {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  100% {
+    transform: translate(20px, -15px) scale(1.15);
+  }
+}
+
+/* ----- Gold Shimmer on Hover ----- */
+.indic-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.indic-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg,
+      transparent,
+      rgb(var(--gold-rgb) / 0.15),
+      transparent);
+  transition: left 0.6s ease;
+}
+
+.indic-shimmer:hover::after {
+  left: 120%;
+}
+
+/* ----- Scrollbar with Indian Tones ----- */
+.indic-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--deep-saffron-rgb) / 0.3) transparent;
+}
+
+.indic-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.indic-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.indic-scroll::-webkit-scrollbar-thumb {
+  background: rgb(var(--deep-saffron-rgb) / 0.3);
+  border-radius: 3px;
+}
+
+.indic-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--deep-saffron-rgb) / 0.5);
+}
+
+/* ============================================================
+   LANDING KIT
+
+   Marketing-surface primitives shared by all three landing pages. PDLMS grew
+   its Indic landing organically in app-local CSS modules; Vidyaverse and DCP
+   would otherwise each need their own copy of that work. Everything here is
+   accent-driven, so one implementation renders saffron, kumkum and turmeric.
+
+   Colour rules that hold throughout:
+     • --accent-strong is the ONLY accent permitted under white text.
+     • Body copy on the light canvas is --night-ink; secondary copy is --bark
+       (≈7.7:1 on parchment). Neither is a grey — the warmth is the point.
+     • Every surface has a .dark counterpart; the landing is not light-only.
+   ============================================================ */
+
+/* The scope wrapper. Sets the canvas both modes are drawn on, so a landing
+   page never has to name a background colour itself. */
+.indic-landing {
+  background-color: var(--parchment);
+  color: var(--night-ink);
+}
+
+.dark .indic-landing {
+  background-color: var(--night-ink);
+  color: var(--ivory-cream);
+}
+
+/* ----- Hero canvas -----
+   Pastel Indic tints in light, deep night-to-accent in dark. Both drift
+   through the same stop ORDER (cool → warm) so the two modes read as one
+   design rather than two. */
+.indic-hero-canvas {
+  position: relative;
+  overflow: hidden;
+  background-image: linear-gradient(135deg,
+      #EEF2FF 0%,
+      #E0F7FA 25%,
+      #FFF8E1 50%,
+      #FCE4EC 75%,
+      #EEF2FF 100%);
+  background-size: 400% 400%;
+  animation: indicShift 18s ease infinite;
+}
+
+.dark .indic-hero-canvas {
+  background-image: linear-gradient(135deg,
+      var(--night-ink) 0%,
+      var(--navy-deep) 28%,
+      var(--indigo-deep) 55%,
+      rgb(var(--accent-strong-rgb) / 0.75) 100%);
+}
+
+/* Ambient warm/cool orbs. Pseudo-elements rather than markup so a hero can
+   opt in with one class and nothing to clean up. */
+.indic-hero-canvas::before,
+.indic-hero-canvas::after {
+  content: '';
+  position: absolute;
+  width: 28rem;
+  height: 28rem;
+  border-radius: 9999px;
+  filter: blur(72px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.indic-hero-canvas::before {
+  top: -8rem;
+  right: -8rem;
+  background: radial-gradient(circle,
+      rgb(var(--accent-primary-rgb) / 0.28) 0%,
+      rgb(var(--gold-rgb) / 0.16) 50%,
+      transparent 72%);
+}
+
+.indic-hero-canvas::after {
+  bottom: -10rem;
+  left: -8rem;
+  background: radial-gradient(circle,
+      rgb(var(--peacock-teal-rgb) / 0.22) 0%,
+      rgb(var(--indigo-deep-rgb) / 0.14) 50%,
+      transparent 72%);
+}
+
+/* ----- Sections ----- */
+.indic-section {
+  position: relative;
+  background-color: var(--parchment);
+}
+
+.dark .indic-section {
+  background-color: var(--night-ink);
+}
+
+/* Alternating band — warm cream, so consecutive sections separate without a
+   hard rule between them. */
+.indic-section--warm {
+  position: relative;
+  background-color: var(--ivory-cream);
+  background-image: radial-gradient(circle at 50% 0%,
+      rgb(var(--accent-primary-rgb) / 0.06) 0%,
+      transparent 60%);
+}
+
+.dark .indic-section--warm {
+  background-color: var(--navy-deep);
+  background-image: radial-gradient(circle at 50% 0%,
+      rgb(var(--accent-primary-rgb) / 0.10) 0%,
+      transparent 60%);
+}
+
+/* Deep band for CTA / stats — the one place white text is correct. */
+.indic-section--deep {
+  position: relative;
+  color: var(--ivory-cream);
+  background-image: linear-gradient(135deg,
+      var(--night-ink) 0%,
+      var(--indigo-deep) 35%,
+      var(--peacock-teal) 68%,
+      rgb(var(--accent-strong-rgb) / 0.92) 100%);
+}
+
+/* ----- Eyebrow pill ----- */
+.indic-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.875rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-contrast);
+  background: var(--accent-soft);
+  border: 1px solid rgb(var(--accent-primary-rgb) / 0.28);
+}
+
+.dark .indic-eyebrow {
+  color: var(--accent-primary-dark);
+  background: rgb(var(--accent-primary-rgb) / 0.12);
+  border-color: rgb(var(--accent-primary-rgb) / 0.32);
+}
+
+/* Same pill on a deep band, where the light version would vanish. */
+.indic-section--deep .indic-eyebrow {
+  color: var(--gold);
+  background: rgb(var(--gold-rgb) / 0.14);
+  border-color: rgb(var(--gold-rgb) / 0.34);
+}
+
+/* ----- Calls to action ----- */
+.indic-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+  padding: 0.75rem 1.75rem;
+  border-radius: 0.75rem;
+  font-weight: 700;
+  border: 2px solid transparent;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.25s ease, color 0.25s ease;
+}
+
+.indic-cta:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 3px;
+}
+
+.indic-cta--primary {
+  background-color: var(--accent-strong);
+  color: #FFFFFF;
+  box-shadow: 0 8px 28px rgb(var(--accent-strong-rgb) / 0.28);
+}
+
+.indic-cta--primary:hover {
+  background-color: var(--accent-contrast);
+  transform: translateY(-2px);
+  box-shadow: 0 14px 38px rgb(var(--accent-strong-rgb) / 0.36);
+}
+
+/* On night-ink the mid-tone strong accent muddies; the lifted accent under
+   dark ink is both brighter and higher contrast. */
+.dark .indic-cta--primary {
+  background-color: var(--accent-primary-dark);
+  color: var(--night-ink);
+  box-shadow: 0 8px 28px rgb(var(--accent-primary-rgb) / 0.34);
+}
+
+.dark .indic-cta--primary:hover {
+  background-color: var(--gold);
+}
+
+.indic-cta--ghost {
+  background-color: rgb(var(--parchment-rgb) / 0.7);
+  color: var(--peacock-teal);
+  border-color: rgb(var(--peacock-teal-rgb) / 0.5);
+  backdrop-filter: blur(6px);
+}
+
+.indic-cta--ghost:hover {
+  background-color: var(--peacock-teal);
+  color: #FFFFFF;
+  transform: translateY(-2px);
+}
+
+.dark .indic-cta--ghost {
+  background-color: rgb(var(--ivory-cream-rgb) / 0.06);
+  color: var(--gold);
+  border-color: rgb(var(--gold-rgb) / 0.45);
+}
+
+.dark .indic-cta--ghost:hover {
+  background-color: rgb(var(--gold-rgb) / 0.16);
+  color: var(--gold);
+}
+
+/* ----- Tile: the landing's default content card -----
+   Warm parchment with a gold hairline, matching PDLMS's .parchmentCard. */
+.indic-tile {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: linear-gradient(145deg, var(--parchment) 0%, var(--ivory-cream) 100%);
+  border: 1px solid rgb(var(--gold-rgb) / 0.28);
+  box-shadow: 0 4px 20px rgb(var(--accent-strong-rgb) / 0.07),
+    inset 0 1px 0 rgb(255 255 255 / 0.6);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.3s ease;
+}
+
+.indic-tile:hover {
+  transform: translateY(-4px);
+  border-color: rgb(var(--accent-primary-rgb) / 0.5);
+  box-shadow: 0 18px 48px rgb(var(--accent-strong-rgb) / 0.14),
+    0 0 40px rgb(var(--gold-rgb) / 0.08);
+}
+
+.dark .indic-tile {
+  background: linear-gradient(145deg, var(--slate-night) 0%, var(--slate-blue) 100%);
+  border-color: rgb(var(--gold-rgb) / 0.16);
+  box-shadow: 0 4px 20px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(var(--ivory-cream-rgb) / 0.04);
+}
+
+.dark .indic-tile:hover {
+  border-color: rgb(var(--accent-primary-rgb) / 0.45);
+  box-shadow: 0 18px 48px rgb(0 0 0 / 0.5), 0 0 40px rgb(var(--gold-rgb) / 0.06);
+}
+
+/* Faint mandala watermark inside a tile. Mask, not background-image — see the
+   .mandala-watermark note above for why. */
+.indic-tile__motif {
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+  background-color: var(--accent-primary);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center bottom -20px;
+  mask-position: center bottom -20px;
+  -webkit-mask-size: 150%;
+  mask-size: 150%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dark .indic-tile__motif {
+  opacity: 0.16;
+}
+
+/* The six motifs, promoted from PDLMS's home.module.css into the shared layer
+   so every app can name them. Each is mask-only: the fills are black purely to
+   be opaque, because only the alpha channel is read. */
+.indic-motif-lotus {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 90 Q20 50 50 10 Q80 50 50 90Z' fill='none' stroke='%23000' stroke-width='0.5'/%3E%3Cpath d='M50 80 Q30 50 50 20 Q70 50 50 80Z' fill='none' stroke='%23000' stroke-width='0.3'/%3E%3Ccircle cx='50' cy='50' r='5' fill='%23000' opacity='0.5'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 90 Q20 50 50 10 Q80 50 50 90Z' fill='none' stroke='%23000' stroke-width='0.5'/%3E%3Cpath d='M50 80 Q30 50 50 20 Q70 50 50 80Z' fill='none' stroke='%23000' stroke-width='0.3'/%3E%3Ccircle cx='50' cy='50' r='5' fill='%23000' opacity='0.5'/%3E%3C/svg%3E");
+}
+
+.indic-motif-sriyantra {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpolygon points='10,90 90,90 50,10' fill='none' stroke='%23000' stroke-width='0.5'/%3E%3Cpolygon points='10,30 90,30 50,90' fill='none' stroke='%23000' stroke-width='0.5'/%3E%3Cpolygon points='25,75 75,75 50,25' fill='none' stroke='%23000' stroke-width='0.3'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpolygon points='10,90 90,90 50,10' fill='none' stroke='%23000' stroke-width='0.5'/%3E%3Cpolygon points='10,30 90,30 50,90' fill='none' stroke='%23000' stroke-width='0.5'/%3E%3Cpolygon points='25,75 75,75 50,25' fill='none' stroke='%23000' stroke-width='0.3'/%3E%3C/svg%3E");
+}
+
+.indic-motif-ashoka {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='%23000' stroke-width='1' stroke-dasharray='4,4'/%3E%3Ccircle cx='50' cy='50' r='10' fill='none' stroke='%23000' stroke-width='0.5'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='none' stroke='%23000' stroke-width='1' stroke-dasharray='4,4'/%3E%3Ccircle cx='50' cy='50' r='10' fill='none' stroke='%23000' stroke-width='0.5'/%3E%3C/svg%3E");
+}
+
+.indic-motif-peacock {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 10 C20 40 40 80 50 90 C60 80 80 40 50 10Z' fill='none' stroke='%23000' stroke-width='0.5'/%3E%3Ccircle cx='50' cy='30' r='8' fill='none' stroke='%23000' stroke-width='0.5'/%3E%3Cpath d='M50 10 Q30 30 50 50 Q70 30 50 10' fill='none' stroke='%23000' stroke-width='0.2'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M50 10 C20 40 40 80 50 90 C60 80 80 40 50 10Z' fill='none' stroke='%23000' stroke-width='0.5'/%3E%3Ccircle cx='50' cy='30' r='8' fill='none' stroke='%23000' stroke-width='0.5'/%3E%3Cpath d='M50 10 Q30 30 50 50 Q70 30 50 10' fill='none' stroke='%23000' stroke-width='0.2'/%3E%3C/svg%3E");
+}
+
+.indic-motif-kolam {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect x='20' y='20' width='60' height='60' fill='none' stroke='%23000' stroke-width='0.5' transform='rotate(45 50 50)'/%3E%3Crect x='30' y='30' width='40' height='40' fill='none' stroke='%23000' stroke-width='0.5' transform='rotate(45 50 50)'/%3E%3Ccircle cx='50' cy='15' r='3' fill='%23000'/%3E%3Ccircle cx='50' cy='85' r='3' fill='%23000'/%3E%3Ccircle cx='15' cy='50' r='3' fill='%23000'/%3E%3Ccircle cx='85' cy='50' r='3' fill='%23000'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect x='20' y='20' width='60' height='60' fill='none' stroke='%23000' stroke-width='0.5' transform='rotate(45 50 50)'/%3E%3Crect x='30' y='30' width='40' height='40' fill='none' stroke='%23000' stroke-width='0.5' transform='rotate(45 50 50)'/%3E%3Ccircle cx='50' cy='15' r='3' fill='%23000'/%3E%3Ccircle cx='50' cy='85' r='3' fill='%23000'/%3E%3Ccircle cx='15' cy='50' r='3' fill='%23000'/%3E%3Ccircle cx='85' cy='50' r='3' fill='%23000'/%3E%3C/svg%3E");
+}
+
+.indic-motif-meenakari {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='35' fill='none' stroke='%23000' stroke-width='0.5'/%3E%3Cpath d='M50 15 A35 35 0 0 1 85 50 A35 35 0 0 0 50 15Z' fill='none' stroke='%23000' stroke-width='0.5'/%3E%3Cpath d='M50 85 A35 35 0 0 1 15 50 A35 35 0 0 0 50 85Z' fill='none' stroke='%23000' stroke-width='0.5'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='35' fill='none' stroke='%23000' stroke-width='0.5'/%3E%3Cpath d='M50 15 A35 35 0 0 1 85 50 A35 35 0 0 0 50 15Z' fill='none' stroke='%23000' stroke-width='0.5'/%3E%3Cpath d='M50 85 A35 35 0 0 1 15 50 A35 35 0 0 0 50 85Z' fill='none' stroke='%23000' stroke-width='0.5'/%3E%3C/svg%3E");
+}
+
+/* ----- Icon plinth with a brass shimmer halo -----
+   Replaces the per-feature `from-purple-500 to-indigo-600` gradients: a
+   landing whose every icon is a different hue reads as a component gallery,
+   not a product. One accent plinth, one brass halo. */
+.indic-icon-plinth {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.875rem;
+  color: #FFFFFF;
+  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-strong) 100%);
+  box-shadow: 0 6px 18px rgb(var(--accent-strong-rgb) / 0.28);
+}
+
+.indic-icon-plinth::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  background: conic-gradient(from 0deg,
+      var(--gold) 0%,
+      var(--parchment) 25%,
+      var(--gold) 50%,
+      var(--temple-stone) 75%,
+      var(--gold) 100%);
+  opacity: 0.75;
+  z-index: -1;
+  filter: blur(2px);
+  animation: brassShimmer 6s linear infinite;
+}
+
+@keyframes brassShimmer {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ----- Stat readout ----- */
+.indic-stat__value {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-synthesis-weight: none;
+  -webkit-font-synthesis: none;
+  line-height: 1.1;
+  color: var(--accent-strong);
+}
+
+.dark .indic-stat__value {
+  color: var(--accent-primary-dark);
+}
+
+.indic-section--deep .indic-stat__value {
+  color: var(--gold);
+}
+
+/* ----- Secondary copy -----
+   Warm ink rather than a neutral grey, so muted text stays inside the palette.
+   ≈7.7:1 on parchment. */
+.indic-muted {
+  color: var(--bark);
+}
+
+.dark .indic-muted {
+  color: rgb(var(--ivory-cream-rgb) / 0.72);
+}
+
+.indic-section--deep .indic-muted {
+  color: rgb(var(--ivory-cream-rgb) / 0.86);
+}
+
+/* ----- Small caps label -----
+   The accent-driven counterpart to .indic-eyebrow for text that sits inside a
+   card rather than above a section. Accent-driven rather than per-item, because
+   a per-item tint has to clear 4.5:1 in BOTH modes and the Indic palette's
+   mid-tones don't: decorative colour belongs on the icon plinth, where it is
+   never load-bearing for legibility. */
+.indic-caps {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-contrast);
+}
+
+.dark .indic-caps {
+  color: var(--accent-primary-dark);
+}
+
+/* ----- Hairline rule with a gold centre ----- */
+.indic-rule {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgb(var(--temple-stone-rgb) / 0.45) 50%,
+      transparent 100%);
+}
+
+/* ----- Shared motion utilities -----
+   The motif components animate through classes only (they take no hooks and
+   no animation library), so the classes they name have to live in the synced
+   system rather than in one app's local stylesheet. */
+.indic-spin-slow {
+  animation: spinCW 40s linear infinite;
+  transform-origin: center;
+}
+
+.indic-float {
+  animation: indicFloat 6s ease-in-out infinite alternate;
+}
+
+@keyframes indicFloat {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-10px);
+  }
+}
+
+.indic-rise {
+  animation: indicRise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes indicRise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.indic-delay-1 { animation-delay: 0.08s; }
+.indic-delay-2 { animation-delay: 0.16s; }
+.indic-delay-3 { animation-delay: 0.24s; }
+.indic-delay-4 { animation-delay: 0.32s; }
+
+/* ============================================================
+   ACCESSIBILITY: Respect prefers-reduced-motion
+   Disables all decorative animations while preserving layout.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .hero-indic,
+  .mesh-bg-indic,
+  .mandala-ring-1,
+  .mandala-ring-2,
+  .mandala-ring-3,
+  .mandala-breathe,
+  .petal-glow,
+  .rangoli-texture,
+  .indic-shimmer::after,
+  .indic-hero-canvas,
+  .indic-icon-plinth::before,
+  .indic-spin-slow,
+  .indic-float,
+  .indic-rise {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  /* .indic-rise starts at opacity 0; killing the animation without this would
+     leave the content permanently invisible. */
+  .indic-rise {
+    opacity: 1;
+    transform: none;
+  }
+}

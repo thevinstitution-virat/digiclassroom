@@ -1,0 +1,48 @@
+/* GENERATED — canonical: PDLMS_Pro/shared/design/indic/indic-fonts.css
+   DO NOT EDIT HERE. Edit the canonical file and re-run sync-indic.mjs.
+   sha256:bc13601b0b696761 */
+/* ============================================================
+   INDIC FONT LOADING — shared by PDLMS, Vidyaverse & DigiClassroom.
+
+   Loading only. The typographic RULES (h1/h2 treatment, guardrails) live in
+   indic-design-system.css; this file exists purely to get the same font bytes
+   into all three apps and to define the --font-* stacks.
+
+   @fontsource (npm-pinned WOFF2) rather than next/font or a Google Fonts
+   <link>, because all three apps must ship the SAME bytes: identical metrics
+   are what make cross-app screenshot comparison and consistent line-breaking
+   possible. It also removes a render-blocking request to fonts.googleapis.com.
+
+   ── How to wire this up ───────────────────────────────────────────────────
+   This file declares the --font-* stacks ONLY. Each app must import the font
+   packages themselves from its own JS entry point:
+
+     import '@fontsource-variable/plus-jakarta-sans';
+     import '@fontsource/yatra-one/400.css';
+     import '@fontsource/noto-sans-devanagari/400.css';
+     import '@fontsource/noto-sans-devanagari/600.css';
+
+   (Next: app/layout.tsx — Vite: src/main.tsx)
+
+   The @fontsource imports deliberately do NOT live in this stylesheet: a bare
+   package specifier in a CSS `@import` is resolved differently by Next's
+   css-loader than by Vite's resolver, so keeping them in JS — where both
+   bundlers agree — is what makes this one file safe to share across all three.
+
+   Verified to resolve: @fontsource-variable/plus-jakarta-sans@5.3.0,
+   @fontsource/yatra-one@5.3.0, @fontsource/noto-sans-devanagari@5.3.0
+   ============================================================ */
+
+:root {
+  --font-display: 'Yatra One', 'Noto Sans Devanagari', serif;
+  --font-body: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', system-ui, sans-serif;
+
+  /* Yatra One ships a genuine Devanagari cut (built on ITF Base Devanagari,
+     not a Latin font with Devanagari bolted on), so short Devanagari accents —
+     taglines, eyebrow flourishes — get the same brush-brand display character
+     as the Latin headlines next to them, instead of falling back to a plain
+     UI sans. Noto Sans Devanagari stays as the safety net for any glyph
+     outside Yatra One's coverage, and is still the better choice if this
+     token is ever used for dense Devanagari body copy rather than a flourish. */
+  --font-deva: 'Yatra One', 'Noto Sans Devanagari', sans-serif;
+}

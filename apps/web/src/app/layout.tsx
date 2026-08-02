@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import Script from "next/script";
 
 import { TRPCProvider } from '@/lib/trpc/provider'
@@ -12,8 +11,22 @@ import "../styles/vg-design-system.css";
 import "../styles/vg-animations.css";
 import "../styles/apple-landing.css";
 import "../styles/whatsapp-chat.css";
-
-const inter = Inter({ subsets: ["latin"] });
+// Indic design system — vendored from PDLMS (canonical source of truth).
+// Do not edit files under design/indic/; edit them in PDLMS and re-run
+// `node shared/design/indic/sync-indic.mjs`. Order is load-bearing: pigments,
+// then this app's accent picked from them, then the system that consumes both,
+// then the bridge that maps the accent onto shadcn's semantic tokens.
+import "../design/indic/indic-tokens.css";
+import "../design/indic/indic-app.css";
+import "../design/indic/indic-design-system.css";
+import "../styles/indic-bridge.css";
+// Self-hosted fonts, imported here rather than from CSS so Next and Vite
+// resolve them identically across the trio. Must precede indic-fonts.css.
+import "@fontsource-variable/plus-jakarta-sans";
+import "@fontsource/yatra-one/400.css";
+import "@fontsource/noto-sans-devanagari/400.css";
+import "@fontsource/noto-sans-devanagari/600.css";
+import "../design/indic/indic-fonts.css";
 
 export const metadata: Metadata = {
   title: "Virat Gyankosh - AI-Powered Educational Platform",
@@ -26,7 +39,9 @@ export const metadata: Metadata = {
     type: "website",
   },
   icons: {
-    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>",
+    // Mandala mark, generated per-app from the Indic tokens
+    // (shared/design/indic/build-indic-css.mjs) and synced into public/.
+    icon: "/favicon.svg",
   },
 };
 
@@ -39,13 +54,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        {/* Google Fonts - Inter */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
-          rel="stylesheet"
-        />
+        {/* Fonts are self-hosted via @fontsource (see imports above) — no
+            render-blocking request to fonts.googleapis.com. */}
         {/* Perplexity-Level MathJax Configuration for VG Kosh */}
         <script
           dangerouslySetInnerHTML={{
@@ -193,7 +203,7 @@ export default function RootLayout({
           strategy="lazyOnload"
         />
       </head>
-      <body className={inter.className}>
+      <body>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

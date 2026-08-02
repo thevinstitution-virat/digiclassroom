@@ -1,0 +1,34 @@
+/* GENERATED — canonical: PDLMS_Pro/shared/design/indic/indic-app.digiclassroom.css
+   DO NOT EDIT HERE. Edit the canonical file and re-run sync-indic.mjs.
+   sha256:83315534125d04a2 */
+/* ============================================================
+   GENERATED FILE — DO NOT EDIT.
+   Source:     shared/design/indic/indic.tokens.mjs
+   Regenerate: node shared/design/indic/build-indic-css.mjs
+   ============================================================ */
+
+/* Accent layer for DigiClassroom Pro — the only file that differs per app.
+   --accent-strong is the ONLY token permitted under white text. */
+
+:root {
+  --accent-primary: var(--turmeric);
+  --accent-primary-rgb: var(--turmeric-rgb);
+  --accent-primary-hsl: var(--turmeric-hsl);
+
+  --accent-strong: #A06504;
+  --accent-strong-rgb: 160 101 4;
+  --accent-strong-hsl: 37.3 95.1% 32.2%;
+
+  --accent-soft: #FFF6E3;
+  --accent-soft-rgb: 255 246 227;
+  --accent-soft-hsl: 40.7 100% 94.5%;
+
+  --accent-contrast: #7A4A00;
+  --accent-contrast-rgb: 122 74 0;
+  --accent-contrast-hsl: 36.4 100% 23.9%;
+
+  /* used only inside .dark — the base accent goes muddy on night-ink */
+  --accent-primary-dark: #FFC153;
+  --accent-primary-dark-rgb: 255 193 83;
+  --accent-primary-dark-hsl: 38.4 100% 66.3%;
+}

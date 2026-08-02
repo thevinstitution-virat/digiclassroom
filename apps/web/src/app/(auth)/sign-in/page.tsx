@@ -6,7 +6,12 @@ import { toAppUrl } from '@/utils/auth-redirect'
 import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Eye, EyeOff, Mail, Lock, Sparkles, GraduationCap, BrainCircuit, ClipboardCheck, Rocket } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, Sparkles, BrainCircuit, ClipboardCheck, Rocket } from 'lucide-react'
+// Shared Indic motifs, vendored from PDLMS — the same lotus backdrop, brand mark
+// and card treatment the other two apps use, so the SSO corridor feels continuous.
+import { AuthBackdrop, authCardClassName } from '@/design/indic/motifs/auth-backdrop'
+import { MandalaSVG } from '@/design/indic/motifs/mandala-svgs'
+import { MandalaMark } from '@/design/indic/motifs/mandala-mark'
 
 const HIGHLIGHTS = [
   { icon: BrainCircuit, title: 'AI tutor that cites the textbook', desc: 'Every answer grounded in your NCERT book — with the exact page.' },
@@ -91,39 +96,35 @@ function SignInForm() {
 
     return (
         <div className="min-h-screen lg:grid lg:grid-cols-[1.05fr_1fr]">
-            {/* ── Brand / marketing panel (desktop) ── */}
-            <aside className="relative hidden overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-12 text-white lg:flex lg:flex-col lg:justify-between xl:p-16">
-                {/* Aurora + grid texture */}
+            {/* ── Brand / marketing panel (desktop) ──
+                Indic dark: night-ink → indigo-deep → the app accent, with a
+                slowly rotating mandala. Mirrors the PDLMS hero treatment so the
+                SSO hop between the two apps feels like one product. */}
+            <aside className="indic-auth-aside relative hidden overflow-hidden p-12 text-white lg:flex lg:flex-col lg:justify-between xl:p-16">
                 <div className="pointer-events-none absolute inset-0">
-                    <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-orange-500/20 blur-3xl" />
-                    <div className="absolute -bottom-28 -right-16 h-[28rem] w-[28rem] rounded-full bg-blue-500/25 blur-3xl" />
-                    <div className="absolute left-1/3 top-1/2 h-72 w-72 rounded-full bg-indigo-500/20 blur-3xl" />
-                    <div
-                        className="absolute inset-0 opacity-[0.12]"
-                        style={{
-                            backgroundImage:
-                                'linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)',
-                            backgroundSize: '44px 44px',
-                            maskImage: 'radial-gradient(70% 60% at 40% 30%, #000 0%, transparent 80%)',
-                            WebkitMaskImage: 'radial-gradient(70% 60% at 40% 30%, #000 0%, transparent 80%)',
-                        }}
-                    />
+                    <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full blur-3xl" style={{ background: 'rgb(var(--accent-primary-rgb) / 0.22)' }} />
+                    {/* Indigo, not teal: teal over the warm end of the aside
+                        gradient mixes to a muddy green. */}
+                    <div className="absolute -bottom-28 -right-16 h-[28rem] w-[28rem] rounded-full blur-3xl" style={{ background: 'rgb(var(--indigo-ink-rgb) / 0.30)' }} />
+                    <div className="absolute left-1/3 top-1/2 h-72 w-72 rounded-full blur-3xl" style={{ background: 'rgb(var(--gold-rgb) / 0.14)' }} />
+                    {/* Mandala watermark instead of the blueprint grid */}
+                    <div className="mandala-wrapper mandala-breathe">
+                        <MandalaSVG />
+                    </div>
                 </div>
 
                 <div className="relative flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 via-indigo-500 to-blue-600 shadow-lg ring-1 ring-white/20">
-                        <GraduationCap className="h-6 w-6" />
-                    </div>
+                    <MandalaMark size={44} />
                     <span className="text-lg font-bold tracking-tight">Digi Classroom</span>
                 </div>
 
                 <div className="relative max-w-md">
-                    <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white/80 backdrop-blur-sm">
+                    <span className="indic-badge inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider">
                         <Sparkles className="h-3.5 w-3.5" /> AI-powered learning
                     </span>
-                    <h2 className="mt-6 text-4xl font-bold leading-tight tracking-tight">
+                    <h2 className="mt-6 text-4xl leading-tight">
                         Your AI study partner for{' '}
-                        <span className="bg-gradient-to-r from-orange-300 to-blue-300 bg-clip-text text-transparent">CBSE &amp; ICSE</span>
+                        <span className="gradient-text-saffron">CBSE &amp; ICSE</span>
                     </h2>
                     <p className="mt-4 text-base leading-relaxed text-white/70">
                         Personalised tutoring, adaptive practice, and a productivity suite — all grounded in your syllabus.
@@ -132,8 +133,14 @@ function SignInForm() {
                     <div className="mt-10 space-y-5">
                         {HIGHLIGHTS.map((h) => (
                             <div key={h.title} className="flex items-start gap-4">
-                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 backdrop-blur-sm">
-                                    <h.icon className="h-5 w-5 text-blue-200" />
+                                <div
+                                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl backdrop-blur-sm"
+                                    style={{
+                                        background: 'rgb(var(--gold-rgb) / 0.12)',
+                                        border: '1px solid rgb(var(--gold-rgb) / 0.25)',
+                                    }}
+                                >
+                                    <h.icon className="h-5 w-5" style={{ color: 'var(--gold)' }} />
                                 </div>
                                 <div>
                                     <p className="font-semibold text-white">{h.title}</p>
@@ -145,32 +152,33 @@ function SignInForm() {
                 </div>
 
                 <div className="relative flex items-center gap-2.5 text-xs text-white/50">
-                    <span className="h-2 w-2 rounded-full bg-gradient-to-r from-orange-400 to-blue-400" />
+                    <span className="h-2 w-2 rounded-full" style={{ background: 'linear-gradient(90deg, var(--accent-primary), var(--gold))' }} />
                     Part of the <span className="font-semibold text-white/70">Vidyaverse</span> ecosystem — one login across Campus OS, Library &amp; Tutor
                 </div>
             </aside>
 
-            {/* ── Form panel ── */}
-            <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-orange-50/70 via-background to-indigo-50/60 p-5 dark:from-slate-950 dark:via-background dark:to-indigo-950/40 sm:p-8">
-                <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-400/10 blur-3xl lg:hidden" />
-                <div className="relative w-full max-w-md">
+            {/* ── Form panel ──
+                Uses the SHARED AuthBackdrop (lotus mandala + parchment card)
+                vendored from PDLMS, so this is literally the same motif and the
+                same card treatment the other two apps use — just turmeric. */}
+            <main className="relative min-h-screen overflow-hidden">
+                <AuthBackdrop>
+                <div className={`relative w-full max-w-md ${authCardClassName} p-6 sm:p-8`}>
                     {/* Mobile brand header */}
                     <div className="mb-8 text-center lg:hidden">
-                        <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 via-indigo-500 to-blue-600 shadow-lg ring-1 ring-white/20">
-                            <Sparkles className="h-8 w-8 text-white" />
-                        </div>
-                        <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome back</h1>
+                        <MandalaMark size={64} className="mb-4" />
+                        <h1 className="text-2xl text-foreground">Welcome back</h1>
                         <p className="mt-1.5 text-sm text-muted-foreground">Sign in to continue your learning journey</p>
                     </div>
 
                     {/* Desktop heading */}
-                    <div className="mb-7 hidden lg:block">
-                        <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome back</h1>
+                    <div className="mb-7 hidden text-center lg:block">
+                        <h1 className="text-3xl text-foreground">Welcome back</h1>
                         <p className="mt-2 text-muted-foreground">Sign in to continue your learning journey</p>
                     </div>
 
-                    {/* Sign-In Card */}
-                    <div className="rounded-2xl border border-border/70 bg-card/90 p-6 shadow-elev-3 backdrop-blur-xl sm:p-8">
+                    {/* Sign-In Card body */}
+                    <div>
                         {/* Error Message */}
                         {error && (
                             <div className="mb-6 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm font-medium text-destructive">
@@ -197,16 +205,30 @@ function SignInForm() {
                             Continue with Google
                         </button>
 
+                        {/* Federated sign-in via the Vidyaverse IdP, gated on
+                            NEXT_PUBLIC_FEDERATION_ENABLED (build-time). Deliberately tinted
+                            with --kumkum, Vidyaverse's own signature pigment, rather than
+                            this app's turmeric: it is the one control that hands the user
+                            to a different product, so it should look like where it goes.
+                            Kumkum is a shared pigment, so this works in every app. */}
                         {federationEnabled && (
                             <button
                                 onClick={handleVidyaverseSignIn}
                                 disabled={vidyaverseLoading}
-                                className="mb-3 flex w-full items-center justify-center gap-3 rounded-xl border border-indigo-300 bg-indigo-50/50 px-4 py-3 font-semibold text-indigo-700 transition-all duration-200 hover:bg-indigo-100/70 disabled:opacity-50 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/40"
+                                className="mb-3 flex w-full items-center justify-center gap-3 rounded-xl px-4 py-3 font-semibold transition-all duration-200 disabled:opacity-50"
+                                style={{
+                                    border: '1px solid rgb(var(--kumkum-rgb) / 0.35)',
+                                    background: 'rgb(var(--kumkum-rgb) / 0.06)',
+                                    color: 'var(--kumkum)',
+                                }}
                             >
                                 {vidyaverseLoading ? (
-                                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+                                    <div
+                                        className="h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
+                                        style={{ borderColor: 'var(--kumkum)', borderTopColor: 'transparent' }}
+                                    />
                                 ) : (
-                                    <Sparkles className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                                    <Sparkles className="h-5 w-5" style={{ color: 'var(--kumkum)' }} />
                                 )}
                                 Continue with Vidyaverse
                             </button>
@@ -299,6 +321,7 @@ function SignInForm() {
                         </Link>
                     </p>
                 </div>
+                </AuthBackdrop>
             </main>
         </div>
     )

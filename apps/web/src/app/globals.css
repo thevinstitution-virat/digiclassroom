@@ -49,18 +49,25 @@
   --chart-5: 271 76% 53%;
 
   /* ===== DigiClassroom brand identity (orange → indigo → blue) ===== */
-  --dc-orange: #f97316;
-  --dc-orange-light: #fb923c;
-  --dc-orange-deep: #ea580c;
-  --dc-blue: #2563eb;
-  --dc-blue-deep: #1d4ed8;
-  --dc-indigo: #6366f1;
-  --dc-violet: #7c3aed;
-  --dc-cyan: #06b6d4;               /* electric highlight — used sparingly */
-  --dc-grad: linear-gradient(90deg, var(--dc-orange), var(--dc-blue));
-  --dc-grad-br: linear-gradient(135deg, var(--dc-orange) 0%, var(--dc-indigo) 52%, var(--dc-blue) 100%);
-  --dc-grad-cool: linear-gradient(135deg, var(--dc-indigo), var(--dc-blue));
-  --dc-grad-warm: linear-gradient(135deg, var(--dc-orange-light), var(--dc-orange-deep));
+  /* DigiClassroom brand palette, re-pointed at the Indic pigments.
+     These names are used by 14 components and by tailwind.config.ts's
+     backgroundImage tokens (bg-dc-grad-br etc.), so re-pointing the VARIABLES
+     re-skins every one of them at once — far better leverage than editing
+     each call site, and it keeps the existing class names working. */
+  --dc-orange: var(--accent-primary);
+  --dc-orange-light: var(--deep-saffron);
+  --dc-orange-deep: var(--accent-strong);
+  --dc-blue: var(--indigo-deep);
+  --dc-blue-deep: var(--night-ink);
+  --dc-indigo: var(--indigo-ink);
+  --dc-violet: var(--lotus-deep);
+  --dc-cyan: var(--peacock-teal);   /* electric highlight — used sparingly */
+  /* Indic gradient runs gold → accent → deep indigo (the Sarvam-style
+     warm-to-cool sweep the PDLMS landing uses), not orange → blue. */
+  --dc-grad: linear-gradient(90deg, var(--accent-strong), var(--deep-saffron));
+  --dc-grad-br: linear-gradient(135deg, var(--gold) 0%, var(--accent-primary) 45%, var(--accent-strong) 100%);
+  --dc-grad-cool: linear-gradient(135deg, var(--peacock-teal), var(--indigo-deep));
+  --dc-grad-warm: linear-gradient(135deg, var(--gold), var(--accent-strong));
 
   /* ===== Premium elevation — layered depth + inset highlight ===== */
   --shadow-color: 222 47% 30%;
@@ -68,13 +75,21 @@
   --elev-2: 0 1px 0 0 hsl(0 0% 100% / 0.65) inset, 0 2px 4px -2px hsl(var(--shadow-color) / 0.10), 0 8px 18px -8px hsl(var(--shadow-color) / 0.14);
   --elev-3: 0 1px 0 0 hsl(0 0% 100% / 0.75) inset, 0 6px 12px -6px hsl(var(--shadow-color) / 0.12), 0 18px 36px -14px hsl(var(--shadow-color) / 0.20);
   --elev-4: 0 1px 0 0 hsl(0 0% 100% / 0.8) inset, 0 28px 60px -22px hsl(var(--shadow-color) / 0.32), 0 10px 20px -10px hsl(var(--shadow-color) / 0.18);
-  --glow-brand: 0 12px 32px -10px hsl(221 83% 53% / 0.45);
-  --glow-amber: 0 12px 32px -10px hsl(24 95% 53% / 0.42);
+  /* Brand glow follows the Indic accent rather than the retired brand blue —
+     it is used under primary buttons, which are now turmeric. */
+  --glow-brand: 0 12px 32px -10px rgb(var(--accent-strong-rgb) / 0.45);
+  --glow-amber: 0 12px 32px -10px rgb(var(--gold-rgb) / 0.42);
 
-  /* Real font definitions (the @theme block below is inert in Tailwind v3) */
-  --font-sf-pro: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-vg-primary: 'Inter', system-ui, sans-serif;
-  --font-vg-cultural: 'Noto Sans Devanagari', serif;
+  /* Legacy font aliases, now pointing at the shared Indic stacks (defined in
+     design/indic/indic-fonts.css). Kept as aliases rather than deleted because
+     tailwind.config.ts still maps font-sans/font-vg-* to them, and hundreds of
+     components use those utilities — the indirection is what lets the type
+     change land without touching them.
+     Note --font-vg-cultural previously named a Devanagari face that no loader
+     ever fetched; aliasing it to --font-deva finally makes it real. */
+  --font-sf-pro: var(--font-body);
+  --font-vg-primary: var(--font-body);
+  --font-vg-cultural: var(--font-deva);
 }
 
 /* ===== Dark mode — class-based (next-themes toggles `.dark`) ===== */
@@ -113,8 +128,8 @@
   --elev-2: 0 1px 0 0 hsl(210 40% 98% / 0.05) inset, 0 2px 4px -2px hsl(var(--shadow-color) / 0.6), 0 8px 18px -8px hsl(var(--shadow-color) / 0.7);
   --elev-3: 0 1px 0 0 hsl(210 40% 98% / 0.06) inset, 0 6px 12px -6px hsl(var(--shadow-color) / 0.6), 0 18px 36px -14px hsl(var(--shadow-color) / 0.85);
   --elev-4: 0 1px 0 0 hsl(210 40% 98% / 0.07) inset, 0 28px 60px -22px hsl(var(--shadow-color) / 0.95), 0 10px 20px -10px hsl(var(--shadow-color) / 0.8);
-  --glow-brand: 0 14px 40px -10px hsl(217 91% 60% / 0.55);
-  --glow-amber: 0 14px 40px -10px hsl(24 95% 53% / 0.42);
+  --glow-brand: 0 14px 40px -10px rgb(var(--accent-primary-rgb) / 0.5);
+  --glow-amber: 0 14px 40px -10px rgb(var(--gold-rgb) / 0.42);
 }
 
 /* ====================================================================
@@ -168,7 +183,7 @@
     inset: 0;
     border-radius: inherit;
     padding: 1px;
-    background: linear-gradient(135deg, hsl(var(--border)) 0%, hsl(var(--border)) 38%, hsl(221 83% 53% / 0.45) 78%, hsl(24 95% 53% / 0.4) 100%);
+    background: linear-gradient(135deg, hsl(var(--border)) 0%, hsl(var(--border)) 38%, rgb(var(--accent-primary-rgb) / 0.45) 78%, rgb(var(--gold-rgb) / 0.4) 100%);
     -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
             mask-composite: exclude;
@@ -186,11 +201,11 @@
     font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: hsl(221 83% 45%);
-    background: hsl(213 100% 96%);
-    border: 1px solid hsl(221 83% 53% / 0.18);
+    color: var(--accent-contrast);
+    background: var(--accent-soft);
+    border: 1px solid rgb(var(--accent-primary-rgb) / 0.22);
   }
-  .dark .dc-eyebrow { color: hsl(213 96% 78%); background: hsl(221 60% 60% / 0.12); border-color: hsl(221 83% 60% / 0.28); }
+  .dark .dc-eyebrow { color: var(--accent-primary-dark); background: rgb(var(--accent-primary-rgb) / 0.12); border-color: rgb(var(--accent-primary-rgb) / 0.3); }
 }
 
 /* App background: soft brand auras over the base surface. */
@@ -202,15 +217,15 @@
   z-index: 0;
   pointer-events: none;
   background:
-    radial-gradient(58rem 58rem at 6% -12%, hsl(24 95% 53% / 0.10), transparent 60%),
-    radial-gradient(52rem 52rem at 102% 4%, hsl(221 83% 53% / 0.12), transparent 56%),
-    radial-gradient(46rem 46rem at 50% 118%, hsl(243 75% 59% / 0.08), transparent 60%);
+    radial-gradient(58rem 58rem at 6% -12%, rgb(var(--accent-primary-rgb) / 0.10), transparent 60%),
+    radial-gradient(52rem 52rem at 102% 4%, rgb(var(--peacock-teal-rgb) / 0.10), transparent 56%),
+    radial-gradient(46rem 46rem at 50% 118%, rgb(var(--indigo-ink-rgb) / 0.07), transparent 60%);
 }
 .dark .dc-app-bg::before {
   background:
-    radial-gradient(58rem 58rem at 6% -12%, hsl(24 95% 53% / 0.10), transparent 58%),
-    radial-gradient(52rem 52rem at 102% 4%, hsl(221 83% 60% / 0.16), transparent 56%),
-    radial-gradient(46rem 46rem at 50% 118%, hsl(243 75% 59% / 0.12), transparent 60%);
+    radial-gradient(58rem 58rem at 6% -12%, rgb(var(--accent-primary-rgb) / 0.12), transparent 58%),
+    radial-gradient(52rem 52rem at 102% 4%, rgb(var(--peacock-teal-rgb) / 0.16), transparent 56%),
+    radial-gradient(46rem 46rem at 50% 118%, rgb(var(--indigo-ink-rgb) / 0.14), transparent 60%);
 }
 
 /* Faint blueprint grid, masked to fade out — adds the "futuristic" texture. */
@@ -239,7 +254,7 @@
   @media (hover: hover) and (pointer: fine) {
     .dc-hover-lift:hover { transform: translateY(-3px); box-shadow: var(--elev-3); }
   }
-  .dc-ring-brand { box-shadow: 0 0 0 1px hsl(221 83% 53% / 0.22), var(--elev-2); }
+  .dc-ring-brand { box-shadow: 0 0 0 1px rgb(var(--accent-primary-rgb) / 0.28), var(--elev-2); }
   .text-balance { text-wrap: balance; }
   .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
   .scrollbar-hide::-webkit-scrollbar { display: none; }
@@ -258,134 +273,6 @@
   }
 }
 
-@theme inline {
-  /* Base Colors */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-
-  /* VG Educational Color System */
-  --color-vg-primary-50: var(--vg-primary-50);
-  --color-vg-primary-100: var(--vg-primary-100);
-  --color-vg-primary-200: var(--vg-primary-200);
-  --color-vg-primary-300: var(--vg-primary-300);
-  --color-vg-primary-400: var(--vg-primary-400);
-  --color-vg-primary-500: var(--vg-primary-500);
-  --color-vg-primary-600: var(--vg-primary-600);
-  --color-vg-primary-700: var(--vg-primary-700);
-  --color-vg-primary-800: var(--vg-primary-800);
-  --color-vg-primary-900: var(--vg-primary-900);
-
-  /* VG Sanskrit & Cultural Colors */
-  --color-vg-sanskrit-50: var(--vg-sanskrit-50);
-  --color-vg-sanskrit-100: var(--vg-sanskrit-100);
-  --color-vg-sanskrit-200: var(--vg-sanskrit-200);
-  --color-vg-sanskrit-300: var(--vg-sanskrit-300);
-  --color-vg-sanskrit-400: var(--vg-sanskrit-400);
-  --color-vg-sanskrit-500: var(--vg-sanskrit-500);
-  --color-vg-sanskrit-600: var(--vg-sanskrit-600);
-  --color-vg-sanskrit-700: var(--vg-sanskrit-700);
-  --color-vg-sanskrit-800: var(--vg-sanskrit-800);
-  --color-vg-sanskrit-900: var(--vg-sanskrit-900);
-
-  --color-vg-cultural-50: var(--vg-cultural-50);
-  --color-vg-cultural-100: var(--vg-cultural-100);
-  --color-vg-cultural-200: var(--vg-cultural-200);
-  --color-vg-cultural-300: var(--vg-cultural-300);
-  --color-vg-cultural-400: var(--vg-cultural-400);
-  --color-vg-cultural-500: var(--vg-cultural-500);
-  --color-vg-cultural-600: var(--vg-cultural-600);
-  --color-vg-cultural-700: var(--vg-cultural-700);
-  --color-vg-cultural-800: var(--vg-cultural-800);
-  --color-vg-cultural-900: var(--vg-cultural-900);
-
-  /* VG Semantic Colors */
-  --color-vg-success-50: var(--vg-success-50);
-  --color-vg-success-100: var(--vg-success-100);
-  --color-vg-success-500: var(--vg-success-500);
-  --color-vg-success-600: var(--vg-success-600);
-  --color-vg-success-700: var(--vg-success-700);
-
-  --color-vg-warning-50: var(--vg-warning-50);
-  --color-vg-warning-100: var(--vg-warning-100);
-  --color-vg-warning-500: var(--vg-warning-500);
-  --color-vg-warning-600: var(--vg-warning-600);
-  --color-vg-warning-700: var(--vg-warning-700);
-
-  --color-vg-error-50: var(--vg-error-50);
-  --color-vg-error-100: var(--vg-error-100);
-  --color-vg-error-500: var(--vg-error-500);
-  --color-vg-error-600: var(--vg-error-600);
-  --color-vg-error-700: var(--vg-error-700);
-
-  /* Typography System */
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-sf-pro: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-vg-primary: 'Inter', system-ui, sans-serif;
-  --font-vg-cultural: 'Noto Sans Devanagari', serif;
-
-  /* VG Typography Scale */
-  --font-size-vg-xs: var(--vg-text-xs);
-  --font-size-vg-sm: var(--vg-text-sm);
-  --font-size-vg-base: var(--vg-text-base);
-  --font-size-vg-lg: var(--vg-text-lg);
-  --font-size-vg-xl: var(--vg-text-xl);
-  --font-size-vg-2xl: var(--vg-text-2xl);
-  --font-size-vg-3xl: var(--vg-text-3xl);
-  --font-size-vg-4xl: var(--vg-text-4xl);
-  --font-size-vg-5xl: var(--vg-text-5xl);
-
-  /* VG Spacing Scale */
-  --spacing-vg-0: var(--vg-space-0);
-  --spacing-vg-1: var(--vg-space-1);
-  --spacing-vg-2: var(--vg-space-2);
-  --spacing-vg-3: var(--vg-space-3);
-  --spacing-vg-4: var(--vg-space-4);
-  --spacing-vg-5: var(--vg-space-5);
-  --spacing-vg-6: var(--vg-space-6);
-  --spacing-vg-8: var(--vg-space-8);
-  --spacing-vg-10: var(--vg-space-10);
-  --spacing-vg-12: var(--vg-space-12);
-  --spacing-vg-16: var(--vg-space-16);
-  --spacing-vg-20: var(--vg-space-20);
-
-  /* VG Shadow System */
-  --box-shadow-vg-xs: var(--vg-shadow-xs);
-  --box-shadow-vg-sm: var(--vg-shadow-sm);
-  --box-shadow-vg-md: var(--vg-shadow-md);
-  --box-shadow-vg-lg: var(--vg-shadow-lg);
-  --box-shadow-vg-xl: var(--vg-shadow-xl);
-  --box-shadow-vg-2xl: var(--vg-shadow-2xl);
-
-  /* VG Border Radius */
-  --border-radius-vg-sm: var(--vg-radius-sm);
-  --border-radius-vg-md: var(--vg-radius-md);
-  --border-radius-vg-lg: var(--vg-radius-lg);
-  --border-radius-vg-xl: var(--vg-radius-xl);
-  --border-radius-vg-2xl: var(--vg-radius-2xl);
-  --border-radius-vg-3xl: var(--vg-radius-3xl);
-
-  /* VG Animation Durations */
-  --animation-duration-vg-fast: var(--vg-duration-fast);
-  --animation-duration-vg-normal: var(--vg-duration-normal);
-  --animation-duration-vg-slow: var(--vg-duration-slow);
-  --animation-duration-vg-slower: var(--vg-duration-slower);
-
-  /* VG Custom Animations */
-  --animation-vg-fade-in: vg-fade-in var(--vg-duration-slow) ease-out;
-  --animation-vg-scale-in: vg-scale-in var(--vg-duration-normal) ease-out;
-  --animation-vg-slide-in-right: vg-slide-in-right var(--vg-duration-slow) ease-out;
-  --animation-vg-slide-in-left: vg-slide-in-left var(--vg-duration-slow) ease-out;
-  --animation-vg-educational-pulse: vg-educational-pulse 2s infinite;
-  --animation-vg-cultural-glow: vg-cultural-glow 3s ease-in-out infinite;
-  --animation-vg-float: vg-float 3s ease-in-out infinite;
-
-  /* VG Backdrop Blur */
-  --backdrop-blur-vg-sm: blur(var(--vg-blur-sm));
-  --backdrop-blur-vg-md: blur(var(--vg-blur-md));
-  --backdrop-blur-vg-lg: blur(var(--vg-blur-lg));
-  --backdrop-blur-vg-xl: blur(var(--vg-blur-xl));
-}
 
 /* Dark theme is class-based above (.dark). prefers-color-scheme is no longer
    used for tokens so the next-themes toggle controls the full palette. */
@@ -399,8 +286,8 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-::selection { background: hsl(221 83% 53% / 0.18); }
-.dark ::selection { background: hsl(217 91% 60% / 0.30); }
+::selection { background: rgb(var(--accent-primary-rgb) / 0.24); }
+.dark ::selection { background: rgb(var(--accent-primary-rgb) / 0.32); }
 
 /* Apple-inspired animations */
 @keyframes fadeIn {
@@ -459,26 +346,27 @@ html {
 
 /* Focus styles for accessibility */
 .focus-ring:focus {
-  outline: 2px solid var(--apple-blue);
+  outline: 2px solid var(--accent-strong);
   outline-offset: 2px;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar — warm neutrals rather than the default cool greys, so a
+   scrolled page doesn't frame the Indic canvas in slate. */
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: rgb(var(--temple-stone-rgb) / 0.08);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: rgb(var(--temple-stone-rgb) / 0.35);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: rgb(var(--temple-stone-rgb) / 0.55);
 }
 
 /* Line clamp utilities */
