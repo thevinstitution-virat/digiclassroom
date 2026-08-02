@@ -85,8 +85,14 @@ export const auth = betterAuth({
     // Public URL of the auth handler (api.<domain>). Explicit so generated
     // links and OAuth callbacks resolve correctly behind the split.
     baseURL: BETTER_AUTH_URL,
+    // The `db` pool above is Postgres (packages/core/src/db/index.ts, migrated off
+    // mysql2 in Phase 4) and every table this adapter touches (user/session/account/
+    // verification) is already pgTable with native boolean columns — this provider
+    // flag was never updated to match. It only gated which fallback path the adapter
+    // used (extra round-trips instead of native RETURNING/ilike), so flipping it is
+    // a pure correctness/perf fix, not a schema or data change.
     database: drizzleAdapter(db, {
-        provider: 'mysql',
+        provider: 'pg',
         schema
     }),
     // A user who signed up here directly and later arrives via Vidyaverse must
