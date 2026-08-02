@@ -24,8 +24,16 @@ import { LoadingButton } from '@/components/ui/loading-button'
 import { StatCard } from '@/components/ui/stat-card'
 import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 import { StudentNoticesWidget, StudentHomeworkWidget } from './ClassroomWidgets'
+import { MandalaSVG } from '@/design/indic/motifs/mandala-svgs'
 
 type Accent = 'brand' | 'orange' | 'blue' | 'indigo' | 'violet' | 'green' | 'red' | 'cyan'
+
+// Three curated, token-backed gradients (same --accent-primary/--accent-strong
+// family as the sidebar) standing in for the old one-off-per-card rainbow.
+// Cycled across cards instead of every tile getting its own arbitrary hue.
+const CHIP_PRIMARY = 'from-[var(--accent-primary)] to-[var(--accent-strong)]'
+const CHIP_COOL = 'from-[var(--peacock-teal)] to-[var(--indigo-deep)]'
+const CHIP_WARM = 'from-[var(--gold)] to-[var(--accent-strong)]'
 
 export default function UserDashboard() {
   const { user } = useBetterAuthUser()
@@ -39,33 +47,33 @@ export default function UserDashboard() {
     chip: string
     highlight: string
   }[] = [
-    { title: 'AI Tutor Chat', description: 'Get instant, step-by-step help with any topic', icon: MessageSquare, href: '/dashboard/user/ai-tutor', chip: 'from-violet-500 to-indigo-600', highlight: 'AI Powered' },
-    { title: 'Study Materials', description: 'Access NCERT-aligned resources and notes', icon: BookOpen, href: '/dashboard/user/materials', chip: 'from-emerald-500 to-teal-600', highlight: 'Comprehensive' },
-    { title: 'Practest Engine', description: 'Take adaptive, exam-style assessments', icon: Brain, href: '/dashboard/user/practest', chip: 'from-blue-500 to-cyan-500', highlight: 'Smart Testing' },
-    { title: 'Productivity Tools', description: 'Plan, focus and study more efficiently', icon: TrendingUp, href: '/dashboard/user/productivity', chip: 'from-orange-500 to-red-500', highlight: 'Efficiency' },
-    { title: 'Shabdakosh', description: 'English–Hindi dictionary with deep references', icon: BookMarked, href: '/dashboard/user/dictionary', chip: 'from-pink-500 to-rose-600', highlight: 'Reference' },
-    { title: 'Mitram Assessment', description: 'Personalised psychological & aptitude insight', icon: Heart, href: '/dashboard/user/mitram', chip: 'from-teal-500 to-blue-600', highlight: 'Personalised' },
+    { title: 'AI Tutor Chat', description: 'Get instant, step-by-step help with any topic', icon: MessageSquare, href: '/dashboard/user/ai-tutor', chip: CHIP_PRIMARY, highlight: 'AI Powered' },
+    { title: 'Study Materials', description: 'Access NCERT-aligned resources and notes', icon: BookOpen, href: '/dashboard/user/materials', chip: CHIP_COOL, highlight: 'Comprehensive' },
+    { title: 'Practest Engine', description: 'Take adaptive, exam-style assessments', icon: Brain, href: '/dashboard/user/practest', chip: CHIP_WARM, highlight: 'Smart Testing' },
+    { title: 'Productivity Tools', description: 'Plan, focus and study more efficiently', icon: TrendingUp, href: '/dashboard/user/productivity', chip: CHIP_PRIMARY, highlight: 'Efficiency' },
+    { title: 'Shabdakosh', description: 'English–Hindi dictionary with deep references', icon: BookMarked, href: '/dashboard/user/dictionary', chip: CHIP_COOL, highlight: 'Reference' },
+    { title: 'Mitram Assessment', description: 'Personalised psychological & aptitude insight', icon: Heart, href: '/dashboard/user/mitram', chip: CHIP_WARM, highlight: 'Personalised' },
   ]
 
   const userStats: { label: string; value: string; icon: typeof Flame; accent: Accent; description: string }[] = [
-    { label: 'Study Streak', value: '12 days', icon: Flame, accent: 'orange', description: 'Keep it going!' },
+    { label: 'Study Streak', value: '12 days', icon: Flame, accent: 'brand', description: 'Keep it going!' },
     { label: 'Courses Active', value: '5', icon: BookOpen, accent: 'blue', description: 'Across 3 subjects' },
-    { label: 'AI Sessions', value: '47', icon: Brain, accent: 'violet', description: 'This month' },
+    { label: 'AI Sessions', value: '47', icon: Brain, accent: 'brand', description: 'This month' },
     { label: 'Avg Score', value: '89%', icon: Trophy, accent: 'green', description: '+4% vs last month' },
   ]
 
   const learningStats = [
-    { label: 'Completed', value: '24', icon: CheckCircle2, chip: 'from-emerald-500 to-teal-600' },
-    { label: 'In Progress', value: '8', icon: Clock, chip: 'from-blue-500 to-cyan-600' },
-    { label: 'Achievements', value: '15', icon: Award, chip: 'from-violet-500 to-fuchsia-600' },
-    { label: 'Study Hours', value: '127', icon: Timer, chip: 'from-orange-500 to-amber-600' },
+    { label: 'Completed', value: '24', icon: CheckCircle2, chip: CHIP_PRIMARY },
+    { label: 'In Progress', value: '8', icon: Clock, chip: CHIP_COOL },
+    { label: 'Achievements', value: '15', icon: Award, chip: CHIP_WARM },
+    { label: 'Study Hours', value: '127', icon: Timer, chip: CHIP_PRIMARY },
   ]
 
   const recentActivities = [
-    { title: 'Completed Math Chapter 5', description: 'Algebra and Functions', time: '2 hours ago', icon: CheckCircle2, chip: 'from-emerald-500 to-teal-600', score: '92%', progress: '100%' },
-    { title: 'AI Tutor Session', description: 'Physics — Mechanics', time: '1 day ago', icon: MessageSquare, chip: 'from-violet-500 to-indigo-600', duration: '45 min' },
-    { title: 'Practest Assessment', description: 'Chemistry Quiz', time: '2 days ago', icon: Brain, chip: 'from-blue-500 to-cyan-600', score: '85%' },
-    { title: 'Study Material Review', description: 'Biology Notes', time: '3 days ago', icon: BookOpen, chip: 'from-orange-500 to-amber-600', progress: '75%' },
+    { title: 'Completed Math Chapter 5', description: 'Algebra and Functions', time: '2 hours ago', icon: CheckCircle2, chip: CHIP_PRIMARY, score: '92%', progress: '100%' },
+    { title: 'AI Tutor Session', description: 'Physics — Mechanics', time: '1 day ago', icon: MessageSquare, chip: CHIP_COOL, duration: '45 min' },
+    { title: 'Practest Assessment', description: 'Chemistry Quiz', time: '2 days ago', icon: Brain, chip: CHIP_WARM, score: '85%' },
+    { title: 'Study Material Review', description: 'Biology Notes', time: '3 days ago', icon: BookOpen, chip: CHIP_PRIMARY, progress: '75%' },
   ]
 
   const firstName = user?.name?.split(' ')[0] || 'Student'
@@ -74,8 +82,13 @@ export default function UserDashboard() {
     <div className="space-y-8">
       {/* Hero / welcome banner */}
       <section className="dc-animate-rise relative overflow-hidden rounded-3xl border border-border/60 bg-card/70 p-6 shadow-elev-3 backdrop-blur-xl sm:p-8">
-        <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-blue-500/15 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-orange-400/15 blur-3xl" />
+        <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-[var(--peacock-teal)]/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-[var(--accent-primary)]/15 blur-3xl" />
+        {/* Same rotating-mandala watermark as PDLMS's dashboard hero and DGCL's own
+            auth pages — restrained, low-opacity, purely decorative. */}
+        <div className="pointer-events-none absolute -right-24 top-1/2 h-[26rem] w-[26rem] -translate-y-1/2 opacity-[0.08]">
+          <MandalaSVG className="h-full w-full" />
+        </div>
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="max-w-2xl">
             <span className="dc-eyebrow">
@@ -159,7 +172,7 @@ export default function UserDashboard() {
         <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-elev-2 lg:col-span-2">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-md">
+              <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${CHIP_PRIMARY} text-white shadow-md`}>
                 <Activity className="h-5 w-5" />
               </div>
               <div>
@@ -208,7 +221,7 @@ export default function UserDashboard() {
         <div className="space-y-6">
           <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-elev-2">
             <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 text-white shadow-md">
+              <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${CHIP_COOL} text-white shadow-md`}>
                 <BarChart3 className="h-5 w-5" />
               </div>
               <div>
@@ -241,7 +254,7 @@ export default function UserDashboard() {
                 variant="secondary"
                 size="lg"
                 onClick={() => router.push('/dashboard/user/ai-tutor')}
-                className="mt-5 w-full border-0 bg-white text-blue-700 hover:bg-white/90"
+                className="mt-5 w-full border-0 bg-white text-[var(--accent-strong)] hover:bg-white/90"
               >
                 Start AI Session <Brain className="h-5 w-5" />
               </LoadingButton>

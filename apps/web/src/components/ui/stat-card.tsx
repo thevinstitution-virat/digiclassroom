@@ -6,7 +6,9 @@ import { cn } from '@/lib/utils'
 type Accent = 'brand' | 'orange' | 'blue' | 'indigo' | 'violet' | 'green' | 'red' | 'cyan'
 
 const ACCENTS: Record<Accent, { chip: string; bar: string; chipShadow: string }> = {
-  brand:  { chip: 'from-orange-500 to-blue-600',   bar: 'from-orange-500 via-indigo-500 to-blue-600', chipShadow: 'shadow-[0_8px_20px_-6px_rgba(37,99,235,0.5)]' },
+  // brand = this app's actual accent (turmeric in DGCL, saffron in PDLMS, etc.)
+  // via the Indic tokens, not a hardcoded orange/blue that happened to look similar.
+  brand:  { chip: 'from-[var(--accent-primary)] to-[var(--accent-strong)]', bar: 'from-[var(--gold)] via-[var(--accent-primary)] to-[var(--accent-strong)]', chipShadow: 'shadow-[0_8px_20px_-6px_rgb(var(--accent-strong-rgb)/0.5)]' },
   orange: { chip: 'from-orange-400 to-orange-600', bar: 'from-orange-400 to-orange-600',               chipShadow: 'shadow-[0_8px_20px_-6px_rgba(249,115,22,0.5)]' },
   blue:   { chip: 'from-blue-500 to-blue-700',     bar: 'from-blue-400 to-blue-600',                   chipShadow: 'shadow-[0_8px_20px_-6px_rgba(37,99,235,0.5)]' },
   indigo: { chip: 'from-indigo-500 to-violet-600', bar: 'from-indigo-400 to-violet-600',               chipShadow: 'shadow-[0_8px_20px_-6px_rgba(99,102,241,0.5)]' },
