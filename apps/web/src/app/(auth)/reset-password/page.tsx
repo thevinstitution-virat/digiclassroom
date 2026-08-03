@@ -4,7 +4,12 @@ import React, { useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { resetPassword } from '@/auth/client'
-import { GraduationCap, Lock, Eye, EyeOff, AlertCircle, Loader2, CheckCircle } from 'lucide-react'
+import { Lock, Eye, EyeOff, AlertCircle, Loader2, CheckCircle } from 'lucide-react'
+// Shared Indic motifs, vendored from PDLMS — same lotus backdrop and card
+// treatment as sign-in/sign-up/forgot-password, so the whole auth corridor
+// feels continuous.
+import { AuthBackdrop, authCardClassName } from '@/design/indic/motifs/auth-backdrop'
+import { MandalaMark } from '@/design/indic/motifs/mandala-mark'
 
 function ResetPasswordForm() {
     const router = useRouter()
@@ -70,7 +75,7 @@ function ResetPasswordForm() {
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-500/15">
                     <AlertCircle className="h-8 w-8 text-rose-500" />
                 </div>
-                <h1 className="mb-2 text-2xl font-bold text-foreground">Invalid reset link</h1>
+                <h1 className="mb-2 text-2xl text-foreground">Invalid reset link</h1>
                 <p className="mb-6 text-muted-foreground">
                     This password reset link is invalid or has expired. Please request a new one.
                 </p>
@@ -90,7 +95,7 @@ function ResetPasswordForm() {
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/15">
                     <CheckCircle className="h-8 w-8 text-emerald-500" />
                 </div>
-                <h1 className="mb-2 text-2xl font-bold text-foreground">Password reset!</h1>
+                <h1 className="mb-2 text-2xl text-foreground">Password reset!</h1>
                 <p className="mb-6 text-muted-foreground">
                     Your password has been successfully reset. Redirecting you to sign in...
                 </p>
@@ -107,7 +112,7 @@ function ResetPasswordForm() {
     return (
         <>
             <div className="mb-6 text-center">
-                <h1 className="text-2xl font-bold text-foreground">Reset password</h1>
+                <h1 className="text-2xl text-foreground">Reset password</h1>
                 <p className="mt-1 text-muted-foreground">Enter your new password below</p>
             </div>
 
@@ -197,36 +202,25 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
     return (
-        <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-orange-50/70 via-background to-indigo-50/60 p-5 dark:from-slate-950 dark:via-background dark:to-indigo-950/40">
-            {/* Background decorations */}
-            <div className="pointer-events-none absolute inset-0 overflow-hidden">
-                <div className="absolute -right-40 -top-40 h-80 w-80 rounded-full bg-orange-400/20 blur-3xl dark:bg-orange-500/10" />
-                <div className="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-blue-400/20 blur-3xl dark:bg-blue-500/15" />
-            </div>
-
-            <div className="relative w-full max-w-md">
+        <AuthBackdrop>
+            <div className={`relative w-full max-w-md ${authCardClassName} p-6 sm:p-8`}>
                 {/* Logo */}
                 <div className="mb-8 text-center">
-                    <Link href="/" className="group inline-flex items-center gap-2.5">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 via-indigo-500 to-blue-600 shadow-lg ring-1 ring-white/20 transition-shadow duration-300 group-hover:shadow-xl">
-                            <GraduationCap className="h-6 w-6 text-white" />
-                        </div>
-                        <span className="text-2xl font-bold dc-gradient-text">Digi Classroom</span>
+                    <Link href="/" className="inline-flex flex-col items-center gap-3">
+                        <MandalaMark size={64} />
+                        <span className="text-lg font-bold tracking-tight text-foreground">Digi Classroom</span>
                     </Link>
                 </div>
 
-                {/* Card */}
-                <div className="rounded-2xl border border-border/70 bg-card/90 p-8 shadow-elev-3 backdrop-blur-xl">
-                    <Suspense fallback={
-                        <div className="py-8 text-center">
-                            <Loader2 className="mx-auto mb-2 h-8 w-8 animate-spin text-primary" />
-                            <p className="text-muted-foreground">Loading...</p>
-                        </div>
-                    }>
-                        <ResetPasswordForm />
-                    </Suspense>
-                </div>
+                <Suspense fallback={
+                    <div className="py-8 text-center">
+                        <Loader2 className="mx-auto mb-2 h-8 w-8 animate-spin text-primary" />
+                        <p className="text-muted-foreground">Loading...</p>
+                    </div>
+                }>
+                    <ResetPasswordForm />
+                </Suspense>
             </div>
-        </div>
+        </AuthBackdrop>
     )
 }
