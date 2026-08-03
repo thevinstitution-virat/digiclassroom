@@ -1,6 +1,6 @@
 /* GENERATED — canonical: PDLMS_Pro/shared/design/indic/mandala-svgs.tsx
    DO NOT EDIT HERE. Edit the canonical file and re-run sync-indic.mjs.
-   sha256:82742ecfa638c32b */
+   sha256:ffd267db51ebfb89 */
 export function MandalaSVG({ className = "" }: { className?: string }) {
   const petals12 = Array.from({ length: 12 }, (_, i) => i * 30)
   const petals8 = Array.from({ length: 8 }, (_, i) => i * 45)
