@@ -149,26 +149,41 @@ export default function BaseSidebar({
         })}
       </nav>
 
-      {/* Profile footer */}
+      {/* Profile footer — sign-out is its own always-visible icon button
+          (not buried in the dropdown below), because the dropdown trigger is
+          intentionally inert while collapsed: with only the profile button
+          there, a collapsed sidebar had no way to reach it at all. */}
       {user && (
         <div className="relative border-t border-gray-200/70 p-3 dark:border-white/10" ref={dropdownRef}>
-          <button
-            onClick={() => !isCollapsed && setShowProfile((v) => !v)}
-            className={`flex w-full items-center rounded-xl p-1.5 transition-colors ${isCollapsed ? 'justify-center' : 'gap-3'} ${showProfile ? 'bg-gray-100 dark:bg-white/[0.06]' : 'hover:bg-gray-100/70 dark:hover:bg-white/[0.04]'}`}
-          >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-gray-700 to-gray-900 text-xs font-bold text-white dark:from-gray-600 dark:to-gray-800">
-              {initials}
-            </div>
-            {!isCollapsed && (
-              <>
-                <div className="min-w-0 flex-1 text-left">
-                  <p className="truncate text-xs font-semibold text-gray-900 dark:text-white">{user.firstName} {user.lastName}</p>
-                  <p className="truncate text-[11px] text-gray-400">{user.emailAddress}</p>
-                </div>
-                <ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${showProfile ? 'rotate-180' : ''}`} />
-              </>
+          <div className={`flex items-center gap-1.5 ${isCollapsed ? 'flex-col' : ''}`}>
+            <button
+              onClick={() => !isCollapsed && setShowProfile((v) => !v)}
+              className={`flex min-w-0 flex-1 items-center rounded-xl p-1.5 transition-colors ${isCollapsed ? 'w-full justify-center' : 'gap-3'} ${showProfile ? 'bg-gray-100 dark:bg-white/[0.06]' : 'hover:bg-gray-100/70 dark:hover:bg-white/[0.04]'}`}
+            >
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-gray-700 to-gray-900 text-xs font-bold text-white dark:from-gray-600 dark:to-gray-800">
+                {initials}
+              </div>
+              {!isCollapsed && (
+                <>
+                  <div className="min-w-0 flex-1 text-left">
+                    <p className="truncate text-xs font-semibold text-gray-900 dark:text-white">{user.firstName} {user.lastName}</p>
+                    <p className="truncate text-[11px] text-gray-400">{user.emailAddress}</p>
+                  </div>
+                  <ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${showProfile ? 'rotate-180' : ''}`} />
+                </>
+              )}
+            </button>
+            {showLogout && (
+              <button
+                onClick={handleLogout}
+                aria-label="Sign out"
+                title="Sign out"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
             )}
-          </button>
+          </div>
 
           {!isCollapsed && showProfile && (
             <div className="absolute bottom-full left-3 right-3 mb-2 overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-xl dark:border-white/10 dark:bg-gray-900">
@@ -183,12 +198,6 @@ export default function BaseSidebar({
                   className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-600 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5">
                   <Settings className="h-4 w-4" /> Settings
                 </Link>
-              )}
-              {showLogout && (
-                <button onClick={() => { setShowProfile(false); handleLogout() }}
-                  className="flex w-full items-center gap-2.5 border-t border-gray-100 px-3 py-2.5 text-sm text-red-600 transition-colors hover:bg-red-50 dark:border-white/10 dark:text-red-400 dark:hover:bg-red-500/10">
-                  <LogOut className="h-4 w-4" /> Sign out
-                </button>
               )}
             </div>
           )}
