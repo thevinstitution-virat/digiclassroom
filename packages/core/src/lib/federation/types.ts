@@ -79,9 +79,14 @@ export function mapGlobalRole(globalRole: string | undefined | null): Role | nul
       return 'super_admin';
 
     case 'admin':
-    case 'support':
     case 'platform_staff':
       return 'admin';
+
+    // 'support' (Vidyaverse's internal customer-support staff role) has no
+    // DCP equivalent. It used to fall into the 'admin' case above — an
+    // unjustified inference (a support agent isn't a DCP admin). Falls
+    // through to null like any other unmapped value; jit.ts logs it
+    // explicitly so it isn't silently absorbed.
 
     // All other Vidyaverse global roles (teacher, student, etc.)
     // should NOT elevate to platform staff — return null to fall through
