@@ -9,8 +9,21 @@
 //
 // The claim contract (global_role + memberships[]) is emitted by the Vidyaverse
 // IdP — see Vidyaverse Pro/backend/src/modules/oidc/claims-resolver.ts and
-// docs/identity-federation-design.md §6, §9. This mirrors the working PDLMS
-// implementation (PDLMS_Pro/lib/federation/jit.ts).
+// docs/identity-federation-design.md §6, §9.
+//
+// CORRECTION (2026-08-05): the previous version of this comment claimed this
+// "mirrors the working PDLMS implementation" — false. At the time this was
+// written, PDLMS had NO global_role handling at all (it only synced tenant
+// memberships), and this file's own super_admin write path had never been
+// executed against a live DB. It isn't a reference implementation; it's an
+// independent, unverified attempt with the identical flaw PDLMS had: the
+// super_admin write below hits trg_protect_super_admin (same trigger, same
+// design, on all three apps' user tables) and `digiclassroom_app` — this
+// app's own DB role — is not a Postgres superuser. Verified empirically
+// against PDLMS's copy of the trigger, including that a SECURITY DEFINER
+// function does NOT launder the is_superuser check, so there is no way to
+// grant super_admin from application code, full stop. See this file's
+// syncGlobalRole() for how that's now handled: detect-and-audit, not write.
 
 import { db } from '@/db';
 import {
@@ -28,7 +41,14 @@ import {
   type VidyaverseMembershipClaim,
 } from './types';
 import type { Role } from '@/auth/permissions';
-import { isDesignatedSuperAdmin } from '@/lib/auth/super-admin-guard';
+
+/** OIDC subs (Vidyaverse `sub`, i.e. this row's Account.accountId) allowed to
+ *  hold DCP's super_admin role. Sub, not email — an email is mutable at the
+ *  IdP; the sub is what the Account row already keys on. */
+const SUPER_ADMIN_SUBS = (process.env.FEDERATION_SUPER_ADMIN_SUBS ?? '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 // Providers that emit the shared OIDC federation contract. `vdl` is the second
 // control plane (inert until its env vars exist) — both emit identical claims.
@@ -129,23 +149,47 @@ export async function syncFederatedSession(userId: string): Promise<JitSyncResul
 
   // ── Global role precedence: global_role ?? primary membership ?? existing ?? student
   const primaryOrgRole = memberships[0]?.role;
-  let resolvedGlobalRole: Role =
-    mapGlobalRole(claims.global_role) ??
-    mapPrimaryMembershipRole(primaryOrgRole) ??
-    existingRole ??
-    'student';
+  const rawGlobalRoleClaim = claims.global_role;
+  const globalRoleMapped = mapGlobalRole(rawGlobalRoleClaim);
 
-  // SECURITY: federation can NEVER confer super_admin on a non-owner email, no
-  // matter what the hub's global_role claim asserts.
-  if (resolvedGlobalRole === 'super_admin' && !isDesignatedSuperAdmin(existingUser.email)) {
-    const fromMembership = mapPrimaryMembershipRole(primaryOrgRole);
-    resolvedGlobalRole = (fromMembership && fromMembership !== 'super_admin' ? fromMembership : 'student') as Role;
+  if (rawGlobalRoleClaim && rawGlobalRoleClaim.toLowerCase() === 'support') {
+    // Vidyaverse's `support` (platform customer-support staff) has no DCP
+    // equivalent. The old map silently promoted it to 'admin' — an
+    // unjustified inference. Now it falls through to membership/existing
+    // role like any other unmapped claim, but visibly, not silently.
+    console.warn(`[federation] global_role="support" has no DCP equivalent for user=${userId} — not elevating`);
   }
+
+  // super_admin can NEVER be written by this sync — see the file-header note.
+  // trg_protect_super_admin requires an actual Postgres-superuser session;
+  // digiclassroom_app doesn't have one, and neither does a SECURITY DEFINER
+  // function (verified). Detect the claim and log it; the grant stays a
+  // manual, deliberate escape-hatch transaction until Phase 1 removes the
+  // local role column (see TRIO_RESET_PROGRESS.md, Step 0/Step 1.3).
+  if (globalRoleMapped === 'super_admin') {
+    if (existingRole !== 'super_admin') {
+      const allowlisted = SUPER_ADMIN_SUBS.includes(account.accountId);
+      console.error(
+        `[federation] super_admin claim for sub=${account.accountId} user=${userId} — ` +
+          (allowlisted
+            ? 'allowlisted but cannot be auto-granted (manual escape-hatch elevation required)'
+            : 'NOT in FEDERATION_SUPER_ADMIN_SUBS — refusing'),
+      );
+    }
+    // Fall back to membership-derived role for the actual write below, same
+    // as the old email-based clamp did, minus the doomed super_admin write.
+  }
+
+  let resolvedGlobalRole: Role =
+    globalRoleMapped === 'super_admin'
+      ? (mapPrimaryMembershipRole(primaryOrgRole) ?? existingRole ?? 'student')
+      : (globalRoleMapped ?? mapPrimaryMembershipRole(primaryOrgRole) ?? existingRole ?? 'student');
 
   // Only move the global role when a claim explicitly resolves one, and never
   // silently downgrade an existing super_admin/admin.
   const claimResolvedRole =
-    mapGlobalRole(claims.global_role) !== null || mapPrimaryMembershipRole(primaryOrgRole) !== null;
+    (globalRoleMapped !== null && globalRoleMapped !== 'super_admin') ||
+    mapPrimaryMembershipRole(primaryOrgRole) !== null;
   const protectedRole = existingRole === 'super_admin' || existingRole === 'admin';
 
   if (claimResolvedRole && !protectedRole && resolvedGlobalRole !== existingRole) {
