@@ -1,6 +1,6 @@
 /* GENERATED — canonical: PDLMS_Pro/shared/design/indic/indic-design-system.css
    DO NOT EDIT HERE. Edit the canonical file and re-run sync-indic.mjs.
-   sha256:25ec922357c08a2a */
+   sha256:0525a9e668446da4 */
 /* ============================================================
    INDIC DESIGN SYSTEM — Indian-Inspired UI Foundation
    Philosophy: "Familiar, legible, modern — grounded in India 
@@ -412,14 +412,19 @@ h3[data-heading='label'] {
   border-right: 1px solid rgb(var(--gold-rgb) / 0.1);
 }
 
-/* ----- Indic Sidebar Theme (Light — Educational) ----- */
+/* ----- Indic Sidebar Theme (Light — Educational) -----
+   Accent-driven (--accent-primary/--accent-strong), not the raw saffron
+   pigment — so the active-item highlight matches each app's own accent
+   (kumkum on Vidyaverse, turmeric on DigiClassroom) instead of always
+   rendering saffron. On PDLMS --accent-primary *is* saffron, so this is a
+   no-op there. */
 .sidebar-indic {
   background: linear-gradient(180deg,
       var(--parchment) 0%,
       var(--ivory-cream) 40%,
       var(--sand-light) 100%);
-  border-right: 2px solid rgb(var(--deep-saffron-rgb) / 0.18);
-  box-shadow: 4px 0 24px rgb(var(--deep-saffron-rgb) / 0.06);
+  border-right: 2px solid rgb(var(--accent-primary-rgb) / 0.18);
+  box-shadow: 4px 0 24px rgb(var(--accent-primary-rgb) / 0.06);
 }
 
 .dark .sidebar-indic {
@@ -427,25 +432,25 @@ h3[data-heading='label'] {
       var(--slate-night) 0%,
       var(--slate-blue) 40%,
       var(--ocean-deep) 100%);
-  border-right: 2px solid rgb(var(--deep-saffron-rgb) / 0.15);
+  border-right: 2px solid rgb(var(--accent-primary-rgb) / 0.15);
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2);
 }
 
 .sidebar-indic-active {
   background: linear-gradient(90deg,
-      rgb(var(--deep-saffron-rgb) / 0.12) 0%,
-      rgb(var(--saffron-rgb) / 0.08) 100%);
-  border-left: 3px solid var(--deep-saffron);
+      rgb(var(--accent-primary-rgb) / 0.12) 0%,
+      rgb(var(--accent-strong-rgb) / 0.08) 100%);
+  border-left: 3px solid var(--accent-primary);
   color: var(--night-ink);
-  box-shadow: 0 2px 12px rgb(var(--deep-saffron-rgb) / 0.1);
+  box-shadow: 0 2px 12px rgb(var(--accent-primary-rgb) / 0.1);
 }
 
 .dark .sidebar-indic-active {
   background: linear-gradient(90deg,
-      rgb(var(--deep-saffron-rgb) / 0.18) 0%,
-      rgb(var(--saffron-rgb) / 0.1) 100%);
+      rgb(var(--accent-primary-rgb) / 0.18) 0%,
+      rgb(var(--accent-strong-rgb) / 0.1) 100%);
   color: var(--ivory-cream);
-  box-shadow: 0 2px 16px rgb(var(--deep-saffron-rgb) / 0.15);
+  box-shadow: 0 2px 16px rgb(var(--accent-primary-rgb) / 0.15);
 }
 
 .sidebar-indic-inactive {
@@ -461,17 +466,17 @@ h3[data-heading='label'] {
 }
 
 .sidebar-indic-inactive:hover {
-  background: rgb(var(--deep-saffron-rgb) / 0.06);
+  background: rgb(var(--accent-primary-rgb) / 0.06);
   border-color: transparent;
-  border-left-color: rgb(var(--deep-saffron-rgb) / 0.4);
+  border-left-color: rgb(var(--accent-primary-rgb) / 0.4);
   color: var(--night-ink);
-  box-shadow: 0 1px 8px rgb(var(--deep-saffron-rgb) / 0.08);
+  box-shadow: 0 1px 8px rgb(var(--accent-primary-rgb) / 0.08);
 }
 
 .dark .sidebar-indic-inactive:hover {
-  background: rgb(var(--deep-saffron-rgb) / 0.1);
+  background: rgb(var(--accent-primary-rgb) / 0.1);
   color: var(--ivory-cream);
-  box-shadow: 0 1px 8px rgb(var(--deep-saffron-rgb) / 0.12);
+  box-shadow: 0 1px 8px rgb(var(--accent-primary-rgb) / 0.12);
 }
 
 /* ----- Indian Decorative Motifs ----- */

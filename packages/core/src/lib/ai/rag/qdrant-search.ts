@@ -31,6 +31,16 @@ export interface QdrantSearchOptions {
    * NCERT base content is ingested untagged, so `organization_id` is absent on those points.
    */
   organizationId?: string | null;
+  /**
+   * Shared cross-repo curriculum taxonomy -- an institute's curriculum scope
+   * (Vidyaverse-hosted Taxonomy Service, resolved by the caller -- see
+   * lib/taxonomy/client.ts). Undefined/empty means no scoping is applied (today's
+   * behavior, unfiltered by taxonomy). Present means: a chunk matches if its book is
+   * tagged onto ANY of these node ids, OR if it carries no taxonomy tags at all --
+   * legacy/untagged content stays retrievable rather than silently disappearing the
+   * day this ships, mirroring the `organization_id is_empty` convention above.
+   */
+  taxonomyScopeNodeIds?: string[];
 }
 
 export interface QdrantSearchResult {
@@ -451,6 +461,19 @@ export class QdrantRAGSearch {
     const orgCondition = this.buildOrgFilterCondition(options);
     if (orgCondition) {
       mustConditions.push(orgCondition);
+    }
+
+    // Shared cross-repo curriculum taxonomy scope. Same shape as the org condition
+    // above (a `should` nested inside `must`, so it narrows without ever being able
+    // to override org isolation) -- absent when the caller has no institute scope to
+    // apply, which is the common case until Phase 5 wires a real caller.
+    if (options.taxonomyScopeNodeIds && options.taxonomyScopeNodeIds.length > 0) {
+      mustConditions.push({
+        should: [
+          { key: 'taxonomy_node_ids', match: { any: options.taxonomyScopeNodeIds } },
+          { is_empty: { key: 'taxonomy_node_ids' } },
+        ],
+      });
     }
 
     console.log('ðŸ” FILTER DEBUG: Building educational filter with options:', {
@@ -953,6 +976,11 @@ export class QdrantRAGSearch {
         console.log(`âœ… Collection ${this.collectionName} created successfully`);
       } else {
         console.log(`â™»ï¸ Collection ${this.collectionName} already exists`);
+        // A field added to the payload after the collection first existed (e.g.
+        // taxonomy_node_ids) needs its index created here too -- the create-collection
+        // branch above only runs once, on first-ever boot, so without this an index
+        // added later would silently never apply to an already-live collection.
+        await this.createPayloadIndexes();
       }
 
       // ðŸ›¡ï¸ ENHANCED: Cache the schema information
@@ -989,7 +1017,11 @@ export class QdrantRAGSearch {
       // Hierarchical fields for multi-level chunking
       { field: 'chunk_level', type: 'keyword' }, // atomic, paragraph, section
       { field: 'parent_id', type: 'keyword' },
-      { field: 'chunk_index', type: 'integer' }
+      { field: 'chunk_index', type: 'integer' },
+      // Shared cross-repo curriculum taxonomy -- every node a chunk's book is tagged
+      // onto (primary + cross-listed). See buildEducationalFilter's taxonomy
+      // condition below.
+      { field: 'taxonomy_node_ids', type: 'keyword' }
     ];
 
     for (const index of indexes) {

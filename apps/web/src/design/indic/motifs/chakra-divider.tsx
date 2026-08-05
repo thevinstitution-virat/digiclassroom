@@ -1,6 +1,6 @@
 /* GENERATED — canonical: PDLMS_Pro/shared/design/indic/chakra-divider.tsx
    DO NOT EDIT HERE. Edit the canonical file and re-run sync-indic.mjs.
-   sha256:dcd3741b4fef90dc */
+   sha256:e304eab2d952491f */
 /**
  * A slow-spinning Ashoka-chakra divider with golden filigree rules on each side.
  * Used between landing sections to reinforce the Indic visual identity.

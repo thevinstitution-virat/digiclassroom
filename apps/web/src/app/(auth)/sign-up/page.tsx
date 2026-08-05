@@ -6,7 +6,12 @@ import { toAppUrl } from '@/utils/auth-redirect'
 import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Eye, EyeOff, Mail, Lock, User, Sparkles, GraduationCap, BrainCircuit, ClipboardCheck, Rocket } from 'lucide-react'
+import { Eye, EyeOff, Mail, Lock, User, Sparkles, BrainCircuit, ClipboardCheck, Rocket } from 'lucide-react'
+// Shared Indic motifs, vendored from PDLMS — same lotus backdrop, brand mark
+// and card treatment as sign-in, so the two screens feel like one corridor.
+import { AuthBackdrop, authCardClassName } from '@/design/indic/motifs/auth-backdrop'
+import { MandalaSVG } from '@/design/indic/motifs/mandala-svgs'
+import { MandalaMark } from '@/design/indic/motifs/mandala-mark'
 
 const HIGHLIGHTS = [
   { icon: BrainCircuit, title: 'AI tutor that cites the textbook', desc: 'Every answer grounded in your NCERT book — with the exact page.' },
@@ -92,38 +97,31 @@ function SignUpForm() {
 
     return (
         <div className="min-h-screen lg:grid lg:grid-cols-[1.05fr_1fr]">
-            {/* ── Brand / marketing panel (desktop) ── */}
-            <aside className="relative hidden overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 p-12 text-white lg:flex lg:flex-col lg:justify-between xl:p-16">
+            {/* ── Brand / marketing panel (desktop) ──
+                Same Indic aside as sign-in — mandala watermark, turmeric glow,
+                so the two screens read as one corridor. */}
+            <aside className="indic-auth-aside relative hidden overflow-hidden p-12 text-white lg:flex lg:flex-col lg:justify-between xl:p-16">
                 <div className="pointer-events-none absolute inset-0">
-                    <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-orange-500/20 blur-3xl" />
-                    <div className="absolute -bottom-28 -right-16 h-[28rem] w-[28rem] rounded-full bg-blue-500/25 blur-3xl" />
-                    <div className="absolute left-1/3 top-1/2 h-72 w-72 rounded-full bg-indigo-500/20 blur-3xl" />
-                    <div
-                        className="absolute inset-0 opacity-[0.12]"
-                        style={{
-                            backgroundImage:
-                                'linear-gradient(rgba(255,255,255,.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.6) 1px, transparent 1px)',
-                            backgroundSize: '44px 44px',
-                            maskImage: 'radial-gradient(70% 60% at 40% 30%, #000 0%, transparent 80%)',
-                            WebkitMaskImage: 'radial-gradient(70% 60% at 40% 30%, #000 0%, transparent 80%)',
-                        }}
-                    />
+                    <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full blur-3xl" style={{ background: 'rgb(var(--accent-primary-rgb) / 0.22)' }} />
+                    <div className="absolute -bottom-28 -right-16 h-[28rem] w-[28rem] rounded-full blur-3xl" style={{ background: 'rgb(var(--indigo-ink-rgb) / 0.30)' }} />
+                    <div className="absolute left-1/3 top-1/2 h-72 w-72 rounded-full blur-3xl" style={{ background: 'rgb(var(--gold-rgb) / 0.14)' }} />
+                    <div className="mandala-wrapper mandala-breathe">
+                        <MandalaSVG />
+                    </div>
                 </div>
 
                 <div className="relative flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 via-indigo-500 to-blue-600 shadow-lg ring-1 ring-white/20">
-                        <GraduationCap className="h-6 w-6" />
-                    </div>
+                    <MandalaMark size={44} />
                     <span className="text-lg font-bold tracking-tight">Digi Classroom</span>
                 </div>
 
                 <div className="relative max-w-md">
-                    <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white/80 backdrop-blur-sm">
+                    <span className="indic-badge inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wider">
                         <Sparkles className="h-3.5 w-3.5" /> Start free in 60 seconds
                     </span>
-                    <h2 className="mt-6 text-4xl font-bold leading-tight tracking-tight">
+                    <h2 className="mt-6 text-4xl leading-tight">
                         Start learning smarter,{' '}
-                        <span className="bg-gradient-to-r from-orange-300 to-blue-300 bg-clip-text text-transparent">today</span>
+                        <span className="gradient-text-saffron">today</span>
                     </h2>
                     <p className="mt-4 text-base leading-relaxed text-white/70">
                         Create your account and unlock an AI tutor, adaptive practice and a full productivity suite — aligned to your syllabus.
@@ -132,8 +130,14 @@ function SignUpForm() {
                     <div className="mt-10 space-y-5">
                         {HIGHLIGHTS.map((h) => (
                             <div key={h.title} className="flex items-start gap-4">
-                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/10 backdrop-blur-sm">
-                                    <h.icon className="h-5 w-5 text-blue-200" />
+                                <div
+                                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl backdrop-blur-sm"
+                                    style={{
+                                        background: 'rgb(var(--gold-rgb) / 0.12)',
+                                        border: '1px solid rgb(var(--gold-rgb) / 0.25)',
+                                    }}
+                                >
+                                    <h.icon className="h-5 w-5" style={{ color: 'var(--gold)' }} />
                                 </div>
                                 <div>
                                     <p className="font-semibold text-white">{h.title}</p>
@@ -145,32 +149,30 @@ function SignUpForm() {
                 </div>
 
                 <div className="relative flex items-center gap-2.5 text-xs text-white/50">
-                    <span className="h-2 w-2 rounded-full bg-gradient-to-r from-orange-400 to-blue-400" />
+                    <span className="h-2 w-2 rounded-full" style={{ background: 'linear-gradient(90deg, var(--accent-primary), var(--gold))' }} />
                     Part of the <span className="font-semibold text-white/70">Vidyaverse</span> ecosystem — one login across Campus OS, Library &amp; Tutor
                 </div>
             </aside>
 
             {/* ── Form panel ── */}
-            <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-orange-50/70 via-background to-indigo-50/60 p-5 dark:from-slate-950 dark:via-background dark:to-indigo-950/40 sm:p-8">
-                <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-blue-400/10 blur-3xl lg:hidden" />
-                <div className="relative w-full max-w-md">
+            <main className="relative min-h-screen overflow-hidden">
+                <AuthBackdrop>
+                <div className={`relative w-full max-w-md ${authCardClassName} p-6 sm:p-8`}>
                     {/* Mobile brand header */}
                     <div className="mb-8 text-center lg:hidden">
-                        <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 via-indigo-500 to-blue-600 shadow-lg ring-1 ring-white/20">
-                            <Sparkles className="h-8 w-8 text-white" />
-                        </div>
-                        <h1 className="text-2xl font-bold tracking-tight text-foreground">Create your account</h1>
+                        <MandalaMark size={64} className="mb-4" />
+                        <h1 className="text-2xl text-foreground">Create your account</h1>
                         <p className="mt-1.5 text-sm text-muted-foreground">Start your personalised learning journey</p>
                     </div>
 
                     {/* Desktop heading */}
-                    <div className="mb-7 hidden lg:block">
-                        <h1 className="text-3xl font-bold tracking-tight text-foreground">Create your account</h1>
+                    <div className="mb-7 hidden text-center lg:block">
+                        <h1 className="text-3xl text-foreground">Create your account</h1>
                         <p className="mt-2 text-muted-foreground">Start your personalised learning journey today</p>
                     </div>
 
-                    {/* Sign-Up Card */}
-                    <div className="rounded-2xl border border-border/70 bg-card/90 p-6 shadow-elev-3 backdrop-blur-xl sm:p-8">
+                    {/* Sign-Up Card body */}
+                    <div>
                         {/* Error Message */}
                         {error && (
                             <div className="mb-6 rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm font-medium text-destructive">
@@ -297,6 +299,7 @@ function SignUpForm() {
                         </Link>
                     </p>
                 </div>
+                </AuthBackdrop>
             </main>
         </div>
     )

@@ -1260,6 +1260,43 @@ export const enrollments = pgTable('enrollments', {
     };
 });
 
+/**
+ * The RAG book corpus this app's chat ("Virat Gyankosh") retrieves from has never
+ * had a relational row of its own — "book" was a virtual concept, computed at
+ * request time by scrolling distinct `book_title` payload values out of the
+ * `ncert-books-enhanced` Qdrant collection (see book-metadata-service.ts). This
+ * table gives it a real identity: a stable id other systems (the shared cross-repo
+ * curriculum taxonomy, hosted in Vidyaverse Pro) can reference.
+ *
+ * `legacyBookTitle` + `organizationId` is the bridge back to today's virtual
+ * identity — populated by scripts/backfill-books-from-qdrant.ts on rollout, and
+ * matched against for future ingestion via book-registry-service.ts's
+ * `resolveOrCreateBook()`, so a re-ingestion of the same title lands on the same row
+ * rather than creating a duplicate.
+ */
+export const books = pgTable('books', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()::text`),
+    title: varchar('title', { length: 500 }).notNull(),
+    legacyBookTitle: varchar('legacy_book_title', { length: 500 }).notNull(),
+    qdrantCollection: varchar('qdrant_collection', { length: 100 }).notNull().default('ncert-books-enhanced'),
+    // NULL = global/NCERT base content, mirroring the `organization_id is_empty`
+    // convention the Qdrant payload itself already uses (enhanced-rag-pipeline.ts) —
+    // deliberately not a NOT NULL column, so that convention stays consistent from
+    // Postgres through to the vector store.
+    organizationId: varchar('organization_id', { length: 255 })
+        .references(() => organization.id, { onDelete: 'set null' }),
+    // Shared cross-repo curriculum taxonomy — denormalized local mirror of the
+    // Vidyaverse-hosted Taxonomy Service's BookTaxonomyLink rows, written by the
+    // admin tagging flow (Phase 4) and read at ingest/search time so neither needs a
+    // live call to the hub on their hot path. Empty until a book is tagged.
+    taxonomyNodeIds: text('taxonomy_node_ids').array().notNull().default(sql`'{}'::text[]`),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()),
+}, (table) => [
+    uniqueIndex('books_legacy_title_org_idx').on(table.legacyBookTitle, table.organizationId),
+    index('books_organization_idx').on(table.organizationId),
+]);
+
 export const videoAssets = pgTable('video_assets', {
     id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()::text`),
     tenantId: varchar('tenant_id', { length: 255 })

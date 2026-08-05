@@ -11,6 +11,7 @@ import { OpenAIService } from '../../services/openai_service';
 import { EnhancedStructureAnalyzer, BookStructure } from '../../content/enhanced-structure-analyzer';
 import { VisualContentAnalysisService } from '../../services/visual-content-analysis-service';
 import { transformToHierarchicalChunks } from './hierarchical-chunker';
+import { resolveOrCreateBook } from './book-registry-service';
 
 // Enhanced RAG Options with query decomposition and re-ranking support
 export interface EnhancedRAGOptions extends QdrantSearchOptions {
@@ -1103,6 +1104,23 @@ export class EnhancedRAGPipeline {
       };
     }
 
+    // Shared cross-repo curriculum taxonomy — resolve this batch's book identity
+    // once (every chunk here belongs to the same document) rather than per-chunk,
+    // and mirror its tagged node ids onto every point below. Best-effort: a book
+    // registry hiccup should not block ingestion, so this falls back to untagged
+    // rather than throwing.
+    let taxonomyNodeIds: string[] = [];
+    try {
+      const firstMeta: any = validatedChunks[0]?.metadata || {};
+      const batchBookTitle = firstMeta.bookTitle || firstMeta.book_title;
+      if (batchBookTitle) {
+        const book = await resolveOrCreateBook(batchBookTitle, ingestionOrgId);
+        taxonomyNodeIds = book.taxonomyNodeIds;
+      }
+    } catch (err) {
+      console.warn('⚠️ Book registry resolution failed, ingesting without taxonomy tags:', err);
+    }
+
     // Ensure collection exists before indexing
     await this.ensureCollectionExists();
 
@@ -1209,6 +1227,11 @@ export class EnhancedRAGPipeline {
             // 🛡️ Batch 2b: tag org-private content. Spread keeps NCERT base untagged (global)
             // so it stays matchable by the search-side `organization_id is_empty` condition.
             ...(ingestionOrgId ? { organization_id: ingestionOrgId } : {}),
+
+            // Shared cross-repo curriculum taxonomy — every node this book is tagged
+            // onto (primary + cross-listed), resolved once above. See
+            // qdrant-search.ts's taxonomyScopeNodeIds for the retrieval-side filter.
+            taxonomy_node_ids: taxonomyNodeIds,
 
             // Enhanced quality metadata
             quality_score: chunkMetadata.quality_score,

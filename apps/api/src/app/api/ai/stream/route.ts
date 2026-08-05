@@ -17,6 +17,7 @@ import { LLMRequest } from '@/lib/services/streaming_service';
 import { SourceChunk } from '@/lib/agents/source_validation';
 import { VectorStoreService } from '@/lib/services/vector_store_service';
 import { subscriptionValidationService } from '@/lib/services/subscription-validation-service';
+import { getCurriculumScopeForUser } from '@/lib/curriculum-scope/client';
 
 interface StreamingChatRequest {
   message: string;
@@ -167,6 +168,12 @@ export async function POST(request: NextRequest) {
     const streamingService = new StreamingService(body.streaming_config);
     const vectorStoreService = new VectorStoreService();
 
+    // Shared cross-repo curriculum taxonomy -- pre-scope retrieval to the student's
+    // institute curriculum where one is configured. Fails open (see
+    // lib/curriculum-scope/client.ts), so a Vidyaverse hiccup degrades to today's
+    // unscoped behavior rather than breaking the AI Tutor.
+    const taxonomyScopeNodeIds = await getCurriculumScopeForUser(userId);
+
     // Retrieve relevant textbook content
     const searchResponse = await vectorStoreService.search_relevant_content({
       query: body.message,
@@ -175,7 +182,8 @@ export async function POST(request: NextRequest) {
       board_type: body.context.board_type as any,
       limit: 5,
       content_types: ['text', 'examples', 'definitions'],
-      cognitive_level: body.context.bloom_level || 'understand'
+      cognitive_level: body.context.bloom_level || 'understand',
+      taxonomyScopeNodeIds,
     });
 
     // Convert to SourceChunk format
