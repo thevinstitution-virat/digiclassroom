@@ -25,6 +25,14 @@ export interface EducationalContext {
    *   - undefined → fail-closed default: global/untagged content only
    */
   organizationId?: string | null;
+  /**
+   * Shared cross-repo curriculum taxonomy — the calling student's institute scope
+   * (resolved from Vidyaverse, see lib/curriculum-scope/client.ts). Undefined/empty
+   * means unfiltered (today's behavior); present narrows to books tagged onto any of
+   * these nodes, or untagged legacy content — see qdrant-search.ts's
+   * taxonomyScopeNodeIds for the actual filter semantics.
+   */
+  taxonomyScopeNodeIds?: string[];
 }
 
 export interface ContentResult {
@@ -89,7 +97,13 @@ export class VectorStoreService {
       const orgKeyPart = context.organizationId === undefined ? 'global-only'
         : context.organizationId === null ? 'platform-all'
         : context.organizationId;
-      const cacheKey = `vector_search:${orgKeyPart}:${context.query}:${context.grade_level}:${context.subject}:${context.board_type}`;
+      // Curriculum scope is part of the key too — otherwise a scoped student's
+      // narrowed results could be served to an unscoped (or differently-scoped)
+      // caller for the same query text, same reasoning as orgKeyPart above.
+      const scopeKeyPart = context.taxonomyScopeNodeIds?.length
+        ? [...context.taxonomyScopeNodeIds].sort().join(',')
+        : 'unscoped';
+      const cacheKey = `vector_search:${orgKeyPart}:${scopeKeyPart}:${context.query}:${context.grade_level}:${context.subject}:${context.board_type}`;
       const cachedResult = await this.cacheService.get<SearchResponse>(cacheKey);
 
       if (cachedResult) {
@@ -115,7 +129,9 @@ export class VectorStoreService {
         contentTypes: context.content_types || ['text'],
         sectionLevel: 3,
         // 🛡️ Batch 2b: carry the org isolation directive into the vector search filter.
-        organizationId: context.organizationId
+        organizationId: context.organizationId,
+        // Shared cross-repo curriculum taxonomy scope.
+        taxonomyScopeNodeIds: context.taxonomyScopeNodeIds,
       };
 
       const qdrantResponse = await qdrantSearch.search(context.query, searchOptions);

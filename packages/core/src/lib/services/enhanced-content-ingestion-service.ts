@@ -5,6 +5,7 @@
 
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { OpenAIService } from './openai_service';
+import { resolveOrCreateBook } from '../ai/rag/book-registry-service';
 
 export interface ContentChunk {
   id: string;
@@ -244,13 +245,29 @@ export class EnhancedContentIngestionService {
           chunk.embedding = await this.openaiService.generateEmbedding(chunk.text);
         }
 
+        // Shared cross-repo curriculum taxonomy — this path carries no
+        // organization/tenant concept, so books ingested here are always global.
+        // Best-effort: an unresolvable title (or a book-registry hiccup) just means
+        // untagged, not a failed ingestion.
+        let taxonomyNodeIds: string[] = [];
+        const textbookName = validation.normalizedMetadata.textbook_name;
+        if (textbookName) {
+          try {
+            const book = await resolveOrCreateBook(textbookName, null);
+            taxonomyNodeIds = book.taxonomyNodeIds;
+          } catch (err) {
+            console.warn(`⚠️ Book registry resolution failed for "${textbookName}", ingesting without taxonomy tags:`, err);
+          }
+        }
+
         // Prepare point for Qdrant
         const point = {
           id: chunk.id,
           vector: chunk.embedding,
           payload: {
             text: chunk.text,
-            ...validation.normalizedMetadata
+            ...validation.normalizedMetadata,
+            taxonomy_node_ids: taxonomyNodeIds,
           }
         };
 
