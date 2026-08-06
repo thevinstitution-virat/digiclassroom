@@ -129,6 +129,11 @@ export const auth = betterAuth({
     },
     emailAndPassword: {
         enabled: true,
+        // OIDC-via-Vidyaverse is now the only account-creation path (2026-08-06
+        // identity reset). Sign-IN stays enabled -- the super-admin's break-glass
+        // recovery path and any future password-reset-issued credential still
+        // need it -- only new local sign-ups are blocked.
+        disableSignUp: true,
         // Hard gate (B2B2C): users cannot sign in until they verify their email.
         // The verification email is sent on sign-up (emailVerification.sendOnSignUp)
         // and re-sent on a blocked sign-in attempt. OAuth/federated users arrive
