@@ -1,0 +1,172 @@
+{
+  "_comment": "Cross-repo contract fixture for the trio sparse tokenizer. Both DCP (document side) and PDLMS/Varta (query side) MUST reproduce these exactly. See sparse-tokenizer.ts for the algorithm. Values are raw term frequencies; Qdrant applies IDF.",
+  "algorithm": {
+    "normalization": [
+      "NFKC",
+      "toLowerCase",
+      "replace /[^p{L}p{N}]+/gu with single space",
+      "trim",
+      "split on space",
+      "drop tokens shorter than 2"
+    ],
+    "hash": "FNV-1a 32-bit over UTF-8 bytes, offset basis 2166136261, prime 16777619, unsigned",
+    "value": "raw term frequency (NOT tf-idf; collection uses modifier: idf)"
+  },
+  "minTokenLength": 2,
+  "termIndex": {
+    "photosynthesis": {
+      "tokens": [
+        "photosynthesis"
+      ],
+      "indices": [
+        2944274927
+      ]
+    },
+    "Photosynthesis": {
+      "tokens": [
+        "photosynthesis"
+      ],
+      "indices": [
+        2944274927
+      ]
+    },
+    "PHOTOSYNTHESIS": {
+      "tokens": [
+        "photosynthesis"
+      ],
+      "indices": [
+        2944274927
+      ]
+    },
+    "chlorophyll": {
+      "tokens": [
+        "chlorophyll"
+      ],
+      "indices": [
+        4166003207
+      ]
+    },
+    "plant's": {
+      "tokens": [
+        "plant"
+      ],
+      "indices": [
+        3150636434
+      ]
+    },
+    "co2": {
+      "tokens": [
+        "co2"
+      ],
+      "indices": [
+        3163389807
+      ]
+    },
+    "h2o": {
+      "tokens": [
+        "h2o"
+      ],
+      "indices": [
+        171060144
+      ]
+    },
+    "प्रकाश": {
+      "tokens": [
+        "प्रकाश"
+      ],
+      "indices": [
+        3944479426
+      ]
+    },
+    "संश्लेषण": {
+      "tokens": [
+        "संश्लेषण"
+      ],
+      "indices": [
+        86462803
+      ]
+    },
+    "ऊर्जा": {
+      "tokens": [
+        "ऊर्जा"
+      ],
+      "indices": [
+        241091037
+      ]
+    },
+    "café": {
+      "tokens": [
+        "café"
+      ],
+      "indices": [
+        2821410889
+      ]
+    },
+    "cafe": {
+      "tokens": [
+        "cafe"
+      ],
+      "indices": [
+        3070856776
+      ]
+    },
+    "a": {
+      "tokens": [],
+      "indices": []
+    },
+    "ab": {
+      "tokens": [
+        "ab"
+      ],
+      "indices": [
+        1294271946
+      ]
+    }
+  },
+  "sentences": {
+    "Photosynthesis: the plant uses CO2 and H2O.": {
+      "indices": [
+        171060144,
+        254395046,
+        1635278981,
+        2944274927,
+        3020861980,
+        3150636434,
+        3163389807
+      ],
+      "values": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    "प्रकाश संश्लेषण की प्रक्रिया": {
+      "indices": [
+        86462803,
+        3944479426,
+        4243190809,
+        4244886528
+      ],
+      "values": [
+        1,
+        1,
+        1,
+        1
+      ]
+    },
+    "the the the cat": {
+      "indices": [
+        108289031,
+        3020861980
+      ],
+      "values": [
+        1,
+        3
+      ]
+    }
+  }
+}

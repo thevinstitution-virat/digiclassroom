@@ -138,6 +138,15 @@ export async function POST(request: NextRequest) {
     try {
       // Create temporary file
       const buffer = Buffer.from(await file.arrayBuffer())
+
+      // Hash in memory, before anything else touches the file. The hash is what
+      // decides whether this is a new book or one we already hold, and that
+      // decision has to happen before the R2 upload and before embedding — a
+      // duplicate should cost neither storage nor OpenAI tokens.
+      const { createHash } = await import('crypto')
+      const sha256 = createHash('sha256').update(buffer).digest('hex')
+      console.log(`🔑 Source sha256: ${sha256}`)
+
       const fileName = `${uuidv4()}_${file.name}`
       tempFilePath = join(process.cwd(), 'tmp', fileName)
 
@@ -182,7 +191,39 @@ export async function POST(request: NextRequest) {
 
         // Process with doc-extract-engine (simplified single-tier processing)
         console.log(`🚀 Upload Route: Starting PDF processing with uploadId: ${uploadId}`);
-        const result = await enhancedRAG.indexPDF(buffer, metadata, file.name, { uploadId, organizationId })
+        const result = await enhancedRAG.indexPDF(buffer, metadata, file.name, {
+          uploadId,
+          organizationId,
+          sourceFile: {
+            buffer,
+            contentType: file.type,
+            sha256,
+            bytes: file.size,
+          },
+        })
+
+          // Identical file already held. Say so explicitly rather than returning a
+          // generic success — the user uploaded a book and is entitled to know it
+          // was linked to an existing one, not freshly processed. A silent
+          // "success, 0 chunks" reads as a broken upload.
+          if ((result as any).deduped) {
+            if (uploadId) {
+              try {
+                const { emitEnd } = await import('@/lib/utils/progress-bus');
+                emitEnd(uploadId);
+              } catch (error) {
+                console.warn(`⚠️ Upload Route: Failed to emit end event:`, error);
+              }
+            }
+            return NextResponse.json({
+              success: true,
+              deduped: true,
+              message:
+                'This exact file is already in the library. It has been linked to the existing book — no re-processing was needed.',
+              contentItemId: (result as any).contentItemId,
+              stats: { totalChunks: 0, uploadedChunks: 0 },
+            })
+          }
 
           if (result.success) {
             console.log(`✅ doc-extract-engine processing completed: ${result.chunks_indexed} chunks indexed`)

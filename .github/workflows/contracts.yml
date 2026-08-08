@@ -1,0 +1,21 @@
+name: Contracts
+
+# The sparse tokenizer is shared with PDLMS/Varta by specification, not by a
+# package — the two repos reimplement the same algorithm and must agree exactly.
+# A drift produces no error, only worse retrieval, so it has to be caught here.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  sparse-tokenizer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run verify:contracts

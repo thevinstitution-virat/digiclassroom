@@ -12,7 +12,8 @@
     "dev:api": "turbo run dev --filter=@repo/api",
     "build": "turbo run build",
     "lint": "turbo run lint",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "verify:contracts": "node scripts/verify-sparse-contract.mjs"
   },
   "devDependencies": {
     "turbo": "^2.3.3"
