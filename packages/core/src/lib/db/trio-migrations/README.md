@@ -43,7 +43,7 @@ that applies the file, or the next person has to read `\d` output to find out.
 | `005_multi_format_asset_model.sql` | `content_asset` can describe a whole multi-format work — source PDF, per-chapter markdown, per-variant narration, cover, thumbnail. | ✅ |
 | `006_asset_slots_and_versions.sql` | The MIGRATE step for slot identity: a chapter is a **slot** that different files occupy over time, so the key is `(content_item_id, role, part_index, variant)` and file history moves to `content_asset_version`. Fixes 005's file-as-identity key, which left two runs active for one chapter. Expand step shipped first in `7bc64d9`. | ✅ |
 | `007_chunk_index_per_asset.sql` | **Phase 1 of 3** — adds `content_chunk.content_asset_id` + `UNIQUE (content_asset_id, chunk_index)`, additively. Phase 2 is the code deploy that writes them; phase 3 is `008`. | ✅ |
-| `008_drop_chunk_item_index_uq.sql` | **Phase 3 of 3** — drops the old `UNIQUE (content_item_id, chunk_index)`. Run only after phase 2 is live. | ⬜ pending phase 2 deploy |
+| `008_drop_chunk_item_index_uq.sql` | **Phase 3 of 3** — drops the old `UNIQUE (content_item_id, chunk_index)`. Run only after phase 2 is live (it was: commit `518a403`, deployed 2026-08-08). `content_item_id` stays as a plain indexed column; only the uniqueness moved. | ✅ |
 
 ## Not captured here
 
