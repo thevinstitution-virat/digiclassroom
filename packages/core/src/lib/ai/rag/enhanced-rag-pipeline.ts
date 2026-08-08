@@ -12,6 +12,37 @@ import { EnhancedStructureAnalyzer, BookStructure } from '../../content/enhanced
 import { VisualContentAnalysisService } from '../../services/visual-content-analysis-service';
 import { transformToHierarchicalChunks } from './hierarchical-chunker';
 import { resolveOrCreateBook } from './book-registry-service';
+import {
+  resolveOrCreateContentItem,
+  insertContentChunks,
+  pruneChunksBeyond,
+  recordSourceAsset,
+  replaceTaxonomyLinks,
+  resolveScopeAndGrant,
+  startIngestRun,
+  hasActiveIngestRun,
+  supersedePriorActiveRun,
+  activateIngestRun,
+  failIngestRun,
+  type SourceApp,
+} from '../../db/content-identity';
+import { buildSparseVector } from './sparse-tokenizer';
+
+/**
+ * One document's shared-content run, threaded through every batch of it.
+ * Created by beginSharedContentRun(), consumed by indexChunksInQdrant(), closed
+ * by finalizeSharedContentRun().
+ */
+interface SharedContentRun {
+  contentItemId: string;
+  ingestRunId: string | null;
+  scope: { visibility: 'public' | 'restricted'; grantOrgIds: string[] };
+  taxonomyNodeIds: string[];
+  /** Document-wide running chunk_index, advanced by each batch. */
+  nextChunkIndex: number;
+  /** Identical bytes already ingested — caller must skip embedding entirely. */
+  deduped: boolean;
+}
 
 // Enhanced RAG Options with query decomposition and re-ranking support
 export interface EnhancedRAGOptions extends QdrantSearchOptions {
@@ -791,7 +822,25 @@ export class EnhancedRAGPipeline {
       medium?: string;
     },
     filename: string,
-    options?: { uploadId?: string; organizationId?: string | null; materialId?: string | null }
+    options?: {
+      uploadId?: string;
+      organizationId?: string | null;
+      materialId?: string | null;
+      sourceApp?: SourceApp;
+      sourceLocalId?: string | null;
+      contentTitle?: string;
+      /**
+       * The uploaded original. Hashed by the CALLER before this point: the hash
+       * drives the dedupe check, and a duplicate must never re-upload the file.
+       */
+      sourceFile?: {
+        buffer: Buffer;
+        contentType: string;
+        sha256: string;
+        bytes: number;
+        pageCount?: number | null;
+      } | null;
+    }
   ): Promise<{
     success: boolean;
     chunks_indexed: number;
@@ -815,7 +864,14 @@ export class EnhancedRAGPipeline {
       invalidChunks?: Array<{ chunkId: string; error: string }>;
     };
     strategy?: string;
+    contentItemId?: string;
   }> {
+    // Hoisted above the try so the outer catch can still reach the run and clean
+    // up after it. An exception escaping the batch loop — an embedding-API
+    // failure, an OOM during extraction — otherwise leaves exactly the leak
+    // B.11 exists to close.
+    let openRun: SharedContentRun | null = null;
+
     try {
       console.log(`📚 Processing PDF with doc-extract-engine: ${filename}`);
 
@@ -857,9 +913,49 @@ export class EnhancedRAGPipeline {
       let totalIndexedCount = 0;
       let totalValidCount = 0;
       let totalInvalidCount = 0;
+      let resolvedContentItemId: string | undefined;
+      const batchFailures: string[] = [];
+      let sharedRunAbortReason: string | null = null;
       const allInvalidChunks: Array<{ chunkId: string; error: string }> = [];
 
       console.log(`📚 Processing ${processingResult.chunks.length} chunks in batches of ${BATCH_SIZE}`);
+
+      // Open the shared-content run ONCE for the whole document, before any
+      // embedding. Doing this per batch would create one ingest_run per batch and
+      // make each batch supersede (and delete the points of) the one before it.
+      const firstChunkMeta: any = (processingResult.chunks as any[])[0]?.metadata || hierarchyMeta || {};
+      const sharedRun = await this.beginSharedContentRun(firstChunkMeta, {
+        organizationId: options?.organizationId,
+        materialId: options?.materialId,
+        sourceApp: options?.sourceApp,
+        sourceLocalId: options?.sourceLocalId,
+        contentTitle: options?.contentTitle || metadata.bookTitle,
+        sourceFile: options?.sourceFile,
+      });
+      openRun = sharedRun;
+
+      // Recorded before indexing so the failure message can tell the operator
+      // whether anything is still live for this book.
+      let priorActiveRunExisted = false;
+      if (sharedRun?.contentItemId) {
+        priorActiveRunExisted = await hasActiveIngestRun(sharedRun.contentItemId);
+      }
+
+      // Identical bytes already ingested — return before spending a single token.
+      if (sharedRun?.deduped) {
+        console.log(
+          `♻️ Identical file already ingested as content_item ${sharedRun.contentItemId} — ` +
+            `linked this upload to it and skipped embedding entirely (0 tokens).`,
+        );
+        return {
+          success: true,
+          chunks_indexed: 0,
+          deduped: true,
+          contentItemId: sharedRun.contentItemId,
+          errors: [],
+          stats: processingResult.stats,
+        } as any;
+      }
 
       for (let batchStart = 0; batchStart < processingResult.chunks.length; batchStart += BATCH_SIZE) {
         const batchChunks = processingResult.chunks.slice(batchStart, batchStart + BATCH_SIZE);
@@ -908,28 +1004,87 @@ export class EnhancedRAGPipeline {
           const indexingResult = await this.indexChunksInQdrant(chunksToIndex, {
             organizationId: options?.organizationId,
             materialId: options?.materialId,
+            sourceApp: options?.sourceApp,
+            sourceLocalId: options?.sourceLocalId,
+            contentTitle: options?.contentTitle || metadata.bookTitle,
+            sharedRun,
           });
           totalIndexedCount += indexingResult.indexedCount;
           totalValidCount += indexingResult.validationStats.validCount;
           totalInvalidCount += indexingResult.validationStats.invalidCount;
           allInvalidChunks.push(...indexingResult.validationStats.invalidChunks);
+          resolvedContentItemId = resolvedContentItemId || indexingResult.contentItemId;
           console.log(`✅ Batch ${batchNum} saved to Qdrant: ${indexingResult.indexedCount} chunks indexed`);
         } catch (batchError) {
           console.error(`⚠️ Batch ${batchNum} failed to index in Qdrant:`, batchError);
-          // Continue to next batch — partial progress is preserved!
+          batchFailures.push(
+            `batch ${batchNum}: ${batchError instanceof Error ? batchError.message : String(batchError)}`,
+          );
+          // Continue to next batch — partial progress is preserved for DCP's own
+          // collection. The shared run is still abandoned after the loop: a
+          // half-ingested textbook marked `active` would answer questions from
+          // the chapters that happened to survive and silently omit the rest.
         }
       }
 
       console.log(`🏁 All batches completed. Total indexed: ${totalIndexedCount}`);
+
+      // Close the run. Three outcomes, not two:
+      //   - every batch succeeded            -> supersede, delete old, activate
+      //   - any batch failed                 -> delete this run's points, fail
+      //   - nothing indexed at all           -> same, with a clearer reason
+      //
+      // Partial success is treated as failure for the SHARED schema on purpose.
+      // DCP's own collection keeps whatever landed, but a shared content_item
+      // advertising `active` with three of five chapters is worse than one that
+      // failed loudly: Varta would answer confidently from the chapters that
+      // made it and never mention the ones that didn't.
+      if (sharedRun) {
+        if (batchFailures.length > 0) {
+          await this.abortSharedContentRun(
+            sharedRun,
+            `${batchFailures.length} batch(es) failed, run abandoned: ${batchFailures.join('; ')}`.slice(0, 1900),
+          );
+          // Operator-facing, and deliberately specific. "Ingest failed" sends
+          // someone hunting; this says which batch broke, that NOTHING was
+          // published, and that the previously published version is untouched —
+          // so the reply to a failed upload is "fix and retry", not "investigate".
+          sharedRunAbortReason =
+            `Nothing was published to the shared library. ${batchFailures.length} of ` +
+            `${Math.ceil(processingResult.chunks.length / BATCH_SIZE)} batches failed ` +
+            `(${batchFailures.join('; ')}). The partial content was removed rather than ` +
+            `published half-complete. ` +
+            (priorActiveRunExisted
+              ? 'The previously published version of this book is still live and unchanged.'
+              : 'This book has no previously published version, so nothing is currently live for it.') +
+            ' Fix the cause and re-upload the same file.';
+        } else if (totalIndexedCount === 0) {
+          await this.abortSharedContentRun(sharedRun, 'No chunks were indexed.');
+          sharedRunAbortReason =
+            'Nothing was published to the shared library: no chunks could be indexed from this file. ' +
+            'Check that the PDF contains extractable text rather than page images.';
+        } else {
+          await this.finalizeSharedContentRun(sharedRun, totalIndexedCount);
+        }
+        // Closed one way or another — the catch below must not touch it again.
+        openRun = null;
+      }
 
       // Get extraction strategy from environment
       const { getValidatedExtractionStrategy } = await import('@/lib/content/chunk-metadata-schema');
       const strategy = getValidatedExtractionStrategy();
 
       return {
-        success: totalIndexedCount > 0,
+        // A partial ingest that abandoned the shared run is NOT a success, even
+        // though DCP's own collection kept what landed. Reporting `success` here
+        // because some batches worked is how a loud failure becomes a silent
+        // one: the operator sees a green upload and never learns the book is
+        // missing from the shared library.
+        success: sharedRunAbortReason ? false : totalIndexedCount > 0,
         chunks_indexed: totalIndexedCount,
-        errors: processingResult.errors,
+        errors: sharedRunAbortReason
+          ? [sharedRunAbortReason, ...processingResult.errors]
+          : processingResult.errors,
         processor_used: 'doc-extract-engine',
         stats: {
           total_pages: processingResult.stats.total_pages,
@@ -947,11 +1102,25 @@ export class EnhancedRAGPipeline {
           validationRate: (totalValidCount + totalInvalidCount) > 0 ? totalValidCount / (totalValidCount + totalInvalidCount) : 1,
           invalidChunks: allInvalidChunks
         },
-        strategy
+        strategy,
+        contentItemId: resolvedContentItemId
       };
 
     } catch (error) {
       console.error('❌ doc-extract-engine processing failed:', error);
+
+      // An exception reached here with a run still open: delete its points and
+      // mark it failed, rather than leaving a `running` row and orphaned vectors
+      // that no later supersede will ever collect.
+      if (openRun) {
+        await this.abortSharedContentRun(
+          openRun,
+          `Ingestion threw: ${error instanceof Error ? error.message : String(error)}`.slice(0, 1900),
+        ).catch((cleanupErr) => {
+          console.error('❌ Failed to clean up the open ingest run:', cleanupErr);
+        });
+      }
+
       return {
         success: false,
         chunks_indexed: 0,
@@ -970,7 +1139,13 @@ export class EnhancedRAGPipeline {
    */
   async indexMarkdownChunks(
     chunks: any[],
-    options?: { organizationId?: string | null; materialId?: string | null }
+    options?: {
+      organizationId?: string | null;
+      materialId?: string | null;
+      sourceApp?: SourceApp;
+      sourceLocalId?: string | null;
+      contentTitle?: string;
+    }
   ): Promise<{
     success: boolean;
     chunks_indexed: number;
@@ -994,6 +1169,9 @@ export class EnhancedRAGPipeline {
           const r = await this.indexChunksInQdrant(batch, {
             organizationId: options?.organizationId,
             materialId: options?.materialId,
+            sourceApp: options?.sourceApp,
+            sourceLocalId: options?.sourceLocalId,
+            contentTitle: options?.contentTitle,
           });
           totalIndexed += r.indexedCount;
           totalValid += r.validationStats.validCount;
@@ -1036,12 +1214,249 @@ export class EnhancedRAGPipeline {
    *   - options.materialId (when supplied) records each point in the qdrant_vector_ids bridge
    *     so the material's vectors can later be purged on delete/reconciliation.
    */
+  /**
+   * Open a document-level shared-content run.
+   *
+   * Everything true of the DOCUMENT rather than of a batch lives here: canonical
+   * identity, dedupe, tenant scope, the stored original, taxonomy links, and the
+   * ingest_run itself. indexChunksInQdrant() then consumes the returned context
+   * once per batch.
+   *
+   * Returns null when the caller supplied no identity to anchor on, which keeps
+   * DCP's legacy DCP-only ingestion behaving exactly as it did.
+   */
+  private async beginSharedContentRun(
+    firstChunkMeta: any,
+    options: {
+      organizationId?: string | null;
+      materialId?: string | null;
+      sourceApp?: SourceApp;
+      sourceLocalId?: string | null;
+      contentTitle?: string;
+      sourceFile?: {
+        buffer: Buffer;
+        contentType: string;
+        sha256: string;
+        bytes: number;
+        pageCount?: number | null;
+      } | null;
+    },
+  ): Promise<SharedContentRun | null> {
+    const ingestionOrgId =
+      typeof options.organizationId === 'string' && options.organizationId !== ''
+        ? options.organizationId
+        : null;
+
+    // Resolve the book registry once — it supplies both the payload tags and the
+    // canonical anchor below.
+    let taxonomyNodeIds: string[] = [];
+    let bookRegistryId: string | null = null;
+    try {
+      const bookTitle = firstChunkMeta?.bookTitle || firstChunkMeta?.book_title || options.contentTitle;
+      if (bookTitle) {
+        const book = await resolveOrCreateBook(bookTitle, ingestionOrgId);
+        taxonomyNodeIds = book.taxonomyNodeIds;
+        bookRegistryId = book.id;
+      }
+    } catch (err) {
+      console.warn('⚠️ Book registry resolution failed, ingesting without taxonomy tags:', err);
+    }
+
+    const sharedSourceApp: SourceApp = options.sourceApp || 'digiclassroom';
+
+    // The book-registry row id IS this book's identity in DCP, so it is the
+    // anchor — not a fallback behind materialId. Two candidate anchors for one
+    // book is how the shared schema ends up with two content_items for the same
+    // textbook. One registry row, one content_source_ref. An explicit
+    // sourceLocalId still wins for callers with their own identity, but a
+    // disagreement is surfaced rather than silently resolved.
+    if (options.sourceLocalId && bookRegistryId && options.sourceLocalId !== bookRegistryId) {
+      console.warn(
+        `⚠️ Two candidate anchors for this book — explicit sourceLocalId="${options.sourceLocalId}" ` +
+          `vs book registry id="${bookRegistryId}". Using the explicit one.`,
+      );
+    }
+    const sharedSourceLocalId =
+      options.sourceLocalId ||
+      bookRegistryId ||
+      (typeof options.materialId === 'string' && options.materialId !== '' ? options.materialId : null);
+
+    if (!sharedSourceLocalId) return null;
+
+    const contentTitle =
+      options.contentTitle || firstChunkMeta?.bookTitle || firstChunkMeta?.book_title || 'Untitled';
+
+    const resolved = await resolveOrCreateContentItem({
+      sourceApp: sharedSourceApp,
+      sourceLocalId: sharedSourceLocalId,
+      title: contentTitle,
+      lang: firstChunkMeta?.medium || firstChunkMeta?.language || null,
+      canonicalSha256: options.sourceFile?.sha256 ?? null,
+    });
+
+    // Dedupe: identical bytes already ingested. Signalled to the caller BEFORE
+    // any embedding happens — the entire value of the hash is that it spares the
+    // OpenAI call. Deduping rows after embedding costs exactly the same money and
+    // merely hides the waste.
+    if (resolved.deduped) {
+      return {
+        contentItemId: resolved.contentItemId,
+        ingestRunId: null,
+        scope: { visibility: 'public', grantOrgIds: [] },
+        taxonomyNodeIds,
+        nextChunkIndex: 0,
+        deduped: true,
+      };
+    }
+
+    // Scope. Throws on an unresolvable org rather than defaulting to public.
+    const scope = await resolveScopeAndGrant({
+      contentItemId: resolved.contentItemId,
+      sourceApp: sharedSourceApp,
+      localOrgId: ingestionOrgId,
+    });
+    console.log(`🔐 Scope resolved: visibility=${scope.visibility}, orgs=[${scope.grantOrgIds.join(',')}]`);
+
+    // Store the original under canonical identity. New items only — a duplicate
+    // returned above and never reaches this point.
+    if (options.sourceFile) {
+      const { uploadSourceDocumentToR2 } = await import('../../services/r2');
+      const key = `content/${resolved.contentItemId}/source.pdf`;
+      const { bucket } = await uploadSourceDocumentToR2({
+        buffer: options.sourceFile.buffer,
+        key,
+        contentType: options.sourceFile.contentType,
+      });
+      await recordSourceAsset({
+        contentItemId: resolved.contentItemId,
+        storageAccount: 'digiclassroom-pro',
+        storageUri: `r2://${bucket}/${key}`,
+        sha256: options.sourceFile.sha256,
+        bytes: options.sourceFile.bytes,
+        pageCount: options.sourceFile.pageCount ?? null,
+      });
+      console.log(`📦 Source stored: r2://${bucket}/${key}`);
+    }
+
+    if (taxonomyNodeIds.length > 0) {
+      const linked = await replaceTaxonomyLinks(resolved.contentItemId, taxonomyNodeIds);
+      console.log(`🏷️ Linked ${linked} taxonomy node(s), first is primary`);
+    }
+
+    const ingestRunId = await startIngestRun({
+      contentItemId: resolved.contentItemId,
+      sourceApp: sharedSourceApp,
+      embeddingModel: 'text-embedding-3-large',
+      embeddingDim: 3072,
+      collection: this.collectionName,
+    });
+
+    return {
+      contentItemId: resolved.contentItemId,
+      ingestRunId,
+      scope,
+      taxonomyNodeIds,
+      nextChunkIndex: 0,
+      deduped: false,
+    };
+  }
+
+  /**
+   * Close a document-level run: supersede -> delete the old run's points ->
+   * activate.
+   *
+   * The order is deliberate. If the process dies partway, the collection still
+   * holds the PREVIOUS run's points and the new run is not yet active — stale but
+   * retrievable. Activating first would open a window where an active run claims
+   * live points that have just been deleted: a book that exists according to
+   * Postgres and returns nothing from search.
+   */
+  /**
+   * Abandon a document-level run: delete its points, then mark it failed.
+   *
+   * Without this, a mid-document failure leaks. The run stays `running`, the
+   * PREVIOUS run stays `active`, and the batches that did succeed leave points
+   * behind tagged with a run_id that never activates. Supersede only ever
+   * targets the *active* run, so nothing collects them — they sit in the
+   * collection forever, blending a half-ingested edition into every future
+   * search. That is exactly the corruption B.3 exists to prevent, reached
+   * through a different branch.
+   *
+   * Points first, status second — the same discipline as finalize. If cleanup
+   * itself dies, a `running` row pointing at real points is recoverable; a
+   * `failed` row pointing at ghosts is not, because nothing will ever look for
+   * them again.
+   */
+  private async abortSharedContentRun(
+    run: SharedContentRun,
+    reason: string,
+  ): Promise<void> {
+    if (!run.ingestRunId) return;
+    try {
+      const deleted = await this.qdrant.delete(this.collectionName, {
+        wait: true,
+        filter: { must: [{ key: 'run_id', match: { value: run.ingestRunId } }] },
+      });
+      console.log(`🧹 Aborting run ${run.ingestRunId} — deleted its points (${JSON.stringify(deleted?.status ?? 'ok')})`);
+    } catch (cleanupErr) {
+      // Leave the run `running` so the reconcile query can still find it. A
+      // `failed` row whose points were never deleted is invisible garbage.
+      console.error(`❌ Could not delete points for failed run ${run.ingestRunId}:`, cleanupErr);
+      throw cleanupErr;
+    }
+    await failIngestRun(run.ingestRunId, reason);
+    console.log(`⛔ Ingest run ${run.ingestRunId} marked failed: ${reason}`);
+  }
+
+  private async finalizeSharedContentRun(
+    run: SharedContentRun,
+    indexedCount: number,
+  ): Promise<void> {
+    if (!run.ingestRunId) return;
+
+    const priorRunId = await supersedePriorActiveRun(run.contentItemId, run.ingestRunId);
+    if (priorRunId) {
+      console.log(`🔁 Superseding prior run ${priorRunId} — deleting its points`);
+      await this.qdrant.delete(this.collectionName, {
+        wait: true,
+        filter: { must: [{ key: 'run_id', match: { value: priorRunId } }] },
+      });
+    }
+
+    // A shorter re-ingest would otherwise leave the previous run's tail rows
+    // behind, breaking the "points_count equals chunk count" invariant.
+    const pruned = await pruneChunksBeyond(run.contentItemId, indexedCount);
+    if (pruned > 0) console.log(`🧹 Pruned ${pruned} stale chunk row(s) from a longer previous run`);
+
+    await activateIngestRun(run.ingestRunId, indexedCount);
+    console.log(`✅ Ingest run ${run.ingestRunId} is now active with ${indexedCount} chunks`);
+  }
+
   private async indexChunksInQdrant(
         // @ts-ignore
     chunks: DoclingChunk[] | any[],
-    options: { organizationId?: string | null; materialId?: string | null } = {}
+    options: {
+      organizationId?: string | null;
+      materialId?: string | null;
+      // Trio shared-identity registration — when sourceLocalId (or materialId, as a
+      // fallback) is present, this batch's chunks also get a canonical content_item
+      // + content_chunk rows in the shared `trio` DB, making them reachable from
+      // PDLMS's Varta and any other shared-collection consumer, not just DCP's own
+      // iTutor. Omit both to keep today's DCP-only behavior unchanged.
+      sourceApp?: SourceApp;
+      sourceLocalId?: string | null;
+      contentTitle?: string;
+      /**
+       * The document-level run this batch belongs to, from beginSharedContentRun().
+       * Absent for legacy DCP-only callers, which keeps their behaviour unchanged.
+       */
+      sharedRun?: SharedContentRun | null;
+    } = {}
   ): Promise<{
     indexedCount: number;
+    contentItemId?: string;
+    /** True when this file's bytes were already ingested and the run was skipped. */
+    deduped?: boolean;
     validationStats: {
       validCount: number;
       invalidCount: number;
@@ -1104,21 +1519,35 @@ export class EnhancedRAGPipeline {
       };
     }
 
-    // Shared cross-repo curriculum taxonomy — resolve this batch's book identity
-    // once (every chunk here belongs to the same document) rather than per-chunk,
-    // and mirror its tagged node ids onto every point below. Best-effort: a book
-    // registry hiccup should not block ingestion, so this falls back to untagged
-    // rather than throwing.
-    let taxonomyNodeIds: string[] = [];
-    try {
-      const firstMeta: any = validatedChunks[0]?.metadata || {};
-      const batchBookTitle = firstMeta.bookTitle || firstMeta.book_title;
-      if (batchBookTitle) {
-        const book = await resolveOrCreateBook(batchBookTitle, ingestionOrgId);
-        taxonomyNodeIds = book.taxonomyNodeIds;
+    // Shared registration — content_item, scope, source asset, taxonomy links
+    // and the ingest_run — happens ONCE PER DOCUMENT in beginSharedContentRun(),
+    // not here.
+    //
+    // This method is called once per OUTER BATCH by indexPDF. Doing registration
+    // here would start a separate ingest_run per batch, and the supersede step
+    // would then delete the previous batch's points as a stale run: a
+    // three-batch textbook would finish with only its last batch retrievable,
+    // reporting success the whole way.
+    const sharedRun = options.sharedRun ?? null;
+    const contentItemId = sharedRun?.contentItemId ?? null;
+    const ingestRunId = sharedRun?.ingestRunId ?? null;
+    const scope = sharedRun?.scope ?? { visibility: 'public' as const, grantOrgIds: [] as string[] };
+
+    // Payload taxonomy tags. With a shared run these are already resolved; the
+    // fallback keeps DCP's legacy direct callers (no shared identity) behaving
+    // exactly as before rather than silently losing their tags.
+    let taxonomyNodeIds: string[] = sharedRun?.taxonomyNodeIds ?? [];
+    if (!sharedRun) {
+      try {
+        const firstMeta: any = validatedChunks[0]?.metadata || {};
+        const batchBookTitle = firstMeta.bookTitle || firstMeta.book_title;
+        if (batchBookTitle) {
+          const book = await resolveOrCreateBook(batchBookTitle, ingestionOrgId);
+          taxonomyNodeIds = book.taxonomyNodeIds;
+        }
+      } catch (err) {
+        console.warn('⚠️ Book registry resolution failed, ingesting without taxonomy tags:', err);
       }
-    } catch (err) {
-      console.warn('⚠️ Book registry resolution failed, ingesting without taxonomy tags:', err);
     }
 
     // Ensure collection exists before indexing
@@ -1126,8 +1555,15 @@ export class EnhancedRAGPipeline {
 
     const batchSize = 100;
     let indexedCount = 0;
-    let bridgeChunkIndex = 0; // Batch 2b: running chunk index for qdrant_vector_ids rows
+    // Document-wide, NOT per-call. This method runs once per outer batch, so a
+    // counter starting at 0 here made every batch reuse chunk_index 0..n — and
+    // insertContentChunks' ON CONFLICT (content_item_id, chunk_index) DO UPDATE
+    // then overwrote the previous batch's rows instead of appending. A multi-batch
+    // book silently kept only its final batch. The offset lives on the shared run
+    // so it survives across calls.
+    let bridgeChunkIndex = sharedRun ? sharedRun.nextChunkIndex : 0;
 
+    try {
     for (let i = 0; i < validatedChunks.length; i += batchSize) {
       const batch = validatedChunks.slice(i, i + batchSize);
 
@@ -1142,25 +1578,24 @@ export class EnhancedRAGPipeline {
 
       if (enableHybridSearch) {
         try {
-          const { hybridEmbedder } = await import('./hybrid-embedder');
-
-          // Index all chunk texts in BM25 for sparse vector generation
-          const allTexts = batch.map(c => c.text || c.content || '');
-          console.log('📚 Indexing chunks in BM25 for sparse vector generation...');
-          hybridEmbedder.indexDocuments(allTexts);
-
-          // Generate sparse vectors for batch
-          sparseVectors = batch.map(chunk => {
-            const text = chunk.text || chunk.content || '';
-            const sparseVectorMap = hybridEmbedder['bm25Index'].vectorize(text);
-
-            // Convert to Qdrant format (indices + values)
-            const terms = Object.keys(sparseVectorMap);
-            return {
-              indices: terms.map((_, idx) => idx),
-              values: terms.map(term => sparseVectorMap[term])
-            };
-          });
+          // Sparse vectors come from the shared tokenizer, NOT from hybridEmbedder.
+          //
+          // The previous implementation had two defects that produced vectors
+          // which looked plausible and retrieved nonsense:
+          //
+          //   1. `indices: terms.map((_, idx) => idx)` used a term's ARRAY
+          //      POSITION WITHIN ITS OWN CHUNK as its sparse index. The same word
+          //      therefore got a different index in every chunk, so no two
+          //      vectors were comparable and the query side could never line up
+          //      with the document side. Nothing errors; recall just collapses.
+          //   2. It sent BM25-weighted values while the collection is configured
+          //      `modifier: idf`, so Qdrant applied IDF a second time on top.
+          //
+          // Now: stable FNV-1a hash of the normalized term as index, raw term
+          // frequency as value, Qdrant applies IDF. PDLMS/Varta MUST build query
+          // vectors with the identical algorithm — see sparse-tokenizer.ts and
+          // the shared fixture.
+          sparseVectors = batch.map(chunk => buildSparseVector(chunk.text || chunk.content || ''));
 
           console.log(`🔍 Generated ${sparseVectors.length} sparse vectors for hybrid search`);
         } catch (error) {
@@ -1169,9 +1604,13 @@ export class EnhancedRAGPipeline {
         }
       }
 
-      // Prepare points for Qdrant (with quality filtering)
-      const points = batch
-        .filter((chunk) => {
+      // Zip chunk+embedding+sparse-vector together by original batch position BEFORE
+      // filtering — the previous filter().map() dropped low-quality chunks first and
+      // then re-indexed from 0, which silently misaligned embeddings[index]/
+      // sparseVectors[index] against the wrong chunk whenever anything was filtered.
+      const qualified = batch
+        .map((chunk, originalIndex) => ({ chunk, originalIndex }))
+        .filter(({ chunk }) => {
           // Quality threshold: Skip chunks with quality_score < 70
           const qualityScore = chunk.metadata?.quality_score;
           if (qualityScore !== undefined && qualityScore < 70) {
@@ -1179,13 +1618,37 @@ export class EnhancedRAGPipeline {
             return false;
           }
           return true;
-        })
-        .map((chunk, index) => {
-          // Handle both DoclingChunk and PDFExtractKitChunk formats
-          // Use numeric ID for Qdrant compatibility
-          const chunkId = Date.now() + index; // Numeric ID
-          const chunkText = chunk.text || chunk.content || '';
+        });
+
+      // Trio shared identity: pre-write each qualified chunk's Postgres row so its
+      // generated UUID can be reused as the Qdrant point id (chunk row and vector
+      // always share one identity, no separate bridge needed for the shared side).
+      // chunkIndex is a running counter across the whole document (all batches),
+      // reused below for the qdrant_vector_ids bridge too, so both stay in sync.
+      let chunkUuidByOriginalIndex: Map<number, string> | null = null;
+      if (contentItemId) {
+        const chunkInputs = qualified.map(({ chunk }, qualifiedIndex) => {
+          const m = chunk.metadata || {};
+          return {
+            chunkIndex: bridgeChunkIndex + qualifiedIndex,
+            text: chunk.text || chunk.content || '',
+            pageStart: m.pageNumber || m.page || null,
+            pageEnd: m.pageNumber || m.page || null,
+            chapter: m.chapter || null,
+          };
+        });
+        const uuids = await insertContentChunks(contentItemId, chunkInputs);
+        chunkUuidByOriginalIndex = new Map(
+          qualified.map(({ originalIndex }, i) => [originalIndex, uuids[i]]),
+        );
+      }
+
+      const points = qualified.map(({ chunk, originalIndex }, index) => {
           const chunkMetadata = chunk.metadata || {};
+          const chunkText = chunk.text || chunk.content || '';
+          // Shared-identity chunks use their Postgres content_chunk UUID as the
+          // point id; legacy (no contentItemId) ingestion keeps the old numeric id.
+          const chunkId = chunkUuidByOriginalIndex?.get(originalIndex) ?? Date.now() + index;
 
           // Normalize class level to Arabic numerals for consistent filtering
           const rawClassLevel = chunkMetadata.classLevel || chunkMetadata.class || 'Unknown';
@@ -1245,18 +1708,46 @@ export class EnhancedRAGPipeline {
             detected_sections_count: chunkMetadata.detected_sections_count,
             isAtomic: chunkMetadata.isAtomic,
             minChunkSize: chunkMetadata.minChunkSize,
-            section_level: chunkMetadata.section_level
+            section_level: chunkMetadata.section_level,
+
+            // Trio shared-collection fields (see TRIO_RESET_PROGRESS.md Step 5) —
+            // only present when this chunk was also registered in the shared
+            // content schema above. `visibility`/`grant_org_ids` are denormalized
+            // from content.content_grant onto the point so cross-app consumers can
+            // filter at query time without a Postgres round-trip.
+            ...(contentItemId ? {
+              content_item_id: contentItemId,
+              // Resolved from identity.org_app_ref, never assumed. A hardcoded
+              // 'public' here would publish an org's private book to every
+              // tenant — failing OPEN on the one axis that must fail closed.
+              visibility: scope.visibility,
+              grant_org_ids: scope.grantOrgIds,
+              // Which run put this point here. Supersede deletes by this field;
+              // without it, a re-ingest leaves the old run's points orphaned
+              // alongside the new ones and every future search silently blends
+              // two editions of the same book.
+              run_id: ingestRunId,
+              // Chunk hierarchy level. Multi-level chunking is off (see the
+              // known-issue note in docs), so everything is a leaf — but the
+              // field is written now because Step 3's retrieval filters
+              // `level = 0`. If it were absent, that filter would match nothing
+              // against a collection that looks perfectly healthy.
+              level: 0,
+              lang: chunkMetadata.medium || chunkMetadata.language || null,
+              kind: 'book',
+              page_start: chunkMetadata.pageNumber || chunkMetadata.page || null,
+            } : {}),
           }
         };
 
         // Add vectors (dense + sparse if hybrid search enabled)
         if (enableHybridSearch && sparseVectors.length > 0) {
           point.vector = {
-            dense: embeddings[index],
-            sparse: sparseVectors[index]
+            dense: embeddings[originalIndex],
+            sparse: sparseVectors[originalIndex]
           };
         } else {
-          point.vector = embeddings[index];
+          point.vector = embeddings[originalIndex];
         }
 
         return point;
@@ -1278,25 +1769,27 @@ export class EnhancedRAGPipeline {
       // 🛡️ Batch 2b: record this batch's point ids in the bridge (delete/reconciliation).
       // Best-effort and per-batch — bridge bookkeeping must never fail a successful upsert,
       // and recording per-batch keeps earlier batches tracked even if a later one throws.
+      // Reuses the SAME running index the content_chunk insert above used, so a
+      // chunk's bridge row and its Postgres row agree on chunk_index.
       if (bridgeMaterialId) {
         try {
           const { recordQdrantVectorIds } = await import('@/lib/db/qdrant-vector-ids');
           await recordQdrantVectorIds(
-            points.map((p: any) => ({
+            points.map((p: any, qualifiedIndex: number) => ({
               materialId: bridgeMaterialId,
               pointId: p.id,
               collection: this.collectionName,
-              chunkIndex: bridgeChunkIndex++,
+              chunkIndex: bridgeChunkIndex + qualifiedIndex,
             }))
           );
         } catch (bridgeError) {
           console.warn('⚠️ Batch 2b: failed to record qdrant_vector_ids bridge rows:', bridgeError);
         }
-      } else {
-        bridgeChunkIndex += points.length;
       }
+      bridgeChunkIndex += qualified.length;
+      if (sharedRun) sharedRun.nextChunkIndex = bridgeChunkIndex;
 
-      indexedCount += batch.length;
+      indexedCount += qualified.length;
       console.log(`📥 Indexed batch ${Math.floor(i / batchSize) + 1}: ${indexedCount}/${validatedChunks.length} chunks`);
     }
 
@@ -1304,6 +1797,7 @@ export class EnhancedRAGPipeline {
 
     return {
       indexedCount,
+      contentItemId: contentItemId ?? undefined,
       validationStats: {
         validCount: stats.validCount,
         invalidCount: stats.invalidCount,
@@ -1311,6 +1805,16 @@ export class EnhancedRAGPipeline {
         invalidChunks
       }
     };
+    } catch (err) {
+      // Mark the run honestly on partial/total failure — earlier batches in this
+      // call may already have written real content_chunk rows + vectors, so this
+      // is "failed after indexing N" not "nothing happened", and chunkCount
+      // reflects what actually landed rather than being left at null.
+      // NOTE: the ingest_run is document-level and owned by the caller, so a
+      // single failed batch is not recorded as a failed run here — indexPDF
+      // decides that after all batches have had their turn.
+      throw err;
+    }
   }
 
   /**

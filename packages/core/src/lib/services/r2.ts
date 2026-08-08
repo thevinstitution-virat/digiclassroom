@@ -72,6 +72,38 @@ export async function uploadBufferToR2(buffer: Buffer, contentType: string, orig
 }
 
 /**
+ * Upload a canonical source document at an explicit key.
+ *
+ * Unlike `uploadBufferToR2`, this does NOT invent the key — the caller owns it.
+ * Trio source files are keyed by canonical identity as
+ * `content/{content_item_id}/source.pdf`, deliberately matching neither DCP's
+ * `sarvagya-*` prefixes nor PDLMS's `global/books/{bookId}/`: the bucket is
+ * shared between both apps, so extending either legacy convention would tie the
+ * shared content schema to one app's history. This namespace collides with
+ * nothing and is what a future Content Service can adopt unchanged.
+ *
+ * @returns the bucket and key actually written, for `r2://{bucket}/{key}`
+ */
+export async function uploadSourceDocumentToR2(params: {
+  buffer: Buffer;
+  key: string;
+  contentType: string;
+}): Promise<{ bucket: string; key: string }> {
+  if (!bucketName) {
+    throw new Error('R2_BUCKET_NAME is not set — cannot store the canonical source document.');
+  }
+  await r2Client.send(
+    new PutObjectCommand({
+      Bucket: bucketName,
+      Key: params.key,
+      Body: params.buffer,
+      ContentType: params.contentType,
+    }),
+  );
+  return { bucket: bucketName, key: params.key };
+}
+
+/**
  * Generate a pre-signed URL to read a file from R2
  * @param objectKey The key of the object to download/read
  */

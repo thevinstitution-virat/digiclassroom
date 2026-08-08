@@ -7,7 +7,7 @@ import { QdrantClient } from '@qdrant/js-client-rest';
 // OpenAI embeddings enabled for NCERT search
 import { OpenAIService } from '../../services/openai_service';
 import { cacheQdrantSchema, getCachedQdrantSchema } from '../../services/service-lifecycle-manager';
-import { hybridEmbedder, type HybridEmbedding } from './hybrid-embedder';
+import { buildSparseVector } from './sparse-tokenizer';
 import { getAgentRetrievalProfile, getAgentSearchOptions, type AgentRetrievalProfile } from './agent-retrieval-profiles';
 
 export interface QdrantSearchOptions {
@@ -325,49 +325,62 @@ export class QdrantRAGSearch {
     }
 
     try {
-      // Generate sparse vector using HybridEmbedder (BM25)
-      const sparseVectorMap = hybridEmbedder['bm25Index'].vectorize(query);
+      // Query-side sparse vector, from the SAME tokenizer the index side uses.
+      //
+      // This previously called hybridEmbedder's BM25 index and then set
+      // `indices: terms.map((_, idx) => idx)` — a term's array position in the
+      // query became its sparse index, so query vectors could never line up with
+      // document vectors. Both sides now go through sparse-tokenizer.ts, which
+      // is the cross-repo contract PDLMS/Varta also builds against.
+      const sparseVector = buildSparseVector(query);
 
-      // Convert sparse vector map to Qdrant format (indices + values)
-      const terms = Object.keys(sparseVectorMap);
-      const sparseVector = {
-        indices: terms.map((_, idx) => idx),
-        values: terms.map(term => sparseVectorMap[term])
-      };
+      console.log(
+        `🔍 Hybrid search: dense (${embedding.length} dims) + sparse (${sparseVector.indices.length} terms)`,
+      );
 
-      console.log(`🔍 Hybrid search: dense (${embedding.length} dims) + sparse (${terms.length} terms)`);
-
-      // Qdrant hybrid search with RRF (Reciprocal Rank Fusion)
-      const searchRequest = {
-        // Named vector for dense embeddings
-        vector: {
-          name: 'dense',
-          vector: embedding
-        },
-        // Sparse vector for keyword matching
-        sparse_vector: {
-          name: 'sparse',
-          vector: {
-            indices: sparseVector.indices,
-            values: sparseVector.values
-          }
-        },
-        filter,
+      // Genuine hybrid retrieval via the Query API with RRF fusion.
+      //
+      // The previous implementation passed `vector` + `sparse_vector` to the
+      // legacy `search()` endpoint and called it RRF in a comment. `search()`
+      // has no fusion step and does not accept `sparse_vector` at all, so the
+      // call threw and the catch below quietly returned dense-only results — a
+      // hybrid search that reported success, logged an error nobody read, and
+      // never once used the sparse index. Fusion only exists on `query()` with
+      // prefetch branches.
+      //
+      // The sparse vector is named `bm25`, matching the collection definition.
+      // The old code asked for `sparse`, which does not exist here.
+      const response = await this.client.query(this.collectionName, {
+        prefetch: [
+          {
+            query: embedding,
+            using: 'dense',
+            filter,
+            // Over-fetch per branch so fusion has a real candidate pool to
+            // reconcile; fusing two top-K lists would mostly re-rank agreement.
+            limit: topK * 2,
+          },
+          {
+            query: {
+              indices: sparseVector.indices,
+              values: sparseVector.values,
+            },
+            using: 'bm25',
+            filter,
+            limit: topK * 2,
+          },
+        ],
+        query: { fusion: 'rrf' },
         limit: topK,
         with_payload: true,
         with_vector: false,
-        // Hybrid search parameters
-        params: {
-          hnsw_ef: 128, // Higher for better recall
-          exact: false
-        }
-      };
+      });
 
-      const response = await this.client.search(this.collectionName, searchRequest);
+      console.log(`✅ Hybrid search (RRF) returned ${response.points.length} results`);
 
-      console.log(`✅ Hybrid search returned ${response.length} results`);
-
-      return response;
+      // query() returns { points: [...] }; callers expect the bare array that
+      // search() used to hand back.
+      return response.points;
     } catch (error) {
       console.error('❌ Hybrid search failed, falling back to dense-only search:', error);
       // Fallback to dense-only search on error
