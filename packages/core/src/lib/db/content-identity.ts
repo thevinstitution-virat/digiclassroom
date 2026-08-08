@@ -110,9 +110,88 @@ export async function resolveOrCreateContentItem(params: {
 }
 
 /**
- * Record the uploaded original. `storageUri` is `r2://{bucket}/{key}`; the bucket
- * alone can't say which credentials to authenticate with, hence storage_account.
+ * Register a file against a SLOT on a work, creating the row or updating the
+ * file that occupies it.
+ *
+ * A slot is (content_item_id, role, part_index, variant): "chapter 3's markdown",
+ * "the source PDF", "chapter 3's female narration". Different files occupy the
+ * same slot over time as content is corrected, and the slot's identity must not
+ * change when the bytes do — the ingest_run points at this row, and a stable id
+ * is what lets a re-ingest supersede the previous one.
+ *
+ * Deliberately a SELECT-then-INSERT/UPDATE rather than ON CONFLICT: this ships
+ * BEFORE trio migration 006 creates the slot unique index, and an ON CONFLICT
+ * clause naming an index that does not exist yet would fail at runtime. This
+ * form is correct under both the old key and the new one — the expand step of
+ * expand → deploy → migrate → contract.
+ *
+ * `storageUri` is `r2://{bucket}/{key}`; the bucket alone cannot say which
+ * credentials to authenticate with, hence storage_account.
  */
+export async function registerAsset(params: {
+  contentItemId: string;
+  role: string;
+  partIndex?: number;
+  variant?: string;
+  storageAccount: string;
+  storageUri: string;
+  sha256: string;
+  bytes?: number | null;
+  pageCount?: number | null;
+}): Promise<{ assetId: string; changed: boolean; created: boolean }> {
+  const pool = getContentPool();
+  const partIndex = params.partIndex ?? 0;
+  const variant = params.variant ?? 'default';
+
+  const existing = await pool.query<{ id: string; asset_sha256: string | null }>(
+    `SELECT id, asset_sha256 FROM content.content_asset
+      WHERE content_item_id = $1
+        AND role = $2
+        AND coalesce(part_index, 0) = $3
+        AND coalesce(variant, 'default') = $4
+      LIMIT 1`,
+    [params.contentItemId, params.role, partIndex, variant],
+  );
+
+  if (existing.rows.length > 0) {
+    const { id, asset_sha256 } = existing.rows[0];
+    // Byte-identical re-upload: nothing to do. The caller uses `changed` to skip
+    // re-embedding, which is the whole point — an unchanged chapter must not
+    // cost a single OpenAI token.
+    if (asset_sha256 === params.sha256) {
+      return { assetId: id, changed: false, created: false };
+    }
+    await pool.query(
+      `UPDATE content.content_asset
+          SET asset_sha256 = $2, storage_uri = $3, storage_account = $4,
+              bytes = $5, page_count = coalesce($6, page_count)
+        WHERE id = $1`,
+      [id, params.sha256, params.storageUri, params.storageAccount, params.bytes ?? null, params.pageCount ?? null],
+    );
+    return { assetId: id, changed: true, created: false };
+  }
+
+  const res = await pool.query<{ id: string }>(
+    `INSERT INTO content.content_asset
+       (content_item_id, role, part_index, variant, storage_account, storage_uri, asset_sha256, bytes, page_count)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+     RETURNING id`,
+    [
+      params.contentItemId,
+      params.role,
+      partIndex,
+      variant,
+      params.storageAccount,
+      params.storageUri,
+      params.sha256,
+      params.bytes ?? null,
+      params.pageCount ?? null,
+    ],
+  );
+  return { assetId: res.rows[0].id, changed: true, created: true };
+}
+
+/** The source PDF of a work. Thin wrapper over registerAsset for the PDF lane. */
 export async function recordSourceAsset(params: {
   contentItemId: string;
   storageAccount: string;
@@ -121,25 +200,8 @@ export async function recordSourceAsset(params: {
   bytes: number;
   pageCount?: number | null;
 }): Promise<string> {
-  const pool = getContentPool();
-  // `asset_sha256`, not `sha256` — trio migration 005 renamed it to keep the
-  // per-FILE hash visibly distinct from content_item.canonical_sha256, the
-  // per-WORK hash. This insert is the only writer of the column.
-  const res = await pool.query<{ id: string }>(
-    `INSERT INTO content.content_asset
-       (content_item_id, role, storage_account, storage_uri, asset_sha256, bytes, page_count)
-     VALUES ($1, 'source', $2, $3, $4, $5, $6)
-     RETURNING id`,
-    [
-      params.contentItemId,
-      params.storageAccount,
-      params.storageUri,
-      params.sha256,
-      params.bytes,
-      params.pageCount ?? null,
-    ],
-  );
-  return res.rows[0].id;
+  const { assetId } = await registerAsset({ ...params, role: 'source', partIndex: 0, variant: 'default' });
+  return assetId;
 }
 
 /**
