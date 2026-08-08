@@ -345,6 +345,7 @@ export async function replaceTaxonomyLinks(
  */
 export async function insertContentChunks(
   contentItemId: string,
+  contentAssetId: string,
   chunks: Array<{
     chunkIndex: number;
     text: string;
@@ -358,15 +359,29 @@ export async function insertContentChunks(
 
   const values: unknown[] = [];
   const rows = chunks.map((c, i) => {
-    const base = i * 6;
-    values.push(contentItemId, c.chunkIndex, c.pageStart ?? null, c.pageEnd ?? null, c.text, c.chapter ?? null);
-    return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`;
+    const base = i * 7;
+    values.push(
+      contentItemId,
+      contentAssetId,
+      c.chunkIndex,
+      c.pageStart ?? null,
+      c.pageEnd ?? null,
+      c.text,
+      c.chapter ?? null,
+    );
+    return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7})`;
   });
 
+  // Keyed on the ASSET, not the work. chunk_index is contiguous 0..N-1 within a
+  // file; book order is (part_index, chunk_index). Under the old
+  // (content_item_id, chunk_index) key, chapter 2's indexes 0..38 collided with
+  // chapter 1's and this DO UPDATE silently overwrote chapter 1's text — a book
+  // that keeps only its last-ingested chapter, with nothing reported.
   const res = await pool.query<{ id: string }>(
-    `INSERT INTO content.content_chunk (content_item_id, chunk_index, page_start, page_end, text, chapter)
+    `INSERT INTO content.content_chunk
+       (content_item_id, content_asset_id, chunk_index, page_start, page_end, text, chapter)
      VALUES ${rows.join(', ')}
-     ON CONFLICT (content_item_id, chunk_index) DO UPDATE SET
+     ON CONFLICT (content_asset_id, chunk_index) DO UPDATE SET
        page_start = excluded.page_start,
        page_end = excluded.page_end,
        text = excluded.text,
@@ -386,13 +401,16 @@ export async function insertContentChunks(
  * "points_count equals chunk count" invariant quietly stops holding.
  */
 export async function pruneChunksBeyond(
-  contentItemId: string,
+  contentAssetId: string,
   chunkCount: number,
 ): Promise<number> {
   const pool = getContentPool();
+  // Scoped to the ASSET. Scoped to the work — as it was — a re-ingest of
+  // chapter 2 that produced fewer chunks would delete every row with a higher
+  // chunk_index across the whole book, taking chapters 3..15 with it.
   const res = await pool.query(
-    `DELETE FROM content.content_chunk WHERE content_item_id = $1 AND chunk_index >= $2`,
-    [contentItemId, chunkCount],
+    `DELETE FROM content.content_chunk WHERE content_asset_id = $1 AND chunk_index >= $2`,
+    [contentAssetId, chunkCount],
   );
   return res.rowCount ?? 0;
 }

@@ -45,6 +45,8 @@ interface SharedContentRun {
   deduped: boolean;
   /** The `source` rendition this run embedded. Null means the rule is violated. */
   sourceAssetId: string | null;
+  /** The asset whose chunks this run writes — chunk_index is contiguous within it. */
+  assetId: string | null;
 }
 
 // Enhanced RAG Options with query decomposition and re-ranking support
@@ -1310,6 +1312,7 @@ export class EnhancedRAGPipeline {
         nextChunkIndex: 0,
         deduped: true,
         sourceAssetId: await findSourceAssetId(resolved.contentItemId),
+        assetId: null,
       };
     }
 
@@ -1365,6 +1368,10 @@ export class EnhancedRAGPipeline {
       nextChunkIndex: 0,
       deduped: false,
       sourceAssetId,
+      // The PDF lane embeds the source PDF itself, so the chunk-owning asset and
+      // the source asset are the same row. The markdown lane sets this to the
+      // chapter's enriched_md asset instead.
+      assetId: sourceAssetId,
     };
   }
 
@@ -1454,7 +1461,7 @@ export class EnhancedRAGPipeline {
 
     // A shorter re-ingest would otherwise leave the previous run's tail rows
     // behind, breaking the "points_count equals chunk count" invariant.
-    const pruned = await pruneChunksBeyond(run.contentItemId, indexedCount);
+    const pruned = await pruneChunksBeyond(sourceAssetId, indexedCount);
     if (pruned > 0) console.log(`🧹 Pruned ${pruned} stale chunk row(s) from a longer previous run`);
 
     await activateIngestRun(run.ingestRunId, indexedCount);
@@ -1666,7 +1673,14 @@ export class EnhancedRAGPipeline {
             chapter: m.chapter || null,
           };
         });
-        const uuids = await insertContentChunks(contentItemId, chunkInputs);
+        // Chunks belong to the ASSET that produced them, so chunk_index is
+        // contiguous within a file rather than across the book.
+        if (!sharedRun?.assetId) {
+          throw new Error(
+            'Cannot write content_chunk rows without an asset id — chunk_index is keyed per asset.',
+          );
+        }
+        const uuids = await insertContentChunks(contentItemId, sharedRun.assetId, chunkInputs);
         chunkUuidByOriginalIndex = new Map(
           qualified.map(({ originalIndex }, i) => [originalIndex, uuids[i]]),
         );
