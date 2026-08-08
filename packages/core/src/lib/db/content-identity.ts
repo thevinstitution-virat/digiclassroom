@@ -120,12 +120,13 @@ export async function recordSourceAsset(params: {
   sha256: string;
   bytes: number;
   pageCount?: number | null;
-}): Promise<void> {
+}): Promise<string> {
   const pool = getContentPool();
-  await pool.query(
+  const res = await pool.query<{ id: string }>(
     `INSERT INTO content.content_asset
        (content_item_id, role, storage_account, storage_uri, sha256, bytes, page_count)
-     VALUES ($1, 'source', $2, $3, $4, $5, $6)`,
+     VALUES ($1, 'source', $2, $3, $4, $5, $6)
+     RETURNING id`,
     [
       params.contentItemId,
       params.storageAccount,
@@ -135,6 +136,29 @@ export async function recordSourceAsset(params: {
       params.pageCount ?? null,
     ],
   );
+  return res.rows[0].id;
+}
+
+/**
+ * The id of this item's `source` rendition, or null if it has none.
+ *
+ * Every content_item must own the original file it was built from, whatever lane
+ * produced its chunks. A chapter ingested from enriched markdown lands perfect
+ * chunks with exact printed pages — iTutor answers flawlessly and cites
+ * correctly — while the reader has nothing to open. Nothing errors, because
+ * chunks and assets are independent tables; the shelf is simply empty. This is
+ * the lookup that makes that state detectable.
+ */
+export async function findSourceAssetId(contentItemId: string): Promise<string | null> {
+  const pool = getContentPool();
+  const res = await pool.query<{ id: string }>(
+    `SELECT id FROM content.content_asset
+      WHERE content_item_id = $1 AND role = 'source'
+      ORDER BY created_at
+      LIMIT 1`,
+    [contentItemId],
+  );
+  return res.rows.length > 0 ? res.rows[0].id : null;
 }
 
 export interface ResolvedScope {
@@ -310,6 +334,12 @@ export async function pruneChunksBeyond(
 
 export async function startIngestRun(params: {
   contentItemId: string;
+  /**
+   * The asset whose bytes this run embedded. A run belongs to a FILE, not to a
+   * work — fifteen chapter files under one book are fifteen runs, each with its
+   * own active slot (see trio migration 004).
+   */
+  contentAssetId: string | null;
   sourceApp: SourceApp;
   embeddingModel: string;
   embeddingDim: number;
@@ -318,10 +348,11 @@ export async function startIngestRun(params: {
   const pool = getContentPool();
   const res = await pool.query<{ id: string }>(
     `INSERT INTO content.ingest_run
-       (content_item_id, source_app, embedding_model, embedding_dim, status, collection)
-     VALUES ($1, $2, $3, $4, 'running', $5) RETURNING id`,
+       (content_item_id, content_asset_id, source_app, embedding_model, embedding_dim, status, collection)
+     VALUES ($1, $2, $3, $4, $5, 'running', $6) RETURNING id`,
     [
       params.contentItemId,
+      params.contentAssetId,
       params.sourceApp,
       params.embeddingModel,
       params.embeddingDim,
@@ -358,14 +389,23 @@ export async function hasActiveIngestRun(contentItemId: string): Promise<boolean
  */
 export async function supersedePriorActiveRun(
   contentItemId: string,
+  contentAssetId: string | null,
   newRunId: string,
 ): Promise<string | null> {
   const pool = getContentPool();
+  // Scoped to the ASSET, not just the item. Since trio migration 004 an item may
+  // hold several concurrently-active runs — one per file — so superseding "any
+  // active run for this item" would retire a sibling chapter's run and delete
+  // its points, which is precisely the collision 004 exists to prevent. The
+  // NULL-safe comparison keeps assetless legacy runs matching each other.
   const res = await pool.query<{ id: string }>(
     `UPDATE content.ingest_run SET status = 'superseded', completed_at = now()
-      WHERE content_item_id = $1 AND status = 'active' AND id <> $2
+      WHERE content_item_id = $1
+        AND content_asset_id IS NOT DISTINCT FROM $2
+        AND status = 'active'
+        AND id <> $3
       RETURNING id`,
-    [contentItemId, newRunId],
+    [contentItemId, contentAssetId, newRunId],
   );
   return res.rows.length > 0 ? res.rows[0].id : null;
 }
