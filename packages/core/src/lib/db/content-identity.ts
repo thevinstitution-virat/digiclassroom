@@ -122,9 +122,12 @@ export async function recordSourceAsset(params: {
   pageCount?: number | null;
 }): Promise<string> {
   const pool = getContentPool();
+  // `asset_sha256`, not `sha256` — trio migration 005 renamed it to keep the
+  // per-FILE hash visibly distinct from content_item.canonical_sha256, the
+  // per-WORK hash. This insert is the only writer of the column.
   const res = await pool.query<{ id: string }>(
     `INSERT INTO content.content_asset
-       (content_item_id, role, storage_account, storage_uri, sha256, bytes, page_count)
+       (content_item_id, role, storage_account, storage_uri, asset_sha256, bytes, page_count)
      VALUES ($1, 'source', $2, $3, $4, $5, $6)
      RETURNING id`,
     [
