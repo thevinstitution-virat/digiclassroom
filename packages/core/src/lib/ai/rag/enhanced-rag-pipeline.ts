@@ -17,6 +17,7 @@ import {
   insertContentChunks,
   pruneChunksBeyond,
   recordSourceAsset,
+  findSourceAssetId,
   replaceTaxonomyLinks,
   resolveScopeAndGrant,
   startIngestRun,
@@ -42,6 +43,8 @@ interface SharedContentRun {
   nextChunkIndex: number;
   /** Identical bytes already ingested — caller must skip embedding entirely. */
   deduped: boolean;
+  /** The `source` rendition this run embedded. Null means the rule is violated. */
+  sourceAssetId: string | null;
 }
 
 // Enhanced RAG Options with query decomposition and re-ranking support
@@ -1306,6 +1309,7 @@ export class EnhancedRAGPipeline {
         taxonomyNodeIds,
         nextChunkIndex: 0,
         deduped: true,
+        sourceAssetId: await findSourceAssetId(resolved.contentItemId),
       };
     }
 
@@ -1319,6 +1323,7 @@ export class EnhancedRAGPipeline {
 
     // Store the original under canonical identity. New items only — a duplicate
     // returned above and never reaches this point.
+    let sourceAssetId: string | null = await findSourceAssetId(resolved.contentItemId);
     if (options.sourceFile) {
       const { uploadSourceDocumentToR2 } = await import('../../services/r2');
       const key = `content/${resolved.contentItemId}/source.pdf`;
@@ -1327,7 +1332,7 @@ export class EnhancedRAGPipeline {
         key,
         contentType: options.sourceFile.contentType,
       });
-      await recordSourceAsset({
+      sourceAssetId = await recordSourceAsset({
         contentItemId: resolved.contentItemId,
         storageAccount: 'digiclassroom-pro',
         storageUri: `r2://${bucket}/${key}`,
@@ -1345,6 +1350,7 @@ export class EnhancedRAGPipeline {
 
     const ingestRunId = await startIngestRun({
       contentItemId: resolved.contentItemId,
+      contentAssetId: sourceAssetId,
       sourceApp: sharedSourceApp,
       embeddingModel: 'text-embedding-3-large',
       embeddingDim: 3072,
@@ -1358,6 +1364,7 @@ export class EnhancedRAGPipeline {
       taxonomyNodeIds,
       nextChunkIndex: 0,
       deduped: false,
+      sourceAssetId,
     };
   }
 
@@ -1414,7 +1421,29 @@ export class EnhancedRAGPipeline {
   ): Promise<void> {
     if (!run.ingestRunId) return;
 
-    const priorRunId = await supersedePriorActiveRun(run.contentItemId, run.ingestRunId);
+    // ── The source-rendition rule ────────────────────────────────────────
+    // Re-checked at close rather than trusted from the start: the asset could
+    // have been written by a concurrent run, or not at all if this lane never
+    // uploaded one. Chunks and assets live in independent tables, so an item
+    // with perfect chunks and no source file raises nothing anywhere — iTutor
+    // cites it correctly while the reader opens an empty shelf. Refuse to
+    // publish that state.
+    const sourceAssetId = await findSourceAssetId(run.contentItemId);
+    if (!sourceAssetId) {
+      throw new Error(
+        `Refusing to activate run ${run.ingestRunId}: content_item ${run.contentItemId} ` +
+          `has no asset with role='source'. Chunks alone are not a publishable work — ` +
+          `the reader would have nothing to open, and nothing would report it. ` +
+          `Every lane must upload and register the original file, even when the ` +
+          `chunks came from curated markdown.`,
+      );
+    }
+
+    const priorRunId = await supersedePriorActiveRun(
+      run.contentItemId,
+      sourceAssetId,
+      run.ingestRunId,
+    );
     if (priorRunId) {
       console.log(`🔁 Superseding prior run ${priorRunId} — deleting its points`);
       await this.qdrant.delete(this.collectionName, {
@@ -1740,15 +1769,18 @@ export class EnhancedRAGPipeline {
           }
         };
 
-        // Add vectors (dense + sparse if hybrid search enabled)
-        if (enableHybridSearch && sparseVectors.length > 0) {
-          point.vector = {
-            dense: embeddings[originalIndex],
-            sparse: sparseVectors[originalIndex]
-          };
-        } else {
-          point.vector = embeddings[originalIndex];
-        }
+        // Named vectors, always. The collection declares `dense` and sparse
+        // `bm25`; anything else is rejected outright by Qdrant.
+        //
+        // Both previous shapes were wrong, and neither had ever run:
+        //   flag ON  -> { dense, sparse }  ->  "Not existing vector name: sparse"
+        //   flag OFF -> a bare array       ->  "Not existing vector name"
+        // So ingestion failed on the first batch in either state. The sparse
+        // vector is named `bm25` here to match the collection; the query side
+        // (qdrant-search.ts) already uses `bm25` via the Query API.
+        point.vector = enableHybridSearch && sparseVectors.length > 0
+          ? { dense: embeddings[originalIndex], bm25: sparseVectors[originalIndex] }
+          : { dense: embeddings[originalIndex] };
 
         return point;
       });
@@ -1836,40 +1868,77 @@ export class EnhancedRAGPipeline {
    * Ensure Qdrant collection exists with proper configuration
    */
   private async ensureCollectionExists(): Promise<void> {
-    try {
-      // Check if collection exists
-      const collections = await this.qdrant.getCollections();
-      const collectionExists = collections.collections.some(
-        (col: any) => col.name === this.collectionName
-      );
+    const collections = await this.qdrant.getCollections();
+    const exists = collections.collections.some((col: any) => col.name === this.collectionName);
 
-      if (!collectionExists) {
-        console.log(`🔧 Creating Qdrant collection: ${this.collectionName}`);
-
-        await this.qdrant.createCollection(this.collectionName, {
-          vectors: {
-            size: 3072, // text-embedding-3-large dimensions (upgraded from 1536)
-            distance: 'Cosine'
-          },
-          optimizers_config: {
-            default_segment_number: 2,
-            max_segment_size: 20000,
-            memmap_threshold: 50000,
-            indexing_threshold: 20000,
-            flush_interval_sec: 5,
-            max_optimization_threads: 1
-          }
-        });
-
-        console.log(`✅ Collection ${this.collectionName} created successfully`);
-      } else {
-        console.log(`✅ Collection ${this.collectionName} already exists`);
-      }
-    } catch (error) {
-      console.error('❌ Failed to ensure collection exists:', error);
-      throw error;
+    if (!exists) {
+      // Create with the SHAPE THIS PIPELINE WRITES: a named dense vector plus
+      // sparse `bm25`. The previous version created `vectors: { size, distance }`
+      // — an unnamed vector — so a freshly created collection could never have
+      // accepted a single point from this same file.
+      console.log(`🔧 Creating Qdrant collection: ${this.collectionName}`);
+      await this.qdrant.createCollection(this.collectionName, {
+        vectors: { dense: { size: 3072, distance: 'Cosine' } },
+        sparse_vectors: { bm25: { modifier: 'idf' } },
+        optimizers_config: {
+          default_segment_number: 2,
+          max_segment_size: 20000,
+          memmap_threshold: 50000,
+          indexing_threshold: 20000,
+          flush_interval_sec: 5,
+          max_optimization_threads: 1,
+        },
+      } as any);
+      console.log(`✅ Collection ${this.collectionName} created`);
+      return;
     }
+
+    // Collection exists — verify it matches what we are about to write, rather
+    // than discovering the mismatch one rejected upsert at a time.
+    const info: any = await this.qdrant.getCollection(this.collectionName);
+    const params = info?.config?.params ?? {};
+    const denseNames = Object.keys(params.vectors ?? {});
+    const sparseNames = Object.keys(params.sparse_vectors ?? {});
+
+    if (!denseNames.includes('dense')) {
+      throw new Error(
+        `Collection "${this.collectionName}" has no named dense vector "dense" ` +
+          `(found: ${denseNames.length ? denseNames.join(', ') : 'an unnamed vector'}). ` +
+          `This pipeline writes named vectors only; ingesting would fail on every point.`,
+      );
+    }
+
+    const hybridEnabled = process.env.ENABLE_HYBRID_SEARCH === 'true';
+
+    // The trap this guard exists to close: a dense-only point is perfectly
+    // VALID under named vectors. If the collection declares a sparse vector and
+    // we ingest with hybrid off, every point lands without `bm25`, Qdrant raises
+    // nothing, retrieval quietly degrades to dense-only, and the only fix is
+    // re-embedding the entire corpus. Refuse at the start of the run instead.
+    if (sparseNames.includes('bm25') && !hybridEnabled) {
+      throw new Error(
+        `Collection "${this.collectionName}" declares a sparse vector "bm25", but ` +
+          `ENABLE_HYBRID_SEARCH is not "true". Ingesting now would write dense-only ` +
+          `points that Qdrant accepts without complaint, silently disabling sparse ` +
+          `retrieval for this content until it is re-embedded. Set ` +
+          `ENABLE_HYBRID_SEARCH=true, or ingest into a collection with no sparse vector.`,
+      );
+    }
+
+    if (hybridEnabled && !sparseNames.includes('bm25')) {
+      throw new Error(
+        `ENABLE_HYBRID_SEARCH is "true" but collection "${this.collectionName}" ` +
+          `declares no sparse vector "bm25" (found: ${sparseNames.join(', ') || 'none'}). ` +
+          `Every upsert would be rejected.`,
+      );
+    }
+
+    console.log(
+      `✅ Collection ${this.collectionName} ready — dense:[${denseNames.join(',')}] ` +
+        `sparse:[${sparseNames.join(',') || 'none'}] hybrid:${hybridEnabled}`,
+    );
   }
+
 
   /**
    * Enhance query with educational context
