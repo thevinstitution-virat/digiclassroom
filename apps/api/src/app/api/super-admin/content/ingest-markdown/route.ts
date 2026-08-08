@@ -18,6 +18,30 @@ import { parseEnrichedMarkdown } from '@/lib/content/markdown-ingest-parser';
  *   - refuses any file whose frontmatter validation_status !== APPROVED
  *     (unless force=true is explicitly passed)
  */
+/**
+ * TEMPORARY: this lane is closed until it is wired to the shared content spine.
+ *
+ * It writes chunks and vectors but NO content_item, content_chunk, content_asset
+ * or ingest_run — it never opens a shared run at all. The points it produces
+ * therefore carry no content_item_id, visibility, level or run_id, which means:
+ *
+ *   - Varta cannot see them (it filters on exactly those fields)
+ *   - no ingest_run tracks them, so no supersede can ever collect them
+ *   - the run-close guard requiring a role='source' asset never fires, because
+ *     there is no run to close
+ *
+ * Until today this failed safe by accident: the write path used vector names the
+ * collection does not define, so every upsert was rejected. Fixing the vector
+ * names and enabling ENABLE_HYBRID_SEARCH removed that accidental brake — this
+ * lane would now succeed at writing permanently-orphaned points into the shared
+ * collection, and identifying them afterwards means searching for the ABSENCE of
+ * a field.
+ *
+ * Remove this block in the same change that routes this lane through
+ * beginSharedContentRun / finalizeSharedContentRun.
+ */
+const MARKDOWN_LANE_WIRED = false;
+
 export async function POST(request: NextRequest) {
   try {
     const session = await auth.api.getSession({ headers: await headers() });
@@ -26,6 +50,23 @@ export async function POST(request: NextRequest) {
     }
     if (!isPlatformStaff((session.user.role ?? '') as Role)) {
       return NextResponse.json({ success: false, error: 'Forbidden. Admin access required.' }, { status: 403 });
+    }
+
+    // Closed until wired — see MARKDOWN_LANE_WIRED above. Refuses BEFORE reading
+    // the upload, so nothing is parsed, embedded, or written.
+    if (!MARKDOWN_LANE_WIRED) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'The enriched-markdown lane is temporarily closed. It is not yet connected to the shared ' +
+            'content library: it would index your chapter for iTutor but register no book, no chapters ' +
+            'and no source file, so Varta could never find it and the content could not be corrected ' +
+            'or removed later. Use the PDF lane meanwhile, or wait for the markdown lane to be wired.',
+          code: 'MARKDOWN_LANE_NOT_WIRED',
+        },
+        { status: 503 },
+      );
     }
 
     const formData = await request.formData();
