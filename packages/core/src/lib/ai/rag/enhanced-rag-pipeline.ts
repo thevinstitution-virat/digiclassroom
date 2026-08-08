@@ -3,7 +3,11 @@
  * Single-tier processing using doc-extract-engine for all documents
  */
 
-import { pdfExtractKitProcessor, PDFExtractKitMetadata } from '../../content/pdf-extract-kit-processor';
+// pdf-extract-kit-processor is imported LAZILY, inside indexPDF, and only after
+// the dev-lane gate below passes. It spawns a Python interpreter from a Windows
+// path and is a developer-machine tool; keeping it out of the module graph keeps
+// it out of the deployed server's startup path entirely.
+import type { PDFExtractKitMetadata } from '../../content/pdf-extract-kit-processor';
 // Simplified architecture: doc-extract-engine only
 import { qdrantSearch, QdrantSearchOptions } from './qdrant-search';
 import { QdrantClient } from '@qdrant/js-client-rest';
@@ -954,8 +958,38 @@ export class EnhancedRAGPipeline {
     // B.11 exists to close.
     let openRun: SharedContentRun | null = null;
 
+    // ── The PDF lane is DEVELOPER-MACHINE ONLY ───────────────────────────
+    //
+    // It shells out to a Python interpreter via `spawn`, and the path it is
+    // configured with in production is the Windows literal
+    // `.venv-py311\Scripts\python.exe`. Neither that venv nor
+    // vendor/PDF-Extract-Kit/models exists in the server image — verified on the
+    // running container — so every call ENOENTs partway through an upload the
+    // operator has already waited on. It has presumably only ever run on a
+    // Windows workstation, which is where the existing corpus came from.
+    //
+    // Gated rather than deleted: it is still the tool that turns a source PDF
+    // into enriched markdown on a machine that has the toolchain. Opt in with
+    // ENABLE_PDF_EXTRACT_LANE=true, and only there.
+    if (process.env.ENABLE_PDF_EXTRACT_LANE !== 'true') {
+      const msg =
+        'The PDF extraction lane is disabled on this host. It spawns a local Python ' +
+        'toolchain (.venv-py311 + vendor/PDF-Extract-Kit/models) that is not installed here, ' +
+        'so it would fail partway through rather than at the start. It is a developer-machine ' +
+        'lane: run it where the toolchain exists and ingest the resulting enriched markdown. ' +
+        'Set ENABLE_PDF_EXTRACT_LANE=true to override on a host that has it.';
+      console.warn(`⛔ indexPDF refused: ${msg}`);
+      return {
+        success: false,
+        chunks_indexed: 0,
+        errors: [msg],
+        processor_used: 'disabled',
+      };
+    }
+
     try {
       console.log(`📚 Processing PDF with doc-extract-engine: ${filename}`);
+      const { pdfExtractKitProcessor } = await import('../../content/pdf-extract-kit-processor');
 
       // Prepare metadata for doc-extract-engine
       const pdfExtractKitMetadata: PDFExtractKitMetadata = {

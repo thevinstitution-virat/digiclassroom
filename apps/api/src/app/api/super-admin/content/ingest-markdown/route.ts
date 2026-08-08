@@ -59,10 +59,14 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error:
-            'The enriched-markdown lane is temporarily closed. It is not yet connected to the shared ' +
+            'The enriched-markdown HTTP lane is closed. It is not yet connected to the shared ' +
             'content library: it would index your chapter for iTutor but register no book, no chapters ' +
             'and no source file, so Varta could never find it and the content could not be corrected ' +
-            'or removed later. Use the PDF lane meanwhile, or wait for the markdown lane to be wired.',
+            'or removed later. ' +
+            'There is no fallback on this server — the PDF lane is a developer-machine tool that ' +
+            'spawns a local Python toolchain which is not installed here, and it is disabled rather ' +
+            'than left to fail mid-upload. Ingestion currently runs through scripts/ingest-part.ts ' +
+            'against the shared spine; ask whoever operates the platform to run your chapter through it.',
           code: 'MARKDOWN_LANE_NOT_WIRED',
         },
         { status: 503 },
