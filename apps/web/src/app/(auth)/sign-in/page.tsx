@@ -38,6 +38,8 @@ function SignInForm() {
     const [loading, setLoading] = useState(false)
     const [googleLoading, setGoogleLoading] = useState(false)
     const [vidyaverseLoading, setVidyaverseLoading] = useState(false)
+    const [magicLinkLoading, setMagicLinkLoading] = useState(false)
+    const [magicLinkSent, setMagicLinkSent] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     const federationEnabled = process.env.NEXT_PUBLIC_FEDERATION_ENABLED === 'true'
@@ -62,7 +64,16 @@ function SignInForm() {
             })
 
             if (result.error) {
-                setError(result.error.message || 'Invalid email or password')
+                // better-auth answers INVALID_EMAIL_OR_PASSWORD both for a wrong
+                // password AND for an account that has no password at all. Almost
+                // every account here is federated (Google / Vidyaverse) and has no
+                // credential row, so the bare message sends people to reset a
+                // password that never existed. Name the likely cause instead.
+                setError(
+                    (result.error.message || 'Invalid email or password') +
+                        '. If you signed up with Google or Vidyaverse, use that button above — ' +
+                        'or get a one-time sign-in link by email.'
+                )
             } else {
                 router.push(redirectUrl)
             }
@@ -70,6 +81,35 @@ function SignInForm() {
             setError(err.message || 'Something went wrong. Please try again.')
         } finally {
             setLoading(false)
+        }
+    }
+
+    // Passwordless sign-in. The magicLink plugin is registered on BOTH the server
+    // (packages/core/src/auth/index.ts) and the client, and /sign-in/magic-link
+    // returns 200 — but nothing in the UI ever called it, so a working
+    // password-free path sat unreachable while users bounced off a password form
+    // for accounts that have no password.
+    const handleMagicLink = async () => {
+        if (!email) {
+            setError('Enter your email address first, then request a sign-in link.')
+            return
+        }
+        setMagicLinkLoading(true)
+        setError(null)
+        try {
+            const magicClient = authClient as unknown as {
+                signIn: { magicLink: (args: { email: string; callbackURL?: string }) => Promise<{ error?: { message?: string } }> }
+            }
+            const result = await magicClient.signIn.magicLink({ email, callbackURL: toAppUrl(redirectUrl) })
+            if (result?.error) {
+                setError(result.error.message || 'Could not send the sign-in link.')
+            } else {
+                setMagicLinkSent(true)
+            }
+        } catch (err: any) {
+            setError(err.message || 'Could not send the sign-in link.')
+        } finally {
+            setMagicLinkLoading(false)
         }
     }
 
@@ -322,6 +362,27 @@ function SignInForm() {
                                     'Sign In'
                                 )}
                             </button>
+                            {/* Passwordless option — the only email-based path that works
+                                for the federated accounts that make up this user base. */}
+                            {magicLinkSent ? (
+                                <p className="mt-4 rounded-xl border border-border bg-accent/40 px-4 py-3 text-center text-sm text-foreground">
+                                    Check <span className="font-semibold">{email}</span> for a one-time sign-in link.
+                                </p>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={handleMagicLink}
+                                    disabled={magicLinkLoading}
+                                    className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-background py-3 px-4 font-semibold text-foreground transition-all duration-200 hover:bg-accent hover:shadow-elev-1 disabled:opacity-50"
+                                >
+                                    {magicLinkLoading ? (
+                                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+                                    ) : (
+                                        <Mail className="h-5 w-5" />
+                                    )}
+                                    Email me a sign-in link
+                                </button>
+                            )}
                         </form>
                     </div>
 

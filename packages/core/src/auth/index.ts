@@ -204,6 +204,15 @@ export const auth = betterAuth({
             }
         }),
         magicLink({
+            // Magic link SIGNS IN existing users only — it must not create them.
+            //
+            // The plugin defaults `disableSignUp` to false and calls
+            // internalAdapter.createUser, so without this flag anyone could type
+            // any address, receive a link, and be provisioned an account. That
+            // would silently reopen the door `emailAndPassword.disableSignUp`
+            // was set to close (see the 2026-08-06 identity reset): local signup
+            // shut on the front entrance while magic link stood open at the side.
+            disableSignUp: true,
             sendMagicLink: async ({ email, url }) => {
                 // The raw token is intentionally NOT logged (security).
                 await sendEmail({

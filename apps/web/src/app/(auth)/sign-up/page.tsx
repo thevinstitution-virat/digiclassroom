@@ -32,12 +32,8 @@ function SignUpForm() {
         }
     }, [isLoaded, user, router])
 
-    const [name, setName] = useState('')
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
-    const [showPassword, setShowPassword] = useState(false)
-    const [loading, setLoading] = useState(false)
     const [googleLoading, setGoogleLoading] = useState(false)
+    const [vidyaverseLoading, setVidyaverseLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     // Mirrors the isReal() gate on the server (packages/core/src/auth/index.ts) —
@@ -49,34 +45,23 @@ function SignUpForm() {
         googleClientId && !googleClientId.startsWith('your_') && !googleClientId.toLowerCase().includes('placeholder')
     )
 
-    const handleEmailSignUp = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setLoading(true)
+    // Account creation is federated only. The server sets
+    // `emailAndPassword.disableSignUp: true` (packages/core/src/auth/index.ts),
+    // so /api/auth/sign-up/email answers 400 EMAIL_PASSWORD_SIGN_UP_DISABLED for
+    // every request. This page previously rendered a full name/email/password
+    // form against that endpoint — it could not succeed even once, and told the
+    // user only "Failed to create account".
+    const handleVidyaverseSignUp = async () => {
+        setVidyaverseLoading(true)
         setError(null)
-
-        if (password.length < 8) {
-            setError('Password must be at least 8 characters')
-            setLoading(false)
-            return
-        }
-
         try {
-            const result = await authClient.signUp.email({
-                email,
-                password,
-                name,
-                callbackURL: toAppUrl(redirectUrl),
-            })
-
-            if (result.error) {
-                setError(result.error.message || 'Failed to create account')
-            } else {
-                router.push(redirectUrl)
+            const oauthClient = authClient as unknown as {
+                signIn: { oauth2: (args: { providerId: string; callbackURL?: string }) => Promise<unknown> }
             }
+            await oauthClient.signIn.oauth2({ providerId: 'vidyaverse', callbackURL: toAppUrl(redirectUrl) })
         } catch (err: any) {
-            setError(err.message || 'Something went wrong. Please try again.')
-        } finally {
-            setLoading(false)
+            setError(err.message || 'Vidyaverse sign-up failed')
+            setVidyaverseLoading(false)
         }
     }
 
@@ -203,92 +188,27 @@ function SignUpForm() {
                             </button>
                         )}
 
-                        {/* Divider */}
-                        <div className="relative mb-6">
-                            <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-border" />
-                            </div>
-                            <div className="relative flex justify-center text-sm">
-                                <span className="bg-card px-4 text-muted-foreground">or sign up with email</span>
-                            </div>
-                        </div>
+                        {/* Vidyaverse is the primary account-creation path — the server
+                            accepts no other. Rendering it above the fold rather than as a
+                            fallback, because it is the ONLY thing on this page that works. */}
+                        <button
+                            onClick={handleVidyaverseSignUp}
+                            disabled={vidyaverseLoading}
+                            className="mb-6 flex w-full items-center justify-center gap-3 rounded-xl bg-dc-grad-br bg-[length:200%_200%] py-3 px-4 font-semibold text-white shadow-glow-brand transition-all duration-200 hover:shadow-elev-3 hover:[background-position:100%_50%] active:scale-[0.98] disabled:opacity-50"
+                        >
+                            {vidyaverseLoading ? (
+                                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/70 border-t-transparent" />
+                            ) : (
+                                <Sparkles className="h-5 w-5" />
+                            )}
+                            Continue with Vidyaverse
+                        </button>
 
-                        {/* Email Form */}
-                        <form onSubmit={handleEmailSignUp} className="space-y-5">
-                            <div>
-                                <label className="mb-2 block text-sm font-semibold text-foreground">
-                                    Full Name
-                                </label>
-                                <div className="relative">
-                                    <User className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                                    <input
-                                        type="text"
-                                        value={name}
-                                        onChange={(e) => setName(e.target.value)}
-                                        placeholder="Your full name"
-                                        required
-                                        className="w-full rounded-xl border border-input bg-background py-3 pl-11 pr-4 text-foreground shadow-elev-1 outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-ring/35"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="mb-2 block text-sm font-semibold text-foreground">
-                                    Email Address
-                                </label>
-                                <div className="relative">
-                                    <Mail className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                                    <input
-                                        type="email"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        placeholder="you@example.com"
-                                        required
-                                        className="w-full rounded-xl border border-input bg-background py-3 pl-11 pr-4 text-foreground shadow-elev-1 outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-ring/35"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="mb-2 block text-sm font-semibold text-foreground">
-                                    Password
-                                </label>
-                                <div className="relative">
-                                    <Lock className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                                    <input
-                                        type={showPassword ? 'text' : 'password'}
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        placeholder="At least 8 characters"
-                                        required
-                                        minLength={8}
-                                        className="w-full rounded-xl border border-input bg-background py-3 pl-11 pr-12 text-foreground shadow-elev-1 outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-ring/35"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                                    >
-                                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="flex w-full items-center justify-center gap-2 rounded-xl bg-dc-grad-br bg-[length:200%_200%] py-3 px-4 font-semibold text-white shadow-glow-brand transition-all duration-200 hover:shadow-elev-3 hover:[background-position:100%_50%] active:scale-[0.98] disabled:opacity-50"
-                            >
-                                {loading ? (
-                                    <>
-                                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                                        Creating account...
-                                    </>
-                                ) : (
-                                    'Create Account'
-                                )}
-                            </button>
-                        </form>
+                        <p className="text-center text-sm text-muted-foreground">
+                            DigiClassroom accounts are created through your Vidyaverse ID — one
+                            login across Campus OS, Library and Tutor. There is no separate
+                            DigiClassroom password to remember.
+                        </p>
                     </div>
 
                     {/* Sign-In Link */}

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { forgetPassword } from '@/auth/client'
+import { requestPasswordReset } from '@/auth/client'
 import { Mail, AlertCircle, Loader2, CheckCircle, ArrowLeft } from 'lucide-react'
 // Shared Indic motifs, vendored from PDLMS — same lotus backdrop and card
 // treatment as sign-in/sign-up, so the whole auth corridor feels continuous.
@@ -21,7 +21,7 @@ export default function ForgotPasswordPage() {
         setLoading(true)
 
         try {
-            const result = await forgetPassword({
+            const result = await requestPasswordReset({
                 email,
                 redirectTo: '/reset-password',
             })
