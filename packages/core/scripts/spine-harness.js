@@ -6,9 +6,15 @@
 const ci = require('./content-identity.js');
 const { getContentPool } = require('./content-connection.js');
 
+/**
+ * The sentinel work. Not an ISBN — deliberately unmistakable, so no real book
+ * can ever collide with it and nobody can mistake a sentinel row for content.
+ */
+const SENTINEL_ISBN = 'TRIO-HARNESS-SENTINEL-DO-NOT-USE';
+
 const APP = 'digiclassroom';
 const LOCAL_ID = `__spine_harness_${Date.now()}`;
-const ISBN = `__harness-${Date.now()}`;
+const ISBN = SENTINEL_ISBN;
 
 let failures = 0;
 function check(name, cond, detail) {
@@ -21,47 +27,74 @@ function check(name, cond, detail) {
 }
 
 /**
- * REFUSE TO RUN AGAINST A DATABASE THAT HOLDS ANYTHING.
+ * REFUSE TO RUN IF ANY ROW BELONGS TO A WORK THIS HARNESS DOES NOT OWN.
  *
- * This harness creates rows and then deletes them, and its cleanup ends with
- * `DELETE FROM content.content_item WHERE id = $1`, which cascades. That was
- * correct while every content table was empty and the only rows in the database
- * were the ones it had just made. It stops being correct the moment a real book
- * lands: a bug in the id it tracks, or an edit that widens a cleanup query,
- * deletes published content, and content_item cascades to assets, chunks, runs
- * and grants.
+ * The first version of this guard demanded an empty schema. That was right for
+ * about a day and then permanently wrong: the moment the first real chapter
+ * lands the harness locks itself out, and a test you cannot run is a test you
+ * stop maintaining.
  *
- * The guard is emptiness, not a flag, because a flag is something you set when
- * you are already sure — and being already sure is exactly the state in which
- * this goes wrong.
+ * Ownership is the real property being protected, not emptiness. This harness
+ * writes throwaway rows and deletes them by cascading from content_item, which
+ * takes assets, chunks, runs and grants with it. What must never happen is that
+ * cascade reaching a work it did not create. So: the sentinel work is fair game,
+ * everything else is off limits, and the check is per-row rather than per-table.
  */
-async function assertDatabaseIsEmpty(pool) {
-  const tables = [
-    'content_item', 'content_asset', 'content_chunk',
-    'ingest_run', 'content_grant', 'content_source_ref', 'content_asset_version',
+async function assertOnlySentinelRows(pool) {
+  const foreign = [];
+
+  const checks = [
+    ['content_item', `SELECT count(*)::int c FROM content.content_item WHERE isbn IS DISTINCT FROM $1`],
+    ['content_asset', `SELECT count(*)::int c FROM content.content_asset a
+                         JOIN content.content_item i ON i.id = a.content_item_id
+                        WHERE i.isbn IS DISTINCT FROM $1`],
+    ['content_chunk', `SELECT count(*)::int c FROM content.content_chunk ch
+                         JOIN content.content_item i ON i.id = ch.content_item_id
+                        WHERE i.isbn IS DISTINCT FROM $1`],
+    ['ingest_run', `SELECT count(*)::int c FROM content.ingest_run r
+                      JOIN content.content_item i ON i.id = r.content_item_id
+                     WHERE i.isbn IS DISTINCT FROM $1`],
+    ['content_grant', `SELECT count(*)::int c FROM content.content_grant g
+                         JOIN content.content_item i ON i.id = g.content_item_id
+                        WHERE i.isbn IS DISTINCT FROM $1`],
+    ['content_source_ref', `SELECT count(*)::int c FROM content.content_source_ref s
+                              JOIN content.content_item i ON i.id = s.content_item_id
+                             WHERE i.isbn IS DISTINCT FROM $1`],
+    ['content_asset_version', `SELECT count(*)::int c FROM content.content_asset_version v
+                                 JOIN content.content_asset a ON a.id = v.asset_id
+                                 JOIN content.content_item i ON i.id = a.content_item_id
+                                WHERE i.isbn IS DISTINCT FROM $1`],
   ];
-  const populated = [];
-  for (const t of tables) {
-    const r = await pool.query(`SELECT count(*)::int c FROM content.${t}`);
-    if (r.rows[0].c > 0) populated.push(`${t}=${r.rows[0].c}`);
+
+  for (const [name, sql] of checks) {
+    const r = await pool.query(sql, [SENTINEL_ISBN]);
+    if (r.rows[0].c > 0) foreign.push(`${name}=${r.rows[0].c}`);
   }
-  if (populated.length > 0) {
-    console.error('REFUSING TO RUN — the content schema is not empty.');
-    console.error(`  populated: ${populated.join(', ')}`);
+
+  if (foreign.length > 0) {
+    console.error('REFUSING TO RUN — the content schema holds rows this harness does not own.');
+    console.error(`  not mine: ${foreign.join(', ')}`);
     console.error(
-      '  This harness writes throwaway rows and deletes them by cascading from content_item.\n' +
-      '  Against a database holding real books that is a data-loss tool, not a test.\n' +
-      '  Run it against an empty database, or write assertions that never delete.',
+      `  This harness deletes by cascading from content_item. It may only ever touch the\n` +
+      `  sentinel work (isbn = "${SENTINEL_ISBN}"). Anything else is real content, and a\n` +
+      `  cascade that reaches it is data loss, not a test.`,
     );
     await pool.end();
     process.exit(3);
   }
-  console.log('Pre-flight: content schema is empty — safe to run.\n');
+  console.log('Pre-flight: no rows outside the sentinel work — safe to run.\n');
+}
+
+/** Clear anything a previous run left behind. Sentinel-scoped, so it can only reach its own rows. */
+async function clearSentinel(pool) {
+  const r = await pool.query(`DELETE FROM content.content_item WHERE isbn = $1`, [SENTINEL_ISBN]);
+  if (r.rowCount > 0) console.log(`  cleared ${r.rowCount} sentinel work(s) left by a previous run`);
 }
 
 async function main() {
   const pool = getContentPool();
-  await assertDatabaseIsEmpty(pool);
+  await assertOnlySentinelRows(pool);
+  await clearSentinel(pool);
 
   // ── 1. Work identity: two different app-local ids, one ISBN, one work ──
   console.log('\n[1] work key resolution');
