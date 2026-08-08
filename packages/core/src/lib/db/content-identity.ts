@@ -11,16 +11,28 @@ export interface ResolvedContentItem {
    * paying twice and discarding one copy.
    */
   deduped: boolean;
+  /** Which resolution path matched. Reported so a surprise is visible in logs. */
+  matchedBy: 'source_ref' | 'work_key' | 'content_hash' | 'created';
 }
 
 /**
  * Resolve the canonical content_item for a given app's local content id.
  *
- * Three resolution paths, in order:
+ * Four resolution paths, in order:
  *   1. (app, local_id) already registered  → same item, not a dedupe
- *   2. canonical_sha256 already registered → EXISTING item, link this app's
- *      local id to it, and report deduped=true so the caller skips the run
- *   3. otherwise                           → create item + source_ref
+ *   2. work key (isbn, edition) matches    → the SAME WORK, being extended by
+ *      another part. Link this app's local id to it; NOT a dedupe — chapter 7 of
+ *      a book already holding chapters 1-6 must still be ingested.
+ *   3. canonical_sha256 already registered → identical BYTES already ingested;
+ *      link the local id and report deduped=true so the caller skips the run
+ *   4. otherwise                           → create item + source_ref
+ *
+ * Why the work key outranks the content hash: a hash says "these exact bytes
+ * were seen before", which is a statement about a FILE. An ISBN is a human
+ * assertion about a WORK, and a work made of fifteen chapter files has fifteen
+ * different hashes and one identity. Ordering them the other way would give a
+ * multi-part book a second content_item the first time a part arrived whose
+ * bytes happened to match something else.
  */
 export async function resolveOrCreateContentItem(params: {
   sourceApp: SourceApp;
@@ -29,6 +41,9 @@ export async function resolveOrCreateContentItem(params: {
   kind?: string;
   lang?: string | null;
   canonicalSha256?: string | null;
+  /** Work key. `content_item_work_key_uq` is UNIQUE (isbn, edition) NULLS NOT DISTINCT WHERE isbn IS NOT NULL. */
+  isbn?: string | null;
+  edition?: string | null;
 }): Promise<ResolvedContentItem> {
   const pool = getContentPool();
   const {
@@ -38,6 +53,8 @@ export async function resolveOrCreateContentItem(params: {
     kind = 'book',
     lang = null,
     canonicalSha256 = null,
+    isbn = null,
+    edition = null,
   } = params;
 
   const existing = await pool.query<{ content_item_id: string }>(
@@ -45,7 +62,46 @@ export async function resolveOrCreateContentItem(params: {
     [sourceApp, sourceLocalId],
   );
   if (existing.rows.length > 0) {
-    return { contentItemId: existing.rows[0].content_item_id, deduped: false };
+    const contentItemId = existing.rows[0].content_item_id;
+    // A work registered before anyone knew its ISBN gains one the first time a
+    // part supplies it. COALESCE, never overwrite: a differing ISBN on a later
+    // part is a data problem to look at, not something to silently adopt.
+    if (isbn) {
+      try {
+        await pool.query(
+          `UPDATE content.content_item
+              SET isbn = coalesce(isbn, $2), edition = coalesce(edition, $3), updated_at = now()
+            WHERE id = $1`,
+          [contentItemId, isbn, edition],
+        );
+      } catch (err: any) {
+        // Another item already claims this work key. Backfilling is a nicety;
+        // failing the ingest over it would be absurd.
+        console.warn(
+          `⚠️ Could not backfill work key (isbn=${isbn}, edition=${edition ?? 'null'}) onto ` +
+            `content_item ${contentItemId}: ${err?.message ?? err}`,
+        );
+      }
+    }
+    return { contentItemId, deduped: false, matchedBy: 'source_ref' };
+  }
+
+  if (isbn) {
+    const byWork = await pool.query<{ id: string }>(
+      `SELECT id FROM content.content_item
+        WHERE isbn = $1 AND edition IS NOT DISTINCT FROM $2`,
+      [isbn, edition],
+    );
+    if (byWork.rows.length > 0) {
+      const contentItemId = byWork.rows[0].id;
+      await pool.query(
+        `INSERT INTO content.content_source_ref (content_item_id, app, local_id)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (app, local_id) DO NOTHING`,
+        [contentItemId, sourceApp, sourceLocalId],
+      );
+      return { contentItemId, deduped: false, matchedBy: 'work_key' };
+    }
   }
 
   if (canonicalSha256) {
@@ -64,7 +120,7 @@ export async function resolveOrCreateContentItem(params: {
          ON CONFLICT (app, local_id) DO NOTHING`,
         [contentItemId, sourceApp, sourceLocalId],
       );
-      return { contentItemId, deduped: true };
+      return { contentItemId, deduped: true, matchedBy: 'content_hash' };
     }
   }
 
@@ -72,9 +128,9 @@ export async function resolveOrCreateContentItem(params: {
   try {
     await client.query('BEGIN');
     const itemRes = await client.query<{ id: string }>(
-      `INSERT INTO content.content_item (title, kind, lang, canonical_sha256)
-       VALUES ($1, $2, $3, $4) RETURNING id`,
-      [title, kind, lang, canonicalSha256],
+      `INSERT INTO content.content_item (title, kind, lang, canonical_sha256, isbn, edition)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+      [title, kind, lang, canonicalSha256, isbn, edition],
     );
     const contentItemId = itemRes.rows[0].id;
     await client.query(
@@ -82,25 +138,45 @@ export async function resolveOrCreateContentItem(params: {
       [contentItemId, sourceApp, sourceLocalId],
     );
     await client.query('COMMIT');
-    return { contentItemId, deduped: false };
+    return { contentItemId, deduped: false, matchedBy: 'created' };
   } catch (err: any) {
     await client.query('ROLLBACK');
-    // Lost a race on content_item_sha_uq: another ingestion inserted the same
-    // bytes between our SELECT and our INSERT. Re-resolve by hash and treat it
-    // as the dedupe it is, rather than surfacing a constraint violation.
-    if (err?.code === '23505' && canonicalSha256) {
-      const retry = await pool.query<{ id: string }>(
-        `SELECT id FROM content.content_item WHERE canonical_sha256 = $1`,
-        [canonicalSha256],
-      );
-      if (retry.rows.length > 0) {
-        const contentItemId = retry.rows[0].id;
-        await pool.query(
-          `INSERT INTO content.content_source_ref (content_item_id, app, local_id)
-           VALUES ($1, $2, $3) ON CONFLICT (app, local_id) DO NOTHING`,
-          [contentItemId, sourceApp, sourceLocalId],
+    // Lost a race between our SELECT and our INSERT. Two indexes can produce
+    // this, and they mean different things:
+    //   content_item_work_key_uq — a sibling PART of the same work got there
+    //     first. Not a dedupe: this part still has to be ingested.
+    //   content_item_sha_uq      — the same BYTES got there first. A real dedupe.
+    // Re-resolve rather than surfacing a constraint violation to the operator.
+    if (err?.code === '23505') {
+      if (isbn) {
+        const retryWork = await pool.query<{ id: string }>(
+          `SELECT id FROM content.content_item WHERE isbn = $1 AND edition IS NOT DISTINCT FROM $2`,
+          [isbn, edition],
         );
-        return { contentItemId, deduped: true };
+        if (retryWork.rows.length > 0) {
+          const contentItemId = retryWork.rows[0].id;
+          await pool.query(
+            `INSERT INTO content.content_source_ref (content_item_id, app, local_id)
+             VALUES ($1, $2, $3) ON CONFLICT (app, local_id) DO NOTHING`,
+            [contentItemId, sourceApp, sourceLocalId],
+          );
+          return { contentItemId, deduped: false, matchedBy: 'work_key' };
+        }
+      }
+      if (canonicalSha256) {
+        const retry = await pool.query<{ id: string }>(
+          `SELECT id FROM content.content_item WHERE canonical_sha256 = $1`,
+          [canonicalSha256],
+        );
+        if (retry.rows.length > 0) {
+          const contentItemId = retry.rows[0].id;
+          await pool.query(
+            `INSERT INTO content.content_source_ref (content_item_id, app, local_id)
+             VALUES ($1, $2, $3) ON CONFLICT (app, local_id) DO NOTHING`,
+            [contentItemId, sourceApp, sourceLocalId],
+          );
+          return { contentItemId, deduped: true, matchedBy: 'content_hash' };
+        }
       }
     }
     throw err;
@@ -132,12 +208,19 @@ export async function registerAsset(params: {
   contentItemId: string;
   role: string;
   partIndex?: number;
+  partLabel?: string | null;
   variant?: string;
   storageAccount: string;
   storageUri: string;
   sha256: string;
   bytes?: number | null;
   pageCount?: number | null;
+  /**
+   * printed page = file page + pageOffset. A chapter PDF cut out of a textbook
+   * starts at file page 1 while the book calls it page 137; without this a
+   * citation points at the wrong page and reads as a hallucination.
+   */
+  pageOffset?: number | null;
 }): Promise<{ assetId: string; changed: boolean; created: boolean }> {
   const pool = getContentPool();
   const partIndex = params.partIndex ?? 0;
@@ -164,31 +247,72 @@ export async function registerAsset(params: {
     await pool.query(
       `UPDATE content.content_asset
           SET asset_sha256 = $2, storage_uri = $3, storage_account = $4,
-              bytes = $5, page_count = coalesce($6, page_count)
+              bytes = $5, page_count = coalesce($6, page_count),
+              page_offset = coalesce($7, page_offset),
+              part_label = coalesce($8, part_label)
         WHERE id = $1`,
-      [id, params.sha256, params.storageUri, params.storageAccount, params.bytes ?? null, params.pageCount ?? null],
+      [
+        id,
+        params.sha256,
+        params.storageUri,
+        params.storageAccount,
+        params.bytes ?? null,
+        params.pageCount ?? null,
+        params.pageOffset ?? null,
+        params.partLabel ?? null,
+      ],
     );
+    // The slot row is updated in place, so the bytes that used to occupy it
+    // would otherwise leave no trace. Append-only history, best-effort: losing
+    // an audit row must not fail an ingest that has otherwise succeeded.
+    await recordAssetVersion(id, params.sha256, params.storageUri);
     return { assetId: id, changed: true, created: false };
   }
 
   const res = await pool.query<{ id: string }>(
     `INSERT INTO content.content_asset
-       (content_item_id, role, part_index, variant, storage_account, storage_uri, asset_sha256, bytes, page_count)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       (content_item_id, role, part_index, part_label, variant, storage_account, storage_uri,
+        asset_sha256, bytes, page_count, page_offset)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
      RETURNING id`,
     [
       params.contentItemId,
       params.role,
       partIndex,
+      params.partLabel ?? null,
       variant,
       params.storageAccount,
       params.storageUri,
       params.sha256,
       params.bytes ?? null,
       params.pageCount ?? null,
+      params.pageOffset ?? null,
     ],
   );
+  await recordAssetVersion(res.rows[0].id, params.sha256, params.storageUri);
   return { assetId: res.rows[0].id, changed: true, created: true };
+}
+
+/**
+ * Append this file to the slot's history (trio migration 006).
+ *
+ * Best-effort by design: `content_asset_version` answers "which bytes did we
+ * publish in March", which is worth having and never worth failing a good
+ * ingest over. The unique index on (asset_id, asset_sha256) makes a repeat
+ * registration of the same bytes a no-op rather than a duplicate row.
+ */
+async function recordAssetVersion(assetId: string, sha256: string, storageUri: string): Promise<void> {
+  try {
+    const pool = getContentPool();
+    await pool.query(
+      `INSERT INTO content.content_asset_version (asset_id, asset_sha256, r2_key)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (asset_id, asset_sha256) DO NOTHING`,
+      [assetId, sha256, storageUri],
+    );
+  } catch (err: any) {
+    console.warn(`⚠️ Could not record asset version for ${assetId}: ${err?.message ?? err}`);
+  }
 }
 
 /** The source PDF of a work. Thin wrapper over registerAsset for the PDF lane. */
@@ -352,6 +476,13 @@ export async function insertContentChunks(
     pageStart?: number | null;
     pageEnd?: number | null;
     chapter?: string | null;
+    /**
+     * 'reference' (explanatory prose) vs 'practice' (a question, prompt or
+     * activity). Per CHUNK, not per file — one chapter carries both, and
+     * answering a student's question with the textbook's own question back at
+     * them is the failure this exists to make filterable. NULL = unclassified.
+     */
+    retrievalClass?: 'reference' | 'practice' | null;
   }>,
 ): Promise<string[]> {
   if (chunks.length === 0) return [];
@@ -359,7 +490,7 @@ export async function insertContentChunks(
 
   const values: unknown[] = [];
   const rows = chunks.map((c, i) => {
-    const base = i * 7;
+    const base = i * 8;
     values.push(
       contentItemId,
       contentAssetId,
@@ -368,8 +499,9 @@ export async function insertContentChunks(
       c.pageEnd ?? null,
       c.text,
       c.chapter ?? null,
+      c.retrievalClass ?? null,
     );
-    return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7})`;
+    return `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6}, $${base + 7}, $${base + 8})`;
   });
 
   // Keyed on the ASSET, not the work. chunk_index is contiguous 0..N-1 within a
@@ -379,13 +511,14 @@ export async function insertContentChunks(
   // that keeps only its last-ingested chapter, with nothing reported.
   const res = await pool.query<{ id: string }>(
     `INSERT INTO content.content_chunk
-       (content_item_id, content_asset_id, chunk_index, page_start, page_end, text, chapter)
+       (content_item_id, content_asset_id, chunk_index, page_start, page_end, text, chapter, retrieval_class)
      VALUES ${rows.join(', ')}
      ON CONFLICT (content_asset_id, chunk_index) DO UPDATE SET
        page_start = excluded.page_start,
        page_end = excluded.page_end,
        text = excluded.text,
-       chapter = excluded.chapter
+       chapter = excluded.chapter,
+       retrieval_class = excluded.retrieval_class
      RETURNING id, chunk_index`,
     values,
   );
@@ -456,6 +589,27 @@ export async function hasActiveIngestRun(contentItemId: string): Promise<boolean
   const res = await pool.query(
     `SELECT 1 FROM content.ingest_run WHERE content_item_id = $1 AND status = 'active' LIMIT 1`,
     [contentItemId],
+  );
+  return res.rows.length > 0;
+}
+
+/**
+ * Whether THIS SLOT is currently published — i.e. whether the file occupying it
+ * has a live run.
+ *
+ * This is what makes "the bytes did not change, skip it" safe. Unchanged bytes
+ * alone are not enough: if the previous run for this asset failed halfway, or
+ * was never activated, nothing is live for the chapter and re-uploading the
+ * identical file must actually re-ingest it. Skipping on bytes alone would tell
+ * an operator "already ingested" about a chapter that is missing from the
+ * library — the one message guaranteed to stop them investigating.
+ */
+export async function hasActiveRunForAsset(contentAssetId: string): Promise<boolean> {
+  const pool = getContentPool();
+  const res = await pool.query(
+    `SELECT 1 FROM content.ingest_run
+      WHERE content_asset_id = $1 AND status = 'active' LIMIT 1`,
+    [contentAssetId],
   );
   return res.rows.length > 0;
 }

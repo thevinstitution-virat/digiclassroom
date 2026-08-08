@@ -176,8 +176,22 @@ export function validateAndNormalizeMetadata(
     contains_figure: raw.contains_figure || false,
   };
 
-  // Validate canonical schema
-  return ChunkMetadataSchema.parse(canonical);
+  // Validate canonical schema, then hand back the raw fields alongside it.
+  //
+  // `canonical` is an explicit field list with no spread, so returning it alone
+  // DISCARDED every field this schema does not name — silently, at the one point
+  // every chunk passes through. The payload builder in enhanced-rag-pipeline
+  // reads `domain`, `course`, `level`, `book`, `subjectGroup`, `quality_score`,
+  // `content_source` and `validation_status` from this object and got `undefined`
+  // for all of them, so indexPDF's careful per-chunk hierarchy injection never
+  // reached a single Qdrant point, and the curated lane's human-validation
+  // provenance was dropped on the way to the payload that was supposed to carry
+  // it. Nothing errored; the fields simply read 'Unknown'.
+  //
+  // Canonical spreads LAST so normalization (class level, defaults, coercions)
+  // still wins over whatever the raw metadata said.
+  const validated = ChunkMetadataSchema.parse(canonical);
+  return { ...(raw as Record<string, unknown>), ...validated } as ChunkMetadata;
 }
 
 /**

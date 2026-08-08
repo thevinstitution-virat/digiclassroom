@@ -21,7 +21,9 @@ import {
   replaceTaxonomyLinks,
   resolveScopeAndGrant,
   startIngestRun,
+  registerAsset,
   hasActiveIngestRun,
+  hasActiveRunForAsset,
   supersedePriorActiveRun,
   activateIngestRun,
   failIngestRun,
@@ -47,6 +49,80 @@ interface SharedContentRun {
   sourceAssetId: string | null;
   /** The asset whose chunks this run writes — chunk_index is contiguous within it. */
   assetId: string | null;
+}
+
+/**
+ * One FILE's worth of work, handed to ingestPart() already parsed.
+ *
+ * `part` names the SLOT the file occupies — (role, partIndex, variant) — not the
+ * file. Chapter 3's markdown is a slot; the file in it changes when the chapter
+ * is corrected, and the slot's identity must not.
+ */
+export interface SpineIngestInput {
+  // ── Work identity ──
+  sourceApp: SourceApp;
+  sourceLocalId: string;
+  contentTitle: string;
+  /** Work key. Fifteen chapter files share one ISBN and resolve to one work. */
+  isbn?: string | null;
+  edition?: string | null;
+  lang?: string | null;
+  /** App-local org id. Resolved to a canonical grant; never assumed public. */
+  organizationId?: string | null;
+  taxonomyNodeIds?: string[];
+
+  // ── Which slot this file occupies ──
+  part: {
+    /** content_asset_role_check: source | enriched_md | pdf_paginated | epub | audio | audio_sync | cover | thumbnail */
+    role: string;
+    partIndex: number;
+    partLabel?: string | null;
+    variant?: string;
+    sha256: string;
+    storageAccount: string;
+    storageUri: string;
+    bytes?: number | null;
+    pageCount?: number | null;
+    /** printed page = file page + pageOffset */
+    pageOffset?: number | null;
+  };
+
+  chunks: SpineChunk[];
+}
+
+export interface SpineChunk {
+  text: string;
+  pageStart: number | null;
+  pageEnd: number | null;
+  chapter?: string | null;
+  /**
+   * 'skip' is not stored — it means drop this chunk before embedding. The other
+   * two are persisted and become filterable.
+   */
+  retrievalClass?: 'reference' | 'practice' | 'skip';
+  /**
+   * The lane's own payload fields, passed through untouched.
+   *
+   * DEVIATION from the signature agreed in 2A, which had bare chunks and no
+   * metadata. Bare chunks cannot work: the payload every DCP consumer filters on
+   * (subject, classLevel, board, medium, chapter hierarchy) is built from these,
+   * and validateChunkBatch REQUIRES class/subject/book_title/page. A spine
+   * function that dropped them would index content nothing could retrieve. The
+   * spine owns the named fields above; everything else belongs to the lane.
+   */
+  metadata?: Record<string, any>;
+}
+
+export interface SpineIngestResult {
+  status: 'indexed' | 'skipped_unchanged' | 'failed';
+  contentItemId: string | null;
+  assetId: string | null;
+  ingestRunId: string | null;
+  partIndex: number;
+  chunksWritten: number;
+  pointsUpserted: number;
+  /** Why it was refused or skipped. Operator-facing, not a stack trace. */
+  reason?: string;
 }
 
 // Enhanced RAG Options with query decomposition and re-ranking support
@@ -1468,6 +1544,287 @@ export class EnhancedRAGPipeline {
     console.log(`✅ Ingest run ${run.ingestRunId} is now active with ${indexedCount} chunks`);
   }
 
+  /**
+   * Ingest ONE FILE into the shared content spine. Everything after parsing,
+   * in one place.
+   *
+   * Parser-agnostic on purpose: this function never reads a PDF, never reads
+   * markdown, and never decides what a chunk is. It is handed a slot and a list
+   * of chunks and owns the whole sequence that turns them into published,
+   * retrievable content — which is the part that has to be identical across
+   * lanes, because every mistake in it (an orphaned run, a lost chapter, a book
+   * published without its source file) is invisible until someone asks the
+   * library a question and gets a confident wrong answer.
+   *
+   * The sequence, and why it is ordered this way:
+   *
+   *   1  resolve the WORK        — by (app, local id), then ISBN, then bytes
+   *   2  register the SLOT       — the file occupying (role, part, variant)
+   *   3  unchanged? stop here    — before a single embedding token is spent
+   *   4  require a source file   — before spending tokens, not after
+   *   5  resolve scope + grant   — throws on an org it cannot resolve
+   *   6  link taxonomy
+   *   7  open the run            — keyed to the ASSET, so sibling chapters do
+   *                                not supersede each other
+   *   8  embed + upsert
+   *   9  supersede -> delete old points -> prune -> activate
+   *
+   * On any failure from 7 onward the run's points are deleted and the run is
+   * marked failed, so a half-ingested chapter never sits in the collection
+   * blending into every future search.
+   *
+   * Returns rather than throws: a batch of fifteen chapters needs to report
+   * per-chapter outcomes, and one bad chapter must not abort the other fourteen.
+   */
+  async ingestPart(input: SpineIngestInput): Promise<SpineIngestResult> {
+    const partIndex = input.part.partIndex ?? 0;
+    const variant = input.part.variant ?? 'default';
+    const label = `${input.part.role}[${partIndex}/${variant}]`;
+
+    const base: SpineIngestResult = {
+      status: 'failed',
+      contentItemId: null,
+      assetId: null,
+      ingestRunId: null,
+      partIndex,
+      chunksWritten: 0,
+      pointsUpserted: 0,
+    };
+
+    // A 'skip' chunk is not content with a property, it is content that was
+    // never ingested — so it gets no row and no vector, and chunk_index counts
+    // only what remains.
+    const usable = input.chunks.filter((c) => c.retrievalClass !== 'skip');
+    const skippedByClass = input.chunks.length - usable.length;
+    if (usable.length === 0) {
+      return {
+        ...base,
+        reason: `${label}: nothing indexable — all ${input.chunks.length} chunk(s) were marked skip.`,
+      };
+    }
+
+    let contentItemId: string | null = null;
+    let assetId: string | null = null;
+    let ingestRunId: string | null = null;
+
+    try {
+      // ── 1. The work ────────────────────────────────────────────────────
+      const resolved = await resolveOrCreateContentItem({
+        sourceApp: input.sourceApp,
+        sourceLocalId: input.sourceLocalId,
+        title: input.contentTitle,
+        lang: input.lang ?? null,
+        isbn: input.isbn ?? null,
+        edition: input.edition ?? null,
+        // Deliberately NOT the part's sha256. canonical_sha256 identifies the
+        // work's own bytes; setting it from a chapter file would make the
+        // second chapter of one book dedupe against the first.
+        canonicalSha256: null,
+      });
+      contentItemId = resolved.contentItemId;
+      console.log(`📖 ${label}: work ${contentItemId} (${resolved.matchedBy})`);
+
+      // ── 2. The slot ────────────────────────────────────────────────────
+      const asset = await registerAsset({
+        contentItemId,
+        role: input.part.role,
+        partIndex,
+        partLabel: input.part.partLabel ?? null,
+        variant,
+        storageAccount: input.part.storageAccount,
+        storageUri: input.part.storageUri,
+        sha256: input.part.sha256,
+        bytes: input.part.bytes ?? null,
+        pageCount: input.part.pageCount ?? null,
+        pageOffset: input.part.pageOffset ?? null,
+      });
+      assetId = asset.assetId;
+
+      // ── 3. Unchanged bytes AND something already live for this slot ────
+      // Both conditions, not just the first: identical bytes whose previous run
+      // failed means nothing is published for this chapter, and reporting
+      // "already ingested" there is the one message that stops an operator
+      // looking for the chapter that is missing.
+      if (!asset.changed && (await hasActiveRunForAsset(assetId))) {
+        console.log(`♻️ ${label}: byte-identical and already live — skipped, 0 tokens.`);
+        return {
+          ...base,
+          status: 'skipped_unchanged',
+          contentItemId,
+          assetId,
+          reason: 'Identical file already published for this slot. Nothing re-embedded.',
+        };
+      }
+
+      // ── 4. The source-rendition rule, checked BEFORE embedding ─────────
+      // Chunks and assets are independent tables, so a work with perfect chunks
+      // and no source file raises nothing anywhere: iTutor answers and cites it
+      // flawlessly while the reader opens an empty shelf. finalize re-checks
+      // this at close; checking here as well is what makes the refusal free
+      // instead of costing a full embedding run first.
+      if (input.part.role !== 'source') {
+        const sourceAssetId = await findSourceAssetId(contentItemId);
+        if (!sourceAssetId) {
+          return {
+            ...base,
+            contentItemId,
+            assetId,
+            reason:
+              `${label}: this work has no asset with role='source'. Chunks alone are not a ` +
+              `publishable work — the reader would have nothing to open and nothing would ` +
+              `report it. Upload and register the original file first, then re-run this part.`,
+          };
+        }
+      }
+
+      // ── 5. Scope ───────────────────────────────────────────────────────
+      const scope = await resolveScopeAndGrant({
+        contentItemId,
+        sourceApp: input.sourceApp,
+        localOrgId:
+          typeof input.organizationId === 'string' && input.organizationId !== ''
+            ? input.organizationId
+            : null,
+      });
+
+      // ── 6. Taxonomy ────────────────────────────────────────────────────
+      const taxonomyNodeIds = input.taxonomyNodeIds ?? [];
+      if (taxonomyNodeIds.length > 0) {
+        await replaceTaxonomyLinks(contentItemId, taxonomyNodeIds);
+      }
+
+      // ── 7. The run, keyed to THIS asset ────────────────────────────────
+      ingestRunId = await startIngestRun({
+        contentItemId,
+        contentAssetId: assetId,
+        sourceApp: input.sourceApp,
+        embeddingModel: 'text-embedding-3-large',
+        embeddingDim: 3072,
+        collection: this.collectionName,
+      });
+
+      const run: SharedContentRun = {
+        contentItemId,
+        ingestRunId,
+        scope,
+        taxonomyNodeIds,
+        nextChunkIndex: 0,
+        deduped: false,
+        sourceAssetId: input.part.role === 'source' ? assetId : await findSourceAssetId(contentItemId),
+        // chunk_index is contiguous within THIS file. This is the whole reason
+        // migration 007 moved the chunk key onto the asset.
+        assetId,
+      };
+
+      // ── 8. Embed + upsert ──────────────────────────────────────────────
+      await this.ensureCollectionExists();
+      const laneChunks = usable.map((c, i) => this.toLaneChunk(c, i, input));
+
+      const BATCH_SIZE = 50;
+      let indexed = 0;
+      for (let start = 0; start < laneChunks.length; start += BATCH_SIZE) {
+        const r = await this.indexChunksInQdrant(laneChunks.slice(start, start + BATCH_SIZE), {
+          organizationId: input.organizationId,
+          sourceApp: input.sourceApp,
+          sourceLocalId: input.sourceLocalId,
+          contentTitle: input.contentTitle,
+          sharedRun: run,
+        });
+        indexed += r.indexedCount;
+      }
+
+      // Every chunk failing validation is a failure, not an empty success —
+      // publishing a run with no points gives a book that exists in Postgres and
+      // returns nothing from search.
+      if (indexed === 0) {
+        throw new Error(
+          `no chunks survived validation (${usable.length} submitted). ` +
+            `Check that each chunk carries class, subject, book_title and page.`,
+        );
+      }
+
+      // ── 9. Close: supersede -> delete old points -> prune -> activate ──
+      const priorRunId = await supersedePriorActiveRun(contentItemId, assetId, ingestRunId);
+      if (priorRunId) {
+        console.log(`🔁 ${label}: superseding run ${priorRunId} — deleting its points`);
+        await this.qdrant.delete(this.collectionName, {
+          wait: true,
+          filter: { must: [{ key: 'run_id', match: { value: priorRunId } }] },
+        });
+      }
+
+      const pruned = await pruneChunksBeyond(assetId, indexed);
+      if (pruned > 0) console.log(`🧹 ${label}: pruned ${pruned} row(s) left by a longer previous run`);
+
+      await activateIngestRun(ingestRunId, indexed);
+      console.log(
+        `✅ ${label}: ${indexed} chunk(s) live` +
+          (skippedByClass > 0 ? ` (${skippedByClass} skipped by class)` : ''),
+      );
+
+      return {
+        status: 'indexed',
+        contentItemId,
+        assetId,
+        ingestRunId,
+        partIndex,
+        chunksWritten: indexed,
+        pointsUpserted: indexed,
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (ingestRunId) {
+        try {
+          await this.qdrant.delete(this.collectionName, {
+            wait: true,
+            filter: { must: [{ key: 'run_id', match: { value: ingestRunId } }] },
+          });
+          await failIngestRun(ingestRunId, `${label}: ${message}`.slice(0, 1900));
+        } catch (cleanupErr) {
+          // Left `running` on purpose: a running row pointing at real points is
+          // recoverable by the reconcile query, a failed row pointing at ghosts
+          // is not, because nothing will ever look for them again.
+          console.error(`❌ ${label}: could not clean up run ${ingestRunId}:`, cleanupErr);
+        }
+      }
+      console.error(`⛔ ${label}: ${message}`);
+      return { ...base, contentItemId, assetId, ingestRunId, reason: `${label}: ${message}` };
+    }
+  }
+
+  /**
+   * Spine chunk -> the shape indexChunksInQdrant validates and embeds.
+   *
+   * retrievalClass rides on the chunk OBJECT rather than inside metadata
+   * because validation rebuilds metadata from a fixed field list; a top-level
+   * property survives that untouched.
+   */
+  private toLaneChunk(chunk: SpineChunk, index: number, input: SpineIngestInput): any {
+    const meta = { ...(chunk.metadata ?? {}) };
+    // The spine owns these four; the lane owns everything else it put in
+    // metadata. Written unconditionally so a lane cannot disagree with the
+    // pages and chapter it declared on the chunk itself.
+    if (chunk.pageStart != null) {
+      meta.page = chunk.pageStart;
+      meta.pageNumber = chunk.pageStart;
+    }
+    if (chunk.pageEnd != null) meta.pageEndNumber = chunk.pageEnd;
+    if (chunk.chapter) meta.chapter = chunk.chapter;
+    if (input.lang && !meta.medium && !meta.language) meta.language = input.lang;
+
+    return {
+      id: `${input.sourceLocalId}:${input.part.role}:${input.part.partIndex}:${index}`,
+      text: chunk.text,
+      metadata: meta,
+      retrieval_class: chunk.retrievalClass === 'practice' || chunk.retrievalClass === 'reference'
+        ? chunk.retrievalClass
+        : null,
+      /** Spine-supplied page range, kept off metadata so validation cannot reshape it. */
+      spine_page_start: chunk.pageStart,
+      spine_page_end: chunk.pageEnd,
+    };
+  }
+
   private async indexChunksInQdrant(
         // @ts-ignore
     chunks: DoclingChunk[] | any[],
@@ -1665,12 +2022,17 @@ export class EnhancedRAGPipeline {
       if (contentItemId) {
         const chunkInputs = qualified.map(({ chunk }, qualifiedIndex) => {
           const m = chunk.metadata || {};
+          const cls = chunk.retrieval_class;
           return {
             chunkIndex: bridgeChunkIndex + qualifiedIndex,
             text: chunk.text || chunk.content || '',
-            pageStart: m.pageNumber || m.page || null,
-            pageEnd: m.pageNumber || m.page || null,
+            // A spine lane declares the range explicitly, and a block spanning
+            // pages 12-13 must not be recorded as ending on 12. Metadata is the
+            // fallback for lanes that only ever produce single-page chunks.
+            pageStart: chunk.spine_page_start ?? m.pageNumber ?? m.page ?? null,
+            pageEnd: chunk.spine_page_end ?? m.pageEndNumber ?? m.pageNumber ?? m.page ?? null,
             chapter: m.chapter || null,
+            retrievalClass: cls === 'reference' || cls === 'practice' ? cls : null,
           };
         });
         // Chunks belong to the ASSET that produced them, so chunk_index is
@@ -1778,7 +2140,13 @@ export class EnhancedRAGPipeline {
               level: 0,
               lang: chunkMetadata.medium || chunkMetadata.language || null,
               kind: 'book',
-              page_start: chunkMetadata.pageNumber || chunkMetadata.page || null,
+              page_start: chunk.spine_page_start ?? chunkMetadata.pageNumber ?? chunkMetadata.page ?? null,
+              page_end: chunk.spine_page_end ?? chunkMetadata.pageEndNumber ?? chunkMetadata.pageNumber ?? chunkMetadata.page ?? null,
+              // Explanatory prose vs a question/prompt/activity. Denormalized
+              // onto the point so retrieval can stop answering a student's
+              // question with the textbook's own question. Null when the lane
+              // did not classify — absent, not guessed.
+              ...(chunk.retrieval_class ? { retrieval_class: chunk.retrieval_class } : {}),
             } : {}),
           }
         };
