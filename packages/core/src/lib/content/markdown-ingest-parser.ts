@@ -16,10 +16,10 @@
  *   <!-- SECTION: ... -->      → section title
  *   <!-- SUBSECTION: ... -->   → appended to section title
  *   <!-- ... SKIP ... -->      → excluded, recorded in `skipped`
- * Typed blocks kept ATOMIC (never split), better retrieval + citation:
- *   [FIGURE ...] [TABLE ...] [GRAPH ...] [CASE STUDY ...] [DIALOGUE ...]
- *   [DISCUSSION_PROMPT]…[/DISCUSSION_PROMPT]
- *   [SUGGESTED_ACTIVITY]…[/SUGGESTED_ACTIVITY]
+ * Typed blocks kept ATOMIC (never split), better retrieval + citation — every
+ * type in the prep skill's block-types spec, each closed by its own [/TAG]:
+ *   [FIGURE] [TABLE] [GRAPH] [CASE STUDY] [DIALOGUE] [GLOSSARY TERM]
+ *   [FEATURE BOX] [QR CODE] [DISCUSSION_PROMPT] [ACTIVITY]
  */
 
 export interface EnrichedBookMeta {
@@ -69,21 +69,59 @@ const PRACTICE_SECTION_RE = /\b(exercise|questions?|let'?s\s+(discuss|explore|re
 
 const CONTENT_SOURCE = 'curated_markdown';
 
-// Opening tokens for atomic typed blocks.
-const BLOCK_OPENERS: Array<{ re: RegExp; type: string; close?: RegExp }> = [
-  { re: /^\[FIGURE\b/i, type: 'figure' },
-  { re: /^\[TABLE\b/i, type: 'table' },
-  { re: /^\[GRAPH\b/i, type: 'graph' },
-  { re: /^\[CASE STUDY\b/i, type: 'case_study' },
-  { re: /^\[FEATURE BOX\b/i, type: 'feature' },
-  { re: /^\[FEATURE\b/i, type: 'feature' },
-  { re: /^\[BOX\b/i, type: 'box' },
-  { re: /^\[DIALOGUE\b/i, type: 'dialogue' },
-  { re: /^\[DISCUSSION_PROMPT\]/i, type: 'discussion_prompt', close: /^\[\/DISCUSSION_PROMPT\]/i },
-  { re: /^\[SUGGESTED_ACTIVITY\]/i, type: 'suggested_activity', close: /^\[\/SUGGESTED_ACTIVITY\]/i },
-  { re: /^\[ACTIVITY\b/i, type: 'suggested_activity' },
-  { re: /^\[EXAMPLE\b/i, type: 'example' },
-];
+/**
+ * Every atomic block TAG the parser understands, mapped to its chunk
+ * `content_type`.
+ *
+ * Keyed by tag text rather than by a per-type regex, because the closing tag is
+ * derived from the tag the opener actually used — `[GLOSSARY TERM …]` closes
+ * with `[/GLOSSARY TERM]`, `[ACTIVITY …]` with `[/ACTIVITY]`. A table keeps the
+ * two spellings of the practice-activity block (`ACTIVITY` per the block-types
+ * spec, `SUGGESTED_ACTIVITY` per older files) pointing at one type without
+ * needing two closing conventions hard-coded.
+ *
+ * GLOSSARY TERM and QR CODE were absent here while being present in the skill's
+ * spec and in the linter's own list. The cost was not cosmetic: a correctly
+ * authored, correctly closed glossary block was merged into the surrounding
+ * prose chunk AND dragged the following paragraph in with it, so a definition
+ * a student asks for retrieved as the middle of an unrelated paragraph.
+ */
+const BLOCK_TAG_TYPES: Record<string, string> = {
+  FIGURE: 'figure',
+  TABLE: 'table',
+  GRAPH: 'graph',
+  'CASE STUDY': 'case_study',
+  'GLOSSARY TERM': 'glossary_term',
+  'FEATURE BOX': 'feature',
+  FEATURE: 'feature',
+  BOX: 'box',
+  'QR CODE': 'qr_code',
+  DIALOGUE: 'dialogue',
+  DISCUSSION_PROMPT: 'discussion_prompt',
+  SUGGESTED_ACTIVITY: 'suggested_activity',
+  ACTIVITY: 'suggested_activity',
+  EXAMPLE: 'example',
+};
+
+/**
+ * An opening tag: `[TAG]`, `[TAG 8.2 | …]`, `[TAG | …]`.
+ *
+ * The tag capture is lazy so a two-word tag resolves to the longest form that
+ * actually reaches a `|` or `]` — `[FEATURE BOX | …]` yields `FEATURE BOX`, not
+ * `FEATURE`. Same shape the linter uses, deliberately: two regexes that are
+ * supposed to recognise the same thing must not be written differently.
+ */
+const OPEN_TAG_RE = /^\[([A-Z][A-Z_ ]*?)(?:\s+[\d.]+)?\s*(?:\||\])/;
+const CLOSE_TAG_RE = /^\[\/([A-Z][A-Z_ ]*)\]\s*$/;
+
+const openTagOf = (line: string): string | null => {
+  const m = line.match(OPEN_TAG_RE);
+  return m ? m[1].trim() : null;
+};
+const closeTagOf = (line: string): string | null => {
+  const m = line.match(CLOSE_TAG_RE);
+  return m ? m[1].trim() : null;
+};
 
 const MARKER_RE = /^<!--\s*(.*?)\s*-->$/;
 const PAGE_RE = /^PAGE\s+(\d+)/i;
@@ -128,6 +166,46 @@ function unescapeMd(s: string): string {
   return s.replace(/\\([-_*[\]()#+.!>`~|])/g, '$1');
 }
 
+/** Characters a markdown escaper adds a backslash in front of. */
+const MD_ESCAPED_RE = /\\([-_*[\]()#+.!>`~|{}])/g;
+
+export interface EscapeNormalization {
+  text: string;
+  /** How many escapes were removed. Non-zero means the file arrived escaped. */
+  removed: number;
+}
+
+/**
+ * Strip markdown-escape artefacts from a whole document.
+ *
+ * This lives in the parser permanently and unconditionally, whatever the prep
+ * side does, because the bytes that arrive are the bytes that get indexed. The
+ * one real chapter on hand arrives with `\---`, `book\_title:` and `\[FIGURE`,
+ * and where the escaping is introduced — the author, the tool, or transport —
+ * does not change what has to be parsed.
+ *
+ * Frontmatter unescaping alone was not enough. It made the metadata parse, which
+ * made the file look healthy, while every escaped `\[FIGURE` in the body stayed
+ * unrecognised and every typed block was silently indexed as loose prose.
+ *
+ * Only a backslash immediately before markdown punctuation is removed; every
+ * other byte passes through, so the transformation is provably nothing but
+ * escape removal. Fenced code blocks are left alone — a backslash there is
+ * content, not syntax.
+ */
+export function normalizeEscapes(md: string): EscapeNormalization {
+  // Split on fences; even-indexed segments are outside code, odd are inside.
+  const segments = md.split(/(```)/);
+  let inCode = false;
+  let removed = 0;
+  const out = segments.map((seg) => {
+    if (seg === '```') { inCode = !inCode; return seg; }
+    if (inCode) return seg;
+    return seg.replace(MD_ESCAPED_RE, (_m, ch) => { removed += 1; return ch; });
+  });
+  return { text: out.join(''), removed };
+}
+
 const FENCE_RE = /^\\?-{3}\s*$/;
 
 /**
@@ -147,6 +225,10 @@ const FENCE_RE = /^\\?-{3}\s*$/;
 function parseFrontmatter(md: string): {
   meta: EnrichedBookMeta;
   bodyStart: number;
+  /** 1-based FILE line number of the body's first line, so every warning the
+   *  parser emits points at a line a human can open in the source file rather
+   *  than at a body-relative offset nothing else uses. */
+  bodyStartLine: number;
   warnings: string[];
   errors: string[];
 } {
@@ -236,13 +318,28 @@ function parseFrontmatter(md: string): {
 
   // Exact offset past the closing fence's own terminator. No re-joining.
   const bodyStart = end === -1 ? 0 : lineEnds[end];
-  return { meta, bodyStart, warnings, errors };
+  const bodyStartLine = end === -1 ? 1 : end + 2;
+  return { meta, bodyStart, bodyStartLine, warnings, errors };
 }
 
-export function parseEnrichedMarkdown(md: string): ParsedMarkdown {
-  const { meta, bodyStart, warnings, errors } = parseFrontmatter(md);
+export function parseEnrichedMarkdown(input: string): ParsedMarkdown {
+  // Unconditional, whole-document, before anything else looks at the bytes.
+  const normalized = normalizeEscapes(input);
+  const md = normalized.text;
+
+  const { meta, bodyStart, bodyStartLine, warnings, errors } = parseFrontmatter(md);
   const body = md.slice(bodyStart);
   const lines = body.split(/\r?\n/);
+
+  if (normalized.removed > 0) {
+    warnings.push(
+      `${normalized.removed} markdown escape(s) removed before parsing — this file arrived escaped. ` +
+        `Parsed correctly, but the prep side is emitting escaped output (E12).`,
+    );
+  }
+
+  /** Body index → 1-based line number in the original file. */
+  const fileLine = (bodyIdx: number) => bodyIdx + bodyStartLine;
 
   const chunks: any[] = [];
   const skipped: string[] = [];
@@ -394,39 +491,93 @@ export function parseEnrichedMarkdown(md: string): ParsedMarkdown {
     }
 
     // ---- Typed atomic blocks ----
-    const opener = BLOCK_OPENERS.find(b => b.re.test(line));
-    if (opener) {
+    const openTag = openTagOf(line);
+    const openType = openTag ? BLOCK_TAG_TYPES[openTag] : undefined;
+    if (openTag && openType) {
       flushProse();
+      const i0 = i; // the opening line, captured before `i` walks forward
       const buf: string[] = [raw];
-      let j = i + 1;
-      if (opener.close) {
-        // Explicit close tag.
-        while (j < lines.length && !opener.close.test(lines[j].trim())) { buf.push(lines[j]); j += 1; }
-        if (j < lines.length) buf.push(lines[j]); // include the close tag line
-        i = j;
+
+      // Look ahead for this block's OWN closing tag. Honoured for every type,
+      // not just the two that used to declare one — an unhonoured `[/FIGURE]`
+      // is not inert, it leaves the block running and the next paragraph gets
+      // absorbed into the figure's chunk.
+      //
+      // The search is bounded: blocks do not nest, so the next opening tag ends
+      // it, and a foreign closing tag means the file's structure is already
+      // broken. Without those bounds, one unclosed [GLOSSARY TERM] would run to
+      // whatever the last closed glossary block in the file happened to be and
+      // swallow the chapter.
+      let closeAt = -1;
+      let abort = '';
+      for (let j = i + 1; j < lines.length; j++) {
+        const t = lines[j].trim();
+        const ct = closeTagOf(t);
+        if (ct) {
+          if (ct === openTag) { closeAt = j; break; }
+          abort = `a foreign [/${ct}] at line ${fileLine(j)}`;
+          break;
+        }
+        const ot = openTagOf(t);
+        if (ot && BLOCK_TAG_TYPES[ot]) { abort = `the next block [${ot}] opening at line ${fileLine(j)}`; break; }
+      }
+
+      if (closeAt !== -1) {
+        for (let j = i + 1; j <= closeAt; j++) buf.push(lines[j]);
+        i = closeAt;
       } else {
-        // Implicit: run until the next structural boundary (blank line then a
-        // marker / another block / a bold heading), or a second blank line, or EOF.
+        // Implicit fallback: run until the next structural boundary (a marker /
+        // another block / a foreign closer / a standalone bold heading), or a
+        // second blank line, or EOF.
+        //
+        // It stays, because refusing an unclosed block would refuse the only
+        // real chapter on hand. But it is never SILENT: a guessed boundary moves
+        // a chunk boundary, and therefore moves a citation, and the guess is
+        // invisible in the output it produces.
         let blanks = 0;
+        let reason = 'end of file';
+        let j = i + 1;
         while (j < lines.length) {
           const t = lines[j].trim();
-          const isBoundary =
-            MARKER_RE.test(t) ||
-            BLOCK_OPENERS.some(b => b.re.test(t)) ||
-            (/^\*\*[^*]+\*\*$/.test(t)); // a standalone bold heading starts new prose
-          if (isBoundary && buf.length > 1) break;
-          if (t === '') { blanks += 1; if (blanks >= 2) break; } else { blanks = 0; }
+          let boundary = '';
+          if (MARKER_RE.test(t)) boundary = 'a structural marker';
+          else if (closeTagOf(t)) boundary = `a foreign [/${closeTagOf(t)}]`;
+          else { const ot = openTagOf(t); if (ot && BLOCK_TAG_TYPES[ot]) boundary = `the next block [${ot}]`; }
+          if (!boundary && /^\*\*[^*]+\*\*$/.test(t)) boundary = 'a standalone bold heading';
+          if (boundary && buf.length > 1) { reason = boundary; break; }
+          if (t === '') { blanks += 1; if (blanks >= 2) { reason = 'a blank-line gap'; break; } } else { blanks = 0; }
           buf.push(lines[j]);
           j += 1;
         }
         i = j - 1;
+        warnings.push(
+          `[${openTag}] opened at line ${fileLine(i0)} has no [/${openTag}] — boundary GUESSED at line ` +
+            `${fileLine(j - 1)} (stopped at ${reason}${abort ? `; closer search stopped at ${abort}` : ''}). ` +
+            `The chunk boundary, and therefore every citation this block produces, rests on that guess.`,
+        );
       }
       // A typed block usually declares its own printed page in the header,
       // e.g. "[TABLE 1.1 | Page 3 | Type: Data Table]" or "[FEATURE BOX 1.1 | Page 192-193]" — use it for the citation.
       const headerPage = buf[0].match(/\bPage\s+(\d+)(?:\s*[-–—]\s*(\d+))?/i);
       const pageStart = headerPage ? parseInt(headerPage[1], 10) : undefined;
       const pageEnd = headerPage?.[2] ? parseInt(headerPage[2], 10) : pageStart;
-      pushChunk(buf.join('\n').trim(), opener.type, pageStart, pageEnd);
+      pushChunk(buf.join('\n').trim(), openType, pageStart, pageEnd);
+      continue;
+    }
+
+    // ---- A closing tag that reached here closes nothing ----
+    //
+    // Dropped, not accumulated. Reaching this point means the block-handling
+    // branch above never consumed it, so there is no open block it belongs to.
+    // Left in the prose buffer it became embedded text: a chunk whose body
+    // contains a bare `[/FIGURE]` between two paragraphs, which the tutor then
+    // quotes back at a student as though it were printed on the page.
+    const strayClose = closeTagOf(line);
+    if (strayClose) {
+      warnings.push(
+        `[/${strayClose}] at line ${fileLine(i)} closes nothing — dropped rather than indexed as prose. ` +
+          `Either its opening tag is missing or an earlier block already ended.`,
+      );
       continue;
     }
 
