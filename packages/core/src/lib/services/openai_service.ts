@@ -115,6 +115,23 @@ export class OpenAIService {
     return vector
   }
 
+  /**
+   * Cumulative embedding usage for this process, straight off the API response.
+   * Process-scoped and static on purpose: a one-shot ingest script wants the
+   * total for a run, and threading a counter through the pipeline would touch
+   * every call site to answer a question only the entry point asks.
+   */
+  private static embeddingUsage = { calls: 0, inputs: 0, promptTokens: 0, totalTokens: 0 }
+
+  static getEmbeddingUsage() {
+    return { ...OpenAIService.embeddingUsage }
+  }
+
+  /** Snapshot boundary, so usage can be attributed to one chapter rather than the whole run. */
+  static resetEmbeddingUsage() {
+    OpenAIService.embeddingUsage = { calls: 0, inputs: 0, promptTokens: 0, totalTokens: 0 }
+  }
+
   async generateEmbeddings(texts: string[]): Promise<number[][]> {
     if (texts.length === 0) {
       return []
@@ -124,6 +141,15 @@ export class OpenAIService {
       model: OpenAIService.EMBEDDING_MODEL,
       input: texts
     })
+
+    // Real usage off the API response, which was being thrown away. An ingest
+    // has to be able to report what it actually spent — a chars/4 estimate is
+    // the wrong thing to put next to a bill, and "no tokens were spent" is a
+    // claim about a skipped re-ingest that must be measured, not asserted.
+    OpenAIService.embeddingUsage.calls += 1
+    OpenAIService.embeddingUsage.promptTokens += embeddingResponse.usage?.prompt_tokens ?? 0
+    OpenAIService.embeddingUsage.totalTokens += embeddingResponse.usage?.total_tokens ?? 0
+    OpenAIService.embeddingUsage.inputs += texts.length
 
     if (!embeddingResponse.data || embeddingResponse.data.length !== texts.length) {
       throw new Error('Embedding count mismatch returned by OpenAI API')

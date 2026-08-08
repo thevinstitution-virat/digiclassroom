@@ -45,6 +45,7 @@ that applies the file, or the next person has to read `\d` output to find out.
 | `007_chunk_index_per_asset.sql` | **Phase 1 of 3** — adds `content_chunk.content_asset_id` + `UNIQUE (content_asset_id, chunk_index)`, additively. Phase 2 is the code deploy that writes them; phase 3 is `008`. | ✅ |
 | `008_drop_chunk_item_index_uq.sql` | **Phase 3 of 3** — drops the old `UNIQUE (content_item_id, chunk_index)`. Run only after phase 2 is live (it was: commit `518a403`, deployed 2026-08-08). `content_item_id` stays as a plain indexed column; only the uniqueness moved. | ✅ |
 | `009_chunk_retrieval_class.sql` | `content_chunk.retrieval_class` — `reference` (prose) vs `practice` (question/prompt/activity), per chunk, so retrieval can stop answering a student with the textbook's own question. In Postgres and not only in the payload, because a model swap is a replay of `content_chunk`. | ✅ |
+| `010_ingest_run_forced.sql` | `ingest_run.forced` + `force_reason` — an ingest that overrode the linter or the APPROVED gate must leave a trace, or forced content is indistinguishable from validated content the moment it is indexed. On the RUN, because force is a property of one ingestion event. | ✅ |
 
 ## Not captured here
 
