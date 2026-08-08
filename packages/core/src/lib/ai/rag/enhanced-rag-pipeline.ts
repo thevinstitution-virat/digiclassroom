@@ -2157,6 +2157,13 @@ export class EnhancedRAGPipeline {
           // point id; legacy (no contentItemId) ingestion keeps the old numeric id.
           const chunkId = chunkUuidByOriginalIndex?.get(originalIndex) ?? Date.now() + index;
 
+          // The chunk_index this point's Postgres row actually got — derived the
+          // same way the bridge derives it, from the chunk's position among the
+          // QUALIFIED chunks, not its position among the embedded ones. Practice
+          // chunks hold a row but no vector, so the two sequences differ.
+          const qualifiedPos = qualifiedPosByOriginalIndex.get(originalIndex);
+          const spineChunkIndex = qualifiedPos === undefined ? undefined : bridgeChunkIndex + qualifiedPos;
+
           // Normalize class level to Arabic numerals for consistent filtering
           const rawClassLevel = chunkMetadata.classLevel || chunkMetadata.class || 'Unknown';
           const normalizedClassLevel = this.normalizeClassLevel(rawClassLevel);
@@ -2224,6 +2231,28 @@ export class EnhancedRAGPipeline {
             // filter at query time without a Postgres round-trip.
             ...(contentItemId ? {
               content_item_id: contentItemId,
+              // WHICH FILE this point came from, and where in that file. The
+              // collection already carried a payload index for chunk_index and
+              // nothing ever wrote the field, so the index matched nothing.
+              //
+              // Both are needed to go from a retrieved point back to a place in
+              // the book: content_item_id says which work, and a work is fifteen
+              // chapter files whose chunk_index sequences all start at 0. Without
+              // the asset id a point knows the book but not the chapter, so
+              // "chunk 3" is ambiguous fifteen ways, and reading order —
+              // (part_index, chunk_index) — cannot be reconstructed from a
+              // retrieval result at all.
+              ...(sharedRun?.assetId ? { content_asset_id: sharedRun.assetId } : {}),
+              ...(spineChunkIndex !== undefined ? { chunk_index: spineChunkIndex } : {}),
+              // Canonical snake_case names alongside the legacy camelCase ones.
+              // Cross-app consumers read the shared collection through the spine's
+              // vocabulary (page_start, retrieval_class, content_item_id); having
+              // the title and section be the only two fields in a different
+              // dialect is how a PDLMS-side filter silently matches nothing.
+              ...(chunkMetadata.bookTitle || chunkMetadata.book_title
+                ? { book_title: chunkMetadata.bookTitle || chunkMetadata.book_title } : {}),
+              ...(chunkMetadata.section_title || chunkMetadata.section
+                ? { section_title: chunkMetadata.section_title || chunkMetadata.section } : {}),
               // Resolved from identity.org_app_ref, never assumed. A hardcoded
               // 'public' here would publish an org's private book to every
               // tenant — failing OPEN on the one axis that must fail closed.
