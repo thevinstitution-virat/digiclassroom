@@ -138,6 +138,50 @@ function lint(file: string): { ok: boolean; output: string } {
   }
 }
 
+/**
+ * Put the chapter's own bytes in R2 and hand back the URI the slot should record.
+ *
+ * The slot used to record `r2://…/parts/N.md` as a formatted string while only
+ * the source PDF was ever uploaded, so every enriched_md row pointed at a key
+ * with nothing behind it. Nothing errored — chunks and objects are independent —
+ * and the chapter retrieved and cited perfectly while the file it came from could
+ * not be fetched by anything, ever.
+ *
+ * Uploaded BEFORE the slot is registered, deliberately. If this succeeds and the
+ * ingest then fails, R2 holds an orphan object no row references, which costs a
+ * few kilobytes. The other order costs a row that lies about where its bytes are,
+ * and that is only discoverable by trying to fetch one.
+ *
+ * The bucket comes back from the upload rather than being spelled out here: the
+ * bucket in the URI has to be the bucket that was actually written to, and
+ * `digiclassroom-pro` was hardcoded in both places purely because R2_BUCKET_NAME
+ * happens to equal the storage-account name today.
+ */
+async function ensurePartUploaded(params: {
+  contentItemId: string;
+  partIndex: number;
+  markdown: string;
+  fileSha: string;
+  slotSha: string | null;
+}): Promise<{ storageUri: string; uploaded: boolean }> {
+  const { uploadContentAssetToR2, contentAssetExistsInR2 } = await import('@/lib/services/r2');
+  const key = `content/${params.contentItemId}/parts/${params.partIndex}.md`;
+
+  // Unchanged bytes AND the object is really there: nothing to do. Checking the
+  // sha alone would skip the upload for every slot registered before this
+  // existed, leaving exactly the rows that need repairing unrepaired.
+  if (params.slotSha === params.fileSha && (await contentAssetExistsInR2(key))) {
+    return { storageUri: `r2://${process.env.R2_BUCKET_NAME}/${key}`, uploaded: false };
+  }
+
+  const { bucket } = await uploadContentAssetToR2({
+    buffer: Buffer.from(params.markdown, 'utf8'),
+    key,
+    contentType: 'text/markdown; charset=utf-8',
+  });
+  return { storageUri: `r2://${bucket}/${key}`, uploaded: true };
+}
+
 /** Read-only: what occupies this slot right now, if anything. */
 async function peekSlot(contentItemId: string | null, partIndex: number) {
   if (!contentItemId) return null;
@@ -302,6 +346,28 @@ async function main() {
     }
 
     // ── The real thing ────────────────────────────────────────────────────
+    const slotNow = await peekSlot(contentItemId, ch.partIndex);
+    let part: { storageUri: string; uploaded: boolean };
+    try {
+      part = await ensurePartUploaded({
+        contentItemId: contentItemId!,
+        partIndex: ch.partIndex,
+        markdown: md,
+        fileSha,
+        slotSha: slotNow?.asset_sha256 ?? null,
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.log(`  OUTCOME       : failed — could not store the chapter in R2: ${msg}`);
+      console.log();
+      results.push({
+        partIndex: ch.partIndex, file: name, outcome: 'failed',
+        detail: `R2 upload failed: ${msg}`, tokens: 0, chunks: 0, points: 0,
+      });
+      continue;
+    }
+    console.log(`  r2            : ${part.uploaded ? 'uploaded' : 'already present, unchanged'} ${part.storageUri}`);
+
     OpenAIService.resetEmbeddingUsage();
     const started = Date.now();
 
@@ -327,7 +393,7 @@ async function main() {
           variant: 'default',
           sha256: fileSha,
           storageAccount: 'digiclassroom-pro',
-          storageUri: `r2://digiclassroom-pro/content/${contentItemId}/parts/${ch.partIndex}.md`,
+          storageUri: part.storageUri,
           bytes,
           pageCount: pages.length,
         },

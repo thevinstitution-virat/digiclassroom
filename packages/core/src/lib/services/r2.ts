@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { v4 as uuidv4 } from "uuid";
 
@@ -84,13 +84,13 @@ export async function uploadBufferToR2(buffer: Buffer, contentType: string, orig
  *
  * @returns the bucket and key actually written, for `r2://{bucket}/{key}`
  */
-export async function uploadSourceDocumentToR2(params: {
+export async function uploadContentAssetToR2(params: {
   buffer: Buffer;
   key: string;
   contentType: string;
 }): Promise<{ bucket: string; key: string }> {
   if (!bucketName) {
-    throw new Error('R2_BUCKET_NAME is not set — cannot store the canonical source document.');
+    throw new Error('R2_BUCKET_NAME is not set — cannot store a content asset.');
   }
   await r2Client.send(
     new PutObjectCommand({
@@ -101,6 +101,34 @@ export async function uploadSourceDocumentToR2(params: {
     }),
   );
   return { bucket: bucketName, key: params.key };
+}
+
+/**
+ * Whether an object already sits at this key.
+ *
+ * Lets a caller keep "re-ingesting an unchanged file costs nothing" true while
+ * still self-healing a slot whose row was written before its bytes were ever
+ * uploaded: unchanged sha alone is not evidence the object exists.
+ */
+export async function contentAssetExistsInR2(key: string): Promise<boolean> {
+  if (!bucketName) return false;
+  try {
+    await r2Client.send(new HeadObjectCommand({ Bucket: bucketName, Key: key }));
+    return true;
+  } catch (err: any) {
+    const status = err?.$metadata?.httpStatusCode;
+    if (status === 404 || err?.name === 'NotFound' || err?.name === 'NoSuchKey') return false;
+    throw err;
+  }
+}
+
+/** The source document of a work. Thin alias, kept for readability at the call site. */
+export async function uploadSourceDocumentToR2(params: {
+  buffer: Buffer;
+  key: string;
+  contentType: string;
+}): Promise<{ bucket: string; key: string }> {
+  return uploadContentAssetToR2(params);
 }
 
 /**

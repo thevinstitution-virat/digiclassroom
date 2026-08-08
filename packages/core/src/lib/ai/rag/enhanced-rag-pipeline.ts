@@ -41,6 +41,17 @@ import { buildSparseVector } from './sparse-tokenizer';
  * Created by beginSharedContentRun(), consumed by indexChunksInQdrant(), closed
  * by finalizeSharedContentRun().
  */
+/**
+ * Whether a metadata value is a real value rather than a stand-in for one.
+ *
+ * `'Unknown'` is treated as absent because upstream callers already substitute
+ * that literal for a missing field (`apps/api/.../trio-ingest` does exactly
+ * `domain || 'Unknown'`), so checking for undefined alone would let the
+ * placeholder straight through onto the point.
+ */
+const isKnown = (v: unknown): v is string =>
+  typeof v === 'string' && v.trim() !== '' && v.trim().toLowerCase() !== 'unknown';
+
 interface SharedContentRun {
   contentItemId: string;
   ingestRunId: string | null;
@@ -2180,7 +2191,23 @@ export class EnhancedRAGPipeline {
             medium: chunkMetadata.medium || chunkMetadata.language || 'Unknown',
             bookTitle: chunkMetadata.bookTitle || chunkMetadata.book_title || 'Unknown',
             // ── Content hierarchy (injected onto each chunk in indexPDF) ──
-            domain: chunkMetadata.domain || 'Unknown',
+            //
+            // `domain` is OMITTED when the lane does not know it, never written
+            // as the string "Unknown". The console lane requires a real domain
+            // on the upload form, so this only ever bites the lanes that have no
+            // hierarchy to inject — the curated-markdown lane among them, which
+            // was stamping every point in the shared collection with a literal
+            // "Unknown".
+            //
+            // A missing key and a key whose value is "Unknown" are not the same
+            // thing to Qdrant. Untagged content is findable with `is_empty`, and
+            // an `is_empty` escape hatch is exactly how the taxonomy filter lets
+            // legacy content through (see qdrant-search.ts). A literal "Unknown"
+            // is invisible to that, matches nothing anyone meant, and would be
+            // returned by a `domain = "Unknown"` filter as though it were a real
+            // classification. Populating it properly is the taxonomy link's job
+            // — until a work is tagged, absent is the truthful answer.
+            ...(isKnown(chunkMetadata.domain) ? { domain: chunkMetadata.domain } : {}),
             course: chunkMetadata.course || chunkMetadata.curriculum || 'Unknown',
             level: chunkMetadata.level || normalizedClassLevel || 'Unknown',
             book: chunkMetadata.book || chunkMetadata.bookTitle || chunkMetadata.subject || 'Unknown',
