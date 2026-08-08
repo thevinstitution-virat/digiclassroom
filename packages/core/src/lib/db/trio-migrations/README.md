@@ -29,10 +29,21 @@ docker exec <postgres-container> psql -U postgres -d trio -f /tmp/001_xxx.sql
 
 ## Files
 
-| File | What it is |
-|---|---|
-| `000_baseline_20260807.sql` | **Captured, not authored.** `pg_dump --schema-only` of the `identity`, `content`, `notes`, and `taxonomy` schemas as they stood on 2026-08-07. The Step 5 foundation was created with ad-hoc SQL and never recorded anywhere, so this snapshot is the baseline every later migration builds on. Do not run it against a database that already has these schemas. |
-| `001_content_dedupe_run_lifecycle_grants.sql` | Content-hash dedupe, ingest-run lifecycle (`active`/`superseded` + one-active partial unique index), the `content_taxonomy_link` grant, and the missing `content_asset` columns. |
+There is no `__migrations` ledger in this database — these are applied by hand,
+so **this table is the ledger**. Update the Applied column in the same commit
+that applies the file, or the next person has to read `\d` output to find out.
+
+| File | What it is | Applied to prod |
+|---|---|---|
+| `000_baseline_20260807.sql` | **Captured, not authored.** `pg_dump --schema-only` of the `identity`, `content`, `notes`, and `taxonomy` schemas as they stood on 2026-08-07. The Step 5 foundation was created with ad-hoc SQL and never recorded anywhere, so this snapshot is the baseline every later migration builds on. Do not run it against a database that already has these schemas. | n/a — snapshot |
+| `001_content_dedupe_run_lifecycle_grants.sql` | Content-hash dedupe, ingest-run lifecycle (`active`/`superseded` + one-active partial unique index), the `content_taxonomy_link` grant, and the missing `content_asset` columns. | ✅ |
+| `002_content_asset_kind_to_role.sql` | `content_asset.kind` → `role`. `kind` means "what sort of thing is this work" on `content_item`; an asset answers "what is this file FOR". | ✅ |
+| `003_seed_class9_subjects.sql` | Seeds the missing Class 9 SUBJECT nodes — the school tree had class nodes for all 12 classes but subjects only under 10 and 12, so no Class 9 book could be tagged at all. | ✅ |
+| `004_work_key_renditions_per_asset_runs.sql` | An ingest run is per **asset**, not per work; an asset states which rendition it is; a work gets an identity (`isbn`/`edition`) that survives having no file. | ✅ |
+| `005_multi_format_asset_model.sql` | `content_asset` can describe a whole multi-format work — source PDF, per-chapter markdown, per-variant narration, cover, thumbnail. | ✅ |
+| `006_asset_slots_and_versions.sql` | The MIGRATE step for slot identity: a chapter is a **slot** that different files occupy over time, so the key is `(content_item_id, role, part_index, variant)` and file history moves to `content_asset_version`. Fixes 005's file-as-identity key, which left two runs active for one chapter. Expand step shipped first in `7bc64d9`. | ✅ |
+| `007_chunk_index_per_asset.sql` | **Phase 1 of 3** — adds `content_chunk.content_asset_id` + `UNIQUE (content_asset_id, chunk_index)`, additively. Phase 2 is the code deploy that writes them; phase 3 is `008`. | ✅ |
+| `008_drop_chunk_item_index_uq.sql` | **Phase 3 of 3** — drops the old `UNIQUE (content_item_id, chunk_index)`. Run only after phase 2 is live. | ⬜ pending phase 2 deploy |
 
 ## Not captured here
 
