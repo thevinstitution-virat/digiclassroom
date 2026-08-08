@@ -31,6 +31,10 @@ export interface EnrichedBookMeta {
   chapter_number: string;
   chapter_title: string;
   chapter_pages?: string;
+  /** Parsed from chapter_pages when it is a range. */
+  chapter_page_start?: number;
+  chapter_page_end?: number;
+  isbn?: string;
   edition?: string;
   publisher?: string;
   validation_status: string;
@@ -41,9 +45,27 @@ export interface EnrichedBookMeta {
 export interface ParsedMarkdown {
   meta: EnrichedBookMeta;
   chunks: any[];        // shape consumed by EnhancedRAGPipeline.indexChunksInQdrant
-  skipped: string[];    // audit trail: SKIP blocks + UNCLEAR flags
+  skipped: string[];    // audit trail: SKIP regions + UNCLEAR flags
   warnings: string[];
+  /** Non-empty means REFUSE. A warning lets a bad file through; this must not. */
+  errors: string[];
 }
+
+/**
+ * Which block types are practice rather than reference.
+ *
+ * A prompt, an activity and an exercise question are things a student is meant
+ * to answer. Retrieval must be able to exclude them, or the tutor answers a
+ * student's question by quoting the textbook's question back at them and cites
+ * it confidently.
+ */
+const PRACTICE_BLOCK_TYPES = new Set(['discussion_prompt', 'suggested_activity']);
+
+/**
+ * Section titles whose PROSE is practice too. Typed blocks are not the only
+ * carrier — a chapter's exercises are usually a numbered list under a heading.
+ */
+const PRACTICE_SECTION_RE = /\b(exercise|questions?|let'?s\s+(discuss|explore|reflect)|activit(y|ies)|think\s+about\s+it|assessment)\b/i;
 
 const CONTENT_SOURCE = 'curated_markdown';
 
@@ -67,7 +89,8 @@ const MARKER_RE = /^<!--\s*(.*?)\s*-->$/;
 const PAGE_RE = /^PAGE\s+(\d+)/i;
 const SECTION_RE = /^SECTION:\s*(.+)$/i;
 const SUBSECTION_RE = /^SUBSECTION:\s*(.+)$/i;
-const SKIP_RE = /SKIP\b/i;
+const SKIP_RE = /\bSKIP\b/i;
+const END_SKIP_RE = /^\s*(\/\s*SKIP|END\s+SKIP|SKIP\s+END)\b/i;
 const UNCLEAR_RE = /\[UNCLEAR[^\]]*\]/i;
 
 function stripQuotes(v: string): string {
@@ -92,27 +115,90 @@ function canonicalSubject(s: string): string {
   return core || s.trim();
 }
 
-/** Parse the leading `--- BOOK_METADATA … ---` frontmatter block. */
-function parseFrontmatter(md: string): { meta: EnrichedBookMeta; bodyStart: number; warnings: string[] } {
-  const warnings: string[] = [];
-  const lines = md.split(/\r?\n/);
+/**
+ * Undo markdown escaping.
+ *
+ * The skill's output reaches this parser having been through a markdown-escaping
+ * step somewhere in transport: the opening delimiter arrives as `\---`, and keys
+ * as `book\_title:`. Both are lossless to reverse and neither is ambiguous —
+ * a backslash before ASCII punctuation is never meaningful inside a frontmatter
+ * key or a `---` fence.
+ */
+function unescapeMd(s: string): string {
+  return s.replace(/\\([-_*[\]()#+.!>`~|])/g, '$1');
+}
 
-  // Find first `---` … next `---`
-  let start = -1;
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].trim() === '---') { start = i; break; }
-    if (lines[i].trim() !== '') break; // frontmatter must be at the top
+const FENCE_RE = /^\\?-{3}\s*$/;
+
+/**
+ * Parse the leading `--- BOOK_METADATA … ---` frontmatter block.
+ *
+ * Returns an EXACT byte offset for the body. The previous implementation
+ * rebuilt the offset by re-joining split lines with '\n' after splitting on
+ * /\r?\n/, so on a CRLF file it was short by one byte per frontmatter line and
+ * the tail of the frontmatter leaked into the first prose chunk. Offsets are
+ * now accumulated from the original separators as they are found.
+ *
+ * `errors` is the load-bearing part. Failing to find frontmatter used to be a
+ * warning that produced empty metadata and a body consisting of the whole file,
+ * frontmatter included — so a malformed file indexed its own YAML as textbook
+ * prose and reported success. That must be a refusal, not a warning.
+ */
+function parseFrontmatter(md: string): {
+  meta: EnrichedBookMeta;
+  bodyStart: number;
+  warnings: string[];
+  errors: string[];
+} {
+  const warnings: string[] = [];
+  const errors: string[] = [];
+
+  // Walk the original string so every offset is real, CRLF or LF.
+  const lineStarts: number[] = [];
+  const lineTexts: string[] = [];
+  const lineEnds: number[] = []; // offset just past this line's terminator
+  {
+    let pos = 0;
+    while (pos <= md.length) {
+      const nl = md.indexOf('\n', pos);
+      if (nl === -1) {
+        lineStarts.push(pos);
+        lineTexts.push(md.slice(pos));
+        lineEnds.push(md.length);
+        break;
+      }
+      lineStarts.push(pos);
+      lineTexts.push(md.slice(pos, nl).replace(/\r$/, ''));
+      lineEnds.push(nl + 1);
+      pos = nl + 1;
+    }
   }
+
+  let start = -1;
+  for (let i = 0; i < lineTexts.length; i++) {
+    const t = lineTexts[i].trim();
+    if (FENCE_RE.test(t)) { start = i; break; }
+    if (t !== '') break; // frontmatter must be at the top
+  }
+
   const kv: Record<string, string> = {};
   let end = -1;
   if (start !== -1) {
-    for (let i = start + 1; i < lines.length; i++) {
-      if (lines[i].trim() === '---') { end = i; break; }
-      const m = lines[i].match(/^([A-Za-z0-9_]+)\s*:\s*(.*)$/);
-      if (m) kv[m[1].toLowerCase()] = stripQuotes(m[2]);
+    for (let i = start + 1; i < lineTexts.length; i++) {
+      const t = lineTexts[i].trim();
+      if (FENCE_RE.test(t)) { end = i; break; }
+      const m = unescapeMd(t).match(/^([A-Za-z0-9_]+)\s*:\s*(.*)$/);
+      if (m) kv[m[1].toLowerCase()] = unescapeMd(stripQuotes(m[2]));
     }
   }
-  if (end === -1) warnings.push('No BOOK_METADATA frontmatter block found — falling back to empty metadata.');
+
+  if (start === -1 || end === -1) {
+    errors.push(
+      'No BOOK_METADATA frontmatter block found (expected a `---` fence at the top of the file, ' +
+        'a closing `---`, and `key: value` lines between them). Refusing rather than indexing ' +
+        'the file as untitled body text.',
+    );
+  }
 
   const meta: EnrichedBookMeta = {
     book_title: kv['book_title'] || kv['booktitle'] || kv['book'] || kv['title'] || '',
@@ -123,6 +209,7 @@ function parseFrontmatter(md: string): { meta: EnrichedBookMeta; bodyStart: numb
     chapter_number: kv['chapter_number'] || kv['chapternumber'] || kv['chapter'] || '',
     chapter_title: kv['chapter_title'] || kv['chaptertitle'] || '',
     chapter_pages: kv['chapter_pages'],
+    isbn: kv['isbn'],
     edition: kv['edition'],
     publisher: kv['publisher'],
     validation_status: (kv['validation_status'] || kv['status'] || 'PENDING').toUpperCase(),
@@ -130,13 +217,30 @@ function parseFrontmatter(md: string): { meta: EnrichedBookMeta; bodyStart: numb
     processed_by: kv['processed_by'],
   };
 
-  // Byte offset where the body begins (line after the closing ---)
-  const bodyStart = end === -1 ? 0 : lines.slice(0, end + 1).join('\n').length + 1;
-  return { meta, bodyStart, warnings };
+  // Printed page range this chapter occupies, e.g. "183–194" (en dash or hyphen).
+  // Used to check that every chunk's page really falls inside the chapter, which
+  // is what catches a chapter-extracted PDF whose file page 1 is book page 183.
+  if (meta.chapter_pages) {
+    const m = meta.chapter_pages.match(/(\d+)\s*[-–—]\s*(\d+)/);
+    if (m) {
+      meta.chapter_page_start = parseInt(m[1], 10);
+      meta.chapter_page_end = parseInt(m[2], 10);
+    } else {
+      warnings.push(`chapter_pages "${meta.chapter_pages}" is not a page range — page bounds not checked.`);
+    }
+  }
+
+  if (!meta.isbn) {
+    warnings.push('No isbn in frontmatter — this chapter cannot be tied to a work key by ISBN.');
+  }
+
+  // Exact offset past the closing fence's own terminator. No re-joining.
+  const bodyStart = end === -1 ? 0 : lineEnds[end];
+  return { meta, bodyStart, warnings, errors };
 }
 
 export function parseEnrichedMarkdown(md: string): ParsedMarkdown {
-  const { meta, bodyStart, warnings } = parseFrontmatter(md);
+  const { meta, bodyStart, warnings, errors } = parseFrontmatter(md);
   const body = md.slice(bodyStart);
   const lines = body.split(/\r?\n/);
 
@@ -176,9 +280,15 @@ export function parseEnrichedMarkdown(md: string): ParsedMarkdown {
     }
 
     seq += 1;
+    // Practice by block type, or by the section it sits under. Both, because a
+    // typed [DISCUSSION_PROMPT] and a bare numbered list under "Exercises" are
+    // the same thing to a student and neither should answer a question.
+    const isPractice =
+      PRACTICE_BLOCK_TYPES.has(contentType) || PRACTICE_SECTION_RE.test(sectionTitle());
     chunks.push({
       id: `${bookSlug}_ch${meta.chapter_number || 'x'}_p${page}_${seq}`,
       text: clean,
+      retrieval_class: isPractice ? 'practice' : 'reference',
       metadata: {
         // required
         class: meta.class_level || 'Unknown',
@@ -237,13 +347,40 @@ export function parseEnrichedMarkdown(md: string): ParsedMarkdown {
       const inner = marker[1];
       if (SKIP_RE.test(inner)) {
         flushProse();
-        // Collect the SKIP note + any immediately-following comment lines.
+        // ENFORCED, not merely noted.
+        //
+        // This used to consume the marker and its trailing comment lines, record
+        // a string, and continue — so the content the marker was pointing at fell
+        // straight into prose accumulation on the next line and was embedded
+        // anyway. The audit trail said SKIPPED and the vector store disagreed.
+        //
+        // A SKIP marker opens a REGION. It closes at an explicit end marker, or
+        // at the next structural boundary (PAGE / SECTION / SUBSECTION), since
+        // those are the only markers that redefine where we are in the book. The
+        // number of body lines actually dropped is reported, so over-skipping is
+        // visible in the audit trail instead of being inferred from a gap.
         const note: string[] = [inner];
-        while (i + 1 < lines.length && MARKER_RE.test(lines[i + 1].trim()) && !PAGE_RE.test(lines[i + 1].trim().replace(MARKER_RE, '$1'))) {
-          i += 1;
-          note.push(lines[i].trim().replace(MARKER_RE, '$1'));
+        let dropped = 0;
+        let j = i + 1;
+        for (; j < lines.length; j++) {
+          const t = lines[j].trim();
+          const mk = t.match(MARKER_RE);
+          if (mk) {
+            const innerNext = mk[1];
+            if (END_SKIP_RE.test(innerNext)) { break; }
+            if (PAGE_RE.test(innerNext) || SECTION_RE.test(innerNext) || SUBSECTION_RE.test(innerNext)) {
+              j -= 1; // hand the boundary marker back to the main loop
+              break;
+            }
+            note.push(innerNext); // an explanatory comment inside the region
+            continue;
+          }
+          if (t !== '') dropped += 1;
         }
-        skipped.push(`SKIPPED: ${note.join(' | ')}`);
+        i = j;
+        skipped.push(
+          `SKIPPED (${dropped} body line${dropped === 1 ? '' : 's'} excluded): ${note.join(' | ')}`,
+        );
         continue;
       }
       const pageM = inner.match(PAGE_RE);
@@ -303,5 +440,24 @@ export function parseEnrichedMarkdown(md: string): ParsedMarkdown {
   }
   flushProse();
 
-  return { meta, chunks, skipped, warnings };
+  // Every chunk's printed page must fall inside the chapter's declared range.
+  // A chapter-extracted PDF whose file page 1 is the book's page 183 produces
+  // chunks citing pages 1..12 — plausible-looking, silently wrong, and only
+  // detectable against the range the frontmatter already states.
+  if (meta.chapter_page_start && meta.chapter_page_end) {
+    const outside = chunks.filter(
+      (c) => c.metadata.page < meta.chapter_page_start! || c.metadata.page > meta.chapter_page_end!,
+    );
+    if (outside.length > 0) {
+      const sample = outside.slice(0, 5).map((c) => c.metadata.page).join(', ');
+      errors.push(
+        `${outside.length} of ${chunks.length} chunk(s) cite a page outside the declared ` +
+          `chapter_pages range ${meta.chapter_page_start}-${meta.chapter_page_end} (e.g. ${sample}). ` +
+          `Either the PAGE markers are wrong or this file's pages are file-relative, not printed. ` +
+          `Refusing: every citation this chapter produces would point at the wrong page.`,
+      );
+    }
+  }
+
+  return { meta, chunks, skipped, warnings, errors };
 }

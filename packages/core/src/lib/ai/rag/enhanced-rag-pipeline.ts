@@ -24,6 +24,7 @@ import {
   registerAsset,
   hasActiveIngestRun,
   hasActiveRunForAsset,
+  getWorkKey,
   supersedePriorActiveRun,
   activateIngestRun,
   failIngestRun,
@@ -1624,6 +1625,39 @@ export class EnhancedRAGPipeline {
       contentItemId = resolved.contentItemId;
       console.log(`📖 ${label}: work ${contentItemId} (${resolved.matchedBy})`);
 
+      // ── 1b. The work key must agree with the work we landed on ─────────
+      //
+      // The app-local id wins the resolution, so a chapter uploaded under the
+      // right sourceLocalId but carrying a DIFFERENT book's ISBN in its
+      // frontmatter would attach silently to the wrong work — and the only
+      // symptom would be a chapter of one textbook answering questions about
+      // another, cited to a page number that exists in both. Refuse instead.
+      // A null ISBN on either side is not a mismatch: it is an absence, and the
+      // resolver backfills it.
+      if (input.isbn) {
+        const existing = await getWorkKey(contentItemId);
+        if (existing?.isbn && existing.isbn !== input.isbn) {
+          return {
+            ...base,
+            contentItemId,
+            reason:
+              `${label}: frontmatter isbn "${input.isbn}" does not match the work this ` +
+              `${input.sourceApp} id already points at ("${existing.title}", isbn "${existing.isbn}"). ` +
+              `Refusing — attaching a chapter to the wrong book is invisible once it is indexed.`,
+          };
+        }
+        if (existing?.isbn && input.edition && existing.edition && existing.edition !== input.edition) {
+          return {
+            ...base,
+            contentItemId,
+            reason:
+              `${label}: frontmatter edition "${input.edition}" does not match this work's ` +
+              `recorded edition "${existing.edition}". Refusing — page numbers differ between ` +
+              `editions, so every citation from this chapter would be wrong.`,
+          };
+        }
+      }
+
       // ── 2. The slot ────────────────────────────────────────────────────
       const asset = await registerAsset({
         contentItemId,
@@ -1722,6 +1756,7 @@ export class EnhancedRAGPipeline {
 
       const BATCH_SIZE = 50;
       let indexed = 0;
+      let upserted = 0;
       for (let start = 0; start < laneChunks.length; start += BATCH_SIZE) {
         const r = await this.indexChunksInQdrant(laneChunks.slice(start, start + BATCH_SIZE), {
           organizationId: input.organizationId,
@@ -1731,6 +1766,7 @@ export class EnhancedRAGPipeline {
           sharedRun: run,
         });
         indexed += r.indexedCount;
+        upserted += r.pointsUpserted;
       }
 
       // Every chunk failing validation is a failure, not an empty success —
@@ -1769,7 +1805,7 @@ export class EnhancedRAGPipeline {
         ingestRunId,
         partIndex,
         chunksWritten: indexed,
-        pointsUpserted: indexed,
+        pointsUpserted: upserted,
       };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -1847,6 +1883,8 @@ export class EnhancedRAGPipeline {
     } = {}
   ): Promise<{
     indexedCount: number;
+    /** Rows written minus practice chunks — a practice chunk is stored, never vectorised. */
+    pointsUpserted: number;
     contentItemId?: string;
     /** True when this file's bytes were already ingested and the run was skipped. */
     deduped?: boolean;
@@ -1903,6 +1941,7 @@ export class EnhancedRAGPipeline {
       console.warn('⚠️ No valid chunks to index after validation');
       return {
         indexedCount: 0,
+        pointsUpserted: 0,
         validationStats: {
           validCount: stats.validCount,
           invalidCount: stats.invalidCount,
@@ -1948,6 +1987,10 @@ export class EnhancedRAGPipeline {
 
     const batchSize = 100;
     let indexedCount = 0;
+    // Rows and points are no longer the same number: a practice chunk is stored
+    // and deliberately not vectorised, so "points_count equals chunk count" is
+    // now "points_count equals reference-chunk count".
+    let pointsUpserted = 0;
     // Document-wide, NOT per-call. This method runs once per outer batch, so a
     // counter starting at 0 here made every batch reuse chunk_index 0..n — and
     // insertContentChunks' ON CONFLICT (content_item_id, chunk_index) DO UPDATE
@@ -1960,9 +2003,42 @@ export class EnhancedRAGPipeline {
     for (let i = 0; i < validatedChunks.length; i += batchSize) {
       const batch = validatedChunks.slice(i, i + batchSize);
 
-      // Generate embeddings for batch
+      // Zip chunk+embedding+sparse-vector together by original batch position BEFORE
+      // filtering — the previous filter().map() dropped low-quality chunks first and
+      // then re-indexed from 0, which silently misaligned embeddings[index]/
+      // sparseVectors[index] against the wrong chunk whenever anything was filtered.
+      const qualified = batch
+        .map((chunk, originalIndex) => ({ chunk, originalIndex }))
+        .filter(({ chunk }) => {
+          // Quality threshold: Skip chunks with quality_score < 70
+          const qualityScore = chunk.metadata?.quality_score;
+          if (qualityScore !== undefined && qualityScore < 70) {
+            console.log(`⏭️  Skipping low-quality chunk: quality_score=${qualityScore}%`);
+            return false;
+          }
+          return true;
+        });
+
+      // A `practice` chunk gets a content_chunk ROW but no vector.
+      //
+      // It is real content — it belongs to the book, it is worth storing, and a
+      // future "show me this chapter's exercises" feature reads it straight out
+      // of Postgres. What it must never be is a retrieval candidate: answering
+      // "what is opportunity cost?" by returning the textbook's own exercise
+      // question, cited to a page, is a confident wrong answer.
+      //
+      // Excluded BEFORE embedding, not after, so it costs nothing. Alignment is
+      // kept the same way the fix above kept it: indices run over embedTargets,
+      // and the original batch position is carried, never recomputed.
+      const embedTargets = qualified.filter(({ chunk }) => chunk.retrieval_class !== 'practice');
+      const practiceCount = qualified.length - embedTargets.length;
+      if (practiceCount > 0) {
+        console.log(`📝 ${practiceCount} practice chunk(s): row written, not embedded, not upserted`);
+      }
+
+      // Generate embeddings for the chunks that will actually be upserted
       const embeddings = await this.generateBatchEmbeddings(
-        batch.map(chunk => chunk.text)
+        embedTargets.map(({ chunk }) => chunk.text)
       );
 
       // Generate sparse vectors if hybrid search is enabled
@@ -1988,7 +2064,7 @@ export class EnhancedRAGPipeline {
           // frequency as value, Qdrant applies IDF. PDLMS/Varta MUST build query
           // vectors with the identical algorithm — see sparse-tokenizer.ts and
           // the shared fixture.
-          sparseVectors = batch.map(chunk => buildSparseVector(chunk.text || chunk.content || ''));
+          sparseVectors = embedTargets.map(({ chunk }) => buildSparseVector(chunk.text || chunk.content || ''));
 
           console.log(`🔍 Generated ${sparseVectors.length} sparse vectors for hybrid search`);
         } catch (error) {
@@ -1996,22 +2072,6 @@ export class EnhancedRAGPipeline {
           enableHybridSearch && console.log('   Hybrid search will be disabled for this batch');
         }
       }
-
-      // Zip chunk+embedding+sparse-vector together by original batch position BEFORE
-      // filtering — the previous filter().map() dropped low-quality chunks first and
-      // then re-indexed from 0, which silently misaligned embeddings[index]/
-      // sparseVectors[index] against the wrong chunk whenever anything was filtered.
-      const qualified = batch
-        .map((chunk, originalIndex) => ({ chunk, originalIndex }))
-        .filter(({ chunk }) => {
-          // Quality threshold: Skip chunks with quality_score < 70
-          const qualityScore = chunk.metadata?.quality_score;
-          if (qualityScore !== undefined && qualityScore < 70) {
-            console.log(`⏭️  Skipping low-quality chunk: quality_score=${qualityScore}%`);
-            return false;
-          }
-          return true;
-        });
 
       // Trio shared identity: pre-write each qualified chunk's Postgres row so its
       // generated UUID can be reused as the Qdrant point id (chunk row and vector
@@ -2048,7 +2108,15 @@ export class EnhancedRAGPipeline {
         );
       }
 
-      const points = qualified.map(({ chunk, originalIndex }, index) => {
+      // Position of each qualified chunk within this batch's row sequence, so the
+      // bridge below records the same chunk_index the Postgres row got. points is
+      // a SUBSET of qualified now (practice chunks have rows but no vectors), so
+      // the point's array position is no longer the chunk's index.
+      const qualifiedPosByOriginalIndex = new Map<number, number>(
+        qualified.map(({ originalIndex }, pos) => [originalIndex, pos]),
+      );
+
+      const points = embedTargets.map(({ chunk, originalIndex }, index) => {
           const chunkMetadata = chunk.metadata || {};
           const chunkText = chunk.text || chunk.content || '';
           // Shared-identity chunks use their Postgres content_chunk UUID as the
@@ -2160,9 +2228,11 @@ export class EnhancedRAGPipeline {
         // So ingestion failed on the first batch in either state. The sparse
         // vector is named `bm25` here to match the collection; the query side
         // (qdrant-search.ts) already uses `bm25` via the Query API.
+        // Indexed by position within embedTargets, which is exactly what was
+        // embedded — not by position in the unfiltered batch.
         point.vector = enableHybridSearch && sparseVectors.length > 0
-          ? { dense: embeddings[originalIndex], bm25: sparseVectors[originalIndex] }
-          : { dense: embeddings[originalIndex] };
+          ? { dense: embeddings[index], bm25: sparseVectors[index] }
+          : { dense: embeddings[index] };
 
         return point;
       });
@@ -2189,11 +2259,15 @@ export class EnhancedRAGPipeline {
         try {
           const { recordQdrantVectorIds } = await import('@/lib/db/qdrant-vector-ids');
           await recordQdrantVectorIds(
-            points.map((p: any, qualifiedIndex: number) => ({
+            points.map((p: any, pointIdx: number) => ({
               materialId: bridgeMaterialId,
               pointId: p.id,
               collection: this.collectionName,
-              chunkIndex: bridgeChunkIndex + qualifiedIndex,
+              // The point's own chunk_index, looked up rather than assumed from
+              // its array position — points is a subset of the rows written.
+              chunkIndex:
+                bridgeChunkIndex +
+                (qualifiedPosByOriginalIndex.get(embedTargets[pointIdx].originalIndex) ?? pointIdx),
             }))
           );
         } catch (bridgeError) {
@@ -2204,13 +2278,18 @@ export class EnhancedRAGPipeline {
       if (sharedRun) sharedRun.nextChunkIndex = bridgeChunkIndex;
 
       indexedCount += qualified.length;
+      pointsUpserted += points.length;
       console.log(`📥 Indexed batch ${Math.floor(i / batchSize) + 1}: ${indexedCount}/${validatedChunks.length} chunks`);
     }
 
-    console.log(`✅ Indexing complete: ${indexedCount} chunks indexed (${stats.invalidCount} skipped due to validation failures)`);
+    console.log(
+      `✅ Indexing complete: ${indexedCount} chunk row(s), ${pointsUpserted} point(s) upserted ` +
+        `(${stats.invalidCount} skipped due to validation failures)`,
+    );
 
     return {
       indexedCount,
+      pointsUpserted,
       contentItemId: contentItemId ?? undefined,
       validationStats: {
         validCount: stats.validCount,

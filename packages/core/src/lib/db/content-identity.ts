@@ -186,6 +186,21 @@ export async function resolveOrCreateContentItem(params: {
 }
 
 /**
+ * The work key currently recorded on an item, for the mismatch check that has to
+ * happen before anything is written.
+ */
+export async function getWorkKey(
+  contentItemId: string,
+): Promise<{ isbn: string | null; edition: string | null; title: string } | null> {
+  const pool = getContentPool();
+  const res = await pool.query<{ isbn: string | null; edition: string | null; title: string }>(
+    `SELECT isbn, edition, title FROM content.content_item WHERE id = $1`,
+    [contentItemId],
+  );
+  return res.rows.length > 0 ? res.rows[0] : null;
+}
+
+/**
  * Register a file against a SLOT on a work, creating the row or updating the
  * file that occupies it.
  *
