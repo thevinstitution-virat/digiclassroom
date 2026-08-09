@@ -16,10 +16,10 @@
  *   <!-- SECTION: ... -->      → section title
  *   <!-- SUBSECTION: ... -->   → appended to section title
  *   <!-- ... SKIP ... -->      → excluded, recorded in `skipped`
- * Typed blocks kept ATOMIC (never split), better retrieval + citation:
- *   [FIGURE ...] [TABLE ...] [GRAPH ...] [CASE STUDY ...] [DIALOGUE ...]
- *   [DISCUSSION_PROMPT]…[/DISCUSSION_PROMPT]
- *   [SUGGESTED_ACTIVITY]…[/SUGGESTED_ACTIVITY]
+ * Typed blocks kept ATOMIC (never split), better retrieval + citation — every
+ * type in the prep skill's block-types spec, each closed by its own [/TAG]:
+ *   [FIGURE] [TABLE] [GRAPH] [CASE STUDY] [DIALOGUE] [GLOSSARY TERM]
+ *   [FEATURE BOX] [QR CODE] [DISCUSSION_PROMPT] [ACTIVITY]
  */
 
 export interface EnrichedBookMeta {
@@ -31,6 +31,10 @@ export interface EnrichedBookMeta {
   chapter_number: string;
   chapter_title: string;
   chapter_pages?: string;
+  /** Parsed from chapter_pages when it is a range. */
+  chapter_page_start?: number;
+  chapter_page_end?: number;
+  isbn?: string;
   edition?: string;
   publisher?: string;
   validation_status: string;
@@ -41,33 +45,90 @@ export interface EnrichedBookMeta {
 export interface ParsedMarkdown {
   meta: EnrichedBookMeta;
   chunks: any[];        // shape consumed by EnhancedRAGPipeline.indexChunksInQdrant
-  skipped: string[];    // audit trail: SKIP blocks + UNCLEAR flags
+  skipped: string[];    // audit trail: SKIP regions + UNCLEAR flags
   warnings: string[];
+  /** Non-empty means REFUSE. A warning lets a bad file through; this must not. */
+  errors: string[];
 }
+
+/**
+ * Which block types are practice rather than reference.
+ *
+ * A prompt, an activity and an exercise question are things a student is meant
+ * to answer. Retrieval must be able to exclude them, or the tutor answers a
+ * student's question by quoting the textbook's question back at them and cites
+ * it confidently.
+ */
+const PRACTICE_BLOCK_TYPES = new Set(['discussion_prompt', 'suggested_activity']);
+
+/**
+ * Section titles whose PROSE is practice too. Typed blocks are not the only
+ * carrier — a chapter's exercises are usually a numbered list under a heading.
+ */
+const PRACTICE_SECTION_RE = /\b(exercise|questions?|let'?s\s+(discuss|explore|reflect)|activit(y|ies)|think\s+about\s+it|assessment)\b/i;
 
 const CONTENT_SOURCE = 'curated_markdown';
 
-// Opening tokens for atomic typed blocks.
-const BLOCK_OPENERS: Array<{ re: RegExp; type: string; close?: RegExp }> = [
-  { re: /^\[FIGURE\b/i, type: 'figure' },
-  { re: /^\[TABLE\b/i, type: 'table' },
-  { re: /^\[GRAPH\b/i, type: 'graph' },
-  { re: /^\[CASE STUDY\b/i, type: 'case_study' },
-  { re: /^\[FEATURE BOX\b/i, type: 'feature' },
-  { re: /^\[FEATURE\b/i, type: 'feature' },
-  { re: /^\[BOX\b/i, type: 'box' },
-  { re: /^\[DIALOGUE\b/i, type: 'dialogue' },
-  { re: /^\[DISCUSSION_PROMPT\]/i, type: 'discussion_prompt', close: /^\[\/DISCUSSION_PROMPT\]/i },
-  { re: /^\[SUGGESTED_ACTIVITY\]/i, type: 'suggested_activity', close: /^\[\/SUGGESTED_ACTIVITY\]/i },
-  { re: /^\[ACTIVITY\b/i, type: 'suggested_activity' },
-  { re: /^\[EXAMPLE\b/i, type: 'example' },
-];
+/**
+ * Every atomic block TAG the parser understands, mapped to its chunk
+ * `content_type`.
+ *
+ * Keyed by tag text rather than by a per-type regex, because the closing tag is
+ * derived from the tag the opener actually used — `[GLOSSARY TERM …]` closes
+ * with `[/GLOSSARY TERM]`, `[ACTIVITY …]` with `[/ACTIVITY]`. A table keeps the
+ * two spellings of the practice-activity block (`ACTIVITY` per the block-types
+ * spec, `SUGGESTED_ACTIVITY` per older files) pointing at one type without
+ * needing two closing conventions hard-coded.
+ *
+ * GLOSSARY TERM and QR CODE were absent here while being present in the skill's
+ * spec and in the linter's own list. The cost was not cosmetic: a correctly
+ * authored, correctly closed glossary block was merged into the surrounding
+ * prose chunk AND dragged the following paragraph in with it, so a definition
+ * a student asks for retrieved as the middle of an unrelated paragraph.
+ */
+const BLOCK_TAG_TYPES: Record<string, string> = {
+  FIGURE: 'figure',
+  TABLE: 'table',
+  GRAPH: 'graph',
+  'CASE STUDY': 'case_study',
+  'GLOSSARY TERM': 'glossary_term',
+  'FEATURE BOX': 'feature',
+  FEATURE: 'feature',
+  BOX: 'box',
+  'QR CODE': 'qr_code',
+  DIALOGUE: 'dialogue',
+  DISCUSSION_PROMPT: 'discussion_prompt',
+  SUGGESTED_ACTIVITY: 'suggested_activity',
+  ACTIVITY: 'suggested_activity',
+  EXAMPLE: 'example',
+};
+
+/**
+ * An opening tag: `[TAG]`, `[TAG 8.2 | …]`, `[TAG | …]`.
+ *
+ * The tag capture is lazy so a two-word tag resolves to the longest form that
+ * actually reaches a `|` or `]` — `[FEATURE BOX | …]` yields `FEATURE BOX`, not
+ * `FEATURE`. Same shape the linter uses, deliberately: two regexes that are
+ * supposed to recognise the same thing must not be written differently.
+ */
+const OPEN_TAG_RE = /^\[([A-Z][A-Z_ ]*?)(?:\s+[\d.]+)?\s*(?:\||\])/;
+const CLOSE_TAG_RE = /^\[\/([A-Z][A-Z_ ]*)\]\s*$/;
+
+const openTagOf = (line: string): string | null => {
+  const m = line.match(OPEN_TAG_RE);
+  return m ? m[1].trim() : null;
+};
+const closeTagOf = (line: string): string | null => {
+  const m = line.match(CLOSE_TAG_RE);
+  return m ? m[1].trim() : null;
+};
 
 const MARKER_RE = /^<!--\s*(.*?)\s*-->$/;
 const PAGE_RE = /^PAGE\s+(\d+)/i;
 const SECTION_RE = /^SECTION:\s*(.+)$/i;
 const SUBSECTION_RE = /^SUBSECTION:\s*(.+)$/i;
-const SKIP_RE = /SKIP\b/i;
+const SKIP_RE = /\bSKIP\b/i;
+const END_SKIP_RE = /^\s*(\/\s*SKIP|END\s+SKIP|SKIP\s+END)\b/i;
 const UNCLEAR_RE = /\[UNCLEAR[^\]]*\]/i;
 
 function stripQuotes(v: string): string {
@@ -92,27 +153,134 @@ function canonicalSubject(s: string): string {
   return core || s.trim();
 }
 
-/** Parse the leading `--- BOOK_METADATA … ---` frontmatter block. */
-function parseFrontmatter(md: string): { meta: EnrichedBookMeta; bodyStart: number; warnings: string[] } {
-  const warnings: string[] = [];
-  const lines = md.split(/\r?\n/);
+/**
+ * Undo markdown escaping.
+ *
+ * The skill's output reaches this parser having been through a markdown-escaping
+ * step somewhere in transport: the opening delimiter arrives as `\---`, and keys
+ * as `book\_title:`. Both are lossless to reverse and neither is ambiguous —
+ * a backslash before ASCII punctuation is never meaningful inside a frontmatter
+ * key or a `---` fence.
+ */
+function unescapeMd(s: string): string {
+  return s.replace(/\\([-_*[\]()#+.!>`~|])/g, '$1');
+}
 
-  // Find first `---` … next `---`
-  let start = -1;
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].trim() === '---') { start = i; break; }
-    if (lines[i].trim() !== '') break; // frontmatter must be at the top
+/** Characters a markdown escaper adds a backslash in front of. */
+const MD_ESCAPED_RE = /\\([-_*[\]()#+.!>`~|{}])/g;
+
+export interface EscapeNormalization {
+  text: string;
+  /** How many escapes were removed. Non-zero means the file arrived escaped. */
+  removed: number;
+}
+
+/**
+ * Strip markdown-escape artefacts from a whole document.
+ *
+ * This lives in the parser permanently and unconditionally, whatever the prep
+ * side does, because the bytes that arrive are the bytes that get indexed. The
+ * one real chapter on hand arrives with `\---`, `book\_title:` and `\[FIGURE`,
+ * and where the escaping is introduced — the author, the tool, or transport —
+ * does not change what has to be parsed.
+ *
+ * Frontmatter unescaping alone was not enough. It made the metadata parse, which
+ * made the file look healthy, while every escaped `\[FIGURE` in the body stayed
+ * unrecognised and every typed block was silently indexed as loose prose.
+ *
+ * Only a backslash immediately before markdown punctuation is removed; every
+ * other byte passes through, so the transformation is provably nothing but
+ * escape removal. Fenced code blocks are left alone — a backslash there is
+ * content, not syntax.
+ */
+export function normalizeEscapes(md: string): EscapeNormalization {
+  // Split on fences; even-indexed segments are outside code, odd are inside.
+  const segments = md.split(/(```)/);
+  let inCode = false;
+  let removed = 0;
+  const out = segments.map((seg) => {
+    if (seg === '```') { inCode = !inCode; return seg; }
+    if (inCode) return seg;
+    return seg.replace(MD_ESCAPED_RE, (_m, ch) => { removed += 1; return ch; });
+  });
+  return { text: out.join(''), removed };
+}
+
+const FENCE_RE = /^\\?-{3}\s*$/;
+
+/**
+ * Parse the leading `--- BOOK_METADATA … ---` frontmatter block.
+ *
+ * Returns an EXACT byte offset for the body. The previous implementation
+ * rebuilt the offset by re-joining split lines with '\n' after splitting on
+ * /\r?\n/, so on a CRLF file it was short by one byte per frontmatter line and
+ * the tail of the frontmatter leaked into the first prose chunk. Offsets are
+ * now accumulated from the original separators as they are found.
+ *
+ * `errors` is the load-bearing part. Failing to find frontmatter used to be a
+ * warning that produced empty metadata and a body consisting of the whole file,
+ * frontmatter included — so a malformed file indexed its own YAML as textbook
+ * prose and reported success. That must be a refusal, not a warning.
+ */
+function parseFrontmatter(md: string): {
+  meta: EnrichedBookMeta;
+  bodyStart: number;
+  /** 1-based FILE line number of the body's first line, so every warning the
+   *  parser emits points at a line a human can open in the source file rather
+   *  than at a body-relative offset nothing else uses. */
+  bodyStartLine: number;
+  warnings: string[];
+  errors: string[];
+} {
+  const warnings: string[] = [];
+  const errors: string[] = [];
+
+  // Walk the original string so every offset is real, CRLF or LF.
+  const lineStarts: number[] = [];
+  const lineTexts: string[] = [];
+  const lineEnds: number[] = []; // offset just past this line's terminator
+  {
+    let pos = 0;
+    while (pos <= md.length) {
+      const nl = md.indexOf('\n', pos);
+      if (nl === -1) {
+        lineStarts.push(pos);
+        lineTexts.push(md.slice(pos));
+        lineEnds.push(md.length);
+        break;
+      }
+      lineStarts.push(pos);
+      lineTexts.push(md.slice(pos, nl).replace(/\r$/, ''));
+      lineEnds.push(nl + 1);
+      pos = nl + 1;
+    }
   }
+
+  let start = -1;
+  for (let i = 0; i < lineTexts.length; i++) {
+    const t = lineTexts[i].trim();
+    if (FENCE_RE.test(t)) { start = i; break; }
+    if (t !== '') break; // frontmatter must be at the top
+  }
+
   const kv: Record<string, string> = {};
   let end = -1;
   if (start !== -1) {
-    for (let i = start + 1; i < lines.length; i++) {
-      if (lines[i].trim() === '---') { end = i; break; }
-      const m = lines[i].match(/^([A-Za-z0-9_]+)\s*:\s*(.*)$/);
-      if (m) kv[m[1].toLowerCase()] = stripQuotes(m[2]);
+    for (let i = start + 1; i < lineTexts.length; i++) {
+      const t = lineTexts[i].trim();
+      if (FENCE_RE.test(t)) { end = i; break; }
+      const m = unescapeMd(t).match(/^([A-Za-z0-9_]+)\s*:\s*(.*)$/);
+      if (m) kv[m[1].toLowerCase()] = unescapeMd(stripQuotes(m[2]));
     }
   }
-  if (end === -1) warnings.push('No BOOK_METADATA frontmatter block found — falling back to empty metadata.');
+
+  if (start === -1 || end === -1) {
+    errors.push(
+      'No BOOK_METADATA frontmatter block found (expected a `---` fence at the top of the file, ' +
+        'a closing `---`, and `key: value` lines between them). Refusing rather than indexing ' +
+        'the file as untitled body text.',
+    );
+  }
 
   const meta: EnrichedBookMeta = {
     book_title: kv['book_title'] || kv['booktitle'] || kv['book'] || kv['title'] || '',
@@ -123,6 +291,7 @@ function parseFrontmatter(md: string): { meta: EnrichedBookMeta; bodyStart: numb
     chapter_number: kv['chapter_number'] || kv['chapternumber'] || kv['chapter'] || '',
     chapter_title: kv['chapter_title'] || kv['chaptertitle'] || '',
     chapter_pages: kv['chapter_pages'],
+    isbn: kv['isbn'],
     edition: kv['edition'],
     publisher: kv['publisher'],
     validation_status: (kv['validation_status'] || kv['status'] || 'PENDING').toUpperCase(),
@@ -130,15 +299,47 @@ function parseFrontmatter(md: string): { meta: EnrichedBookMeta; bodyStart: numb
     processed_by: kv['processed_by'],
   };
 
-  // Byte offset where the body begins (line after the closing ---)
-  const bodyStart = end === -1 ? 0 : lines.slice(0, end + 1).join('\n').length + 1;
-  return { meta, bodyStart, warnings };
+  // Printed page range this chapter occupies, e.g. "183–194" (en dash or hyphen).
+  // Used to check that every chunk's page really falls inside the chapter, which
+  // is what catches a chapter-extracted PDF whose file page 1 is book page 183.
+  if (meta.chapter_pages) {
+    const m = meta.chapter_pages.match(/(\d+)\s*[-–—]\s*(\d+)/);
+    if (m) {
+      meta.chapter_page_start = parseInt(m[1], 10);
+      meta.chapter_page_end = parseInt(m[2], 10);
+    } else {
+      warnings.push(`chapter_pages "${meta.chapter_pages}" is not a page range — page bounds not checked.`);
+    }
+  }
+
+  if (!meta.isbn) {
+    warnings.push('No isbn in frontmatter — this chapter cannot be tied to a work key by ISBN.');
+  }
+
+  // Exact offset past the closing fence's own terminator. No re-joining.
+  const bodyStart = end === -1 ? 0 : lineEnds[end];
+  const bodyStartLine = end === -1 ? 1 : end + 2;
+  return { meta, bodyStart, bodyStartLine, warnings, errors };
 }
 
-export function parseEnrichedMarkdown(md: string): ParsedMarkdown {
-  const { meta, bodyStart, warnings } = parseFrontmatter(md);
+export function parseEnrichedMarkdown(input: string): ParsedMarkdown {
+  // Unconditional, whole-document, before anything else looks at the bytes.
+  const normalized = normalizeEscapes(input);
+  const md = normalized.text;
+
+  const { meta, bodyStart, bodyStartLine, warnings, errors } = parseFrontmatter(md);
   const body = md.slice(bodyStart);
   const lines = body.split(/\r?\n/);
+
+  if (normalized.removed > 0) {
+    warnings.push(
+      `${normalized.removed} markdown escape(s) removed before parsing — this file arrived escaped. ` +
+        `Parsed correctly, but the prep side is emitting escaped output (E12).`,
+    );
+  }
+
+  /** Body index → 1-based line number in the original file. */
+  const fileLine = (bodyIdx: number) => bodyIdx + bodyStartLine;
 
   const chunks: any[] = [];
   const skipped: string[] = [];
@@ -176,9 +377,15 @@ export function parseEnrichedMarkdown(md: string): ParsedMarkdown {
     }
 
     seq += 1;
+    // Practice by block type, or by the section it sits under. Both, because a
+    // typed [DISCUSSION_PROMPT] and a bare numbered list under "Exercises" are
+    // the same thing to a student and neither should answer a question.
+    const isPractice =
+      PRACTICE_BLOCK_TYPES.has(contentType) || PRACTICE_SECTION_RE.test(sectionTitle());
     chunks.push({
       id: `${bookSlug}_ch${meta.chapter_number || 'x'}_p${page}_${seq}`,
       text: clean,
+      retrieval_class: isPractice ? 'practice' : 'reference',
       metadata: {
         // required
         class: meta.class_level || 'Unknown',
@@ -237,13 +444,40 @@ export function parseEnrichedMarkdown(md: string): ParsedMarkdown {
       const inner = marker[1];
       if (SKIP_RE.test(inner)) {
         flushProse();
-        // Collect the SKIP note + any immediately-following comment lines.
+        // ENFORCED, not merely noted.
+        //
+        // This used to consume the marker and its trailing comment lines, record
+        // a string, and continue — so the content the marker was pointing at fell
+        // straight into prose accumulation on the next line and was embedded
+        // anyway. The audit trail said SKIPPED and the vector store disagreed.
+        //
+        // A SKIP marker opens a REGION. It closes at an explicit end marker, or
+        // at the next structural boundary (PAGE / SECTION / SUBSECTION), since
+        // those are the only markers that redefine where we are in the book. The
+        // number of body lines actually dropped is reported, so over-skipping is
+        // visible in the audit trail instead of being inferred from a gap.
         const note: string[] = [inner];
-        while (i + 1 < lines.length && MARKER_RE.test(lines[i + 1].trim()) && !PAGE_RE.test(lines[i + 1].trim().replace(MARKER_RE, '$1'))) {
-          i += 1;
-          note.push(lines[i].trim().replace(MARKER_RE, '$1'));
+        let dropped = 0;
+        let j = i + 1;
+        for (; j < lines.length; j++) {
+          const t = lines[j].trim();
+          const mk = t.match(MARKER_RE);
+          if (mk) {
+            const innerNext = mk[1];
+            if (END_SKIP_RE.test(innerNext)) { break; }
+            if (PAGE_RE.test(innerNext) || SECTION_RE.test(innerNext) || SUBSECTION_RE.test(innerNext)) {
+              j -= 1; // hand the boundary marker back to the main loop
+              break;
+            }
+            note.push(innerNext); // an explanatory comment inside the region
+            continue;
+          }
+          if (t !== '') dropped += 1;
         }
-        skipped.push(`SKIPPED: ${note.join(' | ')}`);
+        i = j;
+        skipped.push(
+          `SKIPPED (${dropped} body line${dropped === 1 ? '' : 's'} excluded): ${note.join(' | ')}`,
+        );
         continue;
       }
       const pageM = inner.match(PAGE_RE);
@@ -257,39 +491,93 @@ export function parseEnrichedMarkdown(md: string): ParsedMarkdown {
     }
 
     // ---- Typed atomic blocks ----
-    const opener = BLOCK_OPENERS.find(b => b.re.test(line));
-    if (opener) {
+    const openTag = openTagOf(line);
+    const openType = openTag ? BLOCK_TAG_TYPES[openTag] : undefined;
+    if (openTag && openType) {
       flushProse();
+      const i0 = i; // the opening line, captured before `i` walks forward
       const buf: string[] = [raw];
-      let j = i + 1;
-      if (opener.close) {
-        // Explicit close tag.
-        while (j < lines.length && !opener.close.test(lines[j].trim())) { buf.push(lines[j]); j += 1; }
-        if (j < lines.length) buf.push(lines[j]); // include the close tag line
-        i = j;
+
+      // Look ahead for this block's OWN closing tag. Honoured for every type,
+      // not just the two that used to declare one — an unhonoured `[/FIGURE]`
+      // is not inert, it leaves the block running and the next paragraph gets
+      // absorbed into the figure's chunk.
+      //
+      // The search is bounded: blocks do not nest, so the next opening tag ends
+      // it, and a foreign closing tag means the file's structure is already
+      // broken. Without those bounds, one unclosed [GLOSSARY TERM] would run to
+      // whatever the last closed glossary block in the file happened to be and
+      // swallow the chapter.
+      let closeAt = -1;
+      let abort = '';
+      for (let j = i + 1; j < lines.length; j++) {
+        const t = lines[j].trim();
+        const ct = closeTagOf(t);
+        if (ct) {
+          if (ct === openTag) { closeAt = j; break; }
+          abort = `a foreign [/${ct}] at line ${fileLine(j)}`;
+          break;
+        }
+        const ot = openTagOf(t);
+        if (ot && BLOCK_TAG_TYPES[ot]) { abort = `the next block [${ot}] opening at line ${fileLine(j)}`; break; }
+      }
+
+      if (closeAt !== -1) {
+        for (let j = i + 1; j <= closeAt; j++) buf.push(lines[j]);
+        i = closeAt;
       } else {
-        // Implicit: run until the next structural boundary (blank line then a
-        // marker / another block / a bold heading), or a second blank line, or EOF.
+        // Implicit fallback: run until the next structural boundary (a marker /
+        // another block / a foreign closer / a standalone bold heading), or a
+        // second blank line, or EOF.
+        //
+        // It stays, because refusing an unclosed block would refuse the only
+        // real chapter on hand. But it is never SILENT: a guessed boundary moves
+        // a chunk boundary, and therefore moves a citation, and the guess is
+        // invisible in the output it produces.
         let blanks = 0;
+        let reason = 'end of file';
+        let j = i + 1;
         while (j < lines.length) {
           const t = lines[j].trim();
-          const isBoundary =
-            MARKER_RE.test(t) ||
-            BLOCK_OPENERS.some(b => b.re.test(t)) ||
-            (/^\*\*[^*]+\*\*$/.test(t)); // a standalone bold heading starts new prose
-          if (isBoundary && buf.length > 1) break;
-          if (t === '') { blanks += 1; if (blanks >= 2) break; } else { blanks = 0; }
+          let boundary = '';
+          if (MARKER_RE.test(t)) boundary = 'a structural marker';
+          else if (closeTagOf(t)) boundary = `a foreign [/${closeTagOf(t)}]`;
+          else { const ot = openTagOf(t); if (ot && BLOCK_TAG_TYPES[ot]) boundary = `the next block [${ot}]`; }
+          if (!boundary && /^\*\*[^*]+\*\*$/.test(t)) boundary = 'a standalone bold heading';
+          if (boundary && buf.length > 1) { reason = boundary; break; }
+          if (t === '') { blanks += 1; if (blanks >= 2) { reason = 'a blank-line gap'; break; } } else { blanks = 0; }
           buf.push(lines[j]);
           j += 1;
         }
         i = j - 1;
+        warnings.push(
+          `[${openTag}] opened at line ${fileLine(i0)} has no [/${openTag}] — boundary GUESSED at line ` +
+            `${fileLine(j - 1)} (stopped at ${reason}${abort ? `; closer search stopped at ${abort}` : ''}). ` +
+            `The chunk boundary, and therefore every citation this block produces, rests on that guess.`,
+        );
       }
       // A typed block usually declares its own printed page in the header,
       // e.g. "[TABLE 1.1 | Page 3 | Type: Data Table]" or "[FEATURE BOX 1.1 | Page 192-193]" — use it for the citation.
       const headerPage = buf[0].match(/\bPage\s+(\d+)(?:\s*[-–—]\s*(\d+))?/i);
       const pageStart = headerPage ? parseInt(headerPage[1], 10) : undefined;
       const pageEnd = headerPage?.[2] ? parseInt(headerPage[2], 10) : pageStart;
-      pushChunk(buf.join('\n').trim(), opener.type, pageStart, pageEnd);
+      pushChunk(buf.join('\n').trim(), openType, pageStart, pageEnd);
+      continue;
+    }
+
+    // ---- A closing tag that reached here closes nothing ----
+    //
+    // Dropped, not accumulated. Reaching this point means the block-handling
+    // branch above never consumed it, so there is no open block it belongs to.
+    // Left in the prose buffer it became embedded text: a chunk whose body
+    // contains a bare `[/FIGURE]` between two paragraphs, which the tutor then
+    // quotes back at a student as though it were printed on the page.
+    const strayClose = closeTagOf(line);
+    if (strayClose) {
+      warnings.push(
+        `[/${strayClose}] at line ${fileLine(i)} closes nothing — dropped rather than indexed as prose. ` +
+          `Either its opening tag is missing or an earlier block already ended.`,
+      );
       continue;
     }
 
@@ -303,5 +591,24 @@ export function parseEnrichedMarkdown(md: string): ParsedMarkdown {
   }
   flushProse();
 
-  return { meta, chunks, skipped, warnings };
+  // Every chunk's printed page must fall inside the chapter's declared range.
+  // A chapter-extracted PDF whose file page 1 is the book's page 183 produces
+  // chunks citing pages 1..12 — plausible-looking, silently wrong, and only
+  // detectable against the range the frontmatter already states.
+  if (meta.chapter_page_start && meta.chapter_page_end) {
+    const outside = chunks.filter(
+      (c) => c.metadata.page < meta.chapter_page_start! || c.metadata.page > meta.chapter_page_end!,
+    );
+    if (outside.length > 0) {
+      const sample = outside.slice(0, 5).map((c) => c.metadata.page).join(', ');
+      errors.push(
+        `${outside.length} of ${chunks.length} chunk(s) cite a page outside the declared ` +
+          `chapter_pages range ${meta.chapter_page_start}-${meta.chapter_page_end} (e.g. ${sample}). ` +
+          `Either the PAGE markers are wrong or this file's pages are file-relative, not printed. ` +
+          `Refusing: every citation this chapter produces would point at the wrong page.`,
+      );
+    }
+  }
+
+  return { meta, chunks, skipped, warnings, errors };
 }
