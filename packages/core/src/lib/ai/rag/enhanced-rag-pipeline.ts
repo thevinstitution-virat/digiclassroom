@@ -1571,9 +1571,18 @@ export class EnhancedRAGPipeline {
       );
     }
 
+    // Scoped to the asset THIS RUN WROTE, not to the work's source rendition.
+    //
+    // Both of these are keyed on content_asset_id, and this passed the `source`
+    // asset's id — the PDF's — to both. No ingest_run ever carries that id, so
+    // the supersede matched nothing: the previous run stayed `active` and its
+    // points were never deleted, leaving two generations of vectors for the same
+    // chapter blended in the collection. The prune then targeted an asset that
+    // owns no chunks, so a shorter re-ingest also left its tail rows behind.
+    // Neither failure raises anything.
     const priorRunId = await supersedePriorActiveRun(
       run.contentItemId,
-      sourceAssetId,
+      run.assetId,
       run.ingestRunId,
     );
     if (priorRunId) {
@@ -1586,8 +1595,10 @@ export class EnhancedRAGPipeline {
 
     // A shorter re-ingest would otherwise leave the previous run's tail rows
     // behind, breaking the "points_count equals chunk count" invariant.
-    const pruned = await pruneChunksBeyond(sourceAssetId, indexedCount);
-    if (pruned > 0) console.log(`🧹 Pruned ${pruned} stale chunk row(s) from a longer previous run`);
+    if (run.assetId) {
+      const pruned = await pruneChunksBeyond(run.assetId, indexedCount);
+      if (pruned > 0) console.log(`🧹 Pruned ${pruned} stale chunk row(s) from a longer previous run`);
+    }
 
     await activateIngestRun(run.ingestRunId, indexedCount);
     console.log(`✅ Ingest run ${run.ingestRunId} is now active with ${indexedCount} chunks`);
