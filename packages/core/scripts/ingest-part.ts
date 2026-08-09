@@ -11,10 +11,24 @@
  *     --isbn 978-93-5729-100-2
  *     --edition "First Edition, June 2026"
  *     --title "Understanding Society - India and Beyond"
- *     --source-pdf /work/economics.pdf
  *     --chapter 8=/work/ch8.md  [--chapter 9=/work/ch9.md ...]
+ *     [--asset <role>[:<part>][:<variant>]=<path> ...]
  *     [--app digiclassroom] [--local-id <id>] [--org <local org id>]
  *     [--dry-run] [--force "<reason>"]
+ *
+ * A work is a hierarchy of slots, (role, part_index, variant), not one file.
+ * The chapters carry the chunks; --asset registers every other rendition of the
+ * same work against the same identity:
+ *
+ *     --asset source=/work/original.pdf      the file the chapters came from
+ *     --asset pdf_paginated=/work/book.pdf   what a reader opens
+ *     --asset epub=/work/book.epub
+ *     --asset audio:8:female=/work/ch8-f.m4a per-chapter, per-voice narration
+ *     --asset cover=/work/cover.jpg
+ *
+ * All of them are optional, INCLUDING source. The chapter markdown is itself an
+ * obtainable rendition, so a book uploaded as chapter files alone is a complete,
+ * publishable work.
  *
  * --dry-run parses, chunks, lints, and looks the slot up READ-ONLY, then stops
  * before embedding. It writes nothing at all — not even identity rows. The point
@@ -35,11 +49,28 @@ import { parseEnrichedMarkdown } from '@/lib/content/markdown-ingest-parser';
 import { enhancedRAG, type SpineIngestResult } from '@/lib/ai/rag/enhanced-rag-pipeline';
 import {
   resolveOrCreateContentItem,
-  recordSourceAsset,
-  findSourceAssetId,
+  registerAsset,
 } from '@/lib/db/content-identity';
 import { getContentPool } from '@/lib/db/content-connection';
 import { OpenAIService } from '@/lib/services/openai_service';
+
+/**
+ * Every rendition role the shared schema allows (trio migration 005's CHECK).
+ * A work is a hierarchy of slots — (role, part_index, variant) — not one file:
+ * chapter markdown, a paginated PDF, an EPUB, per-chapter narration in two
+ * voices, a cover. All of them can be uploaded for the same work.
+ */
+const ASSET_ROLES = [
+  'source', 'enriched_md', 'pdf_paginated', 'epub',
+  'audio', 'audio_sync', 'cover', 'thumbnail',
+];
+
+/** Content types by extension, so a rendition is stored as what it actually is. */
+const CONTENT_TYPES: Record<string, string> = {
+  '.pdf': 'application/pdf', '.epub': 'application/epub+zip', '.md': 'text/markdown; charset=utf-8',
+  '.m4a': 'audio/mp4', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.json': 'application/json',
+  '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp',
+};
 
 /** $ per 1M tokens, text-embedding-3-large. Stated so the number below is checkable. */
 const EMBEDDING_USD_PER_MILLION = 0.13;
@@ -48,7 +79,7 @@ interface Args {
   isbn: string;
   edition: string | null;
   title: string;
-  sourcePdf: string;
+  assets: Array<{ role: string; partIndex: number; variant: string; file: string }>;
   chapters: Array<{ partIndex: number; file: string }>;
   app: 'pdlms' | 'vidyaverse' | 'digiclassroom';
   localId: string;
@@ -71,11 +102,40 @@ function parseArgs(argv: string[]): Args {
     chapters.push({ partIndex: parseInt(spec.slice(0, eq), 10), file: spec.slice(eq + 1) });
   }
 
+  // Other renditions of the same work: --asset <role>[:<partIndex>][:<variant>]=<path>
+  // e.g. --asset epub=/work/book.epub
+  //      --asset audio:3:female=/work/ch3-female.m4a
+  //      --asset cover=/work/cover.jpg
+  const assets: Array<{ role: string; partIndex: number; variant: string; file: string }> = [];
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] !== '--asset') continue;
+    const spec = argv[i + 1] ?? '';
+    const eq = spec.indexOf('=');
+    if (eq === -1) fail(`--asset expects <role>[:<partIndex>][:<variant>]=<path>, got "${spec}"`);
+    const [role, partRaw, variantRaw] = spec.slice(0, eq).split(':');
+    const file = spec.slice(eq + 1);
+    if (!ASSET_ROLES.includes(role)) {
+      fail(`--asset role "${role}" is not one of: ${ASSET_ROLES.join(', ')}`);
+    }
+    if (!existsSync(file)) fail(`asset file not found: ${file}`);
+    assets.push({
+      role,
+      partIndex: partRaw ? parseInt(partRaw, 10) : 0,
+      variant: variantRaw || 'default',
+      file,
+    });
+  }
+
   const isbn = get('isbn');
   const title = get('title');
-  const sourcePdf = get('source-pdf');
-  if (!isbn || !title || !sourcePdf || chapters.length === 0) {
-    fail('required: --isbn --title --source-pdf and at least one --chapter <partIndex>=<path>');
+  // --source-pdf is the old spelling of --asset source=<path>; both accepted.
+  const sourcePdf = get('source-pdf') ?? get('source');
+  if (sourcePdf) {
+    if (!existsSync(sourcePdf)) fail(`source file not found: ${sourcePdf}`);
+    assets.unshift({ role: 'source', partIndex: 0, variant: 'default', file: sourcePdf });
+  }
+  if (!isbn || !title || chapters.length === 0) {
+    fail('required: --isbn --title and at least one --chapter <partIndex>=<path>');
   }
   for (const c of chapters) {
     if (!Number.isFinite(c.partIndex) || c.partIndex < 1) {
@@ -83,7 +143,6 @@ function parseArgs(argv: string[]): Args {
     }
     if (!existsSync(c.file)) fail(`chapter file not found: ${c.file}`);
   }
-  if (!existsSync(sourcePdf)) fail(`source pdf not found: ${sourcePdf}`);
 
   const forceIdx = argv.indexOf('--force');
   const force =
@@ -95,7 +154,7 @@ function parseArgs(argv: string[]): Args {
     isbn: isbn!,
     edition: get('edition'),
     title: title!,
-    sourcePdf: sourcePdf!,
+    assets,
     chapters: chapters.sort((a, b) => a.partIndex - b.partIndex),
     app: (get('app') as Args['app']) ?? 'digiclassroom',
     // One work, one app-local id. Every chapter of a book shares it — that is
@@ -201,7 +260,7 @@ async function main() {
   console.log(`work    : ${args.title}`);
   console.log(`isbn    : ${args.isbn}${args.edition ? `  edition: ${args.edition}` : ''}`);
   console.log(`identity: app=${args.app} local_id=${args.localId}`);
-  console.log(`source  : ${args.sourcePdf}`);
+  console.log(`renditions: ${args.assets.length ? args.assets.map((a) => `${a.role}${a.partIndex ? `/${a.partIndex}` : ''}${a.variant !== 'default' ? `/${a.variant}` : ''}`).join(', ') : '(none beyond the chapters themselves)'}`);
   console.log(`chapters: ${args.chapters.map((c) => c.partIndex).join(', ')}`);
   if (args.force) console.log(`FORCE   : ${args.force}`);
   console.log();
@@ -231,35 +290,43 @@ async function main() {
     console.log(`work resolution : ${contentItemId} (${resolved.matchedBy})`);
   }
 
-  // ── The source rendition ────────────────────────────────────────────────
-  // Registered here rather than inside ingestPart: the original file is not a
-  // part, it is the thing the parts came from, and ingestPart's own refusal
-  // ("this work has no role='source' asset") is precisely the check that this
-  // step is what satisfies.
-  const pdfBuf = readFileSync(args.sourcePdf);
-  const pdfSha = sha256(pdfBuf);
-  console.log(`source pdf      : ${(pdfBuf.length / 1048576).toFixed(1)} MB  sha256 ${pdfSha.slice(0, 12)}…`);
-
+  // ── Other renditions of the work ────────────────────────────────────────
+  // A work is a hierarchy of slots — (role, part_index, variant) — not one
+  // file. Registered here rather than inside ingestPart because none of these
+  // is a PART: they are alternative renditions of the same work, or of one of
+  // its parts, and they carry no chunks.
+  //
+  // All of them are OPTIONAL, including `source`. The chapter files being
+  // ingested are themselves an obtainable rendition, so a book uploaded as
+  // chapter markdown alone is publishable. Demanding a separate source file
+  // did not make a work more obtainable — a blank stub PDF satisfied it — it
+  // just made a fake file the price of admission.
   if (!args.dryRun) {
-    const existingSource = await findSourceAssetId(contentItemId!);
-    if (existingSource) {
-      console.log(`source asset    : already registered (${existingSource})`);
-    } else {
-      const { uploadSourceDocumentToR2 } = await import('@/lib/services/r2');
-      const key = `content/${contentItemId}/source.pdf`;
-      const { bucket } = await uploadSourceDocumentToR2({
-        buffer: pdfBuf,
-        key,
-        contentType: 'application/pdf',
-      });
-      const assetId = await recordSourceAsset({
+    for (const a of args.assets) {
+      const buf = readFileSync(a.file);
+      const digest = sha256(buf);
+      const ext = path.extname(a.file).toLowerCase();
+      const contentType = CONTENT_TYPES[ext] ?? 'application/octet-stream';
+      const name = a.role === 'source' ? `source${ext}` : `${a.role}${a.partIndex ? `-${a.partIndex}` : ''}${a.variant !== 'default' ? `-${a.variant}` : ''}${ext}`;
+      const key = `content/${contentItemId}/${name}`;
+
+      const { uploadContentAssetToR2 } = await import('@/lib/services/r2');
+      const { bucket } = await uploadContentAssetToR2({ buffer: buf, key, contentType });
+      const { assetId, created, changed } = await registerAsset({
         contentItemId: contentItemId!,
+        role: a.role,
+        partIndex: a.partIndex,
+        variant: a.variant,
         storageAccount: 'digiclassroom-pro',
         storageUri: `r2://${bucket}/${key}`,
-        sha256: pdfSha,
-        bytes: pdfBuf.length,
+        sha256: digest,
+        bytes: buf.length,
       });
-      console.log(`source asset    : registered ${assetId} -> r2://${bucket}/${key}`);
+      const state = created ? 'registered' : changed ? 'replaced' : 'unchanged';
+      console.log(
+        `  ${a.role.padEnd(14)}: ${state} ${assetId} ` +
+          `(${(buf.length / 1024).toFixed(1)} KB, sha ${digest.slice(0, 12)}…) -> r2://${bucket}/${key}`,
+      );
     }
     await enhancedRAG.initialize();
   }

@@ -365,6 +365,48 @@ export async function findSourceAssetId(contentItemId: string): Promise<string |
   return res.rows.length > 0 ? res.rows[0].id : null;
 }
 
+/**
+ * Roles that put a real, openable file in a human's hands.
+ *
+ * `source` is one of them, not the definition of them. It means "the file these
+ * chunks were built from", which is a provenance claim, not a reader-facing one
+ * — a scanned master or a publisher's InDesign export can be the source and be
+ * no use to anyone opening the book. The renditions a reader actually opens are
+ * `pdf_paginated` and `epub`, and `enriched_md` is one too: it is clean text
+ * carrying the printed page numbers, which is more readable than most sources.
+ *
+ * `audio` is deliberately absent. An audiobook is a real rendition of the work,
+ * but a citation that says "page 187" cannot be checked against it, and this
+ * check exists to make citations verifiable.
+ */
+const OBTAINABLE_ROLES = ['source', 'pdf_paginated', 'epub', 'enriched_md'] as const;
+
+/**
+ * The id of any asset a reader could actually obtain for this work, or null.
+ *
+ * This replaces a check for `role='source'` specifically. The invariant worth
+ * protecting is that nothing is CITABLE BUT NOT OBTAINABLE — iTutor answering
+ * "page 187 of X" while the shelf is empty, with nothing anywhere reporting it,
+ * because chunks and assets live in independent tables.
+ *
+ * Requiring the `source` role by name did not protect that invariant. It could
+ * be satisfied by any file at all — a 317-byte blank PDF passed it in testing —
+ * so it verified that a row existed, not that a work was obtainable; and it
+ * refused works whose chapters were genuinely present and readable, purely
+ * because the original arrived as something other than a single source file.
+ */
+export async function findObtainableAssetId(contentItemId: string): Promise<string | null> {
+  const pool = getContentPool();
+  const res = await pool.query<{ id: string }>(
+    `SELECT id FROM content.content_asset
+      WHERE content_item_id = $1 AND role = ANY($2)
+      ORDER BY created_at
+      LIMIT 1`,
+    [contentItemId, OBTAINABLE_ROLES as unknown as string[]],
+  );
+  return res.rows.length > 0 ? res.rows[0].id : null;
+}
+
 export interface ResolvedScope {
   visibility: 'public' | 'restricted';
   grantOrgIds: string[];

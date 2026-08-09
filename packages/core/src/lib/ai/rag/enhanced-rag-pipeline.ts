@@ -22,6 +22,7 @@ import {
   pruneChunksBeyond,
   recordSourceAsset,
   findSourceAssetId,
+  findObtainableAssetId,
   replaceTaxonomyLinks,
   resolveScopeAndGrant,
   startIngestRun,
@@ -49,6 +50,9 @@ import { buildSparseVector } from './sparse-tokenizer';
  * `domain || 'Unknown'`), so checking for undefined alone would let the
  * placeholder straight through onto the point.
  */
+/** Named in refusal messages so an operator knows what would satisfy the check. */
+const OBTAINABLE_ROLE_LIST = "role='source', 'pdf_paginated', 'epub' or 'enriched_md'";
+
 const isKnown = (v: unknown): v is string =>
   typeof v === 'string' && v.trim() !== '' && v.trim().toLowerCase() !== 'unknown';
 
@@ -1557,14 +1561,13 @@ export class EnhancedRAGPipeline {
     // with perfect chunks and no source file raises nothing anywhere — iTutor
     // cites it correctly while the reader opens an empty shelf. Refuse to
     // publish that state.
-    const sourceAssetId = await findSourceAssetId(run.contentItemId);
-    if (!sourceAssetId) {
+    const obtainableAssetId = await findObtainableAssetId(run.contentItemId);
+    if (!obtainableAssetId) {
       throw new Error(
         `Refusing to activate run ${run.ingestRunId}: content_item ${run.contentItemId} ` +
-          `has no asset with role='source'. Chunks alone are not a publishable work — ` +
-          `the reader would have nothing to open, and nothing would report it. ` +
-          `Every lane must upload and register the original file, even when the ` +
-          `chunks came from curated markdown.`,
+          `has no obtainable rendition (${OBTAINABLE_ROLE_LIST}). Chunks alone are not a ` +
+          `publishable work — the reader would have nothing to open, and nothing would ` +
+          `report it.`,
       );
     }
 
@@ -1741,19 +1744,22 @@ export class EnhancedRAGPipeline {
       // flawlessly while the reader opens an empty shelf. finalize re-checks
       // this at close; checking here as well is what makes the refusal free
       // instead of costing a full embedding run first.
-      if (input.part.role !== 'source') {
-        const sourceAssetId = await findSourceAssetId(contentItemId);
-        if (!sourceAssetId) {
-          return {
-            ...base,
-            contentItemId,
-            assetId,
-            reason:
-              `${label}: this work has no asset with role='source'. Chunks alone are not a ` +
-              `publishable work — the reader would have nothing to open and nothing would ` +
-              `report it. Upload and register the original file first, then re-run this part.`,
-          };
-        }
+      // The part being registered counts toward this itself: an enriched_md
+      // chapter IS an obtainable rendition, so a book uploaded as chapter files
+      // and nothing else is publishable. It was not, previously — a separate
+      // `source` file was demanded even when every chapter was present and
+      // readable, which is why a blank stub PDF became the way to satisfy it.
+      const obtainable = await findObtainableAssetId(contentItemId);
+      if (!obtainable) {
+        return {
+          ...base,
+          contentItemId,
+          assetId,
+          reason:
+            `${label}: this work has no obtainable rendition (${OBTAINABLE_ROLE_LIST}). Chunks ` +
+            `alone are not a publishable work — the reader would have nothing to open and ` +
+            `nothing would report it. Register a file for this work, then re-run this part.`,
+        };
       }
 
       // ── 5. Scope ───────────────────────────────────────────────────────
