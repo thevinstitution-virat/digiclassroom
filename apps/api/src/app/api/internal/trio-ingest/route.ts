@@ -1,22 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { enhancedRAG } from '@/lib/ai/rag/enhanced-rag-pipeline'
-import { writeFile, unlink } from 'fs/promises'
-import { join } from 'path'
-import { v4 as uuidv4 } from 'uuid'
+import { createHash } from 'node:crypto'
+import { enhancedRAG, type SpineIngestResult } from '@/lib/ai/rag/enhanced-rag-pipeline'
+import { parseEnrichedMarkdown } from '@/lib/content/markdown-ingest-parser'
+import { resolveOrCreateContentItem } from '@/lib/db/content-identity'
 
 /**
  * POST /api/internal/trio-ingest
  *
- * Service-to-service ingestion endpoint — lets another trio app (currently just
- * PDLMS's thin upload proxy) hand DCP a file to process, instead of going through
- * the human-auth-gated /api/super-admin/content/upload route. Auth is a shared
- * secret (TRIO_SERVICE_SECRET, set identically on both apps' backends in Coolify),
- * not a user session — there is no logged-in user on this path.
+ * Service-to-service ingestion — lets another trio app hand DCP a chapter to
+ * process without a logged-in user. Auth is a shared secret
+ * (TRIO_SERVICE_SECRET, set identically on both backends in Coolify).
  *
- * Requires sourceApp/sourceLocalId (unlike the super-admin route, where they're
- * optional) — every request here is registering content in the shared identity
- * model on behalf of a specific app+local record, not DCP's own untagged ingestion.
+ * `sourceApp` + `sourceLocalId` are required here, unlike the human console:
+ * every request registers content on behalf of a specific app's local record.
+ * That pair becomes `content.content_source_ref`, and it is the ONLY thing that
+ * ties a PDLMS `Book` row to a canonical work — which is what lets Varta scope a
+ * book-chat question to the right book instead of refusing.
+ *
+ * ENRICHED MARKDOWN, NOT PDF. This used to call `indexPDF`, which refuses
+ * unless ENABLE_PDF_EXTRACT_LANE=true; that lane spawns a Python toolchain that
+ * exists on no deployed host, so every call through here failed at the last step
+ * after uploading and buffering the whole file. Chapters reach the spine as
+ * human-validated markdown carrying the PRINTED page numbers, which is what
+ * makes citations exact — a PDF would have to be OCR'd back into worse text.
  */
+
+const MAX_BYTES = 5 * 1024 * 1024
+const sha256 = (buf: Buffer) => createHash('sha256').update(buf).digest('hex')
+
 export async function POST(request: NextRequest) {
   const providedSecret = request.headers.get('x-trio-service-secret')
   const expectedSecret = process.env.TRIO_SERVICE_SECRET
@@ -30,87 +41,159 @@ export async function POST(request: NextRequest) {
 
   try {
     const formData = await request.formData()
-    const file = formData.get('file') as File
-    const domain = formData.get('domain') as string
-    const course = formData.get('course') as string
-    const level = formData.get('level') as string
-    const subjectGroup = formData.get('subject') as string
-    const book = formData.get('book') as string
-    const medium = formData.get('medium') as string
-    const bookTitle = formData.get('bookTitle') as string
+    const file = formData.get('file') as File | null
     const sourceApp = formData.get('sourceApp') as string
     const sourceLocalId = formData.get('sourceLocalId') as string
+    const bookTitle = (formData.get('bookTitle') as string | null)?.trim() || ''
+    const organizationId = (formData.get('organizationId') as string | null)?.trim() || null
+    const force = (formData.get('force') as string) === 'true'
+    const partOverride = formData.get('partIndex') as string | null
 
-    if (!file || !bookTitle || !sourceApp || !sourceLocalId) {
+    if (!file || !sourceApp || !sourceLocalId) {
       return NextResponse.json(
-        { success: false, error: 'file, bookTitle, sourceApp, and sourceLocalId are all required' },
+        { success: false, error: 'file, sourceApp and sourceLocalId are all required' },
         { status: 400 },
       )
     }
     if (!['pdlms', 'vidyaverse', 'digiclassroom'].includes(sourceApp)) {
       return NextResponse.json({ success: false, error: `Invalid sourceApp: ${sourceApp}` }, { status: 400 })
     }
-    if (file.type !== 'application/pdf') {
-      return NextResponse.json({ success: false, error: 'Only PDF files are supported' }, { status: 400 })
+    if (file.size > MAX_BYTES) {
+      return NextResponse.json({ success: false, error: 'File exceeds 5MB' }, { status: 400 })
     }
-    const maxSize = 50 * 1024 * 1024
-    if (file.size > maxSize) {
-      return NextResponse.json({ success: false, error: 'File size exceeds 50MB limit' }, { status: 400 })
+    if (!file.name.toLowerCase().endsWith('.md')) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'This lane takes enriched Markdown (.md), not PDFs. The PDF extraction lane is ' +
+            'disabled on every deployed host — it spawns a Python toolchain that is not in the ' +
+            'image — so a PDF here would fail after the upload rather than before it. Attach the ' +
+            "book's PDF as a reader rendition; send the validated markdown for retrieval.",
+          code: 'MARKDOWN_REQUIRED',
+        },
+        { status: 415 },
+      )
     }
 
-    console.log(`📚 trio-ingest: ${bookTitle} on behalf of ${sourceApp}:${sourceLocalId}`)
+    const buf = Buffer.from(await file.arrayBuffer())
+    const { meta, chunks, warnings, errors, skipped } = parseEnrichedMarkdown(buf.toString('utf8'))
 
-    let tempFilePath: string | null = null
+    if (errors.length > 0) {
+      return NextResponse.json({ success: false, error: 'Parser refused the chapter', errors, warnings }, { status: 422 })
+    }
+    if (meta.validation_status !== 'APPROVED' && !force) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `validation_status is "${meta.validation_status}", not APPROVED — a human has to ` +
+            `confirm the transcription matches the printed page before it becomes citable.`,
+        },
+        { status: 422 },
+      )
+    }
+    if (chunks.length === 0) {
+      return NextResponse.json({ success: false, error: 'No indexable chunks — check PAGE/SECTION markers', warnings }, { status: 422 })
+    }
+
+    const partIndex = partOverride ? parseInt(partOverride, 10) : parseInt(String(meta.chapter_number ?? ''), 10)
+    if (!Number.isFinite(partIndex) || partIndex < 1) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'No usable chapter number, so there is no slot to put this in. part_index orders ' +
+            'the chapters of a book and 0 is reserved for the whole work.',
+        },
+        { status: 422 },
+      )
+    }
+
+    const title = bookTitle || meta.book_title || ''
+    const isbn = meta.isbn ?? null
+    if (!title) {
+      return NextResponse.json({ success: false, error: 'No book title, in the request or the frontmatter' }, { status: 422 })
+    }
+
+    console.log(`📚 trio-ingest: "${title}" part ${partIndex} on behalf of ${sourceApp}:${sourceLocalId}`)
+
+    // Resolve identity FIRST so the R2 key is under the canonical work, and so
+    // content_source_ref(app, local_id) exists even if the embed step later
+    // fails — that row is what the calling app needs to find this work again.
+    const resolved = await resolveOrCreateContentItem({
+      sourceApp: sourceApp as 'pdlms' | 'vidyaverse' | 'digiclassroom',
+      sourceLocalId,
+      title,
+      isbn,
+      edition: meta.edition ?? null,
+    })
+    const contentItemId = resolved.contentItemId
+
+    const { uploadContentAssetToR2 } = await import('@/lib/services/r2')
+    const key = `content/${contentItemId}/parts/${partIndex}.md`
+    const { bucket } = await uploadContentAssetToR2({
+      buffer: buf, key, contentType: 'text/markdown; charset=utf-8',
+    })
+
+    await enhancedRAG.initialize()
+
+    const pages = [...new Set(chunks.map((c: any) => c.metadata.page as number))].sort((a, b) => a - b)
+    let result: SpineIngestResult
     try {
-      const buffer = Buffer.from(await file.arrayBuffer())
-      const fileName = `${uuidv4()}_${file.name}`
-      tempFilePath = join(process.cwd(), 'tmp', fileName)
-      const fs = await import('fs/promises')
-      await fs.mkdir(join(process.cwd(), 'tmp'), { recursive: true })
-      await writeFile(tempFilePath, buffer)
-
-      const metadata = {
-        subject: book || bookTitle,
-        subjectGroup: subjectGroup || 'Unknown',
-        domain: domain || 'Unknown',
-        course: course || 'Unknown',
-        level: level || 'Unknown',
-        book: book || bookTitle,
-        bookTitle,
-        classLevel: level || 'Unknown',
-        curriculum: course || 'Unknown',
-        board: course || 'Unknown',
-        language: medium || 'Unknown',
-        medium: medium || 'Unknown',
-      }
-
-      await enhancedRAG.initialize()
-      const result = await enhancedRAG.indexPDF(buffer, metadata, file.name, {
-        sourceApp: sourceApp as any,
+      result = await enhancedRAG.ingestPart({
+        sourceApp: sourceApp as 'pdlms' | 'vidyaverse' | 'digiclassroom',
         sourceLocalId,
-        contentTitle: bookTitle,
+        contentTitle: title,
+        isbn: meta.isbn ?? undefined,
+        edition: meta.edition ?? null,
+        lang: meta.medium ?? null,
+        organizationId,
+        part: {
+          role: 'enriched_md',
+          partIndex,
+          partLabel: meta.chapter_title ? `Chapter ${meta.chapter_number}: ${meta.chapter_title}` : `Part ${partIndex}`,
+          variant: 'default',
+          sha256: sha256(buf),
+          storageAccount: 'digiclassroom-pro',
+          storageUri: `r2://${bucket}/${key}`,
+          bytes: buf.length,
+          pageCount: pages.length,
+        },
+        chunks: chunks.map((c: any) => ({
+          text: c.text,
+          pageStart: c.metadata.pageNumber ?? c.metadata.page ?? null,
+          pageEnd: c.metadata.pageEndNumber ?? c.metadata.pageNumber ?? null,
+          chapter: c.metadata.chapter ?? null,
+          retrievalClass: c.retrieval_class,
+          metadata: c.metadata,
+        })),
       })
-
-      if (!result.success) {
-        throw new Error(`Ingestion failed: ${result.errors.join(', ')}`)
-      }
-
-      return NextResponse.json({
-        success: true,
-        contentItemId: result.contentItemId,
-        chunksIndexed: result.chunks_indexed,
-        stats: result.stats,
-        validationStats: result.validationStats,
-      })
-    } finally {
-      if (tempFilePath) {
-        try {
-          await unlink(tempFilePath)
-        } catch (error) {
-          console.warn('Failed to clean up temporary file:', error)
-        }
-      }
+    } catch (err) {
+      return NextResponse.json(
+        { success: false, error: err instanceof Error ? err.message : 'Ingest failed', contentItemId },
+        { status: 500 },
+      )
     }
+
+    if (result.status === 'failed') {
+      return NextResponse.json(
+        { success: false, error: result.reason ?? 'Ingest failed', contentItemId },
+        { status: 500 },
+      )
+    }
+
+    return NextResponse.json({
+      success: true,
+      contentItemId,
+      // The caller records this: it is how a PDLMS Book row finds its work again.
+      sourceRef: { app: sourceApp, localId: sourceLocalId, matchedBy: resolved.matchedBy },
+      partIndex,
+      status: result.status,               // 'indexed' | 'skipped_unchanged'
+      chunksIndexed: result.chunksWritten,
+      pointsUpserted: result.pointsUpserted,
+      pages: pages.length ? `${pages[0]}-${pages[pages.length - 1]}` : null,
+      skipped,
+      warnings,
+    })
   } catch (error) {
     console.error('❌ trio-ingest failed:', error)
     return NextResponse.json(
