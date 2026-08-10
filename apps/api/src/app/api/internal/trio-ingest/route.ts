@@ -45,6 +45,12 @@ export async function POST(request: NextRequest) {
     const sourceApp = formData.get('sourceApp') as string
     const sourceLocalId = formData.get('sourceLocalId') as string
     const bookTitle = (formData.get('bookTitle') as string | null)?.trim() || ''
+    // The calling app's own ISBN. `resolveOrCreateContentItem` keys identity on
+    // (isbn, edition), so a chapter ingested without one creates a work nothing
+    // can ever match by ISBN again — the same book uploaded twice becomes two
+    // works, and neither is wrong enough to look wrong. PDLMS holds an ISBN on
+    // the Book row that the frontmatter may not repeat, so it can supply it.
+    const isbnOverride = (formData.get('isbn') as string | null)?.trim() || null
     const organizationId = (formData.get('organizationId') as string | null)?.trim() || null
     const force = (formData.get('force') as string) === 'true'
     const partOverride = formData.get('partIndex') as string | null
@@ -109,9 +115,25 @@ export async function POST(request: NextRequest) {
     }
 
     const title = bookTitle || meta.book_title || ''
-    const isbn = meta.isbn ?? null
+    const isbn = isbnOverride ?? meta.isbn ?? null
     if (!title) {
       return NextResponse.json({ success: false, error: 'No book title, in the request or the frontmatter' }, { status: 422 })
+    }
+    // Both sides claiming a DIFFERENT ISBN means the caller has attached this
+    // chapter to the wrong book, which is invisible once it is indexed: the text
+    // is right, the citations are right, and it answers as a different book.
+    // Cheap to refuse here, near-impossible to notice later.
+    if (isbnOverride && meta.isbn && isbnOverride !== meta.isbn) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            `ISBN mismatch: the request says ${isbnOverride} but the chapter's frontmatter says ` +
+            `${meta.isbn}. One of them belongs to a different book — attaching a chapter to the ` +
+            `wrong work cannot be detected once it is indexed.`,
+        },
+        { status: 422 },
+      )
     }
 
     console.log(`📚 trio-ingest: "${title}" part ${partIndex} on behalf of ${sourceApp}:${sourceLocalId}`)
@@ -143,7 +165,10 @@ export async function POST(request: NextRequest) {
         sourceApp: sourceApp as 'pdlms' | 'vidyaverse' | 'digiclassroom',
         sourceLocalId,
         contentTitle: title,
-        isbn: meta.isbn ?? undefined,
+        // The RESOLVED isbn, not the frontmatter's: identity was already settled
+        // above, and passing a different value here would have the run disagree
+        // with the work it belongs to.
+        isbn: isbn ?? undefined,
         edition: meta.edition ?? null,
         lang: meta.medium ?? null,
         organizationId,
