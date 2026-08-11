@@ -145,10 +145,18 @@ export const SUBJECT_MATRIX: ClassSubjectMatrix[] = [
       { name: 'Hindi', availableInEnglish: true, availableInHindi: true, textbookCount: 4 },
       { name: 'Mathematics', availableInEnglish: true, availableInHindi: true },
       { name: 'Science', availableInEnglish: true, availableInHindi: true },
-      { name: 'Civics', availableInEnglish: true, availableInHindi: true },
-      { name: 'Economics', availableInEnglish: true, availableInHindi: true },
-      { name: 'History', availableInEnglish: true, availableInHindi: true },
-      { name: 'Geography', availableInEnglish: true, availableInHindi: true },
+      // ONE subject, not four. The updated NCERT ships Social Science for 9-10
+      // as a single integrated volume, so Civics/Economics/History/Geography are
+      // strands inside one book rather than subjects a student picks between —
+      // which is how classes 6-8 were already modelled. They stay recorded in
+      // subSubjects because the strand is still a real thing to label a chapter
+      // with; it is just not a selectable subject.
+      {
+        name: 'Social Science',
+        availableInEnglish: true,
+        availableInHindi: true,
+        subSubjects: ['History', 'Geography', 'Political Science', 'Economics'],
+      },
       { name: 'Health & Physical Education', availableInEnglish: true, availableInHindi: false },
       { name: 'Information and Computer Technology', availableInEnglish: true, availableInHindi: false },
     ],
@@ -161,10 +169,13 @@ export const SUBJECT_MATRIX: ClassSubjectMatrix[] = [
       { name: 'Hindi', availableInEnglish: true, availableInHindi: true, textbookCount: 4 },
       { name: 'Mathematics', availableInEnglish: true, availableInHindi: true },
       { name: 'Science', availableInEnglish: true, availableInHindi: true },
-      { name: 'Civics', availableInEnglish: true, availableInHindi: true },
-      { name: 'Economics', availableInEnglish: true, availableInHindi: true },
-      { name: 'History', availableInEnglish: true, availableInHindi: true },
-      { name: 'Geography', availableInEnglish: true, availableInHindi: true },
+      // Single integrated volume, as class 9 — see the note there.
+      {
+        name: 'Social Science',
+        availableInEnglish: true,
+        availableInHindi: true,
+        subSubjects: ['History', 'Geography', 'Political Science', 'Economics'],
+      },
       { name: 'Health & Physical Education', availableInEnglish: true, availableInHindi: false },
       { name: 'Information and Computer Technology', availableInEnglish: true, availableInHindi: false },
     ],
