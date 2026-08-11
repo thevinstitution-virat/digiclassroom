@@ -2344,17 +2344,39 @@ export class EnhancedRAGPipeline {
         return point;
       });
 
-      // Upsert to Qdrant with error handling
-      try {
-        await this.qdrant.upsert(this.collectionName, {
-          wait: true,
-          points
-        });
-      } catch (error) {
-        console.error('❌ Qdrant upsert error:', error);
-        console.error('Collection name:', this.collectionName);
-        console.error('Points sample:', JSON.stringify(points[0], null, 2));
-        throw error;
+      // Upsert to Qdrant with error handling.
+      //
+      // A batch can legitimately produce ZERO points. Practice chunks get a
+      // content_chunk row and are deliberately never embedded, so a batch made
+      // up entirely of them embeds 0 texts and builds 0 points — and Qdrant
+      // answers a zero-point upsert with a bare 400 Bad Request. That failure
+      // then propagates out and fails an ingest that had in fact already
+      // succeeded: the chapter's real batch was upserted, the run threw on the
+      // tail batch, and the partial run was rolled back, so the chapter ended up
+      // with chunk rows in the spine and NOTHING retrievable in Qdrant.
+      //
+      // Seen in production on chapter 8 of the Grade 9 NCERT Social Science
+      // book, whose final batch is a single "Questions and activities" chunk.
+      // Any chapter that ends in questions has this shape, so it was never
+      // specific to that book. The rows are already written above; there is
+      // simply nothing to send.
+      if (points.length === 0) {
+        console.log(
+          `⏭️  Batch had no embeddable points (all practice chunks) — rows written, Qdrant upsert skipped.`,
+        );
+      } else {
+        try {
+          await this.qdrant.upsert(this.collectionName, {
+            wait: true,
+            points
+          });
+        } catch (error) {
+          console.error('❌ Qdrant upsert error:', error);
+          console.error('Collection name:', this.collectionName);
+          console.error('Points count:', points.length);
+          console.error('Points sample:', JSON.stringify(points[0], null, 2));
+          throw error;
+        }
       }
 
       // 🛡️ Batch 2b: record this batch's point ids in the bridge (delete/reconciliation).
