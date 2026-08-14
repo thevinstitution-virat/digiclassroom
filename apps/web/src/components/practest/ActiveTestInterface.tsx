@@ -6,20 +6,21 @@
 // PUT the { questionId: optionId } map and the server scores authoritatively.
 
 import React, { useState, useEffect, useRef } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Label } from '@/components/ui/label'
 import {
-  ClockIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  CheckCircleIcon,
-  FlagIcon,
-  PlayIcon,
-} from '@heroicons/react/24/outline'
+  Clock,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle,
+  Flag,
+  Play,
+} from 'lucide-react'
+
+// Difficulty → [background tint, foreground] (mock diffTint).
+const DIFF_TINT: Record<string, [string, string]> = {
+  EASY: ['rgb(14 159 110 / 0.14)', 'var(--emerald)'],
+  MEDIUM: ['rgb(0 106 110 / 0.12)', '#006A6E'],
+  HARD: ['rgb(192 57 43 / 0.12)', 'var(--kumkum)'],
+}
 
 export interface GeneratedOption {
   id: string
@@ -173,184 +174,186 @@ export default function ActiveTestInterface({ session, onTestCompleted, onError,
 
   if (!questions.length) {
     return (
-      <Card>
-        <CardContent className="p-8 text-center text-muted-foreground">No questions available for this test.</CardContent>
-      </Card>
+      <div className="dcs">
+        <div className="card" style={{ padding: 32, textAlign: 'center', color: 'var(--muted)' }}>
+          No questions available for this test.
+        </div>
+      </div>
     )
   }
 
+  const timerRed = timeRemaining < 60
+  const [diffBg, diffFg] = current?.difficulty ? (DIFF_TINT[current.difficulty] ?? DIFF_TINT.MEDIUM) : DIFF_TINT.MEDIUM
+
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-4 sm:p-6">
-      {/* Header */}
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <PlayIcon className="h-5 w-5 text-emerald-600" />
-                {current?.subject || 'Practice'} Test{current?.grade ? ` — Class ${current.grade}` : ''}
-              </CardTitle>
-              <CardDescription>{questions.length} questions</CardDescription>
+    <div className="dcs">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {/* Header */}
+        <div className="card" style={{ padding: '18px 20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+              <Play className="h-5 w-5" style={{ color: 'var(--emerald)' }} />
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--ink)' }}>
+                  {current?.subject || 'Practice'} Test{current?.grade ? ` — Class ${current.grade}` : ''}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--muted)' }}>{questions.length} questions</div>
+              </div>
             </div>
             <div
-              className={`flex items-center gap-2 rounded-xl px-4 py-2 font-mono text-lg font-bold ${
-                timeRemaining < 60
-                  ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
-                  : 'bg-primary/10 text-primary'
-              }`}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7, fontFamily: 'monospace',
+                fontWeight: 800, fontSize: 17, padding: '8px 16px', borderRadius: 11,
+                background: timerRed ? 'rgb(192 57 43 / 0.14)' : 'rgb(var(--accent-primary-rgb) / 0.12)',
+                color: timerRed ? 'var(--kumkum)' : 'var(--accent-text)',
+              }}
             >
-              <ClockIcon className="h-5 w-5" />
+              <Clock className="h-[19px] w-[19px]" />
               {formatTime(timeRemaining)}
             </div>
           </div>
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>{answeredCount} / {questions.length} answered</span>
-              <span>{Math.round(progress)}%</span>
-            </div>
-            <Progress value={progress} className="h-2" />
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: 'var(--muted)', margin: '14px 0 6px' }}>
+            <span>{answeredCount} / {questions.length} answered</span>
+            <span>{Math.round(progress)}%</span>
           </div>
-        </CardHeader>
-      </Card>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
-        {/* Question */}
-        <div className="lg:col-span-3">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Badge variant="outline">Question {currentIndex + 1}</Badge>
-                  {current?.difficulty && (
-                    <Badge
-                      variant={
-                        current.difficulty === 'EASY' ? 'success' : current.difficulty === 'HARD' ? 'destructive' : 'info'
-                      }
-                    >
-                      {current.difficulty}
-                    </Badge>
-                  )}
-                  <span className="text-sm text-muted-foreground">
-                    {current?.maxMarks ?? 1} mark{(current?.maxMarks ?? 1) !== 1 ? 's' : ''}
-                  </span>
-                </div>
-                <Button variant="ghost" size="icon" onClick={() => current && toggleFlag(current.id)} aria-label="Flag question">
-                  <FlagIcon className={`h-4 w-4 ${current && flagged.has(current.id) ? 'fill-current text-rose-600' : 'text-muted-foreground'}`} />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <p className="text-lg leading-relaxed text-foreground">{current?.questionText}</p>
-
-              <RadioGroup
-                value={currentAnswer}
-                onValueChange={(value) => current && handleAnswer(current.id, value)}
-                className="space-y-3"
-              >
-                {current?.options.map((opt, i) => {
-                  const selected = currentAnswer === opt.id
-                  return (
-                    <div
-                      key={opt.id}
-                      className={`flex items-start gap-3 rounded-xl border p-3 transition-colors ${
-                        selected ? 'border-primary/50 bg-primary/5' : 'border-border hover:bg-accent/50'
-                      }`}
-                    >
-                      <RadioGroupItem value={opt.id} id={`${current.id}-${opt.id}`} className="mt-1" />
-                      <Label htmlFor={`${current.id}-${opt.id}`} className="flex-1 cursor-pointer">
-                        <span className="mr-2 font-semibold text-muted-foreground">{LETTER(i)}.</span>
-                        {opt.text}
-                      </Label>
-                    </div>
-                  )
-                })}
-              </RadioGroup>
-
-              <div className="flex items-center justify-between border-t border-border pt-4">
-                <Button variant="outline" onClick={() => goTo(currentIndex - 1)} disabled={currentIndex === 0}>
-                  <ChevronLeftIcon className="mr-2 h-4 w-4" /> Previous
-                </Button>
-                {currentIndex === questions.length - 1 ? (
-                  <Button onClick={() => setShowConfirm(true)} disabled={isSubmitting}>
-                    <CheckCircleIcon className="mr-2 h-4 w-4" /> Finish Test
-                  </Button>
-                ) : (
-                  <Button variant="outline" onClick={() => goTo(currentIndex + 1)}>
-                    Next <ChevronRightIcon className="ml-2 h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <div style={{ height: 8, borderRadius: 999, background: 'var(--track)', overflow: 'hidden' }}>
+            <div style={{ height: '100%', borderRadius: 999, width: `${progress}%`, background: 'linear-gradient(90deg,var(--accent-strong),var(--gold))', transition: 'width .3s' }} />
+          </div>
         </div>
 
-        {/* Navigator */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Navigator</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-5 gap-2">
+        <div className="two-col">
+          {/* Question */}
+          <div className="card" style={{ padding: 22 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
+                <span className="tag" style={{ background: 'var(--panel-2)', color: 'var(--muted)', border: '1px solid var(--line)' }}>Question {currentIndex + 1}</span>
+                {current?.difficulty && (
+                  <span className="tag" style={{ background: diffBg, color: diffFg }}>{current.difficulty}</span>
+                )}
+                <span style={{ fontSize: 12.5, color: 'var(--muted)' }}>
+                  {current?.maxMarks ?? 1} mark{(current?.maxMarks ?? 1) !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <button className="iconbtn" onClick={() => current && toggleFlag(current.id)} aria-label="Flag question" style={{ border: 'none', background: 'none' }}>
+                <Flag className="h-5 w-5" style={{ color: current && flagged.has(current.id) ? 'var(--kumkum)' : 'var(--muted)', fill: current && flagged.has(current.id) ? 'var(--kumkum)' : 'none' }} />
+              </button>
+            </div>
+
+            <p style={{ margin: '0 0 20px', fontSize: 'clamp(16px,2vw,19px)', lineHeight: 1.5, color: 'var(--ink)', fontWeight: 600 }}>{current?.questionText}</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+              {current?.options.map((opt, i) => {
+                const selected = currentAnswer === opt.id
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => current && handleAnswer(current.id, opt.id)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 13, textAlign: 'left', padding: '14px 16px',
+                      borderRadius: 13, cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: 14.5,
+                      fontWeight: 600, color: 'var(--ink)', transition: 'all .16s',
+                      background: selected ? 'rgb(var(--accent-primary-rgb) / 0.1)' : 'var(--panel-2)',
+                      border: `1.5px solid ${selected ? 'var(--accent-primary)' : 'var(--line)'}`,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 28, height: 28, borderRadius: 999, flex: 'none', display: 'inline-flex',
+                        alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13,
+                        background: selected ? 'linear-gradient(135deg,var(--kumkum),var(--saffron))' : 'var(--chip-bg)',
+                        color: selected ? '#fff' : 'var(--accent-text)',
+                      }}
+                    >
+                      {LETTER(i)}
+                    </span>
+                    <span style={{ flex: 1 }}>{opt.text}</span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 22, paddingTop: 16, borderTop: '1px solid var(--line-soft)' }}>
+              <button className="btn btn-ghost" onClick={() => goTo(currentIndex - 1)} disabled={currentIndex === 0}>
+                <ChevronLeft className="h-4 w-4" /> Previous
+              </button>
+              {currentIndex === questions.length - 1 ? (
+                <button className="btn btn-primary" onClick={() => setShowConfirm(true)} disabled={isSubmitting}>
+                  <CheckCircle className="h-4 w-4" /> Finish Test
+                </button>
+              ) : (
+                <button className="btn btn-ghost" onClick={() => goTo(currentIndex + 1)}>
+                  Next <ChevronRight className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Navigator */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="card" style={{ padding: 18 }}>
+              <h3 className="sech" style={{ fontSize: 16, marginBottom: 14 }}>Navigator</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 8 }}>
                 {questions.map((qq, i) => {
                   const isAnswered = !!answers[qq.id]
                   const isCurrent = i === currentIndex
                   const isFlagged = flagged.has(qq.id)
                   return (
-                    <Button
+                    <button
                       key={qq.id}
-                      variant={isCurrent ? 'default' : 'outline'}
-                      size="sm"
                       onClick={() => goTo(i)}
-                      className={`relative h-10 ${isAnswered && !isCurrent ? 'border-emerald-300 bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300' : ''} ${isFlagged ? 'ring-2 ring-rose-400' : ''}`}
+                      style={{
+                        height: 40, borderRadius: 9, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                        fontWeight: 700, fontSize: 13.5,
+                        background: isCurrent ? 'linear-gradient(135deg,var(--kumkum),var(--saffron))' : isAnswered ? 'rgb(14 159 110 / 0.14)' : 'var(--panel-2)',
+                        color: isCurrent ? '#fff' : isAnswered ? 'var(--emerald)' : 'var(--muted)',
+                        border: `1.5px solid ${isCurrent ? 'transparent' : isAnswered ? 'var(--emerald)' : 'var(--line)'}`,
+                        boxShadow: isFlagged ? '0 0 0 2px var(--kumkum)' : 'none',
+                      }}
                     >
                       {i + 1}
-                    </Button>
+                    </button>
                   )
                 })}
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card>
-            <CardContent className="space-y-3 p-6">
-              <Button variant="gradient" className="w-full" onClick={() => setShowConfirm(true)} disabled={isSubmitting}>
+            <div className="card" style={{ padding: 18 }}>
+              <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => setShowConfirm(true)} disabled={isSubmitting}>
                 Submit Test
-              </Button>
-              <div className="space-y-1 text-xs text-muted-foreground">
-                <div className="flex items-center gap-2"><span className="h-3 w-3 rounded border border-emerald-300 bg-emerald-100" /> Answered</div>
-                <div className="flex items-center gap-2"><span className="h-3 w-3 rounded border-2 border-border" /> Not answered</div>
-                <div className="flex items-center gap-2"><FlagIcon className="h-3 w-3 fill-current text-rose-600" /> Flagged</div>
+              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginTop: 14, fontSize: 12, color: 'var(--muted)' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 13, height: 13, borderRadius: 4, background: 'rgb(14 159 110 / 0.2)', border: '1px solid var(--emerald)' }} /> Answered</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ width: 13, height: 13, borderRadius: 4, border: '1.5px solid var(--line)' }} /> Not answered</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Flag className="h-[14px] w-[14px]" style={{ color: 'var(--kumkum)', fill: 'var(--kumkum)' }} /> Flagged</span>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <Card className="w-full max-w-sm">
-            <CardHeader>
-              <CardTitle>Submit test?</CardTitle>
-              <CardDescription>This cannot be undone.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="text-sm text-muted-foreground">
-                <p>Answered: {answeredCount} / {questions.length}</p>
-                <p>Time remaining: {formatTime(timeRemaining)}</p>
+        {showConfirm && (
+          <div
+            onClick={() => !isSubmitting && setShowConfirm(false)}
+            style={{ position: 'fixed', inset: 0, zIndex: 75, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 22, background: 'rgb(10 15 30 / 0.55)', backdropFilter: 'blur(4px)' }}
+          >
+            <div className="card" onClick={(e) => e.stopPropagation()} style={{ width: '100%', maxWidth: 380, padding: 24 }}>
+              <h3 style={{ margin: 0, fontSize: 19, fontWeight: 800, color: 'var(--ink)' }}>Submit test?</h3>
+              <p style={{ margin: '6px 0 0', fontSize: 13.5, color: 'var(--muted)' }}>This cannot be undone.</p>
+              <div style={{ margin: '16px 0', padding: 13, borderRadius: 11, background: 'var(--panel-2)', fontSize: 13, color: 'var(--ink)', display: 'flex', flexDirection: 'column', gap: 5 }}>
+                <span>Answered: {answeredCount} / {questions.length}</span>
+                <span>Time remaining: {formatTime(timeRemaining)}</span>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1" onClick={() => setShowConfirm(false)} disabled={isSubmitting}>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setShowConfirm(false)} disabled={isSubmitting}>
                   Cancel
-                </Button>
-                <Button variant="gradient" className="flex-1" onClick={handleComplete} disabled={isSubmitting}>
+                </button>
+                <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleComplete} disabled={isSubmitting}>
                   {isSubmitting ? 'Submitting…' : 'Submit'}
-                </Button>
+                </button>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
