@@ -180,17 +180,18 @@ export function AgentSelector({ value, onChange, disabled = false, className, dr
   return (
     <div className="inline-flex flex-col items-start gap-1.5">
       {visibleSuggestion && SuggestionIcon && (
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50/80 py-1 pl-1.5 pr-1 text-xs text-blue-800 shadow-sm">
-          <span className={cn('flex h-5 w-5 items-center justify-center rounded-full', visibleSuggestion.accent)}>
-            <SuggestionIcon className="h-3 w-3" />
-          </span>
+        <div
+          className="inline-flex items-center gap-1.5 rounded-full py-1 pl-3 pr-1 text-xs"
+          style={{ background: 'var(--chip-bg)', border: '1px solid rgb(var(--accent-primary-rgb) / 0.3)', color: 'var(--accent-text)' }}
+        >
           <span className="max-w-[12rem] truncate">
             Try <span className="font-semibold">{visibleSuggestion.title}</span>?
           </span>
           <button
             type="button"
             onClick={() => onChange(visibleSuggestion.id)}
-            className="rounded-full bg-blue-600 px-2 py-0.5 text-[11px] font-semibold text-white hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50"
+            className="btn btn-primary"
+            style={{ padding: '3px 12px', fontSize: 12 }}
             aria-label={`Switch to ${visibleSuggestion.title}`}
           >
             Switch
@@ -198,7 +199,8 @@ export function AgentSelector({ value, onChange, disabled = false, className, dr
           <button
             type="button"
             onClick={() => setDismissedIds((prev) => [...prev, visibleSuggestion.id])}
-            className="px-1 text-blue-400 hover:text-blue-700 focus:outline-none"
+            className="px-1 focus:outline-none"
+            style={{ color: 'var(--accent-text)' }}
             aria-label="Dismiss suggestion"
           >
             <X className="h-3.5 w-3.5" />
@@ -211,17 +213,15 @@ export function AgentSelector({ value, onChange, disabled = false, className, dr
         <button
           type="button"
           aria-label={`Current tutor: ${active.title}. Click to switch tutor.`}
-          className={cn(
-            'group inline-flex items-center gap-1.5 rounded-full border border-orange-200/70 bg-white/80 py-1 pl-1.5 pr-2 text-xs font-medium text-gray-700 shadow-sm backdrop-blur-sm transition-colors',
-            'hover:border-blue-400 hover:bg-blue-50/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 disabled:cursor-not-allowed disabled:opacity-50',
-            className,
-          )}
+          className={cn('group chip', className)}
+          style={{ padding: '6px 12px 6px 6px' }}
+          disabled={disabled}
         >
-          <span className={cn('flex h-5 w-5 items-center justify-center rounded-full', active.accent)}>
+          <span className={cn('flex h-[22px] w-[22px] items-center justify-center rounded-full', active.accent)}>
             <ActiveIcon className="h-3 w-3" />
           </span>
           <span className="max-w-[9rem] truncate">{active.title}</span>
-          <ChevronDown className="h-3.5 w-3.5 text-gray-400 transition-transform group-data-[state=open]:rotate-180" />
+          <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" style={{ color: 'var(--muted)' }} />
         </button>
       </DropdownMenuTrigger>
 

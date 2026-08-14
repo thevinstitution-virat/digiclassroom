@@ -36,17 +36,13 @@ export function LengthSelector({ value, onChange, disabled = false, className }:
         <button
           type="button"
           aria-label={active ? `Answer length: ${active.label}, ${active.marks}. Click to change.` : 'Set answer length'}
-          className={cn(
-            'group inline-flex items-center gap-1.5 rounded-full border border-orange-200/70 bg-white/80 py-1 pl-1.5 pr-2 text-xs font-medium text-gray-700 shadow-sm backdrop-blur-sm transition-colors',
-            'hover:border-blue-400 hover:bg-blue-50/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 disabled:cursor-not-allowed disabled:opacity-50',
-            className,
-          )}
+          className={cn('group chip', className)}
+          style={{ padding: '6px 12px' }}
+          disabled={disabled}
         >
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-100 text-teal-700">
-            <Ruler className="h-3 w-3" />
-          </span>
+          <Ruler className="h-[15px] w-[15px]" style={{ color: 'var(--muted)' }} />
           <span className="max-w-[9rem] truncate">{active ? `${active.label} · ${active.marks}` : 'Answer length'}</span>
-          <ChevronDown className="h-3.5 w-3.5 text-gray-400 transition-transform group-data-[state=open]:rotate-180" />
+          <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" style={{ color: 'var(--muted)' }} />
         </button>
       </DropdownMenuTrigger>
 

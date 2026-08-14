@@ -1,14 +1,12 @@
 'use client'
 
 import React from 'react'
-import { Card, CardContent } from '@/components/core/ui/card'
-import { Button } from '@/components/core/ui/button'
 import { Badge } from '@/components/core/ui/badge'
 import FormattedContent from '@/components/ai/core/FormattedContent'
 import LessonPlanContainer from '@/components/learning/lesson/LessonPlanContainer'
 import { FeedbackWidget } from '@/components/user/profile/feedback/FeedbackWidget'
 import AnswerActionButtons from '@/components/ai/AnswerActionButtons'
-import { User, Bot, BookOpen, FileText, Loader2, X, Zap } from 'lucide-react'
+import { Bot, BookOpen, FileText, Loader2, X, Zap } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { MultiModalInput } from '@/components/ai/tutor/MultiModalInput'
 import { AgentSelector } from '@/components/ai/tutor/AgentSelector'
@@ -105,8 +103,8 @@ export default function AITutorPage() {
   ]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50/30 via-blue-50/40 to-indigo-100/50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900">
-      <div className="container mx-auto px-4 py-4 max-w-4xl">
+    <div className="dcs">
+      <div style={{ maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
         {/* Header */}
         <TutorHeader
           isLoadingSubscription={isLoadingSubscription}
@@ -118,7 +116,7 @@ export default function AITutorPage() {
         />
 
         {/* Global Context Selector */}
-        <div className="mb-4">
+        <div>
           <ContextSelector
             visible={shouldShowContextSelector()}
             currentValue={getCurrentContextValue()}
@@ -130,39 +128,33 @@ export default function AITutorPage() {
 
         {/* Subscription Loading/Error Display */}
         {isLoadingSubscription && (
-          <Card className="mb-3 bg-blue-50/90 dark:bg-blue-900/20 backdrop-blur-md border-blue-200 dark:border-blue-800 shadow-lg rounded-2xl">
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-3">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 dark:border-blue-400"></div>
-                <span className="text-blue-800 dark:text-blue-200 text-sm">Loading subscription details...</span>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="card" style={{ padding: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div className="spin" style={{ width: 20, height: 20, borderRadius: '50%', border: '2px solid var(--line)', borderBottomColor: 'var(--accent-primary)' }} />
+              <span style={{ fontSize: 14, color: 'var(--muted)' }}>Loading subscription details…</span>
+            </div>
+          </div>
         )}
 
-
-
         {subscriptionError && subscriptionError !== 'NO_SUBSCRIPTION' && (
-          <Card className="mb-3 bg-red-50/90 dark:bg-red-900/20 backdrop-blur-md border-red-200 dark:border-red-800 shadow-lg rounded-2xl">
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
-                  <span className="text-2xl">⚠️</span>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-red-900 dark:text-red-200">Error Loading Subscription</h3>
-                  <p className="text-sm text-red-700 dark:text-red-300">Please refresh the page or contact support if the issue persists.</p>
-                </div>
+          <div className="card" style={{ padding: 16, borderColor: 'rgb(192 57 43 / 0.3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span className="plinth" style={{ width: 40, height: 40, flex: 'none', background: 'linear-gradient(135deg,var(--kumkum),var(--lotus-deep))' }}>
+                <span style={{ fontSize: 20 }}>⚠️</span>
+              </span>
+              <div>
+                <h3 style={{ margin: 0, fontWeight: 800, fontSize: 15, color: 'var(--ink)' }}>Error loading subscription</h3>
+                <p style={{ margin: '3px 0 0', fontSize: 13, color: 'var(--muted)' }}>Please refresh the page or contact support if the issue persists.</p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* Chat Interface */}
-        <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-0 shadow-lg rounded-2xl overflow-hidden">
-          <CardContent className="p-0">
+        <div className="card" style={{ overflow: 'hidden' }}>
+          <div>
             {/* Messages Area */}
-            <div className="h-[calc(100vh-280px)] min-h-[400px] max-h-[600px] overflow-y-auto overflow-x-hidden p-6 space-y-6 bg-gradient-to-b from-gray-50/30 to-white/50 dark:from-gray-800/30 dark:to-gray-900/50">
+            <div className="h-[calc(100vh-280px)] min-h-[400px] max-h-[600px] overflow-y-auto overflow-x-hidden p-6 space-y-6">
               <AnimatePresence>
                 {messages.filter(msg => msg.role === 'user' || msg.content?.trim() || (msg.messageType && msg.messageType !== 'text')).map((message) => (
                   <motion.div
@@ -172,24 +164,25 @@ export default function AITutorPage() {
                     exit={{ opacity: 0, y: -20 }}
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div className={`flex max-w-[90%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start space-x-2`}>
-                      {/* Avatar */}
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shadow-md ${message.role === 'user'
-                        ? 'bg-gradient-to-r from-orange-500 to-blue-600'
-                        : 'bg-gradient-to-r from-blue-500 to-indigo-600'
-                        }`}>
-                        {message.role === 'user' ? (
-                          <User className="h-4 w-4 text-white" />
-                        ) : (
-                          <Bot className="h-4 w-4 text-white" />
-                        )}
-                      </div>
+                    <div className={`flex max-w-[90%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start gap-2.5`}>
+                      {/* Avatar — bot only (mock: neurology plinth; user bubble stands alone) */}
+                      {message.role === 'assistant' && (
+                        <span
+                          className="plinth"
+                          style={{ width: 32, height: 32, flex: 'none', background: 'linear-gradient(135deg,var(--kumkum),var(--indigo-ink))' }}
+                        >
+                          <Bot className="h-[17px] w-[17px]" />
+                        </span>
+                      )}
 
                       {/* Message Content */}
-                      <div className={`rounded-2xl px-4 py-3 shadow-sm backdrop-blur-sm overflow-hidden ${message.role === 'user'
-                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white ml-2'
-                        : 'bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100 mr-2'
-                        }`}>
+                      <div
+                        className="overflow-hidden"
+                        style={message.role === 'user'
+                          ? { borderRadius: '16px 16px 4px 16px', padding: '12px 15px', background: 'var(--peacock-teal)', color: '#fff', fontSize: 14, lineHeight: 1.6 }
+                          : { borderRadius: '4px 16px 16px 16px', padding: '12px 15px', background: 'var(--panel-2)', color: 'var(--ink)', border: '1px solid var(--line-soft)', fontSize: 14, lineHeight: 1.6 }
+                        }
+                      >
                         <div className="flex-1">
                           {message.role === 'assistant' ? (
                             <div>
@@ -232,10 +225,10 @@ export default function AITutorPage() {
 
                               {/* Source Citations - Compact Display (Max 20 words) */}
                               {message.sources && message.sources.length > 0 && (
-                                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-                                  <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                                    <BookOpen className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-                                    <span className="font-medium">Sources:</span>
+                                <div style={{ marginTop: 9, paddingTop: 9, borderTop: '1px solid var(--line-soft)' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--muted)', flexWrap: 'wrap' }}>
+                                    <BookOpen className="h-[14px] w-[14px]" style={{ color: 'var(--accent-text)' }} />
+                                    <strong>Sources:</strong>
                                     <span>
                                       {message.sources.slice(0, 3).map((source, index) => (
                                         <span key={source.id || index}>
@@ -545,25 +538,30 @@ export default function AITutorPage() {
             </div>
 
             {/* Input Area */}
-            <div className="border-t border-gray-200/50 dark:border-gray-700/50 bg-gradient-to-r from-orange-50/20 to-blue-50/20 dark:from-gray-800/20 dark:to-gray-900/20 p-4">
+            <div style={{ borderTop: '1px solid var(--line-soft)', padding: 14 }}>
               {/* File Upload Display */}
               {uploadedFile && (
-                <div className="mb-3 p-3 bg-gradient-to-r from-orange-50 to-blue-50 dark:from-orange-900/20 dark:to-blue-900/20 border border-orange-200/30 dark:border-orange-700/30 rounded-xl flex items-center justify-between backdrop-blur-sm">
-                  <div className="flex items-center space-x-2">
-                    <FileText className="h-4 w-4 text-orange-600 dark:text-orange-400" />
-                    <span className="text-sm text-gray-800 dark:text-gray-200 font-medium">{uploadedFile.name}</span>
-                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                <div
+                  style={{
+                    marginBottom: 12, padding: 12, borderRadius: 12, display: 'flex',
+                    alignItems: 'center', justifyContent: 'space-between',
+                    background: 'var(--panel-2)', border: '1px solid var(--line-soft)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    <FileText className="h-4 w-4" style={{ color: 'var(--accent-text)', flex: 'none' }} />
+                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{uploadedFile.name}</span>
+                    <span style={{ fontSize: 12, color: 'var(--muted)', flex: 'none' }}>
                       ({(uploadedFile.size / 1024).toFixed(1)} KB)
                     </span>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  <button
                     onClick={removeUploadedFile}
-                    className="h-6 w-6 p-0 text-orange-600 dark:text-orange-400 hover:text-red-500 dark:hover:text-red-400 rounded-lg"
+                    aria-label="Remove file"
+                    style={{ border: 'none', background: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'inline-flex', flex: 'none' }}
                   >
-                    <X className="h-3 w-3" />
-                  </Button>
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
               )}
 
@@ -622,8 +620,8 @@ export default function AITutorPage() {
                 }
               />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       {/* Upgrade Modal */}

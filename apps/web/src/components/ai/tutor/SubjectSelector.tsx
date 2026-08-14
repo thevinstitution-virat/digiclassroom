@@ -69,7 +69,6 @@ interface SubjectSelectorProps {
  */
 export function SubjectSelector({ value, options, onChange, disabled = false, className }: SubjectSelectorProps) {
   const active = options.find((o) => o.toLowerCase() === (value || '').toLowerCase()) || value || 'Subject'
-  const ActiveIcon = iconForSubject(active)
 
   return (
     <DropdownMenu>
@@ -77,17 +76,13 @@ export function SubjectSelector({ value, options, onChange, disabled = false, cl
         <button
           type="button"
           aria-label={`Current subject: ${prettySubject(active)}. Click to switch subject.`}
-          className={cn(
-            'group inline-flex items-center gap-1.5 rounded-full border border-orange-200/70 bg-white/80 py-1 pl-1.5 pr-2 text-xs font-medium text-gray-700 shadow-sm backdrop-blur-sm transition-colors',
-            'hover:border-blue-400 hover:bg-blue-50/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/50 disabled:cursor-not-allowed disabled:opacity-50',
-            className,
-          )}
+          className={cn('group chip', className)}
+          style={{ padding: '6px 12px' }}
+          disabled={disabled || options.length === 0}
         >
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-blue-700">
-            <ActiveIcon className="h-3 w-3" />
-          </span>
+          <BookOpen className="h-[15px] w-[15px]" style={{ color: 'var(--muted)' }} />
           <span className="max-w-[9rem] truncate">{prettySubject(active)}</span>
-          <ChevronDown className="h-3.5 w-3.5 text-gray-400 transition-transform group-data-[state=open]:rotate-180" />
+          <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" style={{ color: 'var(--muted)' }} />
         </button>
       </DropdownMenuTrigger>
 
