@@ -6,8 +6,9 @@ import { auth } from '@/auth';
 import { headers } from 'next/headers';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
+import { PrintButton } from './PrintButton';
 
 export default async function CertificatePage({ params }: { params: { certificateId: string } }) {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -91,14 +92,7 @@ export default async function CertificatePage({ params }: { params: { certificat
               Back
             </Link>
           </Button>
-          <Button 
-            onClick={() => {
-              if (typeof window !== 'undefined') window.print();
-            }}
-          >
-            <Printer className="h-4 w-4 mr-2" />
-            Print Certificate
-          </Button>
+          <PrintButton />
         </div>
       </div>
 

@@ -18,12 +18,24 @@ import React, { ReactNode, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
-import { Menu, Search, Bell, Sun, Moon } from 'lucide-react'
+import { Menu, Search, Bell, Sun, Moon, GraduationCap, Presentation, Users, Building2, ShieldCheck } from 'lucide-react'
+import type { ComponentType } from 'react'
 import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext'
 import { DashboardShellProvider, useDashboardShell } from '@/contexts/DashboardShellContext'
-import type { ViewAsRole } from '@/lib/dashboard/view-as'
+import type { ViewAsIcon, ViewAsRole } from '@/lib/dashboard/view-as'
 
 export type { ViewAsRole }
+
+// Resolve the view-as icon KEY (a serialisable string that crosses the
+// server→client boundary) to a Lucide component HERE, on the client. The icon
+// components must never travel as props from the server layouts — see view-as.tsx.
+const VIEW_AS_ICONS: Record<ViewAsIcon, ComponentType<{ className?: string }>> = {
+  student: GraduationCap,
+  teacher: Presentation,
+  parent: Users,
+  institution: Building2,
+  admin: ShieldCheck,
+}
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -156,7 +168,7 @@ function DashboardLayoutInner({ children, sidebar, header, viewAs }: DashboardLa
                   View as
                 </span>
                 {viewAs.map((r) => {
-                  const Icon = r.icon
+                  const Icon = VIEW_AS_ICONS[r.icon]
                   const on = r.href === viewAsActive
                   return (
                     <Link key={r.key} href={r.href} className={`pill ${on ? 'on' : ''}`} style={{ flex: 'none' }}>
