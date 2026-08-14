@@ -5,7 +5,8 @@ import {
   Play, BarChart3, Globe, Brain, ChevronDown,
   Target, Zap, TrendingUp, ArrowRight, MessageSquare, Search, Database,
   Rocket, Mail, Phone, MapPin, Send, BookOpen, Star,
-  Facebook, Twitter, Instagram, Linkedin, Youtube, Check, Crown, Sparkles
+  Facebook, Twitter, Instagram, Linkedin, Youtube, Check, Crown, Sparkles,
+  BadgeCheck, Quote, GraduationCap, Layers, WifiOff, Bot, Library, Route
 } from 'lucide-react'
 import { Navbar } from '@/components/navigation/navbar'
 import { HeroProductMockup } from '@/components/landing/sections/HeroProductMockup'
@@ -155,32 +156,32 @@ export const EnhancedLandingPage: React.FC = () => {
         <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto py-16">
           <div className="mb-6 mt-8">
             <span className="indic-eyebrow indic-rise">
-              <Zap className="h-4 w-4" /> Powered by Advanced AI &amp; Machine Learning
+              <Zap className="h-4 w-4" /> Powered by Sarvagya · Agentic RAG over NCERT
             </span>
           </div>
 
-          <h1 className="text-5xl md:text-7xl mb-6 indic-rise indic-delay-1">
-            <span className="gradient-text-indic-soft">Digi Classroom</span>
+          <h1 className="text-5xl md:text-7xl mb-5 indic-rise indic-delay-1">
+            The AI tutor that
             <br />
-            <span className="text-3xl md:text-5xl">Next-Gen Learning Platform</span>
+            <span className="gradient-text-indic-soft">shows its sources.</span>
           </h1>
 
           <p
-            className="text-xl md:text-2xl mb-8 font-semibold tracking-wide indic-rise indic-delay-2"
+            className="font-deva text-2xl md:text-3xl mb-7 tracking-wide indic-rise indic-delay-2"
             style={{ color: 'var(--accent-strong)' }}
           >
-            AI-Powered · Adaptive · Comprehensive
+            ज्ञान · अभ्यास · उत्कर्ष
           </p>
 
-          <p className="indic-muted text-lg md:text-xl mb-12 max-w-4xl mx-auto leading-relaxed indic-rise indic-delay-2">
-            Experience revolutionary education with our <strong>Agentic RAG AI system</strong>,
-            advanced <em>e-Learning Practest engine</em>, and comprehensive CBSE curriculum coverage.
-            Transform your learning journey with intelligent tutoring and adaptive assessments.
+          <p className="indic-muted text-lg md:text-xl mb-12 max-w-3xl mx-auto leading-relaxed indic-rise indic-delay-2">
+            <strong>NCERT-grounded answers</strong>, Bloom-tagged and citation-backed.
+            Adaptive Practest, offline-ready study tools — built for CBSE &amp; ICSE learners,
+            Classes 6–12.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center indic-rise indic-delay-3">
             <button onClick={() => router.push('/sign-up')} className="indic-cta indic-cta--primary w-full sm:w-auto text-lg">
-              Start Learning Now
+              Start learning free
               <Rocket className="h-5 w-5" />
             </button>
             <button
@@ -188,16 +189,16 @@ export const EnhancedLandingPage: React.FC = () => {
               className="indic-cta indic-cta--ghost w-full sm:w-auto text-lg"
             >
               <Play className="w-5 h-5" />
-              Explore Features
+              See it in action
             </button>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 max-w-4xl mx-auto">
             {[
-              { label: 'AI Models', value: '5+', icon: Brain },
-              { label: 'NCERT-Cited', value: '100%', icon: Database },
-              { label: 'Classes 6–12', value: 'CBSE·ICSE', icon: Target },
-              { label: 'Productivity Tools', value: '7', icon: TrendingUp }
+              { label: 'AI models', value: '5+', icon: Brain },
+              { label: 'NCERT-cited', value: '100%', icon: Database },
+              { label: 'CBSE · ICSE', value: '6–12', icon: Target },
+              { label: 'study tools', value: '7', icon: TrendingUp }
             ].map((stat, index) => (
               <div key={index} className="indic-tile text-center p-4">
                 <span className="indic-icon-plinth w-11 h-11 mx-auto mb-2">
@@ -215,6 +216,26 @@ export const EnhancedLandingPage: React.FC = () => {
 
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 indic-float">
           <ChevronDown className="w-7 h-7" style={{ color: 'rgb(var(--accent-strong-rgb) / 0.6)' }} />
+        </div>
+      </section>
+
+      {/* ── Trust strip ── */}
+      <section className="indic-section py-6" style={{ borderTop: '1px solid var(--line, rgb(184 134 11 / 0.18))', borderBottom: '1px solid rgb(184 134 11 / 0.18)' }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+            {[
+              { icon: BadgeCheck, label: 'NCERT-grounded' },
+              { icon: Quote, label: 'Verifiable citations' },
+              { icon: GraduationCap, label: 'CBSE & ICSE' },
+              { icon: Layers, label: 'Bloom-tagged' },
+              { icon: WifiOff, label: 'Offline-ready' },
+            ].map((item) => (
+              <span key={item.label} className="indic-muted inline-flex items-center gap-2 text-sm font-semibold">
+                <item.icon className="h-4 w-4" style={{ color: 'var(--accent-strong)' }} />
+                {item.label}
+              </span>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -254,6 +275,42 @@ export const EnhancedLandingPage: React.FC = () => {
 
       {/* AI Tutor (Sarvagya RAG) + Practest deep-dive */}
       <AiTutorDeepDive />
+
+      {/* ── How it works ── */}
+      <section className="indic-section py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <span className="indic-eyebrow mb-6">
+              <Route className="w-4 h-4" /> How it works
+            </span>
+            <h2 className="text-4xl md:text-5xl mt-6">
+              From doubt to mastery in <span className="gradient-text-indic-soft">three steps.</span>
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              { n: '01', icon: MessageSquare, title: 'Ask anything', desc: 'Type a doubt in Hindi or English from any NCERT chapter, Classes 6–12.' },
+              { n: '02', icon: BookOpen, title: 'Learn with proof', desc: 'Every answer cites the exact textbook page and tags its Bloom’s level.' },
+              { n: '03', icon: BarChart3, title: 'Practise adaptively', desc: 'Practest tunes difficulty to you and tracks mastery until it sticks.' },
+            ].map((step) => (
+              <div key={step.n} className="indic-tile p-8">
+                <div className="indic-tile__motif indic-motif-kolam" />
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between mb-5">
+                    <span className="indic-icon-plinth w-14 h-14">
+                      <step.icon className="h-6 w-6" />
+                    </span>
+                    <span className="indic-stat__value text-5xl opacity-25">{step.n}</span>
+                  </div>
+                  <h3 className="text-xl mb-3">{step.title}</h3>
+                  <p className="indic-muted leading-relaxed">{step.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* The Productivity Suite — real branded student tools */}
       <ProductivitySuite />
@@ -341,7 +398,7 @@ export const EnhancedLandingPage: React.FC = () => {
               <ArrowRight className="h-5 w-5" />
             </a>
             <p className="indic-muted mt-4 text-sm">
-              Compare all features and find the perfect plan for your needs
+              7-day money-back on any paid plan · no-cost EMI available · cancel anytime.
             </p>
           </div>
         </div>
@@ -506,18 +563,67 @@ export const EnhancedLandingPage: React.FC = () => {
         </div>
       </section>
 
+      {/* ── Vidyaverse ecosystem trio ── */}
+      <section className="indic-section--warm py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <span className="indic-eyebrow mb-6">
+              <Globe className="w-4 h-4" /> The Vidyaverse ecosystem
+            </span>
+            <h2 className="text-4xl md:text-5xl mt-6 mb-6">
+              One login. <span className="gradient-text-indic-soft">Three platforms.</span>
+            </h2>
+            <p className="indic-muted text-xl max-w-3xl mx-auto">
+              Digi Classroom is part of the Vidyaverse trio — the tutor, the campus OS, and the
+              digital library, all connected.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              { icon: Bot, name: 'Digi Classroom', kind: 'AI TUTOR', desc: 'NCERT-grounded tutoring & adaptive practice for Classes 6–12.', here: true },
+              { icon: GraduationCap, name: 'Vidyaverse', kind: 'CAMPUS OS', desc: 'The institution operating system — admissions to ID cards.', here: false },
+              { icon: Library, name: 'PDLMS', kind: 'DIGITAL LIBRARY', desc: 'Multi-tenant digital library of learning resources.', here: false },
+            ].map((app) => (
+              <div
+                key={app.name}
+                className="indic-tile p-8"
+                style={app.here ? { borderColor: 'rgb(var(--accent-primary-rgb) / 0.65)', borderWidth: 2 } : undefined}
+              >
+                {app.here && (
+                  <div className="absolute top-4 right-4 z-10">
+                    <span className="inline-block px-3 py-1 text-[11px] font-bold text-white rounded-full" style={{ background: 'var(--accent-strong)' }}>
+                      YOU’RE HERE
+                    </span>
+                  </div>
+                )}
+                <div className="relative z-10">
+                  <span className="indic-icon-plinth w-14 h-14 mb-5">
+                    <app.icon className="h-6 w-6" />
+                  </span>
+                  <div className="indic-eyebrow mb-3">{app.kind}</div>
+                  <h3 className="text-2xl mt-3 mb-2">{app.name}</h3>
+                  <p className="indic-muted leading-relaxed">{app.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── Newsletter ── */}
       <section className="indic-section--deep py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h2 className="text-4xl md:text-5xl mb-6">
-              Stay Updated with Digi Classroom
+              Start learning the way you think.
             </h2>
             <p className="indic-muted text-xl mb-12 max-w-3xl mx-auto">
-              Get the latest updates on new features, educational insights, and learning tips delivered to your inbox
+              Join the founding cohort shaping the future of CBSE &amp; ICSE study. Get updates on new
+              features and launch access.
             </p>
 
-            <form onSubmit={handleNewsletterSubmit} className="max-w-md mx-auto">
+            <form onSubmit={handleNewsletterSubmit} className="max-w-xl mx-auto">
               <div className="flex flex-col sm:flex-row gap-4">
                 <input
                   type="email"
@@ -538,7 +644,15 @@ export const EnhancedLandingPage: React.FC = () => {
                   style={{ background: 'var(--gold)', color: 'var(--night-ink)' }}
                 >
                   <Send className="h-5 w-5" />
-                  Subscribe
+                  Notify me
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push('/sign-up')}
+                  className="indic-cta indic-cta--primary px-8"
+                >
+                  <Rocket className="h-5 w-5" />
+                  Start free
                 </button>
               </div>
             </form>

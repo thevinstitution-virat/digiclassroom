@@ -1,6 +1,6 @@
 'use client'
 
-import { Bot, Quote, Zap, Flame, Trophy } from 'lucide-react'
+import { Bot, Quote, Zap, Flame, Trophy, BadgeCheck, Layers } from 'lucide-react'
 
 /**
  * Hero product mockup — a CSS-composed app window (AI tutor answer + a
@@ -56,6 +56,12 @@ export function HeroProductMockup() {
                 <Bot className="h-4 w-4" />
               </span>
               <span className="text-sm font-bold" style={{ color: 'var(--night-ink)' }}>Digi Tutor</span>
+              <span
+                className="ml-auto inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style={{ background: 'rgb(14 159 110 / 0.12)', color: 'var(--teal-light)' }}
+              >
+                <BadgeCheck className="h-3 w-3" /> grounded in NCERT
+              </span>
             </div>
             <div
               className="ml-auto w-fit max-w-[88%] text-[13px] p-2.5 rounded-2xl rounded-tr-sm shadow-sm"
@@ -80,6 +86,12 @@ export function HeroProductMockup() {
                 >
                   <Quote className="h-2.5 w-2.5" /> NCERT Sci 9 · p.96
                 </span>
+                <span
+                  className="ml-1.5 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded"
+                  style={{ background: 'rgb(var(--peacock-teal-rgb) / 0.1)', color: 'var(--peacock-teal)' }}
+                >
+                  <Layers className="h-2.5 w-2.5" /> Bloom: Understand
+                </span>
               </div>
             </div>
           </div>
@@ -99,7 +111,7 @@ export function HeroProductMockup() {
               className="rounded-xl p-3 shadow-sm"
               style={{ background: 'var(--parchment)', border: '1px solid rgb(var(--temple-stone-rgb) / 0.2)' }}
             >
-              <div className="text-[11px] mb-1" style={{ color: 'var(--bark)' }}>Q · Capital of photosynthesis?</div>
+              <div className="text-[11px] mb-1" style={{ color: 'var(--bark)' }}>Q · Site of photosynthesis?</div>
               <div className="text-sm font-bold" style={{ color: 'var(--night-ink)' }}>Chloroplast</div>
             </div>
             <div
