@@ -100,7 +100,7 @@ function QuizTab() {
           <Trophy className="h-10 w-10 text-white" />
         </div>
         <h2 className="text-3xl font-bold mb-4">
-          <span className="bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-[#FF6B35] via-[#F5A623] to-[#FFD700] bg-clip-text text-transparent">
             Choose Quiz Category
           </span>
         </h2>
@@ -110,7 +110,7 @@ function QuizTab() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
           <Button
             onClick={() => handleCategorySelect({ category: 'general', questionCount: 10 })}
-            className="p-6 h-auto bg-gradient-to-r from-orange-500 to-blue-600 hover:from-orange-600 hover:to-blue-700 text-white rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center"
+            className="p-6 h-auto bg-gradient-to-r from-[#C0392B] to-[#FF6B35] hover:from-[#A93226] hover:to-[#E8551C] text-white rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center"
           >
             <div className="text-center">
               <div className="text-lg font-bold">General Vocabulary</div>
@@ -138,7 +138,7 @@ function QuizTab() {
           <Target className="h-10 w-10 text-white" />
         </div>
         <h2 className="text-3xl font-bold mb-4">
-          <span className="bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-[#FF6B35] via-[#F5A623] to-[#FFD700] bg-clip-text text-transparent">
             Quiz in Progress
           </span>
         </h2>
@@ -163,7 +163,7 @@ function QuizTab() {
             <Trophy className="h-10 w-10 text-white" />
           </div>
           <h2 className="text-3xl font-bold mb-3">
-            <span className="bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-[#FF6B35] via-[#F5A623] to-[#FFD700] bg-clip-text text-transparent">
               🎉 Quiz Completed!
             </span>
           </h2>
@@ -224,7 +224,7 @@ function QuizTab() {
           </Button>
           <Button
             onClick={() => setQuizState('category')}
-            className="px-6 py-3 h-12 bg-gradient-to-r from-orange-500 to-blue-600 hover:from-orange-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center"
+            className="px-6 py-3 h-12 bg-gradient-to-r from-[#C0392B] to-[#FF6B35] hover:from-[#A93226] hover:to-[#E8551C] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center"
           >
             <GraduationCap className="h-5 w-5 mr-2" />
             <span>Choose New Category</span>
@@ -236,7 +236,7 @@ function QuizTab() {
             <Crown className="h-8 w-8 text-white" />
           </div>
           <h3 className="text-xl font-bold mb-3">
-            <span className="bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-[#FF6B35] via-[#F5A623] to-[#FFD700] bg-clip-text text-transparent">
               🌟 Great Job! Keep Learning!
             </span>
           </h3>
@@ -255,7 +255,7 @@ function QuizTab() {
           <BookOpen className="h-10 w-10 text-white" />
         </div>
         <h2 className="text-3xl font-bold mb-4">
-          <span className="bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-[#FF6B35] via-[#F5A623] to-[#FFD700] bg-clip-text text-transparent">
             Quiz Review
           </span>
         </h2>
@@ -264,7 +264,7 @@ function QuizTab() {
         </p>
         <Button
           onClick={handleCloseReview}
-          className="px-8 py-3 h-12 bg-gradient-to-r from-orange-500 to-blue-600 hover:from-orange-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center"
+          className="px-8 py-3 h-12 bg-gradient-to-r from-[#C0392B] to-[#FF6B35] hover:from-[#A93226] hover:to-[#E8551C] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center"
         >
           <span>Back to Results</span>
         </Button>
@@ -777,7 +777,7 @@ export default function DictionaryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50/30 via-blue-50/40 to-indigo-100/50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900">
+    <div className="dcs">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* Enhanced Header */}
         <div className="mb-12">
@@ -785,7 +785,7 @@ export default function DictionaryPage() {
             <div className="flex flex-col items-center space-y-3 mb-6">
               <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-orange-500/10 to-blue-500/10 backdrop-blur-sm border border-orange-200/30 rounded-2xl px-6 py-3">
                 <Sparkles className="h-5 w-5 text-orange-500" />
-                <span className="text-sm font-medium bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+                <span className="text-sm font-medium bg-gradient-to-r from-[#FF6B35] via-[#F5A623] to-[#FFD700] bg-clip-text text-transparent">
                   AI-Powered Dictionary & Translation
                 </span>
               </div>
@@ -807,7 +807,7 @@ export default function DictionaryPage() {
             </div>
             
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              <span className="bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent flex items-center justify-center gap-4">
+              <span className="bg-gradient-to-r from-[#FF6B35] via-[#F5A623] to-[#FFD700] bg-clip-text text-transparent flex items-center justify-center gap-4">
                 <BookOpen className="h-12 w-12 text-orange-500" />
                 Shabdakosh Dictionary
               </span>
@@ -875,11 +875,11 @@ export default function DictionaryPage() {
             {/* Enhanced Search Box */}
             <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-8 shadow-xl border border-white/20 dark:border-gray-700/20">
               <div className="text-center mb-8">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-orange-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
+                <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-[#C0392B] to-[#FF6B35] rounded-2xl flex items-center justify-center shadow-lg">
                   <Search className="h-8 w-8 text-white" />
                 </div>
                 <h2 className="text-2xl md:text-3xl font-bold mb-3">
-                  <span className="bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+                  <span className="bg-gradient-to-r from-[#FF6B35] via-[#F5A623] to-[#FFD700] bg-clip-text text-transparent">
                     Word Treasury Search
                   </span>
                 </h2>
@@ -903,7 +903,7 @@ export default function DictionaryPage() {
                   <Button
                     onClick={() => handleSearch(searchQuery)}
                     disabled={isSearching || !searchQuery.trim()}
-                    className="h-14 px-8 bg-gradient-to-r from-orange-500 to-blue-600 hover:from-orange-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center"
+                    className="h-14 px-8 bg-gradient-to-r from-[#C0392B] to-[#FF6B35] hover:from-[#A93226] hover:to-[#E8551C] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center"
                   >
                     {isSearching ? (
                       <>
@@ -975,7 +975,7 @@ export default function DictionaryPage() {
                     <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
                       <Search className="h-5 w-5 text-white" />
                     </div>
-                    <h3 className="text-xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+                    <h3 className="text-xl font-bold bg-gradient-to-r from-[#FF6B35] via-[#F5A623] to-[#FFD700] bg-clip-text text-transparent">
                       Search Results for "{searchQuery}"
                     </h3>
                   </div>
@@ -999,7 +999,7 @@ export default function DictionaryPage() {
                               </Badge>
                             )}
                           </div>
-                          <p className="text-lg font-semibold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent mb-2">
+                          <p className="text-lg font-semibold bg-gradient-to-r from-[#FF6B35] via-[#F5A623] to-[#FFD700] bg-clip-text text-transparent mb-2">
                             {word.hindiTranslation}
                           </p>
                           <p className="text-gray-600 dark:text-gray-400 mb-2">{word.englishDefinition}</p>
@@ -1071,7 +1071,7 @@ export default function DictionaryPage() {
                     <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-2xl flex items-center justify-center">
                       <BookOpen className="h-6 w-6 text-white" />
                     </div>
-                    <h3 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-[#FF6B35] via-[#F5A623] to-[#FFD700] bg-clip-text text-transparent">
                       Enhanced Word Information
                     </h3>
                   </div>
@@ -1517,7 +1517,7 @@ export default function DictionaryPage() {
                     <Globe className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-[#FF6B35] via-[#F5A623] to-[#FFD700] bg-clip-text text-transparent">
                       Word of the Day
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400">
@@ -1529,13 +1529,13 @@ export default function DictionaryPage() {
 
               <div className="space-y-8">
                 <div className="text-center space-y-4 p-8 bg-gradient-to-r from-orange-50/50 to-blue-50/50 dark:from-orange-900/20 dark:to-blue-900/20 rounded-2xl border border-orange-200/30">
-                  <div className="w-16 h-16 mx-auto bg-gradient-to-r from-orange-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg mb-4">
+                  <div className="w-16 h-16 mx-auto bg-gradient-to-r from-[#C0392B] to-[#FF6B35] rounded-2xl flex items-center justify-center shadow-lg mb-4">
                     <Crown className="h-8 w-8 text-white" />
                   </div>
                   <h2 className="text-4xl font-bold text-gray-900 dark:text-gray-100">
                     {mockWordOfDay.word}
                   </h2>
-                  <p className="text-2xl font-semibold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+                  <p className="text-2xl font-semibold bg-gradient-to-r from-[#FF6B35] via-[#F5A623] to-[#FFD700] bg-clip-text text-transparent">
                     {mockWordOfDay.hindiTranslation}
                   </p>
                   <p className="text-lg text-gray-600 dark:text-gray-400">
@@ -1562,7 +1562,7 @@ export default function DictionaryPage() {
                     </h4>
                     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 p-4 rounded-xl border border-blue-200/30">
                       <p className="text-gray-700 dark:text-gray-300 mb-2">{mockWordOfDay.examples[0].english}</p>
-                      <p className="text-lg font-semibold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+                      <p className="text-lg font-semibold bg-gradient-to-r from-[#FF6B35] via-[#F5A623] to-[#FFD700] bg-clip-text text-transparent">
                         {mockWordOfDay.examples[0].hindi}
                       </p>
                     </div>
@@ -1585,7 +1585,7 @@ export default function DictionaryPage() {
                       <span>Pronunciation</span>
                     </Button>
                     <Button
-                      className="px-6 py-3 h-12 bg-gradient-to-r from-orange-500 to-blue-600 hover:from-orange-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center"
+                      className="px-6 py-3 h-12 bg-gradient-to-r from-[#C0392B] to-[#FF6B35] hover:from-[#A93226] hover:to-[#E8551C] text-white font-semibold rounded-xl shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center"
                     >
                       <Heart className="h-5 w-5 mr-2" />
                       <span>Add to Learning</span>
@@ -1608,7 +1608,7 @@ export default function DictionaryPage() {
                     <BookOpen className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+                    <h3 className="text-2xl font-bold bg-gradient-to-r from-[#FF6B35] via-[#F5A623] to-[#FFD700] bg-clip-text text-transparent">
                       Recently Learned Words
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400">
@@ -1633,7 +1633,7 @@ export default function DictionaryPage() {
                               {word.partOfSpeech}
                             </Badge>
                           </div>
-                          <p className="text-lg font-semibold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent mb-1">
+                          <p className="text-lg font-semibold bg-gradient-to-r from-[#FF6B35] via-[#F5A623] to-[#FFD700] bg-clip-text text-transparent mb-1">
                             {word.hindiTranslation}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center">
