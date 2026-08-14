@@ -1,0 +1,202 @@
+/* ============================================================
+   DASHBOARDS — faithful port of design_handoff_digiclassroom_ui/
+   designs/DigiClassroom Dashboards.dc.html
+
+   The mock's stylesheet, scoped under `.dcd` so its generic class names
+   (.card/.btn/.navitem/.pill/.plinth/.eyebrow/.tag/.sech…) and its surface
+   tokens (--bg/--panel/--panel-2/--sidebar/--ink/--muted/--line/--track…)
+   never leak into the rest of the app. The mock's `[data-theme="dark"]` is
+   mapped to this app's next-themes `.dark` class. Pigment tokens
+   (--saffron/--gold/--peacock-teal/--accent-* …) and the font stacks come from
+   the global indic-* layer; only the surface/semantic tokens are (re)defined
+   here (plus --emerald, which the global layer does not carry). Material
+   Symbols are replaced with lucide in the markup (handoff #3), so the mock's
+   `.msi` font rules are intentionally dropped — icon sizing lives on the JSX.
+   ============================================================ */
+
+.dcd {
+  --radius: 18px;
+  /* light theme (default) */
+  --bg: #FBF6EC;
+  --panel: #FFFDF9;
+  --panel-2: #FFF6EA;
+  --sidebar: #FFFCF7;
+  --ink: #241704;
+  --muted: #6E5D45;
+  --line: rgb(184 134 11 / 0.18);
+  --line-soft: rgb(184 134 11 / 0.10);
+  --accent-text: #A06504;
+  --chip-bg: #FFF4DC;
+  --track: rgb(184 134 11 / 0.16);
+  --shadow: 0 18px 40px -28px rgba(120, 74, 10, .5);
+  --shadow-sm: 0 8px 20px -14px rgba(120, 74, 10, .5);
+  --emerald: #0E9F6E;
+
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.dark .dcd {
+  --bg: #0A0F1E;
+  --panel: #121A31;
+  --panel-2: #0E1426;
+  --sidebar: #0C1224;
+  --ink: #FFF8F0;
+  --muted: rgb(255 248 240 / 0.64);
+  --line: rgb(255 215 0 / 0.14);
+  --line-soft: rgb(255 215 0 / 0.08);
+  --accent-text: var(--accent-primary-dark);
+  --chip-bg: rgb(255 215 0 / 0.09);
+  --track: rgb(255 255 255 / 0.10);
+  --shadow: 0 22px 50px -28px rgba(0, 0, 0, .7);
+  --shadow-sm: 0 10px 26px -18px rgba(0, 0, 0, .7);
+}
+
+.dcd a { color: var(--accent-text); text-decoration: none; }
+.dcd a:hover { color: var(--lotus-pink); }
+.dcd ::selection { background: rgb(var(--accent-primary-rgb) / 0.26); }
+.dcd ::-webkit-scrollbar { width: 9px; height: 9px; }
+.dcd ::-webkit-scrollbar-thumb { background: rgb(184 134 11 / .32); border-radius: 99px; }
+
+/* All dashboard headings ride the body face; the global h1/h2/h3 rule
+   (indic-design-system.css) puts them in the Yatra One display face, which the
+   mock uses only for `.deva` flourishes (the wordmark). */
+.dcd h1, .dcd h2, .dcd h3, .dcd h4 { font-family: var(--font-body); }
+.dcd .deva { font-family: var(--font-deva); }
+
+.dcd .grad {
+  background: linear-gradient(110deg, var(--saffron), var(--turmeric) 52%, var(--gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.dcd .plinth {
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 14px; color: #fff;
+  box-shadow: 0 10px 22px -10px rgba(255, 107, 53, .6);
+}
+
+.dcd .card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow-sm);
+  position: relative; overflow: hidden;
+  transition: transform .28s cubic-bezier(.2, .7, .2, 1), box-shadow .28s, border-color .28s;
+}
+.dcd .card.lift:hover {
+  transform: translateY(-5px);
+  border-color: rgb(var(--accent-primary-rgb) / 0.4);
+  box-shadow: var(--shadow);
+}
+
+.dcd .btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--font-body); font-weight: 700; font-size: 14.5px;
+  border-radius: 12px; padding: 11px 20px; cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform .18s, box-shadow .18s, background .18s, color .18s;
+}
+.dcd .btn-primary {
+  background: linear-gradient(135deg, var(--kumkum), var(--saffron)); color: #fff;
+  box-shadow: 0 12px 26px -12px rgba(192, 57, 43, .6);
+}
+.dcd .btn-primary:hover { transform: translateY(-2px); color: #fff; }
+.dcd .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.dcd .btn-ghost:hover {
+  background: var(--chip-bg); color: var(--accent-text);
+  border-color: rgb(var(--accent-primary-rgb) / 0.4);
+}
+
+.dcd .iconbtn {
+  width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--ink); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background .18s, color .18s;
+}
+.dcd .iconbtn:hover { background: var(--chip-bg); color: var(--accent-text); }
+
+.dcd .navitem {
+  display: flex; align-items: center; gap: 13px; padding: 11px 14px;
+  border-radius: 12px; color: var(--muted); font-weight: 600; font-size: 14.5px;
+  cursor: pointer; border: none; background: transparent; width: 100%;
+  text-align: left; font-family: var(--font-body);
+  transition: background .18s, color .18s;
+}
+.dcd .navitem:hover { background: var(--chip-bg); color: var(--accent-text); }
+.dcd .navitem.active {
+  background: linear-gradient(135deg, rgb(var(--accent-primary-rgb) / 0.16), rgb(var(--accent-primary-rgb) / 0.05));
+  color: var(--accent-text); box-shadow: inset 3px 0 0 var(--accent-primary);
+}
+
+.dcd .pill {
+  display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px;
+  border-radius: 999px; font-weight: 700; font-size: 13.5px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+  white-space: nowrap; transition: all .18s; font-family: var(--font-body);
+}
+.dcd .pill:hover { color: var(--accent-text); border-color: rgb(var(--accent-primary-rgb) / 0.4); }
+.dcd .pill.on {
+  background: linear-gradient(135deg, var(--kumkum), var(--saffron)); color: #fff;
+  border-color: transparent; box-shadow: 0 8px 18px -9px rgba(192, 57, 43, .6);
+}
+
+.dcd .eyebrow {
+  display: inline-flex; align-items: center; gap: 7px; padding: 6px 13px;
+  border-radius: 999px; background: var(--chip-bg); color: var(--accent-text);
+  font-weight: 700; font-size: 12px; letter-spacing: .03em;
+  border: 1px solid rgb(var(--accent-primary-rgb) / 0.28);
+}
+.dcd .tag {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px;
+  border-radius: 999px; font-size: 11.5px; font-weight: 700;
+}
+.dcd .sech {
+  font-size: 20px; font-weight: 800; color: var(--ink);
+  letter-spacing: -.01em; margin: 0;
+}
+.dcd .dcd-quicklink { cursor: pointer; transition: background .18s; }
+.dcd .dcd-quicklink:hover { background: var(--panel-2); }
+
+@keyframes dcd-spin-slow { to { transform: rotate(360deg); } }
+@keyframes dcd-pulse { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
+.dcd .spin { animation: dcd-spin-slow 90s linear infinite; transform-origin: center; }
+.dcd .dotpulse { animation: dcd-pulse 2s ease-in-out infinite; }
+
+/* shell */
+.dcd .shell {
+  display: grid; grid-template-columns: 250px 1fr;
+  min-height: 100vh; background: var(--bg);
+}
+.dcd .sidebar {
+  background: var(--sidebar); border-right: 1px solid var(--line);
+  display: flex; flex-direction: column; position: sticky; top: 0;
+  height: 100vh; overflow-y: auto; z-index: 40;
+}
+.dcd .backdrop { display: none; }
+.dcd .hamburger { display: none; }
+.dcd .bottomnav { display: none; }
+
+@media (max-width: 1024px) {
+  .dcd .shell { grid-template-columns: 1fr; }
+  .dcd .sidebar {
+    position: fixed; top: 0; left: 0; width: 280px;
+    transform: translateX(-100%);
+    transition: transform .3s cubic-bezier(.2, .7, .2, 1);
+    box-shadow: 0 0 60px rgba(0, 0, 0, .3);
+  }
+  .dcd .sidebar.open { transform: translateX(0); }
+  .dcd .backdrop.show {
+    display: block; position: fixed; inset: 0;
+    background: rgba(10, 15, 30, .5); z-index: 35; backdrop-filter: blur(2px);
+  }
+  .dcd .hamburger { display: inline-flex; }
+  .dcd .bottomnav { display: flex; }
+  .dcd main { padding-bottom: 92px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dcd .spin, .dcd .dotpulse { animation: none !important; }
+}
