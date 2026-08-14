@@ -18,6 +18,7 @@ import {
   Receipt,
   Award,
   TrendingUp,
+  LineChart,
   CreditCard
 } from 'lucide-react'
 
@@ -39,6 +40,8 @@ export default function UserSidebar({ user }: UserSidebarProps) {
   const navigation = [
     createNavigationItem('Dashboard', '/dashboard/user', Home, {
       description: 'Overview and activities',
+      primary: true,
+      shortName: 'Home',
     }),
 
     // Learn
@@ -56,6 +59,8 @@ export default function UserSidebar({ user }: UserSidebarProps) {
       description: 'AI-powered assessment engine',
       featured: true,
       section: 'Learn',
+      primary: true,
+      shortName: 'Practest',
     }),
     createNavigationItem('Sanchika', '/dashboard/user/sanchika', FolderTree, {
       description: 'Smart Workspace',
@@ -68,6 +73,8 @@ export default function UserSidebar({ user }: UserSidebarProps) {
       description: 'Chat with your AI teacher',
       featured: true,
       section: 'AI & Research',
+      primary: true,
+      shortName: 'Tutor',
     }),
     createNavigationItem('Sarvagya', '/dashboard/sarvagya', Search, {
       description: 'AI Research Assistant',
@@ -93,6 +100,13 @@ export default function UserSidebar({ user }: UserSidebarProps) {
     }),
 
     // Progress
+    createNavigationItem('Progress', '/dashboard/user/progress', LineChart, {
+      description: 'Mastery, streaks and achievements',
+      featured: true,
+      section: 'Progress',
+      primary: true,
+      shortName: 'Progress',
+    }),
     createNavigationItem('Certificates', '/dashboard/student/certificates', Award, {
       description: 'Course completion certificates',
       featured: true,

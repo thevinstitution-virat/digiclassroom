@@ -1,267 +1,208 @@
 'use client'
 
+/**
+ * Learner home — a faithful port of the "Student" dashboard in
+ * design_handoff_digiclassroom_ui/designs/DigiClassroom Dashboards.dc.html.
+ * Renders inside DashboardLayout's `.dcd` shell, so the scoped classes
+ * (.card/.plinth/.eyebrow/.grad/.btn…) resolve. Data stays real: the greeting
+ * comes from useBetterAuthUser, every tool card routes to its real page, and the
+ * live StudentNotices/Homework widgets are kept. The stat/activity/progress
+ * figures carry over verbatim from the previous shipped version of this page
+ * (they were already static placeholders there — no new backend was claimed).
+ */
+
 import { useRouter } from 'next/navigation'
 import {
-  MessageSquare,
-  BookOpen,
-  Brain,
-  TrendingUp,
-  Heart,
-  ArrowRight,
-  Clock,
-  Award,
-  BarChart3,
-  CheckCircle2,
+  Sparkles, Bot, ArrowRight, Flame, BookOpen, ClipboardList, Trophy, Zap,
+  Languages, Heart, CheckCircle2, Clock, Medal, Timer, LineChart, Activity,
   ChevronRight,
-  Sparkles,
-  Activity,
-  BookMarked,
-  Trophy,
-  Timer,
-  Flame,
 } from 'lucide-react'
-import { LoadingButton } from '@/components/ui/loading-button'
-import { StatCard } from '@/components/ui/stat-card'
 import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 import { StudentNoticesWidget, StudentHomeworkWidget } from './ClassroomWidgets'
-import { MandalaSVG } from '@/design/indic/motifs/mandala-svgs'
-
-type Accent = 'brand' | 'orange' | 'blue' | 'indigo' | 'violet' | 'green' | 'red' | 'cyan'
-
-// Three curated, token-backed gradients (same --accent-primary/--accent-strong
-// family as the sidebar) standing in for the old one-off-per-card rainbow.
-// Cycled across cards instead of every tile getting its own arbitrary hue.
-const CHIP_PRIMARY = 'from-[var(--accent-primary)] to-[var(--accent-strong)]'
-const CHIP_COOL = 'from-[var(--peacock-teal)] to-[var(--indigo-deep)]'
-const CHIP_WARM = 'from-[var(--gold)] to-[var(--accent-strong)]'
+import { GP, GC, GW, GT, GV } from '@/components/dashboard/gradients'
 
 export default function UserDashboard() {
   const { user } = useBetterAuthUser()
   const router = useRouter()
-
-  const quickActions: {
-    title: string
-    description: string
-    icon: typeof MessageSquare
-    href: string
-    chip: string
-    highlight: string
-  }[] = [
-    { title: 'AI Tutor Chat', description: 'Get instant, step-by-step help with any topic', icon: MessageSquare, href: '/dashboard/user/ai-tutor', chip: CHIP_PRIMARY, highlight: 'AI Powered' },
-    { title: 'Study Materials', description: 'Access NCERT-aligned resources and notes', icon: BookOpen, href: '/dashboard/user/materials', chip: CHIP_COOL, highlight: 'Comprehensive' },
-    { title: 'Practest Engine', description: 'Take adaptive, exam-style assessments', icon: Brain, href: '/dashboard/user/practest', chip: CHIP_WARM, highlight: 'Smart Testing' },
-    { title: 'Productivity Tools', description: 'Plan, focus and study more efficiently', icon: TrendingUp, href: '/dashboard/user/productivity', chip: CHIP_PRIMARY, highlight: 'Efficiency' },
-    { title: 'Shabdakosh', description: 'English–Hindi dictionary with deep references', icon: BookMarked, href: '/dashboard/user/dictionary', chip: CHIP_COOL, highlight: 'Reference' },
-    { title: 'Mitram Assessment', description: 'Personalised psychological & aptitude insight', icon: Heart, href: '/dashboard/user/mitram', chip: CHIP_WARM, highlight: 'Personalised' },
-  ]
-
-  const userStats: { label: string; value: string; icon: typeof Flame; accent: Accent; description: string }[] = [
-    { label: 'Study Streak', value: '12 days', icon: Flame, accent: 'brand', description: 'Keep it going!' },
-    { label: 'Courses Active', value: '5', icon: BookOpen, accent: 'blue', description: 'Across 3 subjects' },
-    { label: 'AI Sessions', value: '47', icon: Brain, accent: 'brand', description: 'This month' },
-    { label: 'Avg Score', value: '89%', icon: Trophy, accent: 'green', description: '+4% vs last month' },
-  ]
-
-  const learningStats = [
-    { label: 'Completed', value: '24', icon: CheckCircle2, chip: CHIP_PRIMARY },
-    { label: 'In Progress', value: '8', icon: Clock, chip: CHIP_COOL },
-    { label: 'Achievements', value: '15', icon: Award, chip: CHIP_WARM },
-    { label: 'Study Hours', value: '127', icon: Timer, chip: CHIP_PRIMARY },
-  ]
-
-  const recentActivities = [
-    { title: 'Completed Math Chapter 5', description: 'Algebra and Functions', time: '2 hours ago', icon: CheckCircle2, chip: CHIP_PRIMARY, score: '92%', progress: '100%' },
-    { title: 'AI Tutor Session', description: 'Physics — Mechanics', time: '1 day ago', icon: MessageSquare, chip: CHIP_COOL, duration: '45 min' },
-    { title: 'Practest Assessment', description: 'Chemistry Quiz', time: '2 days ago', icon: Brain, chip: CHIP_WARM, score: '85%' },
-    { title: 'Study Material Review', description: 'Biology Notes', time: '3 days ago', icon: BookOpen, chip: CHIP_PRIMARY, progress: '75%' },
-  ]
-
   const firstName = user?.name?.split(' ')[0] || 'Student'
 
+  const stats = [
+    { icon: Flame, value: '12 days', label: 'Study streak', desc: 'Keep it going!', delta: 'Personal best', grad: GP },
+    { icon: BookOpen, value: '5', label: 'Courses active', desc: 'Across 3 subjects', delta: 'On track', grad: GC },
+    { icon: Bot, value: '47', label: 'AI sessions', desc: 'This month', delta: '+11', grad: GW },
+    { icon: Trophy, value: '89%', label: 'Avg score', desc: 'vs last month', delta: '+4%', grad: GT },
+  ]
+
+  const tools = [
+    { icon: Bot, tag: 'AI powered', title: 'AI Tutor Chat', desc: 'Instant, step-by-step help with any topic — citation-backed.', grad: GP, href: '/dashboard/user/ai-tutor' },
+    { icon: BookOpen, tag: 'Comprehensive', title: 'Study Materials', desc: 'NCERT-aligned resources, notes and summaries.', grad: GC, href: '/dashboard/user/materials' },
+    { icon: ClipboardList, tag: 'Smart testing', title: 'Practest Engine', desc: 'Adaptive, exam-style assessments that tune to you.', grad: GW, href: '/dashboard/user/practest' },
+    { icon: Zap, tag: 'Efficiency', title: 'Productivity Tools', desc: 'Plan, focus and study more efficiently.', grad: GT, href: '/dashboard/user/productivity' },
+    { icon: Languages, tag: 'Reference', title: 'Shabdakosh', desc: 'English–Hindi dictionary with deep references.', grad: GC, href: '/dashboard/user/dictionary' },
+    { icon: Heart, tag: 'Personalised', title: 'Mitram Assessment', desc: 'Psychological & aptitude insight, personalised.', grad: GV, href: '/dashboard/user/mitram' },
+  ]
+
+  const activity = [
+    { icon: CheckCircle2, title: 'Completed Math Chapter 5', desc: 'Algebra and Functions', time: '2h ago', meta: 'Score 92%', grad: GP },
+    { icon: Bot, title: 'AI Tutor session', desc: 'Physics — Mechanics', time: '1d ago', meta: '45 min', grad: GC },
+    { icon: ClipboardList, title: 'Practest assessment', desc: 'Chemistry Quiz', time: '2d ago', meta: 'Score 85%', grad: GW },
+    { icon: BookOpen, title: 'Study material review', desc: 'Biology Notes', time: '3d ago', meta: 'Progress 75%', grad: GT },
+  ]
+
+  const progress = [
+    { icon: CheckCircle2, label: 'Completed', value: '24' },
+    { icon: Clock, label: 'In progress', value: '8' },
+    { icon: Medal, label: 'Achievements', value: '15' },
+    { icon: Timer, label: 'Study hours', value: '127' },
+  ]
+
   return (
-    <div className="space-y-8">
-      {/* Hero / welcome banner */}
-      <section className="dc-animate-rise relative overflow-hidden rounded-3xl border border-border/60 bg-card/70 p-6 shadow-elev-3 backdrop-blur-xl sm:p-8">
-        <div className="pointer-events-none absolute -right-16 -top-20 h-64 w-64 rounded-full bg-[var(--peacock-teal)]/15 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-[var(--accent-primary)]/15 blur-3xl" />
-        {/* Same rotating-mandala watermark as PDLMS's dashboard hero and DGCL's own
-            auth pages — restrained, low-opacity, purely decorative. */}
-        <div className="pointer-events-none absolute -right-24 top-1/2 h-[26rem] w-[26rem] -translate-y-1/2 opacity-[0.08]">
-          <MandalaSVG className="h-full w-full" />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+      {/* Welcome hero */}
+      <section className="card" style={{ padding: 'clamp(22px,3vw,34px)' }}>
+        <div style={{ position: 'absolute', right: -90, top: -90, width: 340, height: 340, opacity: 0.09, pointerEvents: 'none' }}>
+          <svg viewBox="0 0 200 200" width="100%" className="spin" aria-hidden="true">
+            <circle cx="100" cy="100" r="92" fill="none" stroke="var(--accent-primary)" strokeWidth="1.5" strokeDasharray="3 7" />
+            <circle cx="100" cy="100" r="66" fill="none" stroke="var(--peacock-teal)" strokeWidth="1.5" />
+            <circle cx="100" cy="100" r="40" fill="none" stroke="var(--accent-primary)" strokeWidth="1.5" strokeDasharray="2 5" />
+            <circle cx="100" cy="100" r="14" fill="var(--gold)" />
+          </svg>
         </div>
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="max-w-2xl">
-            <span className="dc-eyebrow">
-              <Sparkles className="h-3.5 w-3.5" /> Your learning dashboard
-            </span>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-              Welcome back, <span className="dc-gradient-text">{firstName}</span>
-            </h1>
-            <p className="mt-2 text-base text-muted-foreground sm:text-lg">
+        <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', gap: 22, alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ maxWidth: 560 }}>
+            <span className="eyebrow"><Sparkles className="h-[15px] w-[15px]" /> Your learning dashboard</span>
+            <h2 style={{ margin: '16px 0 0', fontSize: 'clamp(26px,3.4vw,36px)', fontWeight: 800, letterSpacing: '-.02em', color: 'var(--ink)' }}>
+              Welcome back, <span className="grad">{firstName}</span>
+            </h2>
+            <p style={{ margin: '8px 0 0', color: 'var(--muted)', fontSize: 16, lineHeight: 1.6 }}>
               Ready to continue your journey? Your AI tutor and tools are set up and waiting.
             </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <LoadingButton variant="gradient" size="lg" onClick={() => router.push('/dashboard/user/ai-tutor')}>
-                <Brain className="h-5 w-5" /> Start AI Session
-              </LoadingButton>
-              <LoadingButton variant="outline" size="lg" onClick={() => router.push('/dashboard/user/materials')}>
-                Browse Materials <ArrowRight className="h-4 w-4" />
-              </LoadingButton>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 11, marginTop: 20 }}>
+              <button className="btn btn-primary" onClick={() => router.push('/dashboard/user/ai-tutor')}>
+                <Bot className="h-[19px] w-[19px]" /> Start AI session
+              </button>
+              <button className="btn btn-ghost" onClick={() => router.push('/dashboard/user/materials')}>
+                Browse materials <ArrowRight className="h-[19px] w-[19px]" />
+              </button>
             </div>
           </div>
-
-          {/* Streak highlight */}
-          <div className="flex shrink-0 items-center gap-4 rounded-2xl border border-border/60 bg-background/60 px-6 py-5 shadow-elev-1 backdrop-blur-sm">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-400 to-red-500 text-white shadow-[0_10px_24px_-8px_rgba(249,115,22,0.6)]">
-              <Flame className="h-7 w-7" />
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '18px 22px', borderRadius: 16, background: 'var(--panel-2)', border: '1px solid var(--line)' }}>
+            <span className="plinth" style={{ width: 54, height: 54, background: 'linear-gradient(135deg,var(--deep-saffron),var(--kumkum))' }}>
+              <Flame className="h-[28px] w-[28px]" />
+            </span>
             <div>
-              <p className="text-3xl font-bold tracking-tight text-foreground">12</p>
-              <p className="text-sm text-muted-foreground">day streak 🔥</p>
+              <div style={{ fontSize: 30, fontWeight: 800, lineHeight: 1, color: 'var(--ink)' }}>12</div>
+              <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 3 }}>day streak 🔥</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Stat tiles */}
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {userStats.map((s) => (
-          <StatCard key={s.label} icon={s.icon} title={s.label} value={s.value} accent={s.accent} description={s.description} />
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: 16 }}>
+        {stats.map((s) => (
+          <div key={s.label} className="card lift" style={{ padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span className="plinth" style={{ width: 44, height: 44, background: s.grad }}>
+                <s.icon className="h-[22px] w-[22px]" />
+              </span>
+              <span className="tag" style={{ background: 'var(--chip-bg)', color: 'var(--accent-text)' }}>{s.delta}</span>
+            </div>
+            <div style={{ fontSize: 28, fontWeight: 800, margin: '16px 0 2px', color: 'var(--ink)' }}>{s.value}</div>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--ink)' }}>{s.label}</div>
+            <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>{s.desc}</div>
+          </div>
         ))}
       </section>
 
-      {/* Quick actions */}
+      {/* Learning tools */}
       <section>
-        <div className="mb-5 flex items-end justify-between">
+        <div style={{ display: 'flex', alignItems: 'end', justifyContent: 'space-between', marginBottom: 14 }}>
           <div>
-            <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Your learning tools</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Everything you need, one click away</p>
+            <h3 className="sech">Your learning tools</h3>
+            <p style={{ margin: '3px 0 0', color: 'var(--muted)', fontSize: 14 }}>Everything you need, one click away</p>
           </div>
         </div>
-
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {quickActions.map((action) => (
-            <button
-              key={action.title}
-              onClick={() => router.push(action.href)}
-              className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card p-6 text-left shadow-elev-2 dc-hover-lift focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-            >
-              <div className={`pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-gradient-to-br ${action.chip} opacity-10 blur-2xl transition-opacity duration-300 group-hover:opacity-25`} />
-              <div className="relative">
-                <div className={`mb-5 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${action.chip} text-white shadow-lg transition-transform duration-300 group-hover:scale-105`}>
-                  <action.icon className="h-7 w-7" />
-                </div>
-                <span className={`mb-2 inline-block rounded-full bg-gradient-to-r ${action.chip} bg-clip-text text-xs font-semibold uppercase tracking-wide text-transparent`}>
-                  {action.highlight}
-                </span>
-                <h3 className="text-lg font-bold text-foreground">{action.title}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{action.description}</p>
-                <div className="mt-4 inline-flex items-center text-sm font-semibold text-primary">
-                  Access now
-                  <ChevronRight className="ml-1 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
-                </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(250px,1fr))', gap: 16 }}>
+          {tools.map((t) => (
+            <div key={t.title} className="card lift" style={{ padding: 22, cursor: 'pointer' }} onClick={() => router.push(t.href)}>
+              <span className="plinth" style={{ width: 50, height: 50, background: t.grad }}>
+                <t.icon className="h-[25px] w-[25px]" />
+              </span>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.06em', textTransform: 'uppercase', color: 'var(--accent-text)', margin: '16px 0 4px' }}>{t.tag}</div>
+              <h4 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: 'var(--ink)' }}>{t.title}</h4>
+              <p style={{ margin: '6px 0 0', color: 'var(--muted)', fontSize: 13.5, lineHeight: 1.55 }}>{t.desc}</p>
+              <div style={{ marginTop: 14, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13.5, fontWeight: 700, color: 'var(--accent-text)' }}>
+                Access now <ChevronRight className="h-[17px] w-[17px]" />
               </div>
-            </button>
+            </div>
           ))}
         </div>
       </section>
 
       {/* Activity + progress */}
-      <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Recent activities */}
-        <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-elev-2 lg:col-span-2">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${CHIP_PRIMARY} text-white shadow-md`}>
-                <Activity className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-foreground">Recent activity</h2>
-                <p className="text-sm text-muted-foreground">Your latest progress</p>
-              </div>
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 18 }}>
+        <div className="card" style={{ padding: 22, gridColumn: 'span 2', minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <span className="plinth" style={{ width: 42, height: 42, background: 'linear-gradient(135deg,var(--saffron),var(--turmeric))' }}>
+              <Activity className="h-[21px] w-[21px]" />
+            </span>
+            <div>
+              <h3 className="sech" style={{ fontSize: 18 }}>Recent activity</h3>
+              <p style={{ margin: '2px 0 0', color: 'var(--muted)', fontSize: 13 }}>Your latest progress</p>
             </div>
-            <LoadingButton variant="ghost" size="sm" onClick={() => router.push('/dashboard/user/profile')}>
-              Profile <ArrowRight className="h-4 w-4" />
-            </LoadingButton>
           </div>
-
-          <div className="space-y-3">
-            {recentActivities.map((activity) => (
-              <div
-                key={activity.title}
-                className="group flex items-start gap-4 rounded-xl border border-border/60 bg-background/50 p-4 transition-colors duration-200 hover:bg-accent/50"
-              >
-                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${activity.chip} text-white shadow-md`}>
-                  <activity.icon className="h-5 w-5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="truncate font-semibold text-foreground">{activity.title}</h3>
-                    <span className="shrink-0 text-xs text-muted-foreground">{activity.time}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {activity.map((a) => (
+              <div key={a.title} style={{ display: 'flex', alignItems: 'flex-start', gap: 13, padding: 13, borderRadius: 12, background: 'var(--panel-2)', border: '1px solid var(--line-soft)' }}>
+                <span className="plinth" style={{ width: 40, height: 40, flex: 'none', background: a.grad }}>
+                  <a.icon className="h-[20px] w-[20px]" />
+                </span>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                    <span style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--ink)' }}>{a.title}</span>
+                    <span style={{ fontSize: 12, color: 'var(--muted)', flex: 'none' }}>{a.time}</span>
                   </div>
-                  <p className="mt-0.5 text-sm text-muted-foreground">{activity.description}</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {activity.score && (
-                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">Score {activity.score}</span>
-                    )}
-                    {activity.progress && (
-                      <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700 dark:bg-blue-500/15 dark:text-blue-300">Progress {activity.progress}</span>
-                    )}
-                    {activity.duration && (
-                      <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-700 dark:bg-violet-500/15 dark:text-violet-300">{activity.duration}</span>
-                    )}
-                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 1 }}>{a.desc}</div>
+                  {a.meta && (
+                    <span className="tag" style={{ marginTop: 8, background: 'rgb(14 159 110 / 0.14)', color: 'var(--emerald)' }}>{a.meta}</span>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Right rail */}
-        <div className="space-y-6">
-          <div className="rounded-2xl border border-border/70 bg-card p-6 shadow-elev-2">
-            <div className="mb-5 flex items-center gap-3">
-              <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${CHIP_COOL} text-white shadow-md`}>
-                <BarChart3 className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-foreground">Learning progress</h2>
-                <p className="text-sm text-muted-foreground">Track your journey</p>
-              </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
+          <div className="card" style={{ padding: 22 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <span className="plinth" style={{ width: 42, height: 42, background: GC }}>
+                <LineChart className="h-[21px] w-[21px]" />
+              </span>
+              <h3 className="sech" style={{ fontSize: 18 }}>Learning progress</h3>
             </div>
-            <div className="space-y-2.5">
-              {learningStats.map((stat) => (
-                <div key={stat.label} className="flex items-center justify-between rounded-xl border border-border/50 bg-background/50 p-3.5 transition-colors hover:bg-accent/50">
-                  <div className="flex items-center gap-3">
-                    <div className={`flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br ${stat.chip} text-white shadow-sm`}>
-                      <stat.icon className="h-4 w-4" />
-                    </div>
-                    <span className="text-sm font-medium text-foreground">{stat.label}</span>
-                  </div>
-                  <span className="text-xl font-bold tabular-nums text-foreground">{stat.value}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+              {progress.map((p) => (
+                <div key={p.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 13px', borderRadius: 11, background: 'var(--panel-2)', border: '1px solid var(--line-soft)' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10, fontSize: 13.5, fontWeight: 600, color: 'var(--ink)' }}>
+                    <p.icon className="h-[18px] w-[18px]" style={{ color: 'var(--accent-text)' }} />{p.label}
+                  </span>
+                  <span style={{ fontSize: 18, fontWeight: 800, color: 'var(--ink)' }}>{p.value}</span>
                 </div>
               ))}
             </div>
           </div>
-
-          {/* CTA */}
-          <div className="relative overflow-hidden rounded-2xl bg-dc-grad-br p-6 text-white shadow-glow-brand">
-            <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/15 blur-2xl" />
-            <div className="relative">
-              <h3 className="text-xl font-bold">Ready to learn?</h3>
-              <p className="mt-1.5 text-sm text-white/85">Jump back in with your AI-powered tutor and keep the streak alive.</p>
-              <LoadingButton
-                variant="secondary"
-                size="lg"
-                onClick={() => router.push('/dashboard/user/ai-tutor')}
-                className="mt-5 w-full border-0 bg-white text-[var(--accent-strong)] hover:bg-white/90"
-              >
-                Start AI Session <Brain className="h-5 w-5" />
-              </LoadingButton>
-            </div>
+          <div className="card" style={{ padding: 22, color: '#fff', background: 'linear-gradient(135deg,var(--kumkum),var(--saffron))', border: 'none' }}>
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#fff' }}>Ready to learn?</h3>
+            <p style={{ margin: '6px 0 0', fontSize: 13.5, color: 'rgba(255,255,255,.9)', lineHeight: 1.5 }}>
+              Jump back in with your AI tutor and keep the streak alive.
+            </p>
+            <button className="btn" style={{ marginTop: 16, width: '100%', background: '#fff', color: 'var(--kumkum)' }} onClick={() => router.push('/dashboard/user/ai-tutor')}>
+              <Bot className="h-[19px] w-[19px]" /> Start AI session
+            </button>
           </div>
-          
-          {/* Dynamic Classroom Widgets */}
+
+          {/* Live classroom widgets — real notices & homework */}
           <StudentNoticesWidget />
           <StudentHomeworkWidget />
         </div>

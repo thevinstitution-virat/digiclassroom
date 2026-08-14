@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation'
 import { getOrgContextOrNull } from '@/lib/auth/get-org-context'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import TeacherSidebar from '@/components/teacher/TeacherSidebar'
+import { PLATFORM_VIEW_AS_ROLES } from '@/lib/dashboard/view-as'
 
 export default async function TeacherLayout({ children }: { children: React.ReactNode }) {
   const ctx = await getOrgContextOrNull()
@@ -22,5 +23,12 @@ export default async function TeacherLayout({ children }: { children: React.Reac
     redirect('/dashboard/user')
   }
 
-  return <DashboardLayout sidebar={<TeacherSidebar />}>{children}</DashboardLayout>
+  return (
+    <DashboardLayout
+      sidebar={<TeacherSidebar />}
+      viewAs={isPlatformStaff ? PLATFORM_VIEW_AS_ROLES : undefined}
+    >
+      {children}
+    </DashboardLayout>
+  )
 }

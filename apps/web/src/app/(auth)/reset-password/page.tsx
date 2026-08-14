@@ -4,12 +4,9 @@ import React, { useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { resetPassword } from '@/auth/client'
-import { Lock, Eye, EyeOff, AlertCircle, Loader2, CheckCircle } from 'lucide-react'
-// Shared Indic motifs, vendored from PDLMS — same lotus backdrop and card
-// treatment as sign-in/sign-up/forgot-password, so the whole auth corridor
-// feels continuous.
-import { AuthBackdrop, authCardClassName } from '@/design/indic/motifs/auth-backdrop'
-import { MandalaMark } from '@/design/indic/motifs/mandala-mark'
+import { Lock, Eye, EyeOff, AlertCircle, Loader2, CheckCircle2, Circle } from 'lucide-react'
+// App-local single-card auth shell (see AuthShell).
+import { AuthShell } from '@/components/auth/AuthShell'
 
 function ResetPasswordForm() {
     const router = useRouter()
@@ -26,7 +23,7 @@ function ResetPasswordForm() {
     const passwordRequirements = [
         { label: 'At least 8 characters', met: password.length >= 8 },
         { label: 'Contains a number', met: /\d/.test(password) },
-        { label: 'Contains uppercase letter', met: /[A-Z]/.test(password) },
+        { label: 'Contains an uppercase letter', met: /[A-Z]/.test(password) },
     ]
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -71,61 +68,58 @@ function ResetPasswordForm() {
 
     if (!token) {
         return (
-            <div className="text-center">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-500/15">
-                    <AlertCircle className="h-8 w-8 text-rose-500" />
+            <AuthShell title="Invalid reset link">
+                <div className="text-center">
+                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[rgb(var(--kumkum-rgb)/0.14)]">
+                        <AlertCircle className="h-8 w-8 text-[color:var(--kumkum)]" />
+                    </div>
+                    <p className="mb-6 leading-relaxed text-muted-foreground">
+                        This password reset link is invalid or has expired. Please request a new one.
+                    </p>
+                    <Link
+                        href="/forgot-password"
+                        className="inline-block w-full rounded-[14px] bg-[linear-gradient(135deg,var(--kumkum),var(--saffron))] py-3 text-center font-bold text-white shadow-[0_14px_30px_-14px_rgba(192,57,43,0.65)] transition-all duration-200 hover:-translate-y-0.5"
+                    >
+                        Request new reset link
+                    </Link>
                 </div>
-                <h1 className="mb-2 text-2xl text-foreground">Invalid reset link</h1>
-                <p className="mb-6 text-muted-foreground">
-                    This password reset link is invalid or has expired. Please request a new one.
-                </p>
-                <Link
-                    href="/forgot-password"
-                    className="inline-block w-full rounded-xl bg-dc-grad-br py-3 text-center font-semibold text-white shadow-glow-brand transition-all duration-300 hover:shadow-elev-3"
-                >
-                    Request new reset link
-                </Link>
-            </div>
+            </AuthShell>
         )
     }
 
     if (success) {
         return (
-            <div className="text-center">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/15">
-                    <CheckCircle className="h-8 w-8 text-emerald-500" />
+            <AuthShell title="Password reset!">
+                <div className="text-center">
+                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[rgb(14_159_110_/_0.14)]">
+                        <CheckCircle2 className="h-8 w-8 text-[color:var(--emerald,#0E9F6E)]" />
+                    </div>
+                    <p className="mb-6 leading-relaxed text-muted-foreground">
+                        Your password has been reset successfully. You can now sign in with your new password.
+                    </p>
+                    <Link
+                        href="/sign-in"
+                        className="inline-block w-full rounded-[14px] bg-[linear-gradient(135deg,var(--kumkum),var(--saffron))] py-3 text-center font-bold text-white shadow-[0_14px_30px_-14px_rgba(192,57,43,0.65)] transition-all duration-200 hover:-translate-y-0.5"
+                    >
+                        Sign in now
+                    </Link>
                 </div>
-                <h1 className="mb-2 text-2xl text-foreground">Password reset!</h1>
-                <p className="mb-6 text-muted-foreground">
-                    Your password has been successfully reset. Redirecting you to sign in...
-                </p>
-                <Link
-                    href="/sign-in"
-                    className="inline-block w-full rounded-xl bg-dc-grad-br py-3 text-center font-semibold text-white shadow-glow-brand transition-all duration-300 hover:shadow-elev-3"
-                >
-                    Sign in now
-                </Link>
-            </div>
+            </AuthShell>
         )
     }
 
     return (
-        <>
-            <div className="mb-6 text-center">
-                <h1 className="text-2xl text-foreground">Reset password</h1>
-                <p className="mt-1 text-muted-foreground">Enter your new password below</p>
-            </div>
-
+        <AuthShell title="Reset password" subtitle="Choose a new password">
             {error && (
-                <div className="mb-4 flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-3">
+                <div className="mb-4 flex items-start gap-2 rounded-[14px] border border-destructive/30 bg-destructive/10 p-3">
                     <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-destructive" />
                     <p className="text-sm font-medium text-destructive">{error}</p>
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 <div>
-                    <label htmlFor="password" className="mb-1.5 block text-sm font-semibold text-foreground">
+                    <label htmlFor="password" className="mb-1.5 block text-[13.5px] font-bold text-foreground">
                         New Password
                     </label>
                     <div className="relative">
@@ -138,7 +132,7 @@ function ResetPasswordForm() {
                             placeholder="Enter new password"
                             required
                             autoFocus
-                            className="w-full rounded-xl border border-input bg-background py-3 pl-11 pr-12 text-foreground shadow-elev-1 outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-ring/35"
+                            className="w-full rounded-[14px] border border-input bg-card py-3 pl-11 pr-12 text-foreground outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-ring/25"
                         />
                         <button
                             type="button"
@@ -148,20 +142,22 @@ function ResetPasswordForm() {
                             {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                         </button>
                     </div>
-                    {password.length > 0 && (
-                        <div className="mt-2 space-y-1">
-                            {passwordRequirements.map((req, i) => (
-                                <div key={i} className="flex items-center gap-1.5 text-xs">
-                                    <CheckCircle className={`h-3.5 w-3.5 ${req.met ? 'text-emerald-500' : 'text-muted-foreground/40'}`} />
-                                    <span className={req.met ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}>{req.label}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                    {/* Live requirement checklist — always visible, per the mock */}
+                    <div className="mt-2.5 flex flex-col gap-1.5">
+                        {passwordRequirements.map((req, i) => (
+                            <div
+                                key={i}
+                                className={`flex items-center gap-2 text-[12.5px] ${req.met ? 'text-[color:var(--emerald,#0E9F6E)]' : 'text-muted-foreground'}`}
+                            >
+                                {req.met ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
+                                {req.label}
+                            </div>
+                        ))}
+                    </div>
                 </div>
 
                 <div>
-                    <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-semibold text-foreground">
+                    <label htmlFor="confirmPassword" className="mb-1.5 block text-[13.5px] font-bold text-foreground">
                         Confirm New Password
                     </label>
                     <div className="relative">
@@ -173,18 +169,18 @@ function ResetPasswordForm() {
                             onChange={(e) => setConfirmPassword(e.target.value)}
                             placeholder="Confirm new password"
                             required
-                            className="w-full rounded-xl border border-input bg-background py-3 pl-11 pr-4 text-foreground shadow-elev-1 outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-ring/35"
+                            className="w-full rounded-[14px] border border-input bg-card py-3 pl-11 pr-4 text-foreground outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-ring/25"
                         />
                     </div>
                     {confirmPassword.length > 0 && password !== confirmPassword && (
-                        <p className="mt-1 text-xs text-rose-500">Passwords do not match</p>
+                        <p className="mt-1 text-xs text-[color:var(--kumkum)]">Passwords do not match</p>
                     )}
                 </div>
 
                 <button
                     type="submit"
                     disabled={loading}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-dc-grad-br bg-[length:200%_200%] py-3 font-semibold text-white shadow-glow-brand transition-all duration-200 hover:shadow-elev-3 hover:[background-position:100%_50%] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex w-full items-center justify-center gap-2 rounded-[14px] bg-[linear-gradient(135deg,var(--kumkum),var(--saffron))] py-3 font-bold text-white shadow-[0_14px_30px_-14px_rgba(192,57,43,0.65)] transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     {loading ? (
                         <>
@@ -196,31 +192,20 @@ function ResetPasswordForm() {
                     )}
                 </button>
             </form>
-        </>
+        </AuthShell>
     )
 }
 
 export default function ResetPasswordPage() {
     return (
-        <AuthBackdrop>
-            <div className={`relative w-full max-w-md ${authCardClassName} p-6 sm:p-8`}>
-                {/* Logo */}
-                <div className="mb-8 text-center">
-                    <Link href="/" className="inline-flex flex-col items-center gap-3">
-                        <MandalaMark size={64} />
-                        <span className="text-lg font-bold tracking-tight text-foreground">Digi Classroom</span>
-                    </Link>
+        <Suspense
+            fallback={
+                <div className="flex min-h-screen items-center justify-center bg-background">
+                    <Loader2 className="h-10 w-10 animate-spin text-primary" />
                 </div>
-
-                <Suspense fallback={
-                    <div className="py-8 text-center">
-                        <Loader2 className="mx-auto mb-2 h-8 w-8 animate-spin text-primary" />
-                        <p className="text-muted-foreground">Loading...</p>
-                    </div>
-                }>
-                    <ResetPasswordForm />
-                </Suspense>
-            </div>
-        </AuthBackdrop>
+            }
+        >
+            <ResetPasswordForm />
+        </Suspense>
     )
 }

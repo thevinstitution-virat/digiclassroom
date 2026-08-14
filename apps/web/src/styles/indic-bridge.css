@@ -26,6 +26,34 @@
   --accent-foreground: var(--accent-contrast-hsl);
   --sidebar-primary: var(--accent-strong-hsl);
   --sidebar-ring: var(--accent-primary-hsl);
+
+  /* ── Warm-Indic SURFACES (light) ──────────────────────────────────────
+     The accent bridge above re-tints every primitive; this block re-grounds
+     them on the temple-modern surfaces the redesign mocks specify, so the
+     whole app leaves the old cool blue-grey palette in one move. Values are
+     the mock's exact hexes (--bg/--panel/--ink/--muted/--line …) converted to
+     the bare "H S% L%" channel triplets shadcn's hsl(var(--x)) contract needs
+     — never full colours here, or every /opacity modifier breaks (see top).  */
+  --background: 41 60% 95%;          /* --bg     #FBF6EC warm cream page   */
+  --foreground: 36 80% 8%;           /* --ink    #241704 rich brown-ink    */
+  --card: 40 100% 99%;               /* --panel  #FFFDF9 raised parchment  */
+  --card-foreground: 36 80% 8%;
+  --popover: 40 100% 99%;
+  --popover-foreground: 36 80% 8%;
+  --secondary: 34 100% 96%;          /* --panel-2 #FFF6EA sunken warm wash */
+  --secondary-foreground: 35 40% 24%;
+  --muted: 34 100% 96%;
+  --muted-foreground: 35 23% 35%;    /* --muted  #6E5D45 bark text         */
+  --border: 40 44% 82%;              /* --line   faint temple-gold hairline */
+  --input: 38 42% 80%;
+  --destructive: 6 63% 46%;          /* --kumkum #C0392B crimson           */
+  --destructive-foreground: 0 0% 100%;
+
+  --sidebar-background: 38 100% 98%; /* --sidebar #FFFCF7 parchment rail    */
+  --sidebar-foreground: 35 26% 32%;
+  --sidebar-accent: 43 100% 93%;     /* --chip-bg #FFF4DC hover wash        */
+  --sidebar-accent-foreground: 37 95% 32%;
+  --sidebar-border: 40 44% 82%;
 }
 
 /* Turmeric at 55% lightness goes muddy on a near-black surface, so dark mode
@@ -35,4 +63,28 @@
   --ring: var(--accent-primary-dark-hsl);
   --sidebar-primary: var(--accent-primary-dark-hsl);
   --sidebar-ring: var(--accent-primary-dark-hsl);
+
+  /* ── Warm-Indic SURFACES (dark) ──────────────────────────────────────
+     Night-ink base with slightly-warmed panels and ivory text — the mock's
+     dark-theme surface set. Kept in sync with the light block above.        */
+  --background: 225 50% 8%;          /* --bg     #0A0F1E night-ink          */
+  --foreground: 32 100% 97%;         /* --ink    #FFF8F0 ivory-cream        */
+  --card: 225 46% 13%;               /* --panel  #121A31 raised indigo-ink  */
+  --card-foreground: 32 100% 97%;
+  --popover: 226 46% 10%;
+  --popover-foreground: 32 100% 97%;
+  --secondary: 226 46% 10%;          /* --panel-2 #0E1426 sunken            */
+  --secondary-foreground: 32 60% 90%;
+  --muted: 226 46% 10%;
+  --muted-foreground: 34 35% 68%;    /* --muted  ivory @ .64                */
+  --border: 46 35% 20%;              /* --line   gold @ .16 hairline        */
+  --input: 46 30% 24%;
+  --destructive: 6 63% 46%;
+  --destructive-foreground: 0 0% 100%;
+
+  --sidebar-background: 225 50% 9%;  /* --sidebar #0C1224                   */
+  --sidebar-foreground: 34 30% 70%;
+  --sidebar-accent: 46 40% 16%;
+  --sidebar-accent-foreground: 38 100% 66%;
+  --sidebar-border: 46 35% 20%;
 }

@@ -9,6 +9,7 @@ import { dashboardHome } from '@/lib/dashboard/dashboard-nav'
 import AdminSidebarWrapper from '@/components/core/layout/AdminSidebarWrapper'
 import LoadingSkeleton from '@/components/ui/LoadingSkeleton'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import { PLATFORM_VIEW_AS_ROLES } from '@/lib/dashboard/view-as'
 import { SuperAdminContextProvider } from './_context/SuperAdminContext'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -24,7 +25,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <SuperAdminContextProvider>
-      <DashboardLayout sidebar={<AdminSidebarWrapper />}>
+      <DashboardLayout sidebar={<AdminSidebarWrapper />} viewAs={PLATFORM_VIEW_AS_ROLES}>
         <Suspense fallback={<LoadingSkeleton />}>{children}</Suspense>
       </DashboardLayout>
     </SuperAdminContextProvider>

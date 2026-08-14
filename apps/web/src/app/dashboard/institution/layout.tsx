@@ -10,6 +10,7 @@ import { getOrgContextOrNull } from '@/lib/auth/get-org-context';
 import { dashboardHome } from '@/lib/dashboard/dashboard-nav';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import InstitutionSidebar from '@/components/institution/InstitutionSidebar';
+import { PLATFORM_VIEW_AS_ROLES } from '@/lib/dashboard/view-as';
 import InstitutionOnboardingWizard from '@/components/institution/InstitutionOnboardingWizard';
 import { db } from '@/db';
 import { institutionProfiles } from '@/db/schema';
@@ -47,5 +48,12 @@ export default async function InstitutionLayout({
     return <InstitutionOnboardingWizard initialData={profile} />;
   }
 
-  return <DashboardLayout sidebar={<InstitutionSidebar />}>{children}</DashboardLayout>;
+  return (
+    <DashboardLayout
+      sidebar={<InstitutionSidebar />}
+      viewAs={isSuperAdmin ? PLATFORM_VIEW_AS_ROLES : undefined}
+    >
+      {children}
+    </DashboardLayout>
+  );
 }

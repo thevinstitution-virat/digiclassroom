@@ -1,16 +1,27 @@
 /**
- * BaseSidebar — modern, refined navigation shell shared across all dashboards.
- * Slim items, soft active states, grouped sections, glass panel, collapsible.
+ * BaseSidebar — the shared dashboard sidebar, a faithful port of the grouped nav
+ * in design_handoff_digiclassroom_ui/designs/DigiClassroom Dashboards.dc.html:
+ * mandala wordmark + role console label, titled uppercase sections, and a
+ * gradient active pill with a left accent bar (`.navitem.active`). Every role
+ * sidebar (student/teacher/parent/institution/super-admin) feeds this one
+ * component, so the whole product picks up the redesign at once. It also reports
+ * its nav up to DashboardShellContext so the topbar title and the ≤1024px bottom
+ * tab bar read the exact same items.
+ *
+ * Markup lives inside the `.dcd` wrapper that DashboardLayout paints on the shell
+ * root, so the scoped stylesheet's classes (.sidebar/.navitem/.plinth…) resolve.
  */
 
 'use client'
 
-import React, { ReactNode, useState, useRef, useEffect } from 'react'
+import React, { ReactNode, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSidebar } from '@/contexts/SidebarContext'
+import { useDashboardShell } from '@/contexts/DashboardShellContext'
 import { authClient } from '@/auth/client'
-import { ChevronLeft, ChevronRight, Settings, LogOut, ChevronDown, User } from 'lucide-react'
+import { LogOut } from 'lucide-react'
+import MandalaMark from '@/components/dashboard/MandalaMark'
 
 export interface NavigationItem {
   name: string
@@ -22,6 +33,10 @@ export interface NavigationItem {
   gradient?: string
   /** Optional group label — a header renders above the first item of each section. */
   section?: string
+  /** Marks this item for the ≤1024px bottom tab bar (mock: 4 primary + "More"). */
+  primary?: boolean
+  /** Short label the bottom tab bar uses in place of `name` when set. */
+  shortName?: string
 }
 
 export interface SidebarUser {
@@ -36,7 +51,7 @@ interface BaseSidebarProps {
   user?: SidebarUser | null
   brandName: string
   brandSubtitle: string
-  brandIcon: React.ComponentType<{ className?: string }>
+  brandIcon?: React.ComponentType<{ className?: string }>
   brandColor?: string
   theme?: 'light' | 'dark'
   className?: string
@@ -51,167 +66,198 @@ export default function BaseSidebar({
   user,
   brandName,
   brandSubtitle,
-  brandIcon: BrandIcon,
-  profilePath,
+  profilePath = '/dashboard/user/profile',
   showLogout = true,
-  userRole = 'user',
   headerSlot,
-  className = '',
 }: BaseSidebarProps) {
   const pathname = usePathname()
-  const { isCollapsed, toggleSidebar, isMobile } = useSidebar()
-  const [showProfile, setShowProfile] = useState(false)
-  const dropdownRef = useRef<HTMLDivElement>(null)
+  const { isCollapsed, setSidebarCollapsed } = useSidebar()
+  const shell = useDashboardShell()
 
+  // Longest-prefix match so a nested route (…/practest/active) still lights the
+  // Practest item, while the dashboard-home root never wins over a deeper page.
+  const activeHref = useMemo(() => {
+    return navigation
+      .map((n) => n.href)
+      .filter((h) => pathname === h || pathname.startsWith(h + '/'))
+      .sort((a, b) => b.length - a.length)[0]
+  }, [navigation, pathname])
+
+  // Feed the shared shell (topbar title + bottom tab bar). Signature-keyed so the
+  // provider's state update doesn't re-fire this effect.
+  const navSig = navigation.map((n) => `${n.href}|${n.badge ?? ''}`).join(',')
   useEffect(() => {
-    function onClick(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setShowProfile(false)
-    }
-    document.addEventListener('mousedown', onClick)
-    return () => document.removeEventListener('mousedown', onClick)
-  }, [])
+    shell?.setData({
+      items: navigation.map((n) => ({ name: n.name, href: n.href, icon: n.icon, badge: n.badge, primary: n.primary, shortName: n.shortName })),
+      brandName,
+      roleLabel: brandSubtitle,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navSig, brandName, brandSubtitle])
 
   const handleLogout = async () => {
     try { await authClient.signOut() } catch (e) { console.error('Logout failed:', e) }
   }
 
-  const initials = `${user?.firstName?.[0] ?? ''}${user?.lastName?.[0] ?? ''}`.toUpperCase() || 'U'
+  const closeOnMobile = () => setSidebarCollapsed(true)
+
+  const initials =
+    `${user?.firstName?.[0] ?? ''}${user?.lastName?.[0] ?? ''}`.toUpperCase() || 'U'
+  const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Guest'
 
   return (
-    <div
-      className={`relative flex h-full flex-col border-r border-border/70 bg-card/85 backdrop-blur-xl transition-all duration-300 ease-in-out shadow-[8px_0_30px_-16px_hsl(var(--shadow-color)/0.35)] ${isCollapsed ? 'w-[76px]' : 'w-64'} ${className}`}
-      role="navigation"
-      aria-label="Main navigation"
-    >
-      {/* Top brand sheen */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
-
+    <aside className={`sidebar ${isCollapsed ? '' : 'open'}`}>
       {/* Brand header */}
-      <div className="flex h-16 shrink-0 items-center gap-3 px-4">
-        <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--accent-primary)] to-[var(--accent-strong)] text-white shadow-lg shadow-[var(--accent-strong)]/25 ring-1 ring-white/20">
-          <BrandIcon className="h-5 w-5" />
-        </div>
-        {!isCollapsed && (
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold tracking-tight text-gray-900 dark:text-white">{brandName}</p>
-            <p className="truncate text-[11px] font-medium text-gray-400">{brandSubtitle}</p>
+      <div
+        style={{
+          padding: '20px 18px', display: 'flex', alignItems: 'center', gap: 11,
+          borderBottom: '1px solid var(--line-soft)',
+        }}
+      >
+        <MandalaMark size={36} />
+        <div>
+          <div className="deva" style={{ fontSize: 19, lineHeight: 1 }}>{brandName}</div>
+          <div
+            style={{
+              fontSize: 10.5, fontWeight: 700, letterSpacing: '.08em',
+              textTransform: 'uppercase', color: 'var(--muted)', marginTop: 3,
+            }}
+          >
+            {brandSubtitle}
           </div>
-        )}
-        <button
-          onClick={toggleSidebar}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-gray-200"
-          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </button>
+        </div>
       </div>
 
-      {headerSlot && !isCollapsed && <div className="px-3 pb-2">{headerSlot}</div>}
+      {headerSlot && <div style={{ padding: '12px 12px 0' }}>{headerSlot}</div>}
 
-      {/* Navigation */}
-      <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
-        {navigation.map((item, idx) => {
-          const isActive = pathname === item.href
-          const Icon = item.icon
-          const newSection = !!item.section && item.section !== navigation[idx - 1]?.section
-          return (
-            <React.Fragment key={item.name}>
-              {newSection && !isCollapsed && (
-                <div className="px-3 pb-1 pt-4 first:pt-1">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500">{item.section}</span>
-                </div>
-              )}
-              {newSection && isCollapsed && idx !== 0 && (
-                <div className="mx-3 my-2 border-t border-gray-200/70 dark:border-white/10" aria-hidden="true" />
-              )}
-              <Link
-                href={item.href}
-                onClick={() => { if (isMobile) toggleSidebar() }}
-                title={isCollapsed ? item.name : undefined}
-                aria-current={isActive ? 'page' : undefined}
-                className={`group relative flex items-center rounded-xl text-sm font-medium transition-all duration-200 ${isCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2'} ${
-                  isActive
-                    ? 'bg-gradient-to-r from-[var(--accent-primary)]/12 to-[var(--accent-strong)]/12 text-foreground shadow-sm ring-1 ring-[var(--accent-primary)]/20'
-                    : 'text-muted-foreground hover:bg-accent/70 hover:text-foreground'
-                }`}
+      {/* Grouped nav */}
+      <nav style={{ padding: '12px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {groupBySection(navigation).map((section) => (
+          <div key={section.title || '_'}>
+            {section.title && (
+              <div
+                style={{
+                  padding: '6px 14px 7px', fontSize: 10, fontWeight: 800,
+                  letterSpacing: '.16em', textTransform: 'uppercase',
+                  color: 'var(--muted)', opacity: 0.8,
+                }}
               >
-                {isActive && !isCollapsed && (
-                  <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-full bg-gradient-to-b from-[var(--accent-primary)] to-[var(--accent-strong)]" />
-                )}
-                <Icon className={`h-[18px] w-[18px] shrink-0 transition-colors ${isActive ? 'text-[var(--accent-strong)] dark:text-[var(--accent-primary-dark)]' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200'}`} />
-                {!isCollapsed && <span className="flex-1 truncate">{item.name}</span>}
-                {!isCollapsed && item.badge != null && (
-                  <span className="rounded-full bg-[var(--accent-primary)]/15 px-1.5 py-0.5 text-[10px] font-bold text-[var(--accent-strong)] dark:text-[var(--accent-primary-dark)]">{item.badge}</span>
-                )}
-              </Link>
-            </React.Fragment>
-          )
-        })}
+                {section.title}
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {section.items.map((item) => {
+                const Icon = item.icon
+                const isActive = item.href === activeHref
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={closeOnMobile}
+                    aria-current={isActive ? 'page' : undefined}
+                    className={`navitem ${isActive ? 'active' : ''}`}
+                  >
+                    <Icon className="h-[21px] w-[21px] shrink-0" />
+                    <span>{item.name}</span>
+                    {item.badge != null && item.badge !== '' && (
+                      <span
+                        style={{
+                          marginLeft: 'auto', fontSize: 11, fontWeight: 800, color: '#fff',
+                          background: 'var(--kumkum)', borderRadius: 999, padding: '1px 8px',
+                        }}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      {/* Profile footer — sign-out is its own always-visible icon button
-          (not buried in the dropdown below), because the dropdown trigger is
-          intentionally inert while collapsed: with only the profile button
-          there, a collapsed sidebar had no way to reach it at all. */}
+      {/* User footer */}
       {user && (
-        <div className="relative border-t border-gray-200/70 p-3 dark:border-white/10" ref={dropdownRef}>
-          <div className={`flex items-center gap-1.5 ${isCollapsed ? 'flex-col' : ''}`}>
-            <button
-              onClick={() => !isCollapsed && setShowProfile((v) => !v)}
-              className={`flex min-w-0 flex-1 items-center rounded-xl p-1.5 transition-colors ${isCollapsed ? 'w-full justify-center' : 'gap-3'} ${showProfile ? 'bg-gray-100 dark:bg-white/[0.06]' : 'hover:bg-gray-100/70 dark:hover:bg-white/[0.04]'}`}
+        <div style={{ padding: '14px 12px', borderTop: '1px solid var(--line-soft)' }}>
+          <div
+            style={{
+              display: 'flex', alignItems: 'center', gap: 11, padding: 9,
+              borderRadius: 12, background: 'var(--panel-2)', border: '1px solid var(--line-soft)',
+            }}
+          >
+            <Link
+              href={profilePath}
+              onClick={closeOnMobile}
+              style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0, flex: 1 }}
             >
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-gray-700 to-gray-900 text-xs font-bold text-white dark:from-gray-600 dark:to-gray-800">
+              <span
+                className="plinth"
+                style={{
+                  width: 38, height: 38,
+                  background: 'linear-gradient(135deg,var(--peacock-teal),var(--indigo-deep))',
+                  fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 14,
+                }}
+              >
                 {initials}
+              </span>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div
+                  style={{
+                    fontSize: 13.5, fontWeight: 800, color: 'var(--ink)',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  }}
+                >
+                  {fullName}
+                </div>
+                <div
+                  style={{
+                    fontSize: 11.5, color: 'var(--muted)',
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  }}
+                >
+                  {user.emailAddress}
+                </div>
               </div>
-              {!isCollapsed && (
-                <>
-                  <div className="min-w-0 flex-1 text-left">
-                    <p className="truncate text-xs font-semibold text-gray-900 dark:text-white">{user.firstName} {user.lastName}</p>
-                    <p className="truncate text-[11px] text-gray-400">{user.emailAddress}</p>
-                  </div>
-                  <ChevronDown className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${showProfile ? 'rotate-180' : ''}`} />
-                </>
-              )}
-            </button>
+            </Link>
             {showLogout && (
               <button
                 onClick={handleLogout}
                 aria-label="Sign out"
                 title="Sign out"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                style={{ border: 'none', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', display: 'inline-flex' }}
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-[19px] w-[19px]" />
               </button>
             )}
           </div>
-
-          {!isCollapsed && showProfile && (
-            <div className="absolute bottom-full left-3 right-3 mb-2 overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-xl dark:border-white/10 dark:bg-gray-900">
-              {profilePath && (
-                <Link href={profilePath} onClick={() => setShowProfile(false)}
-                  className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-600 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5">
-                  <User className="h-4 w-4" /> Profile
-                </Link>
-              )}
-              {userRole === 'admin' && (
-                <Link href="/dashboard/super-admin/settings" onClick={() => setShowProfile(false)}
-                  className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-gray-600 transition-colors hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-white/5">
-                  <Settings className="h-4 w-4" /> Settings
-                </Link>
-              )}
-            </div>
-          )}
         </div>
       )}
-    </div>
+    </aside>
   )
+}
+
+interface Section { title: string; items: NavigationItem[] }
+
+/** Fold the flat, section-tagged nav into contiguous titled groups. Items with
+ *  no `section` before the first titled one form an untitled lead group (the
+ *  home/overview item), exactly like the mock's first entry. */
+function groupBySection(navigation: NavigationItem[]): Section[] {
+  const sections: Section[] = []
+  for (const item of navigation) {
+    const title = item.section || ''
+    const last = sections[sections.length - 1]
+    if (last && last.title === title) last.items.push(item)
+    else sections.push({ title, items: [item] })
+  }
+  return sections
 }
 
 export function createNavigationItem(
   name: string,
   href: string,
   icon: React.ComponentType<{ className?: string }>,
-  options: { description?: string; featured?: boolean; badge?: string | number; gradient?: string; section?: string } = {},
+  options: { description?: string; featured?: boolean; badge?: string | number; gradient?: string; section?: string; primary?: boolean; shortName?: string } = {},
 ): NavigationItem {
   return { name, href, icon, ...options }
 }

@@ -1,13 +1,19 @@
 'use client'
 
-// Super-admin platform overview — modern console: stats, institutions, quick actions.
+// Super-admin platform overview — a faithful port of the "Super-Admin" view in
+// design_handoff_digiclassroom_ui/designs/DigiClassroom Dashboards.dc.html,
+// rendered inside DashboardLayout's `.dcd` shell. Every figure stays real: the
+// stat tiles come from /api/super-admin/overview, the institutions list from
+// /api/super-admin/organizations/list, and the revenue chart from the real
+// <SARevenueClient/> (the mock's demo revenue bars are its stand-in).
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { SARevenueClient } from '@/components/super-admin/SARevenueClient'
 import {
   Building2, Users, GraduationCap, ShieldCheck, Plus, CreditCard, Flag,
-  FileText, AlertTriangle, ArrowRight, ArrowUpRight,
+  FileText, AlertTriangle, ArrowRight,
 } from 'lucide-react'
+import { GP, GC, GW, GT, GV } from '@/components/dashboard/gradients'
 
 interface Overview {
   institutions: number; users: number; students: number; teachers: number
@@ -19,14 +25,8 @@ interface OrgRow {
   enabledFeatures: number; allowedFeatures: number
 }
 
-const planBadge: Record<string, string> = {
-  starter: 'bg-slate-100 text-slate-600 dark:bg-slate-700/40 dark:text-slate-300',
-  pro: 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300',
-  professional: 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300',
-  enterprise: 'bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-300',
-}
 const statusDot: Record<string, string> = {
-  active: 'bg-emerald-500', trial: 'bg-amber-500', suspended: 'bg-red-500', cancelled: 'bg-gray-400',
+  active: 'var(--emerald)', trial: 'var(--turmeric)', suspended: 'var(--kumkum)', cancelled: 'var(--muted)',
 }
 
 export default function AdminDashboard() {
@@ -45,101 +45,83 @@ export default function AdminDashboard() {
   }, [])
 
   const stats = [
-    { name: 'Institutions', value: ov?.institutions ?? 0, icon: Building2, tint: 'bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400', glow: 'bg-violet-400/40' },
-    { name: 'Total Users', value: ov?.users ?? 0, icon: Users, tint: 'bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400', glow: 'bg-blue-400/40' },
-    { name: 'Students', value: ov?.students ?? 0, icon: GraduationCap, tint: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400', glow: 'bg-emerald-400/40' },
-    { name: 'Institution Admins', value: ov?.institutionAdmins ?? 0, icon: ShieldCheck, tint: 'bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400', glow: 'bg-orange-400/40' },
+    { name: 'Institutions', value: ov?.institutions ?? 0, icon: Building2, grad: GV },
+    { name: 'Total Users', value: ov?.users ?? 0, icon: Users, grad: GC },
+    { name: 'Students', value: ov?.students ?? 0, icon: GraduationCap, grad: GT },
+    { name: 'Institution Admins', value: ov?.institutionAdmins ?? 0, icon: ShieldCheck, grad: GW },
   ]
   const quickActions = [
-    { name: 'Onboard Institution', desc: 'Create a new institution', href: '/dashboard/super-admin/onboarding', icon: Plus, tint: 'from-violet-500 to-purple-600' },
-    { name: 'Organizations', desc: 'Manage all institutions', href: '/dashboard/super-admin/organizations', icon: Building2, tint: 'from-blue-500 to-indigo-600' },
-    { name: 'Subscription Plans', desc: 'Billing & plans', href: '/dashboard/super-admin/plans', icon: CreditCard, tint: 'from-emerald-500 to-green-600' },
-    { name: 'Feature Flags', desc: 'Platform toggles', href: '/dashboard/super-admin/feature-flags', icon: Flag, tint: 'from-sky-500 to-blue-600' },
-    { name: 'Content', desc: 'NCERT & ingestion', href: '/dashboard/super-admin/content', icon: FileText, tint: 'from-amber-500 to-orange-600' },
-    { name: 'Danger Zone', desc: 'Destructive ops', href: '/dashboard/super-admin/danger-zone', icon: AlertTriangle, tint: 'from-red-500 to-rose-600' },
+    { name: 'Onboard Institution', desc: 'Create a new institution', href: '/dashboard/super-admin/onboarding', icon: Plus, grad: GV },
+    { name: 'Organizations', desc: 'Manage all institutions', href: '/dashboard/super-admin/organizations', icon: Building2, grad: GC },
+    { name: 'Subscription Plans', desc: 'Billing & plans', href: '/dashboard/super-admin/plans', icon: CreditCard, grad: GT },
+    { name: 'Feature Flags', desc: 'Platform toggles', href: '/dashboard/super-admin/feature-flags', icon: Flag, grad: GW },
+    { name: 'Content', desc: 'NCERT & ingestion', href: '/dashboard/super-admin/content', icon: FileText, grad: GP },
+    { name: 'Danger Zone', desc: 'Destructive ops', href: '/dashboard/super-admin/danger-zone', icon: AlertTriangle, grad: 'linear-gradient(135deg,var(--kumkum),var(--lotus-deep))' },
   ]
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <div className="mb-2 inline-flex items-center gap-1.5 text-xs font-medium text-gray-400">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> Platform online
-          </div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Platform Overview</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">DigiClassroom Pro · super-admin console</p>
-        </div>
-        <Link
-          href="/dashboard/super-admin/onboarding"
-          className="group inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition-all hover:shadow-xl hover:shadow-blue-600/30"
-        >
-          <Plus className="h-4 w-4" /> Onboard Institution
-          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-        </Link>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
+      {/* Stat tiles */}
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 16 }}>
         {stats.map((s) => (
-          <div
-            key={s.name}
-            className="group relative overflow-hidden rounded-2xl border border-gray-200/70 bg-white p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-gray-200/60 dark:border-white/10 dark:bg-gray-900/50 dark:hover:shadow-black/30"
-          >
-            <div className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100 ${s.glow}`} />
-            <div className="relative">
-              <div className={`mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl ${s.tint}`}>
-                <s.icon className="h-5 w-5" />
-              </div>
-              <p className="text-3xl font-bold tracking-tight tabular-nums text-gray-900 dark:text-white">
-                {loading ? <span className="inline-block h-8 w-12 animate-pulse rounded-lg bg-gray-200 dark:bg-gray-700" /> : s.value.toLocaleString()}
-              </p>
-              <p className="mt-1 text-sm font-medium text-gray-500 dark:text-gray-400">{s.name}</p>
+          <div key={s.name} className="card lift" style={{ padding: 22 }}>
+            <span className="plinth" style={{ width: 42, height: 42, background: s.grad }}>
+              <s.icon className="h-[21px] w-[21px]" />
+            </span>
+            <div style={{ fontSize: 30, fontWeight: 800, margin: '14px 0 2px', color: 'var(--ink)' }}>
+              {loading ? (
+                <span className="dotpulse" style={{ display: 'inline-block', width: 48, height: 26, borderRadius: 8, background: 'var(--track)' }} />
+              ) : (
+                s.value.toLocaleString()
+              )}
             </div>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--muted)' }}>{s.name}</div>
           </div>
         ))}
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Institutions */}
-        <div className="overflow-hidden rounded-2xl border border-gray-200/70 bg-white shadow-sm lg:col-span-2 dark:border-white/10 dark:bg-gray-900/50">
-          <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4 dark:border-white/5">
+      {/* Institutions + quick actions */}
+      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 18 }}>
+        <div className="card" style={{ padding: 0, gridColumn: 'span 2', minWidth: 0, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 22px', borderBottom: '1px solid var(--line-soft)' }}>
             <div>
-              <h2 className="font-semibold text-gray-900 dark:text-white">Institutions</h2>
-              <p className="text-xs text-gray-400">{orgs.length} total</p>
+              <h3 className="sech" style={{ fontSize: 18 }}>Institutions</h3>
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>{orgs.length} total</span>
             </div>
-            <Link href="/dashboard/super-admin/organizations" className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:gap-1.5 dark:text-blue-400">
-              View all <ArrowUpRight className="h-3.5 w-3.5" />
-            </Link>
+            <Link href="/dashboard/super-admin/organizations" style={{ fontSize: 13.5, fontWeight: 700 }}>View all →</Link>
           </div>
           {loading ? (
-            <div className="space-y-3 p-5">
-              {[0, 1, 2].map((i) => <div key={i} className="h-12 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800" />)}
+            <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="dotpulse" style={{ height: 48, borderRadius: 12, background: 'var(--panel-2)' }} />
+              ))}
             </div>
           ) : orgs.length === 0 ? (
-            <div className="px-5 py-14 text-center">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800">
-                <Building2 className="h-6 w-6 text-gray-300" />
-              </div>
-              <p className="text-sm text-gray-500">No institutions yet.</p>
-              <Link href="/dashboard/super-admin/onboarding" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-violet-600 hover:underline">
-                Onboard your first institution <ArrowRight className="h-4 w-4" />
+            <div style={{ padding: '48px 22px', textAlign: 'center' }}>
+              <span className="plinth" style={{ width: 48, height: 48, margin: '0 auto 12px', background: GC }}>
+                <Building2 className="h-[24px] w-[24px]" />
+              </span>
+              <p style={{ fontSize: 14, color: 'var(--muted)' }}>No institutions yet.</p>
+              <Link href="/dashboard/super-admin/onboarding" style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 13.5, fontWeight: 700 }}>
+                Onboard your first institution <ArrowRight className="h-[16px] w-[16px]" />
               </Link>
             </div>
           ) : (
-            <div className="divide-y divide-gray-50 dark:divide-white/5">
+            <div>
               {orgs.map((o) => (
-                <div key={o.id} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-gray-50/70 dark:hover:bg-white/[0.03]">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gray-100 to-gray-200 text-sm font-bold text-gray-500 dark:from-gray-700 dark:to-gray-800 dark:text-gray-300">
+                <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '14px 22px', borderBottom: '1px solid var(--line-soft)' }}>
+                  <span className="plinth" style={{ width: 38, height: 38, flex: 'none', background: GC, fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 15 }}>
                     {o.name.charAt(0).toUpperCase()}
+                  </span>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14.5, color: 'var(--ink)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{o.name}</div>
+                    <div style={{ fontSize: 12.5, color: 'var(--muted)', textTransform: 'capitalize' }}>{o.type?.replace('_', ' ')} · {o.members} members</div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{o.name}</p>
-                    <p className="truncate text-xs capitalize text-gray-400">{o.type?.replace('_', ' ')} · {o.members} members</p>
-                  </div>
-                  <span className={`hidden rounded-md px-2 py-0.5 text-xs font-medium capitalize sm:inline ${planBadge[o.plan ?? ''] ?? 'bg-gray-100 text-gray-500'}`}>{o.plan ?? '—'}</span>
-                  <span className="inline-flex items-center gap-1.5 text-xs font-medium capitalize text-gray-500 dark:text-gray-400">
-                    <span className={`h-1.5 w-1.5 rounded-full ${statusDot[o.status] ?? 'bg-gray-400'}`} /> {o.status}
+                  {o.plan && (
+                    <span className="tag" style={{ flex: 'none', background: 'var(--chip-bg)', color: 'var(--accent-text)', textTransform: 'capitalize' }}>{o.plan}</span>
+                  )}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 600, color: 'var(--muted)', flex: 'none', textTransform: 'capitalize' }}>
+                    <span style={{ width: 7, height: 7, borderRadius: '50%', background: statusDot[o.status] ?? 'var(--muted)' }} />{o.status}
                   </span>
                 </div>
               ))}
@@ -147,36 +129,31 @@ export default function AdminDashboard() {
           )}
         </div>
 
-        {/* Quick actions */}
-        <div className="rounded-2xl border border-gray-200/70 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-900/50">
-          <h2 className="px-1 pb-3 font-semibold text-gray-900 dark:text-white">Quick actions</h2>
-          <div className="space-y-1">
+        <div className="card" style={{ padding: 18, minWidth: 0 }}>
+          <h3 className="sech" style={{ fontSize: 18, marginBottom: 12, padding: '0 4px' }}>Quick actions</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
             {quickActions.map((a) => (
-              <Link
-                key={a.name}
-                href={a.href}
-                className="group flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-gray-50 dark:hover:bg-white/[0.04]"
-              >
-                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${a.tint} text-white shadow-sm`}>
+              <Link key={a.name} href={a.href} className="dcd-quicklink" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 11, borderRadius: 11 }}>
+                <span className="plinth" style={{ width: 36, height: 36, flex: 'none', background: a.grad }}>
                   <a.icon className="h-[18px] w-[18px]" />
+                </span>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--ink)' }}>{a.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.desc}</div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-100">{a.name}</p>
-                  <p className="truncate text-xs text-gray-400">{a.desc}</p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-gray-300 transition-all group-hover:translate-x-0.5 group-hover:text-gray-500" />
+                <ArrowRight className="h-[18px] w-[18px]" style={{ color: 'var(--muted)' }} />
               </Link>
             ))}
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Revenue Analytics Section */}
-      <div className="rounded-2xl border border-gray-200/70 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-gray-900/50">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Revenue Analytics</h2>
-        <p className="text-sm text-gray-500 mb-6">Platform-wide · All institutions · Captured payments only</p>
+      {/* Revenue analytics — real captured-payments chart */}
+      <section className="card" style={{ padding: 24 }}>
+        <h3 className="sech" style={{ fontSize: 18 }}>Revenue analytics</h3>
+        <p style={{ margin: '4px 0 20px', color: 'var(--muted)', fontSize: 13.5 }}>Platform-wide · all institutions · captured payments only</p>
         <SARevenueClient />
-      </div>
+      </section>
     </div>
   )
 }

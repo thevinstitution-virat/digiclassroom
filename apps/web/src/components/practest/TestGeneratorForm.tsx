@@ -7,17 +7,10 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
-  CogIcon, DocumentTextIcon, ClockIcon, PlayIcon, InformationCircleIcon,
-  AcademicCapIcon, LockClosedIcon, SparklesIcon,
-} from '@heroicons/react/24/outline'
+  Settings, FileText, Clock, Play, Info, GraduationCap, Lock, Sparkles,
+} from 'lucide-react'
 import { DifficultyDistribution } from '@/types/practest'
 import { useUserProfile, useSubscription, useSubjectFilter } from '@/hooks'
 
@@ -132,198 +125,231 @@ export default function TestGeneratorForm({ onTestGenerated, onError, loading, u
   // ── Loading / onboarding states ──
   if (profileLoading || subLoading) {
     return (
-      <div className="p-8 text-center text-muted-foreground">
-        <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        Loading your profile…
+      <div className="dcs">
+        <div style={{ padding: 32, textAlign: 'center', color: 'var(--muted)' }}>
+          <div className="spin" style={{ width: 32, height: 32, margin: '0 auto 12px', borderRadius: '50%', border: '2px solid var(--line)', borderTopColor: 'var(--accent-primary)' }} />
+          Loading your profile…
+        </div>
       </div>
     )
   }
 
   if (profileError === 'NO_PROFILE' || !userClass) {
     return (
-      <div className="p-8 text-center">
-        <AcademicCapIcon className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-        <h3 className="text-lg font-semibold text-foreground">Complete your profile first</h3>
-        <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-          Practest uses your board and class to build the right test. Set them up once and you’re ready.
-        </p>
-        <Button asChild variant="gradient" className="mt-5">
-          <Link href="/dashboard/user/profile">Set up my profile</Link>
-        </Button>
+      <div className="dcs">
+        <div className="card" style={{ padding: 32, textAlign: 'center' }}>
+          <span className="plinth" style={{ width: 56, height: 56, margin: '0 auto 14px', background: 'linear-gradient(135deg,var(--kumkum),var(--saffron))' }}>
+            <GraduationCap className="h-7 w-7" />
+          </span>
+          <h3 style={{ fontSize: 17, fontWeight: 800, color: 'var(--ink)', margin: 0 }}>Complete your profile first</h3>
+          <p style={{ margin: '6px auto 0', maxWidth: '42ch', fontSize: 13.5, color: 'var(--muted)' }}>
+            Practest uses your board and class to build the right test. Set them up once and you’re ready.
+          </p>
+          <Link href="/dashboard/user/profile" className="btn btn-primary" style={{ marginTop: 18 }}>Set up my profile</Link>
+        </div>
       </div>
     )
   }
 
   const distTotal = dist.EASY + dist.MEDIUM + dist.HARD
+  const diffColor: Record<string, string> = { EASY: 'var(--emerald)', MEDIUM: '#006A6E', HARD: 'var(--kumkum)' }
 
   return (
-    <div className="grid grid-cols-1 gap-6 p-4 sm:p-6 lg:grid-cols-3">
-      {/* Form */}
-      <div className="space-y-6 lg:col-span-2">
-        {/* Profile context bar (auto — not a picker) */}
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card/70 p-3 shadow-elev-1">
-          <Badge variant="brand" className="gap-1"><AcademicCapIcon className="h-3.5 w-3.5" /> Class {effectiveClass}</Badge>
-          <Badge variant="soft">{BOARD_LABEL[userBoard ?? ''] || userBoard}</Badge>
-          {userMedium && <Badge variant="secondary">{`${String(userMedium).charAt(0)}${String(userMedium).slice(1).toLowerCase()}`} medium</Badge>}
-          {planName && <span className="ml-auto inline-flex items-center gap-1 text-xs text-muted-foreground"><SparklesIcon className="h-3.5 w-3.5" /> {planName}</span>}
+    <div className="dcs">
+      <div className="two-col">
+        {/* Form */}
+        <div className="card" style={{ padding: 22 }}>
+          {/* Profile context bar (auto — not a picker) */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginBottom: 18, padding: '11px 13px', borderRadius: 12, background: 'var(--panel-2)', border: '1px solid var(--line-soft)' }}>
+            <span className="tag" style={{ background: 'var(--chip-bg)', color: 'var(--accent-text)' }}><GraduationCap className="h-[13px] w-[13px]" /> Class {effectiveClass}</span>
+            <span className="tag" style={{ background: 'rgb(0 106 110 / 0.12)', color: '#006A6E' }}>{BOARD_LABEL[userBoard ?? ''] || userBoard}</span>
+            {userMedium && <span className="tag" style={{ background: 'var(--panel)', color: 'var(--muted)', border: '1px solid var(--line)' }}>{`${String(userMedium).charAt(0)}${String(userMedium).slice(1).toLowerCase()}`} medium</span>}
+            {planName && <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--muted)' }}><Sparkles className="h-[13px] w-[13px]" /> {planName}</span>}
 
-          {hasAllClasses ? (
-            <div className="ml-1 flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Switch class:</span>
-              <Select value={String(effectiveClass)} onValueChange={(v) => setClassOverride(parseInt(v))}>
-                <SelectTrigger className="h-8 w-[110px]"><SelectValue /></SelectTrigger>
-                <SelectContent>{Array.from({ length: 12 }, (_, i) => i + 1).map((c) => <SelectItem key={c} value={String(c)}>Class {c}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-          ) : (
-            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground"><LockClosedIcon className="h-3.5 w-3.5" /> from your profile</span>
-          )}
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><CogIcon className="h-5 w-5 text-primary" /> Build your test</CardTitle>
-            <CardDescription>Pick one or more subjects for a mixed test. Chapters are optional.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Subjects (entitlement-aware) */}
-            <div className="space-y-3">
-              <Label>Subjects <span className="font-normal text-muted-foreground">(select one or more)</span></Label>
-              {availableSubjects.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No practice questions are available for Class {effectiveClass} yet. Please check back soon.
-                </p>
-              ) : (
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {availableSubjects.map((s) => {
-                    const on = subjects.includes(s)
-                    return (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => { toggle(subjects, setSubjects, s); setChapters([]) }}
-                        className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-colors ${
-                          on ? 'border-primary/50 bg-primary/10 text-primary' : 'border-border bg-background text-foreground hover:bg-accent'
-                        }`}
-                      >
-                        <span className={`flex h-4 w-4 items-center justify-center rounded border text-[10px] ${on ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/40'}`}>
-                          {on && '✓'}
-                        </span>
-                        {s}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-              {subjects.length > 1 && <p className="text-xs text-muted-foreground">Mixed test — questions are balanced across your {subjects.length} subjects.</p>}
-            </div>
-
-            {/* Optional chapters */}
-            {availableChapters.length > 0 && (
-              <>
-                <Separator />
-                <div className="space-y-3">
-                  <Label>Chapters <span className="font-normal text-muted-foreground">(optional — leave empty for all)</span></Label>
-                  <div className="grid max-h-44 grid-cols-2 gap-2 overflow-y-auto rounded-xl border border-border p-3 sm:grid-cols-3">
-                    {availableChapters.map((c) => (
-                      <label key={c} className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
-                        <input type="checkbox" checked={chapters.includes(c)} onChange={() => toggle(chapters, setChapters, c)} className="rounded border-input text-primary focus:ring-ring" />
-                        {c}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
-
-            <Separator />
-
-            {/* Count + difficulty */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Number of questions</Label>
-                <Select value={String(totalQuestions)} onValueChange={(v) => setTotalQuestions(parseInt(v) as 10 | 20 | 30 | 50)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{[10, 20, 30, 50].map((n) => <SelectItem key={n} value={String(n)}>{n} questions</SelectItem>)}</SelectContent>
+            {hasAllClasses ? (
+              <div style={{ marginLeft: planName ? 0 : 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>Switch class:</span>
+                <Select value={String(effectiveClass)} onValueChange={(v) => setClassOverride(parseInt(v))}>
+                  <SelectTrigger className="h-8 w-[110px]"><SelectValue /></SelectTrigger>
+                  <SelectContent>{Array.from({ length: 12 }, (_, i) => i + 1).map((c) => <SelectItem key={c} value={String(c)}>Class {c}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Estimated duration</Label>
-                <div className="flex items-center gap-2 rounded-xl bg-muted px-3 py-2.5 text-sm font-medium text-foreground"><ClockIcon className="h-4 w-4 text-muted-foreground" /> {estimatedDuration} min</div>
-              </div>
-            </div>
+            ) : (
+              <span style={{ marginLeft: planName ? 0 : 'auto', display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--muted)' }}><Lock className="h-[13px] w-[13px]" /> from your profile</span>
+            )}
+          </div>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Difficulty mix</Label>
-                <Button variant="outline" size="sm" onClick={() => setUseCustomDist((v) => !v)}>{useCustomDist ? 'Use default' : 'Customize'}</Button>
-              </div>
-              <div className="grid grid-cols-3 gap-4">
-                {(['EASY', 'MEDIUM', 'HARD'] as const).map((k) => (
-                  <div key={k} className="space-y-2">
-                    <Label className="text-sm">{k}</Label>
-                    {useCustomDist ? (
-                      <input type="number" min={0} max={totalQuestions} value={dist[k]} onChange={(e) => setDist((d) => ({ ...d, [k]: Math.max(0, parseInt(e.target.value) || 0) }))} className="w-full rounded-xl border border-input bg-background p-2 text-sm text-foreground shadow-elev-1 outline-none focus:border-primary focus:ring-2 focus:ring-ring/35" />
-                    ) : (
-                      <div className="rounded-xl bg-muted p-2 text-center text-sm font-medium text-foreground">{dist[k]}</div>
-                    )}
-                  </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <Settings className="h-[19px] w-[19px]" style={{ color: 'var(--accent-text)' }} />
+            <h3 className="sech" style={{ fontSize: 17 }}>Build your test</h3>
+          </div>
+          <p style={{ margin: '0 0 16px', fontSize: 13, color: 'var(--muted)' }}>Pick one or more subjects for a mixed test. Chapters are optional.</p>
+
+          {/* Subjects (entitlement-aware) */}
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 9 }}>
+            Subjects <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(select one or more)</span>
+          </label>
+          {availableSubjects.length === 0 ? (
+            <p style={{ fontSize: 13, color: 'var(--muted)' }}>
+              No practice questions are available for Class {effectiveClass} yet. Please check back soon.
+            </p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(130px,1fr))', gap: 9, marginBottom: 8 }}>
+              {availableSubjects.map((s) => {
+                const on = subjects.includes(s)
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => { toggle(subjects, setSubjects, s); setChapters([]) }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 9, textAlign: 'left', padding: '11px 12px',
+                      borderRadius: 11, cursor: 'pointer', fontFamily: 'var(--font-body)', fontSize: 13.5, fontWeight: 600,
+                      background: on ? 'rgb(var(--accent-primary-rgb) / 0.1)' : 'var(--panel-2)',
+                      border: `1.5px solid ${on ? 'var(--accent-primary)' : 'var(--line)'}`,
+                      color: on ? 'var(--accent-text)' : 'var(--ink)',
+                    }}
+                  >
+                    <span style={{ width: 18, height: 18, borderRadius: 5, flex: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, color: '#fff', background: on ? 'var(--accent-primary)' : 'transparent', border: `1.5px solid ${on ? 'var(--accent-primary)' : 'var(--muted)'}` }}>
+                      {on && '✓'}
+                    </span>
+                    {s}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+          {subjects.length > 1 && <p style={{ fontSize: 12, color: 'var(--muted)' }}>Mixed test — questions are balanced across your {subjects.length} subjects.</p>}
+
+          {/* Optional chapters */}
+          {availableChapters.length > 0 && (
+            <>
+              <div style={{ height: 1, background: 'var(--line-soft)', margin: '18px 0' }} />
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 9 }}>
+                Chapters <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(optional — leave empty for all)</span>
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(130px,1fr))', gap: 8, maxHeight: 176, overflowY: 'auto', borderRadius: 11, border: '1px solid var(--line)', padding: 12 }}>
+                {availableChapters.map((c) => (
+                  <label key={c} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--ink)' }}>
+                    <input type="checkbox" checked={chapters.includes(c)} onChange={() => toggle(chapters, setChapters, c)} style={{ accentColor: 'var(--accent-primary)' }} />
+                    {c}
+                  </label>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground">Total {distTotal} / {totalQuestions}</p>
+            </>
+          )}
+
+          <div style={{ height: 1, background: 'var(--line-soft)', margin: '18px 0' }} />
+
+          {/* Count + duration */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 18 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 9 }}>Number of questions</label>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {([10, 20, 30, 50] as const).map((n) => {
+                  const on = totalQuestions === n
+                  return (
+                    <button
+                      key={n}
+                      onClick={() => setTotalQuestions(n)}
+                      style={{
+                        flex: 1, padding: '10px 0', borderRadius: 10, cursor: 'pointer', fontFamily: 'var(--font-body)',
+                        fontWeight: 700, fontSize: 13.5,
+                        background: on ? 'linear-gradient(135deg,var(--kumkum),var(--saffron))' : 'var(--panel-2)',
+                        color: on ? '#fff' : 'var(--muted)',
+                        border: `1.5px solid ${on ? 'transparent' : 'var(--line)'}`,
+                      }}
+                    >
+                      {n}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 9 }}>Estimated duration</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 13px', borderRadius: 10, background: 'var(--panel-2)', fontSize: 13.5, fontWeight: 600, color: 'var(--ink)', border: '1px solid var(--line-soft)' }}>
+                <Clock className="h-[17px] w-[17px]" style={{ color: 'var(--muted)' }} /> {estimatedDuration} min
+              </div>
+            </div>
+          </div>
 
-      {/* Summary */}
-      <div className="space-y-6">
-        {needsUpgrade && (
-          <Alert className="border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/30">
-            <InformationCircleIcon className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="text-sm text-amber-800 dark:text-amber-300">
-              Your plan is inactive. <Link href="/dashboard/user/pricing" className="font-semibold underline">See plans</Link> to unlock more.
-            </AlertDescription>
-          </Alert>
-        )}
+          {/* Difficulty mix */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 }}>
+            <label style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>Difficulty mix</label>
+            <button className="chip" onClick={() => setUseCustomDist((v) => !v)} style={{ padding: '5px 12px', fontSize: 12 }}>{useCustomDist ? 'Use default' : 'Customize'}</button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 10 }}>
+            {(['EASY', 'MEDIUM', 'HARD'] as const).map((k) => (
+              <div key={k} style={{ textAlign: 'center', padding: 13, borderRadius: 11, background: 'var(--panel-2)', border: '1px solid var(--line-soft)' }}>
+                <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.05em', color: diffColor[k] }}>{k}</div>
+                {useCustomDist ? (
+                  <input
+                    type="number" min={0} max={totalQuestions} value={dist[k]}
+                    onChange={(e) => setDist((d) => ({ ...d, [k]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                    style={{ width: '100%', marginTop: 6, textAlign: 'center', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--field)', padding: 6, fontSize: 16, fontWeight: 800, color: 'var(--ink)', outline: 'none' }}
+                  />
+                ) : (
+                  <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--ink)', marginTop: 3 }}>{dist[k]}</div>
+                )}
+              </div>
+            ))}
+          </div>
+          {useCustomDist && <p style={{ fontSize: 12, color: distTotal === totalQuestions ? 'var(--muted)' : 'var(--kumkum)', marginTop: 8 }}>Total {distTotal} / {totalQuestions}</p>}
+        </div>
 
-        <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><DocumentTextIcon className="h-5 w-5 text-emerald-600" /> Summary</CardTitle></CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <Row label="Class" value={`Class ${effectiveClass} · ${BOARD_LABEL[userBoard ?? ''] || userBoard}`} />
-            <Row label="Subjects" value={subjects.length ? subjects.join(', ') : '—'} />
-            <Row label="Chapters" value={chapters.length ? `${chapters.length} selected` : 'All'} />
-            <Row label="Questions" value={String(totalQuestions)} />
-            <Row label="Est. duration" value={`${estimatedDuration} min`} />
-          </CardContent>
-        </Card>
+        {/* Summary */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {needsUpgrade && (
+            <div className="card" style={{ padding: 14, borderColor: 'rgb(245 166 35 / 0.4)' }}>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <Info className="h-4 w-4" style={{ color: 'var(--turmeric)', flex: 'none', marginTop: 2 }} />
+                <p style={{ margin: 0, fontSize: 13, color: 'var(--ink)' }}>
+                  Your plan is inactive. <Link href="/dashboard/user/pricing" style={{ fontWeight: 700, textDecoration: 'underline' }}>See plans</Link> to unlock more.
+                </p>
+              </div>
+            </div>
+          )}
 
-        {usage && usage.limit > 0 && (
-          <p className="text-center text-sm text-muted-foreground">
-            {usage.remaining > 0 ? (
-              <><span className="font-semibold text-foreground">{usage.remaining}</span> of {usage.limit} practice tests left today{usage.isTrial ? ' (trial)' : ''}</>
-            ) : (
-              <span className="font-medium text-rose-600 dark:text-rose-400">Daily limit reached — resets tomorrow.</span>
-            )}
-          </p>
-        )}
+          <div className="card" style={{ padding: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <FileText className="h-[19px] w-[19px]" style={{ color: 'var(--emerald)' }} />
+              <h3 className="sech" style={{ fontSize: 16 }}>Summary</h3>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 11, fontSize: 13.5 }}>
+              <Row label="Class" value={`Class ${effectiveClass} · ${BOARD_LABEL[userBoard ?? ''] || userBoard}`} />
+              <Row label="Subjects" value={subjects.length ? subjects.join(', ') : '—'} />
+              <Row label="Chapters" value={chapters.length ? `${chapters.length} selected` : 'All'} />
+              <Row label="Questions" value={String(totalQuestions)} />
+              <Row label="Est. duration" value={`${estimatedDuration} min`} />
+            </div>
+          </div>
 
-        <Button onClick={handleGenerate} disabled={!isValid || loading || limitReached} variant="gradient" size="xl" className="w-full">
-          {loading ? 'Generating…' : limitReached ? 'Daily limit reached' : <><PlayIcon className="h-5 w-5" /> Generate test</>}
-        </Button>
+          {usage && usage.limit > 0 && (
+            <p style={{ textAlign: 'center', fontSize: 13, color: 'var(--muted)' }}>
+              {usage.remaining > 0 ? (
+                <><strong style={{ color: 'var(--ink)' }}>{usage.remaining}</strong> of {usage.limit} practice tests left today{usage.isTrial ? ' (trial)' : ''}</>
+              ) : (
+                <span style={{ fontWeight: 600, color: 'var(--kumkum)' }}>Daily limit reached — resets tomorrow.</span>
+              )}
+            </p>
+          )}
 
-        {limitReached && (
-          <Button asChild variant="outline" className="w-full">
-            <Link href="/dashboard/user/pricing">Upgrade for more tests</Link>
-          </Button>
-        )}
+          <button onClick={handleGenerate} disabled={!isValid || loading || limitReached} className="btn btn-primary" style={{ width: '100%', padding: 15, fontSize: 16 }}>
+            {loading ? 'Generating…' : limitReached ? 'Daily limit reached' : <><Play className="h-5 w-5" /> Generate test</>}
+          </button>
 
-        <Alert>
-          <InformationCircleIcon className="h-4 w-4" />
-          <AlertDescription className="text-sm text-muted-foreground">
-            Your class and board are taken from your profile — the same way the AI Tutor works. Options shuffle per question and score by ID, so there are no answer mismatches.
-          </AlertDescription>
-        </Alert>
+          {limitReached && (
+            <Link href="/dashboard/user/pricing" className="btn btn-ghost" style={{ width: '100%' }}>Upgrade for more tests</Link>
+          )}
+
+          <div style={{ display: 'flex', gap: 10, padding: 13, borderRadius: 12, background: 'var(--panel-2)', border: '1px solid var(--line-soft)' }}>
+            <Info className="h-[18px] w-[18px]" style={{ color: 'var(--accent-text)', flex: 'none' }} />
+            <p style={{ margin: 0, fontSize: 12.5, color: 'var(--muted)', lineHeight: 1.5 }}>
+              Your class and board come from your profile, like the AI Tutor. Options shuffle per question and score by ID — no answer mismatches.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -331,9 +357,9 @@ export default function TestGeneratorForm({ onTestGenerated, onError, loading, u
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="truncate text-right font-medium text-foreground">{value}</span>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+      <span style={{ color: 'var(--muted)' }}>{label}</span>
+      <span style={{ textAlign: 'right', fontWeight: 700, color: 'var(--ink)' }}>{value}</span>
     </div>
   )
 }
