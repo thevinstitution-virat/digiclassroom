@@ -1,0 +1,170 @@
+/* ============================================================
+   STUDENT APP — faithful port of design_handoff_digiclassroom_ui/
+   designs/DigiClassroom Student App.dc.html
+
+   The mock's stylesheet, scoped under `.dcs` so its generic class names
+   (.card/.btn/.chip/.navitem/.tag/.field/.plinth/.grad/.sech/.two-col…) and
+   its surface tokens (--bg/--panel/--panel-2/--sidebar/--ink/--muted/--line/
+   --track/--field…) never leak into the rest of the app. The mock's
+   `[data-theme="dark"]` is mapped to this app's next-themes `.dark` class.
+   Pigment tokens (--saffron/--gold/--peacock-teal/--accent-* …) and the font
+   stacks come from the global indic-* layer; only the surface/semantic tokens
+   are (re)defined here (plus --emerald, which the global layer does not carry,
+   and --field, which the dashboards scope does not need).
+
+   Student pages render INSIDE the `.dcd` shell that DashboardLayout paints, so
+   `.dcs` is a nested scope: it re-declares the surface tokens (identical hexes)
+   and adds the student-only classes/tokens. Material Symbols are replaced with
+   lucide in the markup (handoff #3); the mock's `.msi` font rules are dropped.
+   ============================================================ */
+
+.dcs {
+  --radius: 18px;
+  /* light theme (default) */
+  --bg: #FBF6EC;
+  --panel: #FFFDF9;
+  --panel-2: #FFF6EA;
+  --sidebar: #FFFCF7;
+  --ink: #241704;
+  --muted: #6E5D45;
+  --line: rgb(184 134 11 / 0.18);
+  --line-soft: rgb(184 134 11 / 0.10);
+  --accent-text: #A06504;
+  --chip-bg: #FFF4DC;
+  --track: rgb(184 134 11 / 0.16);
+  --field: #FFFFFF;
+  --shadow: 0 18px 40px -28px rgba(120, 74, 10, .5);
+  --shadow-sm: 0 8px 20px -14px rgba(120, 74, 10, .5);
+  --emerald: #0E9F6E;
+
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.dark .dcs {
+  --bg: #0A0F1E;
+  --panel: #121A31;
+  --panel-2: #0E1426;
+  --sidebar: #0C1224;
+  --ink: #FFF8F0;
+  --muted: rgb(255 248 240 / 0.64);
+  --line: rgb(255 215 0 / 0.14);
+  --line-soft: rgb(255 215 0 / 0.08);
+  --accent-text: var(--accent-primary-dark);
+  --chip-bg: rgb(255 215 0 / 0.09);
+  --track: rgb(255 255 255 / 0.10);
+  --field: #0E1730;
+  --shadow: 0 22px 50px -28px rgba(0, 0, 0, .7);
+  --shadow-sm: 0 10px 26px -18px rgba(0, 0, 0, .7);
+}
+
+.dcs a { color: var(--accent-text); text-decoration: none; }
+.dcs a:hover { color: var(--lotus-pink); }
+.dcs ::selection { background: rgb(var(--accent-primary-rgb) / 0.26); }
+
+/* All student headings ride the body face; the global h1/h2/h3 rule
+   (indic-design-system.css) puts them in the Yatra One display face, which the
+   mock uses only for `.deva` flourishes (the wordmark). */
+.dcs h1, .dcs h2, .dcs h3, .dcs h4 { font-family: var(--font-body); }
+.dcs .deva { font-family: var(--font-deva); }
+
+.dcs .grad {
+  background: linear-gradient(110deg, var(--saffron), var(--turmeric) 52%, var(--gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.dcs .plinth {
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 14px; color: #fff;
+  box-shadow: 0 10px 22px -10px rgba(255, 107, 53, .6);
+}
+
+.dcs .card {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); box-shadow: var(--shadow-sm);
+  position: relative; overflow: hidden;
+  transition: transform .28s cubic-bezier(.2, .7, .2, 1), box-shadow .28s, border-color .28s;
+}
+.dcs .card.lift:hover {
+  transform: translateY(-5px);
+  border-color: rgb(var(--accent-primary-rgb) / 0.4);
+  box-shadow: var(--shadow);
+}
+
+.dcs .btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: var(--font-body); font-weight: 700; font-size: 14.5px;
+  border-radius: 12px; padding: 11px 18px; cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform .18s, box-shadow .18s, background .18s, color .18s;
+}
+.dcs .btn:disabled { opacity: .55; cursor: not-allowed; }
+.dcs .btn-primary {
+  background: linear-gradient(135deg, var(--kumkum), var(--saffron)); color: #fff;
+  box-shadow: 0 12px 26px -12px rgba(192, 57, 43, .6);
+}
+.dcs .btn-primary:hover:not(:disabled) { transform: translateY(-2px); color: #fff; }
+.dcs .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.dcs .btn-ghost:hover:not(:disabled) {
+  background: var(--chip-bg); color: var(--accent-text);
+  border-color: rgb(var(--accent-primary-rgb) / 0.4);
+}
+
+.dcs .iconbtn {
+  width: 42px; height: 42px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--panel); color: var(--ink); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background .18s, color .18s; flex: none;
+}
+.dcs .iconbtn:hover { background: var(--chip-bg); color: var(--accent-text); }
+
+.dcs .navitem {
+  display: flex; align-items: center; gap: 13px; padding: 11px 14px;
+  border-radius: 12px; color: var(--muted); font-weight: 600; font-size: 14.5px;
+  cursor: pointer; border: none; background: transparent; width: 100%;
+  text-align: left; font-family: var(--font-body);
+  transition: background .18s, color .18s;
+}
+.dcs .navitem:hover { background: var(--chip-bg); color: var(--accent-text); }
+.dcs .navitem.active {
+  background: linear-gradient(135deg, rgb(var(--accent-primary-rgb) / 0.16), rgb(var(--accent-primary-rgb) / 0.05));
+  color: var(--accent-text); box-shadow: inset 3px 0 0 var(--accent-primary);
+}
+
+.dcs .chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 15px;
+  border-radius: 999px; font-weight: 700; font-size: 13px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel); color: var(--muted);
+  white-space: nowrap; transition: all .18s; font-family: var(--font-body);
+}
+.dcs .chip.on { background: linear-gradient(135deg, var(--kumkum), var(--saffron)); color: #fff; border-color: transparent; }
+.dcs .chip:hover { color: var(--accent-text); }
+
+.dcs .tag {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px;
+  border-radius: 999px; font-size: 11.5px; font-weight: 700;
+}
+.dcs .sech {
+  font-size: 20px; font-weight: 800; color: var(--ink);
+  letter-spacing: -.01em; margin: 0;
+}
+.dcs .field {
+  width: 100%; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--field); padding: 12px 14px; font-family: var(--font-body);
+  font-size: 14.5px; color: var(--ink); outline: none;
+  transition: border-color .18s, box-shadow .18s;
+}
+.dcs .field:focus { border-color: var(--accent-primary); box-shadow: 0 0 0 3px rgb(var(--accent-primary-rgb) / 0.2); }
+.dcs .field::placeholder { color: var(--muted); }
+
+.dcs .two-col { display: grid; grid-template-columns: 1fr 320px; gap: 18px; align-items: start; }
+@media (max-width: 1080px) { .dcs .two-col { grid-template-columns: 1fr; } }
+
+@keyframes dcs-spin-slow { to { transform: rotate(360deg); } }
+.dcs .spin { animation: dcs-spin-slow 90s linear infinite; transform-origin: center; }
+
+@media (prefers-reduced-motion: reduce) { .dcs .spin { animation: none !important; } }

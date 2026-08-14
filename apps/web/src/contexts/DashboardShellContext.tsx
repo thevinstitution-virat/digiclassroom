@@ -14,6 +14,10 @@ export interface ShellNavItem {
   href: string
   icon: React.ComponentType<{ className?: string }>
   badge?: string | number
+  /** Marks this item for the ≤1024px bottom tab bar (mock: 4 primary + "More"). */
+  primary?: boolean
+  /** Short label the bottom tab bar uses in place of `name` when set. */
+  shortName?: string
 }
 
 export interface ShellData {

@@ -15,6 +15,8 @@ import "../styles/whatsapp-chat.css";
 import "../styles/landing-indic.css";
 // Dashboards-only, scoped under `.dcd` — a faithful port of the redesign mock.
 import "../styles/dashboards-indic.css";
+// Student-app-only, scoped under `.dcs` — a faithful port of the redesign mock.
+import "../styles/student-indic.css";
 // Indic design system — vendored from PDLMS (canonical source of truth).
 // Do not edit files under design/indic/; edit them in PDLMS and re-run
 // `node shared/design/indic/sync-indic.mjs`. Order is load-bearing: pigments,

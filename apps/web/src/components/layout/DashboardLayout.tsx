@@ -56,7 +56,11 @@ function DashboardLayoutInner({ children, sidebar, header, viewAs }: DashboardLa
   const topKicker = shell?.data.roleLabel || ''
 
   const isDark = resolvedTheme === 'dark'
-  const bottomItems = items.slice(0, 4)
+  // The bottom tab bar shows the sidebar's designated primary items (mock: 4 +
+  // "More"); when a sidebar marks none, fall back to the first four so every
+  // role still gets a usable bar.
+  const primaryItems = items.filter((i) => i.primary)
+  const bottomItems = (primaryItems.length ? primaryItems : items).slice(0, 4)
   const viewAsActive = viewAs ? activeByPrefix(pathname, viewAs.map((r) => r.href)) : undefined
 
   const openNav = () => setSidebarCollapsed(false)
@@ -215,7 +219,7 @@ function DashboardLayoutInner({ children, sidebar, header, viewAs }: DashboardLa
                       overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%',
                     }}
                   >
-                    {b.name}
+                    {b.shortName || b.name}
                   </span>
                 </Link>
               )

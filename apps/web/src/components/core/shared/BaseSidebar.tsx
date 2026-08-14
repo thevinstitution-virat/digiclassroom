@@ -33,6 +33,10 @@ export interface NavigationItem {
   gradient?: string
   /** Optional group label — a header renders above the first item of each section. */
   section?: string
+  /** Marks this item for the ≤1024px bottom tab bar (mock: 4 primary + "More"). */
+  primary?: boolean
+  /** Short label the bottom tab bar uses in place of `name` when set. */
+  shortName?: string
 }
 
 export interface SidebarUser {
@@ -84,7 +88,7 @@ export default function BaseSidebar({
   const navSig = navigation.map((n) => `${n.href}|${n.badge ?? ''}`).join(',')
   useEffect(() => {
     shell?.setData({
-      items: navigation.map((n) => ({ name: n.name, href: n.href, icon: n.icon, badge: n.badge })),
+      items: navigation.map((n) => ({ name: n.name, href: n.href, icon: n.icon, badge: n.badge, primary: n.primary, shortName: n.shortName })),
       brandName,
       roleLabel: brandSubtitle,
     })
@@ -253,7 +257,7 @@ export function createNavigationItem(
   name: string,
   href: string,
   icon: React.ComponentType<{ className?: string }>,
-  options: { description?: string; featured?: boolean; badge?: string | number; gradient?: string; section?: string } = {},
+  options: { description?: string; featured?: boolean; badge?: string | number; gradient?: string; section?: string; primary?: boolean; shortName?: string } = {},
 ): NavigationItem {
   return { name, href, icon, ...options }
 }
