@@ -1,789 +1,675 @@
 'use client'
-import React, { useState, useEffect, useRef } from 'react'
+
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useTheme } from 'next-themes'
 import {
-  Play, BarChart3, Globe, Brain, ChevronDown,
-  Target, Zap, TrendingUp, ArrowRight, MessageSquare, Search, Database,
-  Rocket, Mail, Phone, MapPin, Send, BookOpen, Star,
-  Facebook, Twitter, Instagram, Linkedin, Youtube, Check, Crown, Sparkles,
-  BadgeCheck, Quote, GraduationCap, Layers, WifiOff, Bot, Library, Route
+  Zap, Rocket, Play, Bot, BadgeCheck, Quote, Layers, Flame, Trophy, ChevronDown,
+  LayoutGrid, Brain, ClipboardCheck, Network, SlidersHorizontal, BarChart3, Share2,
+  Route, MessageSquare, BookOpen, Puzzle, WifiOff, Shield, Smile, Users, Timer,
+  Tag, Sparkles, MessagesSquare, Crown, Check, GraduationCap, Library, Heart, Star,
+  ChevronLeft, ChevronRight, HelpCircle, Send, Menu, Sun, Moon,
 } from 'lucide-react'
-import { Navbar } from '@/components/navigation/navbar'
-import { HeroProductMockup } from '@/components/landing/sections/HeroProductMockup'
-import { AiTutorDeepDive } from '@/components/landing/sections/AiTutorDeepDive'
-import { ProductivitySuite } from '@/components/landing/sections/ProductivitySuite'
-// Shared Indic motifs, vendored from PDLMS (canonical: shared/design/indic).
-// Same lotus mandala and chakra rule the other two apps use — this landing is
-// the most visible surface, so it is where the family resemblance has to land.
-import { MandalaSVG } from '@/design/indic/motifs/mandala-svgs'
-import { MandalaMark } from '@/design/indic/motifs/mandala-mark'
-import { ChakraDivider } from '@/design/indic/motifs/chakra-divider'
+import { LandingFooter } from '@/components/landing/LandingFooter'
+
+/* ── Reusable inline SVG mandalas (ported from the mock) ─────────────────── */
+
+function NavMandala({ id, spin }: { id: string; spin: string }) {
+  const petals = [0, 45, 90, 135, 180, 225, 270, 315]
+  return (
+    <svg viewBox="0 0 120 120" width={38} height={38} aria-hidden="true">
+      <defs>
+        <radialGradient id={id} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="var(--gold)" />
+          <stop offset="70%" stopColor="var(--accent-primary)" />
+          <stop offset="100%" stopColor="var(--saffron)" />
+        </radialGradient>
+      </defs>
+      <circle cx="60" cy="60" r="58" fill={`url(#${id})`} />
+      <circle cx="60" cy="60" r="58" fill="none" stroke="var(--gold)" strokeOpacity="0.55" strokeWidth="1.5" />
+      <g className={spin} style={{ transformOrigin: 'center', transformBox: 'fill-box' }}>
+        {petals.map((r) => (
+          <ellipse key={r} cx="60" cy="26" rx="8" ry="20" fill="#fff" fillOpacity="0.34" transform={`rotate(${r} 60 60)`} />
+        ))}
+      </g>
+      <circle cx="60" cy="60" r="15" fill="#fff" fillOpacity="0.95" />
+      <circle cx="60" cy="60" r="6.5" fill="var(--saffron)" />
+    </svg>
+  )
+}
+
+function HeroMandala({ spinA, spinB }: { spinA: string; spinB: string }) {
+  const outer = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330]
+  const inner = [0, 45, 90, 135, 180, 225, 270, 315]
+  return (
+    <svg viewBox="0 0 400 400" width="100%" xmlns="http://www.w3.org/2000/svg">
+      <g className={spinA} style={{ transformOrigin: 'center', transformBox: 'fill-box' }}>
+        <circle cx="200" cy="200" r="182" fill="none" stroke="rgb(255 153 51 / 0.20)" strokeWidth="1" />
+        <circle cx="200" cy="200" r="162" fill="none" stroke="rgb(255 107 53 / 0.22)" strokeWidth="0.8" />
+        {outer.map((r) => (
+          <path key={r} d="M200,42 Q222,72 200,104 Q178,72 200,42Z" fill="rgb(255 107 53 / 0.18)" stroke="rgb(255 153 51 / 0.4)" strokeWidth="0.6" transform={`rotate(${r} 200 200)`} />
+        ))}
+      </g>
+      <g className={spinB} style={{ transformOrigin: 'center', transformBox: 'fill-box' }}>
+        <circle cx="200" cy="200" r="104" fill="none" stroke="rgb(0 106 110 / 0.3)" strokeWidth="1" />
+        {inner.map((r) => (
+          <path key={r} d="M200,108 Q216,134 200,158 Q184,134 200,108Z" fill="rgb(0 106 110 / 0.22)" stroke="rgb(0 106 110 / 0.5)" strokeWidth="0.7" transform={`rotate(${r} 200 200)`} />
+        ))}
+      </g>
+      <circle cx="200" cy="200" r="40" fill="rgb(255 215 0 / 0.08)" stroke="rgb(255 215 0 / 0.4)" strokeWidth="1" />
+      <circle cx="200" cy="200" r="20" fill="rgb(255 215 0 / 0.16)" stroke="rgb(255 153 51 / 0.6)" strokeWidth="1.2" />
+      <circle cx="200" cy="200" r="7" fill="rgb(255 215 0 / 0.7)" />
+    </svg>
+  )
+}
+
+function ChakraWheel({ spin }: { spin: string }) {
+  const spokes = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330]
+  return (
+    <svg viewBox="0 0 100 100" width={42} height={42} className={spin} aria-hidden="true" style={{ transformOrigin: 'center', transformBox: 'fill-box' }}>
+      <circle cx="50" cy="50" r="46" fill="none" stroke="var(--accent-strong)" strokeWidth="2" />
+      <circle cx="50" cy="50" r="8" fill="var(--accent-strong)" />
+      {spokes.map((r) => (
+        <line key={r} x1="50" y1="50" x2="50" y2="6" stroke="var(--accent-strong)" strokeWidth="1.4" transform={`rotate(${r} 50 50)`} />
+      ))}
+    </svg>
+  )
+}
+
+function RingMandala({ spin, stroke = '#FFD700' }: { spin: string; stroke?: string }) {
+  return (
+    <svg viewBox="0 0 200 200" width="100%" className={spin} aria-hidden="true" style={{ transformOrigin: 'center', transformBox: 'fill-box' }}>
+      <circle cx="100" cy="100" r="92" fill="none" stroke={stroke} strokeWidth="1" strokeDasharray="3 7" />
+      <circle cx="100" cy="100" r="66" fill="none" stroke="#FF9933" strokeWidth="1" />
+      <circle cx="100" cy="100" r="40" fill="none" stroke={stroke} strokeWidth="1" strokeDasharray="2 5" />
+      <circle cx="100" cy="100" r="14" fill={stroke} fillOpacity="0.4" />
+    </svg>
+  )
+}
+
+function CornerMotif() {
+  return (
+    <svg viewBox="0 0 200 200" width={150} height={150} aria-hidden="true" style={{ position: 'absolute', right: -30, top: -30, opacity: 0.12 }}>
+      <circle cx="100" cy="100" r="86" fill="none" stroke="var(--accent-primary)" strokeWidth="1.5" strokeDasharray="3 6" />
+      <circle cx="100" cy="100" r="62" fill="none" stroke="var(--peacock-teal)" strokeWidth="1.5" />
+      <circle cx="100" cy="100" r="38" fill="none" stroke="var(--accent-primary)" strokeWidth="1.5" strokeDasharray="2 5" />
+      <circle cx="100" cy="100" r="12" fill="var(--gold)" />
+    </svg>
+  )
+}
+
+/* ── Data (verbatim from the mock) ──────────────────────────────────────── */
+
+const FEATURES = [
+  { Icon: Brain, title: 'AI Tutoring System', tag: 'Agentic RAG', desc: 'Conversational AI with role-based answers, CBSE/ICSE alignment, and citation-backed retrieval over your NCERT books.' },
+  { Icon: ClipboardCheck, title: 'Practest Engine', tag: 'Smart testing', desc: 'Adaptive assessment with intelligent question generation and real-time, chapter-level performance analytics.' },
+  { Icon: Network, title: 'Structured Question Bank', tag: 'Organised', desc: 'Board → Class → Subject → Chapter hierarchy with clean metadata tagging so nothing gets lost.' },
+  { Icon: SlidersHorizontal, title: 'Computer-Adaptive Testing', tag: 'Adaptive', desc: 'CAT algorithms adjust difficulty to your performance for the fastest possible learning curve.' },
+  { Icon: BarChart3, title: 'Advanced Analytics', tag: 'Deep insight', desc: "Track mastery with Bloom's-taxonomy classification and honest strength/gap reporting." },
+  { Icon: Share2, title: 'Multi-Modal Learning', tag: 'Universal', desc: 'Visual, reading and practice modes so every learner meets the material the way they think best.' },
+]
+
+const TOOLS = [
+  { Icon: Zap, name: 'FlashBharat', tagline: 'Gamified active recall', desc: 'Indian-context flashcards, live quiz battles and cultural badges that make revision addictive.' },
+  { Icon: WifiOff, name: 'OfflineOrbit', tagline: 'Offline-first learning', desc: 'Download lessons, tests and notes — study with zero internet, then sync smartly on reconnect.' },
+  { Icon: Shield, name: 'FocusShield', tagline: 'Smart focus mode', desc: 'Blocks distracting apps during study, with a whitelist you control and an emergency escape.' },
+  { Icon: Smile, name: 'MoodMentor', tagline: 'AI study coach', desc: 'Tracks how you feel and adapts the schedule — coaching that protects motivation, not just marks.' },
+  { Icon: Users, name: 'ParentPulse', tagline: 'Parent & teacher view', desc: 'Progress insight and direct messaging so families stay in the loop without the nagging.' },
+  { Icon: Timer, name: 'CurricuTimer', tagline: 'Syllabus-aware Pomodoro', desc: 'Adaptive study timers tuned to your grade and the CBSE/ICSE syllabus, engagement tracked.' },
+]
+
+const PLANS = [
+  { name: 'Free', price: '₹0', unit: '/ 7 days', Icon: Sparkles, badge: 'Try free', blurb: 'Try every feature, limited questions.', feats: ['15 questions total', 'All boards & classes', 'No credit card'], tint: 'var(--temple-stone)', featured: false },
+  { name: 'Basic', price: '₹249', unit: '/ month', Icon: BookOpen, badge: '', blurb: 'For focused, single-subject learning.', feats: ['30 questions / day', '1 board, 1 class', 'Email support'], tint: 'var(--peacock-teal)', featured: false },
+  { name: 'Classic', price: '₹499', unit: '/ month', Icon: MessagesSquare, badge: 'Popular', blurb: 'For dedicated daily learners.', feats: ['60 questions / day', '1 board, 1 class', 'Priority support'], tint: 'var(--accent-strong)', featured: true },
+  { name: 'Pro', price: '₹999', unit: '/ month', Icon: Crown, badge: 'Best value', blurb: 'Ultimate flexibility, all classes.', feats: ['150 questions / day', '1 board, ALL classes', 'Early feature access'], tint: 'var(--lotus-deep)', featured: false },
+]
+
+const STEPS = [
+  { n: '01', Icon: MessageSquare, title: 'Ask anything', desc: 'Type a doubt in Hindi or English from any NCERT chapter, Classes 6–12.' },
+  { n: '02', Icon: BookOpen, title: 'Learn with proof', desc: 'Every answer cites the exact textbook page and tags its Bloom’s level.' },
+  { n: '03', Icon: BarChart3, title: 'Practise adaptively', desc: 'Practest tunes difficulty to you and tracks mastery until it sticks.' },
+]
+
+const TRIO = [
+  { Icon: Bot, name: 'Digi Classroom', role: 'AI Tutor', here: true, desc: 'NCERT-grounded tutoring & adaptive practice for Classes 6–12.' },
+  { Icon: GraduationCap, name: 'Vidyaverse', role: 'Campus OS', here: false, desc: 'The institution operating system — admissions to ID cards.' },
+  { Icon: Library, name: 'PDLMS', role: 'Digital Library', here: false, desc: 'Multi-tenant digital library of learning resources.' },
+]
+
+const COUNTERS = [
+  { Icon: Brain, value: '5+', label: 'AI models' },
+  { Icon: BadgeCheck, value: '100%', label: 'NCERT-cited' },
+  { Icon: BookOpen, value: '6–12', label: 'Classes' },
+  { Icon: Zap, value: '7', label: 'Study tools' },
+]
+
+const FAQ_DATA: Record<'students' | 'teachers' | 'parents', { q: string; a: string }[]> = {
+  students: [
+    { q: 'How does the AI tutor actually help me learn?', a: 'It combines multiple models with curriculum-specific retrieval, adapts to your pace, and explains using Bloom’s taxonomy — always citing the NCERT page so you can trust the answer.' },
+    { q: 'What makes the Practest engine special?', a: 'Computer-adaptive testing generates questions from a hierarchical bank and adjusts difficulty in real time, with chapter-level analytics after every attempt.' },
+    { q: 'Can I track my progress?', a: 'Yes — visual dashboards, learning streaks, XP and clear strength/gap insight so you always know what to revise next.' },
+    { q: 'Is content aligned to my syllabus?', a: 'All content is mapped to the latest CBSE and ICSE curriculum for Classes 6–12, with metadata tagging for precise alignment across subjects.' },
+    { q: 'Can I use it offline?', a: 'Yes — OfflineOrbit lets you download lessons, practice and assessments, then syncs intelligently when you reconnect.' },
+  ],
+  teachers: [
+    { q: 'How do I manage my classroom?', a: 'Create and manage classes, assign work, track student progress, generate reports, and customise learning paths for individuals or groups.' },
+    { q: 'What analytics do I get?', a: 'Performance metrics, engagement levels, learning patterns, assessment results and curriculum-coverage reports — all as clear visualisations.' },
+    { q: 'Can I create my own content?', a: 'Yes — build custom lessons, quizzes and assignments, or adapt existing content to your teaching style and syllabus needs.' },
+    { q: 'Which teaching methods are supported?', a: 'Flipped classroom, blended, project-based and traditional instruction — with flexible content delivery for each.' },
+    { q: 'Is there onboarding support?', a: 'Training resources, webinars and documentation to help you integrate the platform effectively into your practice.' },
+  ],
+  parents: [
+    { q: 'How do I monitor my child’s progress?', a: 'Detailed progress reports, time-on-task, achievement badges and trends — with milestone notifications when they matter.' },
+    { q: 'Is the platform safe for my child?', a: 'Data encryption, privacy protection, content filtering and compliance with educational data-protection norms keep the space safe.' },
+    { q: 'Can I set study schedules and limits?', a: 'Set daily goals, screen-time limits, break reminders and structured schedules, with parental controls over access.' },
+    { q: 'Can I reach my child’s teachers?', a: 'Secure messaging, conference scheduling and progress sharing keep parent–teacher communication simple.' },
+    { q: 'What support is available?', a: 'AI tutoring assistance, help resources and human support so your child always has a next step.' },
+  ],
+}
+
+const TESTIMONIALS = [
+  { name: 'Class 10 learner', role: 'Design-partner persona', quote: 'Explain a hard concept in minutes — and show me the exact textbook page it came from, so I can trust it.' },
+  { name: 'Class 12 learner', role: 'Design-partner persona', quote: 'Adaptive testing that gets harder as I improve, mapped to the real board pattern. That is what would prepare me.' },
+  { name: 'Class 9 learner', role: 'Design-partner persona', quote: 'A platform that adapts to how I learn and keeps me focused — flashcards, streaks and offline access.' },
+]
+
+const NAV_LINKS = [
+  { href: '#features', label: 'Features' },
+  { href: '#ai-tutor', label: 'AI Tutor' },
+  { href: '#pricing', label: 'Plans' },
+  { href: '#faq', label: 'FAQ' },
+  { href: '#contact', label: 'Contact' },
+]
 
 export const EnhancedLandingPage: React.FC = () => {
   const router = useRouter()
-  const [currentTestimonial, setCurrentTestimonial] = useState(0)
-  const [openFaq, setOpenFaq] = useState<number | null>(null)
-  const [activeFaqCategory, setActiveFaqCategory] = useState<'students' | 'teachers' | 'parents'>('students')
-  const [newsletterEmail, setNewsletterEmail] = useState('')
-  const [counters, setCounters] = useState({ students: 0, satisfaction: 0, courses: 0, teachers: 0 })
+  const { resolvedTheme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [faqTab, setFaqTab] = useState<'students' | 'teachers' | 'parents'>('students')
+  const [openFaq, setOpenFaq] = useState(0)
+  const [activeT, setActiveT] = useState(0)
 
-  const heroRef = useRef<HTMLDivElement>(null)
-  const featuresRef = useRef<HTMLDivElement>(null)
-  const countersRef = useRef<HTMLDivElement>(null)
+  useEffect(() => setMounted(true), [])
 
-  // Pre-launch: value props voiced through learner personas from our design-partner
-  // interviews — not fabricated named students. Honest founding-cohort framing.
-  const testimonials = [
-    { id: 1, name: "Class 10 learner", grade: "Design-partner persona", quote: "What I want from an AI tutor: explain a hard concept in minutes — and show me the exact textbook page it came from so I can trust it." },
-    { id: 2, name: "Class 12 learner", grade: "Design-partner persona", quote: "Adaptive testing that gets harder as I improve, mapped to the actual board pattern — that's what would prepare me for exams." },
-    { id: 3, name: "Class 9 learner", grade: "Design-partner persona", quote: "A platform that adapts to how I learn and keeps me focused — flashcards, streaks, and offline access — would make studying feel less like a chore." }
-  ]
+  const goSignup = () => router.push('/sign-up')
+  const isDark = mounted && resolvedTheme === 'dark'
+  const toggleTheme = () => setTheme(isDark ? 'light' : 'dark')
 
-  const faqCategories = {
-    students: [
-      { question: "How does Digi Classroom's AI tutoring system help me learn better?", answer: "Our advanced agentic RAG system combines multiple AI models with curriculum-specific content retrieval. It understands your learning style, adapts to your pace, and provides personalized explanations using Bloom's taxonomy classification for optimal comprehension." },
-      { question: "What makes the e-Learning Practest assessment engine special?", answer: "Our Practest engine uses Computer Adaptive Testing (CAT) algorithms with T5/BART models for intelligent question generation. It maintains a comprehensive question bank with hierarchical topic organization and provides real-time performance analytics." },
-      { question: "Can I track my learning progress and performance?", answer: "Yes! Digi Classroom provides comprehensive progress tracking with visual dashboards, performance analytics, learning streaks, XP points, and detailed insights into your strengths and areas for improvement." },
-      { question: "Is the content aligned with my school curriculum?", answer: "Absolutely! All content is meticulously aligned with the latest CBSE curriculum for classes 9-12. Our database-driven approach ensures comprehensive coverage with metadata tagging for precise curriculum alignment across all subjects." },
-      { question: "Can I access the platform offline?", answer: "Yes! Download lessons, practice materials, and assessments for offline access. Our OfflineOrbit feature ensures uninterrupted learning even without internet connectivity." }
-    ],
-    teachers: [
-      { question: "How can I manage my classroom and students on Digi Classroom?", answer: "Our comprehensive teacher dashboard allows you to create and manage classes, assign homework, track student progress, generate detailed reports, and customize learning paths for individual students or groups." },
-      { question: "What analytics and insights are available for educators?", answer: "Access detailed analytics including student performance metrics, engagement levels, learning patterns, assessment results, and curriculum coverage reports. All data is presented in easy-to-understand visualizations." },
-      { question: "Can I create custom content and assessments?", answer: "Yes! Teachers can create custom lessons, quizzes, and assignments using our intuitive content creation tools. You can also modify existing content to match your teaching style and curriculum requirements." },
-      { question: "How does the platform support different teaching methodologies?", answer: "Digi Classroom supports various teaching approaches including flipped classroom, blended learning, project-based learning, and traditional instruction methods with flexible content delivery options." },
-      { question: "Is there professional development support for teachers?", answer: "We provide comprehensive training resources, webinars, documentation, and dedicated support to help teachers maximize the platform's potential and integrate it effectively into their teaching practice." }
-    ],
-    parents: [
-      { question: "How can I monitor my child's learning progress and performance?", answer: "Parents get access to detailed progress reports, learning analytics, time spent studying, achievement badges, and performance trends. You can set up notifications for important milestones and achievements." },
-      { question: "Is the platform safe and secure for my child?", answer: "Absolutely! Digi Classroom implements robust security measures including data encryption, privacy protection, content filtering, and compliance with educational data protection regulations to ensure a safe learning environment." },
-      { question: "Can I set study schedules and screen time limits?", answer: "Yes! Parents can set daily study goals, screen time limits, break reminders, and create structured learning schedules. The platform includes parental controls to manage access and usage patterns." },
-      { question: "How do I communicate with my child's teachers through the platform?", answer: "The platform includes secure messaging features, parent-teacher conference scheduling, progress sharing, and collaborative tools to maintain regular communication with educators about your child's learning journey." },
-      { question: "What support is available if my child needs help?", answer: "We provide 24/7 technical support, AI-powered tutoring assistance, access to human tutors for complex queries, and comprehensive help resources to ensure your child gets the support they need." }
-    ]
-  }
+  const t = TESTIMONIALS[activeT]
+  const initials = t.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
+  const faqList = FAQ_DATA[faqTab]
 
-  /* Every feature previously carried its own hue (purple, blue, green, orange,
-     pink, teal). Six unrelated gradients read as a component gallery rather
-     than one product, and none of them were Indic. They now share the accent
-     plinth; the distinguishing signal is the motif watermark behind each tile,
-     which is the same set of six mandalas PDLMS uses on its feature grid. */
-  const platformFeatures = [
-    { icon: Brain, title: "AI-Powered Tutoring System", description: "Advanced conversational AI with role-based responses, CBSE curriculum alignment, and intelligent RAG search", highlight: "AI Powered", motif: 'lotus' },
-    { icon: Database, title: "e-Learning Practest Engine", description: "Comprehensive assessment system with adaptive testing, intelligent question generation, and detailed analytics", highlight: "Smart Testing", motif: 'sriyantra' },
-    { icon: Search, title: "Enhanced Question Bank", description: "Hierarchical topic organization with Board to Class to Subject to Chapter structure and metadata tagging", highlight: "Organized Content", motif: 'ashoka' },
-    { icon: Target, title: "Computer Adaptive Testing", description: "CAT algorithms that adjust difficulty based on performance for optimal learning progression", highlight: "Adaptive Learning", motif: 'peacock' },
-    { icon: BarChart3, title: "Advanced Analytics", description: "Comprehensive performance tracking with Bloom's taxonomy classification and learning insights", highlight: "Deep Insights", motif: 'kolam' },
-    { icon: Globe, title: "Multi-Modal Learning", description: "Support for all learning styles with visual, auditory, and kinesthetic content delivery methods", highlight: "Universal Access", motif: 'meenakari' }
-  ]
-
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) animateCounters()
-      })
-    }, { threshold: 0.5 })
-    if (countersRef.current) observer.observe(countersRef.current)
-    return () => observer.disconnect()
-  }, [])
-
-  const animateCounters = () => {
-    const targets = { students: 6, satisfaction: 100, courses: 7, teachers: 7 }
-    const duration = 2000, steps = 60
-    let step = 0
-    const interval = setInterval(() => {
-      step++
-      const progress = step / steps
-      const easeOut = 1 - Math.pow(1 - progress, 3)
-      setCounters({
-        students: Math.floor(targets.students * easeOut),
-        satisfaction: Math.floor(targets.satisfaction * easeOut),
-        courses: Math.floor(targets.courses * easeOut),
-        teachers: Math.floor(targets.teachers * easeOut)
-      })
-      if (step >= steps) {
-        clearInterval(interval)
-        setCounters(targets)
-      }
-    }, duration / steps)
-  }
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTestimonial((prev) => (prev + 1) % testimonials.length)
-    }, 5000)
-    return () => clearInterval(interval)
-  }, [testimonials.length])
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (heroRef.current) {
-        const scrolled = window.pageYOffset
-        const parallax = scrolled * 0.5
-        heroRef.current.style.transform = `translateY(${parallax}px)`
-      }
-    }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log('Newsletter subscription:', newsletterEmail)
-    setNewsletterEmail('')
-  }
+  const chipBase = 'inline-flex items-center justify-center rounded-full font-bold cursor-pointer transition-all'
 
   return (
-    <div className="indic-landing min-h-screen">
-      {/* Navigation */}
-      <Navbar />
-
-      {/* ── Hero ──
-          indic-hero-canvas supplies the pastel Indic gradient (light) / deep
-          night-to-turmeric gradient (dark) plus the ambient orbs, so this
-          section names no colours of its own. */}
-      <section className="indic-hero-canvas relative min-h-screen flex items-center justify-center pt-16">
-        {/* Parallax layer: kept as an empty transform target — the gradient now
-            lives on the section itself so it can't slide away from its edges. */}
-        <div ref={heroRef} className="absolute inset-0 pointer-events-none" />
-        <div className="rangoli-texture" />
-
-        {/* Slowly breathing lotus mandala, the trio's shared hero motif */}
-        <div className="mandala-wrapper mandala-breathe">
-          <MandalaSVG />
+    <>
+      <div className="dcl" style={{ minHeight: '100vh' }}>
+        {/* announcement bar */}
+        <div style={{ background: 'linear-gradient(90deg,var(--indigo-deep),var(--night-ink))', color: 'var(--ivory-cream)', textAlign: 'center', fontSize: 13.5, fontWeight: 600, padding: '9px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 9, flexWrap: 'wrap' }}>
+          <Sparkles size={16} style={{ color: 'var(--gold)' }} />
+          Launching 2026 · Founding cohort onboarding now · NCERT-grounded, citation-backed AI tutoring
         </div>
 
-        <div className="relative z-10 text-center px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto py-16">
-          <div className="mb-6 mt-8">
-            <span className="indic-eyebrow indic-rise">
-              <Zap className="h-4 w-4" /> Powered by Sarvagya · Agentic RAG over NCERT
-            </span>
-          </div>
-
-          <h1 className="text-5xl md:text-7xl mb-5 indic-rise indic-delay-1">
-            The AI tutor that
-            <br />
-            <span className="gradient-text-indic-soft">shows its sources.</span>
-          </h1>
-
-          <p
-            className="font-deva text-2xl md:text-3xl mb-7 tracking-wide indic-rise indic-delay-2"
-            style={{ color: 'var(--accent-strong)' }}
-          >
-            ज्ञान · अभ्यास · उत्कर्ष
-          </p>
-
-          <p className="indic-muted text-lg md:text-xl mb-12 max-w-3xl mx-auto leading-relaxed indic-rise indic-delay-2">
-            <strong>NCERT-grounded answers</strong>, Bloom-tagged and citation-backed.
-            Adaptive Practest, offline-ready study tools — built for CBSE &amp; ICSE learners,
-            Classes 6–12.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center indic-rise indic-delay-3">
-            <button onClick={() => router.push('/sign-up')} className="indic-cta indic-cta--primary w-full sm:w-auto text-lg">
-              Start learning free
-              <Rocket className="h-5 w-5" />
-            </button>
-            <button
-              onClick={() => featuresRef.current?.scrollIntoView({ behavior: 'smooth' })}
-              className="indic-cta indic-cta--ghost w-full sm:w-auto text-lg"
-            >
-              <Play className="w-5 h-5" />
-              See it in action
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 max-w-4xl mx-auto">
-            {[
-              { label: 'AI models', value: '5+', icon: Brain },
-              { label: 'NCERT-cited', value: '100%', icon: Database },
-              { label: 'CBSE · ICSE', value: '6–12', icon: Target },
-              { label: 'study tools', value: '7', icon: TrendingUp }
-            ].map((stat, index) => (
-              <div key={index} className="indic-tile text-center p-4">
-                <span className="indic-icon-plinth w-11 h-11 mx-auto mb-2">
-                  <stat.icon className="h-5 w-5" />
-                </span>
-                <div className="indic-stat__value text-2xl">{stat.value}</div>
-                <div className="indic-muted text-sm">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Product mockup — shows what Digi Classroom actually is, above the fold */}
-          <HeroProductMockup />
-        </div>
-
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 indic-float">
-          <ChevronDown className="w-7 h-7" style={{ color: 'rgb(var(--accent-strong-rgb) / 0.6)' }} />
-        </div>
-      </section>
-
-      {/* ── Trust strip ── */}
-      <section className="indic-section py-6" style={{ borderTop: '1px solid var(--line, rgb(184 134 11 / 0.18))', borderBottom: '1px solid rgb(184 134 11 / 0.18)' }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
-            {[
-              { icon: BadgeCheck, label: 'NCERT-grounded' },
-              { icon: Quote, label: 'Verifiable citations' },
-              { icon: GraduationCap, label: 'CBSE & ICSE' },
-              { icon: Layers, label: 'Bloom-tagged' },
-              { icon: WifiOff, label: 'Offline-ready' },
-            ].map((item) => (
-              <span key={item.label} className="indic-muted inline-flex items-center gap-2 text-sm font-semibold">
-                <item.icon className="h-4 w-4" style={{ color: 'var(--accent-strong)' }} />
-                {item.label}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Features ── */}
-      <section id="features" ref={featuresRef} className="indic-section--warm py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl mb-6">
-              Platform <span className="gradient-text-indic-soft">Features</span>
-            </h2>
-            <p className="indic-muted text-xl max-w-3xl mx-auto">
-              Discover the cutting-edge technology that powers personalized learning experiences
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {platformFeatures.map((feature, index) => (
-              <div key={index} className="indic-tile p-8">
-                <div className={`indic-tile__motif indic-motif-${feature.motif}`} />
-                <div className="relative z-10">
-                  <span className="indic-icon-plinth w-16 h-16 mb-6">
-                    <feature.icon className="h-8 w-8" />
-                  </span>
-                  <div className="mb-4">
-                    <span className="indic-eyebrow mb-3">{feature.highlight}</span>
-                    <h3 className="text-xl mt-3">{feature.title}</h3>
-                  </div>
-                  <p className="indic-muted leading-relaxed">{feature.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <ChakraDivider className="indic-section" />
-
-      {/* AI Tutor (Sarvagya RAG) + Practest deep-dive */}
-      <AiTutorDeepDive />
-
-      {/* ── How it works ── */}
-      <section className="indic-section py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <span className="indic-eyebrow mb-6">
-              <Route className="w-4 h-4" /> How it works
-            </span>
-            <h2 className="text-4xl md:text-5xl mt-6">
-              From doubt to mastery in <span className="gradient-text-indic-soft">three steps.</span>
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { n: '01', icon: MessageSquare, title: 'Ask anything', desc: 'Type a doubt in Hindi or English from any NCERT chapter, Classes 6–12.' },
-              { n: '02', icon: BookOpen, title: 'Learn with proof', desc: 'Every answer cites the exact textbook page and tags its Bloom’s level.' },
-              { n: '03', icon: BarChart3, title: 'Practise adaptively', desc: 'Practest tunes difficulty to you and tracks mastery until it sticks.' },
-            ].map((step) => (
-              <div key={step.n} className="indic-tile p-8">
-                <div className="indic-tile__motif indic-motif-kolam" />
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-5">
-                    <span className="indic-icon-plinth w-14 h-14">
-                      <step.icon className="h-6 w-6" />
-                    </span>
-                    <span className="indic-stat__value text-5xl opacity-25">{step.n}</span>
-                  </div>
-                  <h3 className="text-xl mb-3">{step.title}</h3>
-                  <p className="indic-muted leading-relaxed">{step.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* The Productivity Suite — real branded student tools */}
-      <ProductivitySuite />
-
-      {/* ── Plans ── */}
-      <section id="plans" className="indic-section py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl mb-6">
-              Simple, <span className="gradient-text-indic-soft">Transparent Pricing</span>
-            </h2>
-            <p className="indic-muted text-xl max-w-3xl mx-auto">
-              Choose the perfect plan for your learning journey. All plans include access to our advanced AI tutor.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            {/* Tier colour previously carried the meaning (grey / blue / green /
-                orange). Rank is now carried by the accent ramp — temple-stone,
-                peacock, accent, gold — which stays inside the Indic palette and
-                still reads as an ascending ladder. */}
-            {[
-              {
-                name: 'Free Trial', price: '₹0', unit: '/ 7 days', icon: Sparkles, badge: 'Try Free',
-                blurb: 'Try all features with limited questions', tint: 'var(--temple-stone)',
-                features: ['15 questions total', 'All boards & classes', 'No credit card required'],
-              },
-              {
-                name: 'Basic', price: '₹249', unit: '/ month', icon: BookOpen, badge: null,
-                blurb: 'Perfect for focused learning', tint: 'var(--peacock-teal)',
-                features: ['30 questions per day', '1 board, 1 class', 'Email support'],
-              },
-              {
-                name: 'Classic', price: '₹499', unit: '/ month', icon: MessageSquare, badge: 'Popular',
-                blurb: 'For dedicated learners', tint: 'var(--accent-strong)', featured: true,
-                features: ['60 questions per day', '1 board, 1 class', 'Priority support'],
-              },
-              {
-                name: 'Pro', price: '₹999', unit: '/ month', icon: Crown, badge: 'Best Value',
-                blurb: 'Ultimate flexibility', tint: 'var(--lotus-deep)',
-                features: ['150 questions per day', '1 board, ALL classes', 'Early access to features'],
-              },
-            ].map((plan) => (
-              <div
-                key={plan.name}
-                className="indic-tile p-6"
-                style={plan.featured ? { borderColor: 'rgb(var(--accent-primary-rgb) / 0.65)', borderWidth: 2 } : undefined}
-              >
-                {plan.badge && (
-                  <div className="absolute top-4 right-4 z-10">
-                    <span
-                      className="inline-block px-3 py-1 text-xs font-bold text-white rounded-full"
-                      style={{ background: plan.tint }}
-                    >
-                      {plan.badge}
-                    </span>
-                  </div>
-                )}
-                <div className="relative z-10">
-                  <div className="mb-4">
-                    <plan.icon className="h-10 w-10 mb-3" style={{ color: plan.tint }} />
-                    <h3 className="text-2xl mb-2">{plan.name}</h3>
-                    <div className="flex items-baseline mb-2">
-                      <span className="indic-stat__value text-4xl">{plan.price}</span>
-                      <span className="indic-muted ml-2">{plan.unit}</span>
-                    </div>
-                    <p className="indic-muted text-sm">{plan.blurb}</p>
-                  </div>
-                  <ul className="space-y-2 mb-6">
-                    {plan.features.map((f) => (
-                      <li key={f} className="flex items-start text-sm">
-                        <Check className="h-5 w-5 mr-2 flex-shrink-0" style={{ color: 'var(--teal-light)' }} />
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="text-center">
-            <a href="/pricing" className="indic-cta indic-cta--primary">
-              View Full Pricing Details
-              <ArrowRight className="h-5 w-5" />
+        {/* nav */}
+        <nav style={{ position: 'sticky', top: 0, zIndex: 50, backdropFilter: 'blur(14px) saturate(160%)', background: 'var(--nav-bg)', borderBottom: '1px solid var(--line)' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: 68, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+            <a href="#top" style={{ display: 'flex', alignItems: 'center', gap: 11, color: 'var(--ink)' }}>
+              <NavMandala id="mm-nav" spin="spin-slow" />
+              <span className="deva" style={{ fontSize: 23, letterSpacing: '.01em' }}>Digi Classroom</span>
             </a>
-            <p className="indic-muted mt-4 text-sm">
-              7-day money-back on any paid plan · no-cost EMI available · cancel anytime.
-            </p>
-          </div>
-        </div>
-      </section>
 
-      {/* ── Capability counters ── */}
-      <section id="about" ref={countersRef} className="indic-section--deep mandala-watermark py-20">
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <span className="indic-eyebrow mb-6">
-              <Sparkles className="w-4 h-4" /> Launching 2026 · Founding learners onboarding now
-            </span>
-            <h2 className="text-4xl md:text-5xl mt-6 mb-6">
-              Built for Every CBSE &amp; ICSE Learner
-            </h2>
-            <p className="indic-muted text-xl max-w-3xl mx-auto">
-              Not vanity metrics — the real capabilities students get from day one.
-            </p>
-          </div>
+            <div className="nav-links" style={{ alignItems: 'center', gap: 30 }}>
+              {NAV_LINKS.map((l) => (
+                <a key={l.href} href={l.href} className="navlink">{l.label}</a>
+              ))}
+            </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            {[
-              { label: 'AI Models', value: counters.students, icon: Brain, suffix: '+' },
-              { label: 'NCERT-Cited', value: counters.satisfaction, icon: Target, suffix: '%' },
-              { label: 'Classes (6–12)', value: counters.courses, icon: BookOpen, suffix: '' },
-              { label: 'Productivity Tools', value: counters.teachers, icon: Zap, suffix: '' }
-            ].map((stat, index) => (
-              <div
-                key={index}
-                className="text-center p-6 rounded-xl backdrop-blur-md transition-all duration-300"
-                style={{
-                  background: 'rgb(var(--ivory-cream-rgb) / 0.08)',
-                  border: '1px solid rgb(var(--gold-rgb) / 0.25)',
-                }}
-              >
-                <stat.icon className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--gold)' }} />
-                <div className="indic-stat__value text-4xl md:text-5xl mb-2">
-                  {stat.value}{stat.suffix}
-                </div>
-                <div className="indic-muted font-semibold">{stat.label}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button onClick={toggleTheme} aria-label="Toggle theme" style={{ width: 42, height: 42, borderRadius: 12, border: '1px solid var(--line)', background: 'var(--panel)', color: 'var(--accent-text)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                {isDark ? <Sun size={21} /> : <Moon size={21} />}
+              </button>
+              <div className="nav-cta" style={{ alignItems: 'center', gap: 10 }}>
+                <button onClick={() => router.push('/sign-in')} className="navlink" style={{ fontWeight: 700, padding: '8px 6px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16 }}>Sign in</button>
+                <button onClick={goSignup} className="btn btn-primary" style={{ padding: '11px 22px', fontSize: 15 }}>Get started</button>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Testimonials ── */}
-      <section className="indic-section py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl mb-6">
-              Designed With <span className="gradient-text-indic-soft">Real Learners</span>
-            </h2>
-            <p className="indic-muted text-xl max-w-3xl mx-auto">
-              We&apos;re building Digi Classroom alongside students. These are the needs they voiced —
-              the product is built to meet them.
-            </p>
-            <p className="indic-muted text-sm mt-3 italic opacity-80">
-              Illustrative voices from design-partner interviews · launching 2026
-            </p>
+              <button onClick={() => setMenuOpen((v) => !v)} className="nav-burger" aria-label="Menu" style={{ width: 42, height: 42, borderRadius: 12, border: '1px solid var(--line)', background: 'var(--panel)', color: 'var(--ink)', cursor: 'pointer', alignItems: 'center', justifyContent: 'center' }}>
+                <Menu size={23} />
+              </button>
+            </div>
           </div>
 
-          <div className="relative max-w-4xl mx-auto">
-            <div className="indic-tile p-8 md:p-12">
-              <div className="indic-tile__motif indic-motif-lotus" />
-              <div className="relative z-10 text-center">
-                <div className="flex justify-center mb-6">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-6 w-6 fill-current" style={{ color: 'var(--gold)' }} />
+          {menuOpen && (
+            <div style={{ borderTop: '1px solid var(--line)', background: 'var(--panel)', padding: '16px 24px 22px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {NAV_LINKS.map((l) => (
+                <a key={l.href} href={l.href} onClick={() => setMenuOpen(false)} className="navlink" style={{ padding: '11px 4px', fontSize: 17 }}>{l.label}</a>
+              ))}
+              <button onClick={() => { setMenuOpen(false); goSignup() }} className="btn btn-primary" style={{ marginTop: 10 }}>Get started</button>
+            </div>
+          )}
+        </nav>
+
+        <main id="top">
+          {/* ───────── HERO ───────── */}
+          <section style={{ position: 'relative', overflow: 'hidden', padding: 'clamp(56px,8vw,96px) 24px clamp(64px,9vw,110px)' }}>
+            <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(58rem 42rem at 82% -6%,rgb(var(--accent-primary-rgb) / 0.16),transparent 60%),radial-gradient(52rem 44rem at 6% 8%,rgb(0 106 110 / 0.14),transparent 58%)' }} />
+            <div className="floaty" style={{ position: 'absolute', top: '8%', right: -60, width: 320, height: 320, borderRadius: '50%', background: 'radial-gradient(circle,rgba(255,107,53,.22),transparent 68%)', filter: 'blur(20px)', pointerEvents: 'none' }} />
+
+            <div className="breathe" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 'min(120vw,1100px)', opacity: 0.5, pointerEvents: 'none' }}>
+              <HeroMandala spinA="spin-slow" spinB="spin-rev" />
+            </div>
+
+            <div style={{ position: 'relative', zIndex: 2, maxWidth: 940, margin: '0 auto', textAlign: 'center' }}>
+              <span className="eyebrow"><Zap size={17} /> Powered by Sarvagya · Agentic RAG over NCERT</span>
+              <h1 style={{ fontFamily: 'var(--font-body)', fontWeight: 800, letterSpacing: '-.03em', lineHeight: 1.04, margin: '22px 0 0', fontSize: 'clamp(40px,7vw,78px)', color: 'var(--ink)' }}>
+                The AI tutor that<br /><span className="grad">shows its sources.</span>
+              </h1>
+              <p className="deva" style={{ fontSize: 'clamp(18px,2.4vw,26px)', color: 'var(--accent-text)', margin: '18px 0 0', letterSpacing: '.02em' }}>ज्ञान · अभ्यास · उत्कर्ष</p>
+              <p className="sub" style={{ maxWidth: '44ch' }}>NCERT-grounded answers, Bloom-tagged and citation-backed. Adaptive Practest, offline-ready study tools — built for CBSE &amp; ICSE learners, Classes 6–12.</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, justifyContent: 'center', marginTop: 32 }}>
+                <button onClick={goSignup} className="btn btn-primary">Start learning free <Rocket size={20} /></button>
+                <a href="#ai-tutor" className="btn btn-ghost"><Play size={20} /> See it in action</a>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 14, margin: '44px auto 0', maxWidth: 760 }}>
+                {[['5+', 'AI models'], ['100%', 'NCERT-cited'], ['6–12', 'CBSE · ICSE'], ['7', 'study tools']].map(([v, l]) => (
+                  <div key={l} className="card" style={{ padding: '18px 14px', textAlign: 'center', boxShadow: 'none' }}>
+                    <div style={{ fontWeight: 800, fontSize: 26, color: 'var(--accent-text)' }}>{v}</div>
+                    <div style={{ color: 'var(--muted)', fontSize: 13.5, fontWeight: 600 }}>{l}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* product mockup */}
+            <div style={{ position: 'relative', zIndex: 2, maxWidth: 820, margin: '52px auto 0' }}>
+              <div style={{ position: 'absolute', inset: -16, borderRadius: 28, background: 'linear-gradient(135deg,var(--gold),var(--saffron),var(--lotus-pink))', filter: 'blur(34px)', opacity: 0.24 }} />
+              <div style={{ position: 'relative', borderRadius: 22, overflow: 'hidden', border: '1px solid rgb(255 215 0 / 0.3)', boxShadow: '0 40px 80px -34px rgba(0,0,0,.55)', background: '#FFFCF7' }}>
+                <div style={{ height: 40, display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px', background: '#FFF8F0', borderBottom: '1px solid rgb(184 134 11 / 0.2)' }}>
+                  <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#C0392B', opacity: 0.75 }} />
+                  <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#F5A623' }} />
+                  <span style={{ width: 11, height: 11, borderRadius: '50%', background: '#00897B' }} />
+                  <span style={{ marginLeft: 10, fontSize: 12, fontWeight: 700, color: '#5A4E3C' }}>Digi Classroom · Class 9 Science</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr' }}>
+                  <div style={{ padding: 20, borderRight: '1px solid rgb(184 134 11 / 0.16)', textAlign: 'left' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                      <span className="plinth" style={{ width: 30, height: 30, borderRadius: 9 }}><Bot size={17} /></span>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: '#0A0F1E' }}>Digi Tutor</span>
+                      <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, color: '#00897B' }}><BadgeCheck size={14} /> grounded in NCERT</span>
+                    </div>
+                    <div style={{ marginLeft: 'auto', width: 'fit-content', maxWidth: '86%', fontSize: 13, padding: '10px 13px', borderRadius: '16px 16px 4px 16px', background: '#006A6E', color: '#fff' }}>Explain photosynthesis simply 🌱</div>
+                    <div style={{ marginTop: 10, maxWidth: '94%', fontSize: 13, padding: '11px 13px', borderRadius: '16px 16px 16px 4px', background: '#FFF8F0', border: '1px solid rgb(184 134 11 / 0.22)', color: '#0A0F1E', lineHeight: 1.55 }}>
+                      Plants make food from sunlight, water and CO₂ — turning light energy into glucose and releasing oxygen.
+                      <div style={{ marginTop: 9, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: '#FFF6E3', color: '#7A4A00' }}><Quote size={12} /> NCERT Sci 9 · p.96</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10.5, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: 'rgb(0 106 110 / 0.12)', color: '#006A6E' }}><Layers size={12} /> Bloom: Understand</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12, background: 'linear-gradient(135deg,#FFF3E6,#FFF8F0)', textAlign: 'left' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}><Zap size={17} style={{ color: '#A06504' }} /><span style={{ fontSize: 12, fontWeight: 800, color: '#0A0F1E' }}>FlashBharat</span></div>
+                    <div style={{ borderRadius: 12, padding: 11, background: '#FFFCF7', border: '1px solid rgb(184 134 11 / 0.22)' }}>
+                      <div style={{ fontSize: 11, color: '#5A4E3C', marginBottom: 3 }}>Q · Site of photosynthesis?</div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: '#0A0F1E' }}>Chloroplast</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: 12, padding: 11, background: '#FFFCF7', border: '1px solid rgb(184 134 11 / 0.22)' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 800, fontSize: 14, color: '#C0392B' }}><Flame size={17} /> 12</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 800, fontSize: 14, color: '#006A6E' }}><Trophy size={17} /> Lv 7</span>
+                    </div>
+                    <div style={{ fontSize: 10.5, textAlign: 'center', color: '#5A4E3C' }}>day streak · keep it alive!</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="hint" style={{ display: 'flex', justifyContent: 'center', marginTop: 40, color: 'var(--accent-text)' }}><ChevronDown size={30} /></div>
+          </section>
+
+          {/* ───────── TRUST STRIP ───────── */}
+          <section style={{ borderTop: '1px solid var(--line)', borderBottom: '1px solid var(--line)', background: 'var(--panel-2)' }}>
+            <div style={{ maxWidth: 1120, margin: '0 auto', padding: '20px 24px', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '14px 30px', color: 'var(--muted)', fontWeight: 700, fontSize: 14 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><BadgeCheck size={18} style={{ color: 'var(--accent-text)' }} /> NCERT-grounded</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><Quote size={18} style={{ color: 'var(--peacock-teal)' }} /> Verifiable citations</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><GraduationCap size={18} style={{ color: 'var(--accent-text)' }} /> CBSE &amp; ICSE</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><Layers size={18} style={{ color: 'var(--peacock-teal)' }} /> Bloom-tagged</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><WifiOff size={18} style={{ color: 'var(--accent-text)' }} /> Offline-ready</span>
+            </div>
+          </section>
+
+          {/* ───────── FEATURES ───────── */}
+          <section id="features" style={{ position: 'relative', padding: 'clamp(64px,9vw,116px) 24px', background: 'var(--bg)' }}>
+            <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+              <div style={{ textAlign: 'center', marginBottom: 56 }}>
+                <span className="eyebrow"><LayoutGrid size={17} /> The platform</span>
+                <h2 className="h2" style={{ marginTop: 18 }}>Everything a serious learner needs, <span className="grad">in one place.</span></h2>
+                <p className="sub">Cutting-edge technology that powers a personalised, trustworthy learning experience.</p>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(290px,1fr))', gap: 22 }}>
+                {FEATURES.map((f) => (
+                  <div key={f.title} className="card lift" style={{ padding: 30 }}>
+                    <CornerMotif />
+                    <div style={{ position: 'relative', zIndex: 1 }}>
+                      <span className="plinth" style={{ width: 58, height: 58 }}><f.Icon size={28} /></span>
+                      <div style={{ marginTop: 20, fontSize: 12, fontWeight: 800, letterSpacing: '.08em', textTransform: 'uppercase', color: 'var(--accent-text)' }}>{f.tag}</div>
+                      <h3 style={{ margin: '8px 0 10px', fontSize: 21, fontWeight: 800, color: 'var(--ink)' }}>{f.title}</h3>
+                      <p style={{ margin: 0, color: 'var(--muted)', lineHeight: 1.6, fontSize: 15 }}>{f.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* chakra divider */}
+          <div aria-hidden="true" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 18, padding: '8px 24px', background: 'var(--bg)' }}>
+            <span style={{ height: 1.5, flex: 1, maxWidth: 200, background: 'linear-gradient(90deg,transparent,rgb(184 134 11 / 0.5))' }} />
+            <ChakraWheel spin="spin-slow" />
+            <span style={{ height: 1.5, flex: 1, maxWidth: 200, background: 'linear-gradient(270deg,transparent,rgb(184 134 11 / 0.5))' }} />
+          </div>
+
+          {/* ───────── AI TUTOR DEEP DIVE ───────── */}
+          <section id="ai-tutor" style={{ position: 'relative', padding: 'clamp(64px,9vw,116px) 24px', background: 'var(--panel-2)', overflow: 'hidden' }}>
+            <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+              <div style={{ textAlign: 'center', marginBottom: 52 }}>
+                <span className="eyebrow"><Sparkles size={17} /> Sarvagya · Agentic RAG</span>
+                <h2 className="h2" style={{ marginTop: 18 }}>A tutor that <span className="grad">cites the textbook.</span></h2>
+                <p className="sub">Answers grounded in your NCERT books and tagged by Bloom’s level — then Practest turns understanding into exam-ready performance.</p>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(320px,1fr))', gap: 26, alignItems: 'stretch' }}>
+                {/* tutor mockup */}
+                <div style={{ borderRadius: 'var(--radius)', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#FFFCF7', border: '1px solid rgb(255 215 0 / 0.3)', boxShadow: 'var(--card-shadow)' }}>
+                  <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 9, background: '#FFF8F0', borderBottom: '1px solid rgb(184 134 11 / 0.2)' }}>
+                    <span className="plinth" style={{ width: 32, height: 32, borderRadius: 9 }}><Bot size={18} /></span>
+                    <span style={{ fontWeight: 800, fontSize: 14, color: '#0A0F1E' }}>Digi Tutor</span>
+                    <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11.5, fontWeight: 700, color: '#00897B' }}><BadgeCheck size={15} /> grounded in NCERT</span>
+                  </div>
+                  <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 11, flex: 1 }}>
+                    <div style={{ marginLeft: 'auto', width: 'fit-content', maxWidth: '85%', fontSize: 13.5, padding: '11px 14px', borderRadius: '16px 16px 4px 16px', background: '#006A6E', color: '#fff' }}>Why does ice float on water? (Class 9)</div>
+                    <div style={{ maxWidth: '92%', fontSize: 13.5, padding: '12px 14px', borderRadius: '16px 16px 16px 4px', background: '#FFF8F0', border: '1px solid rgb(184 134 11 / 0.2)', color: '#0A0F1E', lineHeight: 1.6 }}>
+                      Ice floats because water expands when it freezes — the molecules form an open hexagonal lattice, making ice <em>less dense</em> than liquid water.
+                      <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: '#FFF6E3', color: '#7A4A00' }}><Quote size={13} /> NCERT Sci 9 · Ch 10, p.132</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: 'rgb(0 106 110 / 0.12)', color: '#006A6E' }}><Layers size={13} /> Bloom: Understand</span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+                      <span style={{ flex: 1, textAlign: 'center', padding: 9, borderRadius: 9, fontSize: 11.5, fontWeight: 700, color: '#7A4A00', background: '#FFF6E3', border: '1px solid rgb(160 101 4 / 0.15)' }}>Explain simpler</span>
+                      <span style={{ flex: 1, textAlign: 'center', padding: 9, borderRadius: 9, fontSize: 11.5, fontWeight: 700, color: '#006A6E', background: 'rgb(0 106 110 / 0.1)', border: '1px solid rgb(0 106 110 / 0.15)' }}>Give an example</span>
+                      <span style={{ flex: 1, textAlign: 'center', padding: 9, borderRadius: 9, fontSize: 11.5, fontWeight: 700, color: '#1A237E', background: 'rgb(26 35 126 / 0.09)', border: '1px solid rgb(26 35 126 / 0.15)' }}>Test me</span>
+                    </div>
+                  </div>
+                </div>
+                {/* practest mockup */}
+                <div style={{ borderRadius: 'var(--radius)', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#FFFCF7', border: '1px solid rgb(255 215 0 / 0.3)', boxShadow: 'var(--card-shadow)' }}>
+                  <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 9, background: '#FFF8F0', borderBottom: '1px solid rgb(184 134 11 / 0.2)' }}>
+                    <span style={{ width: 32, height: 32, borderRadius: 9, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', background: 'linear-gradient(135deg,#1A237E,#0D1B6E)' }}><BarChart3 size={18} /></span>
+                    <span style={{ fontWeight: 800, fontSize: 14, color: '#0A0F1E' }}>Practest · Adaptive</span>
+                    <span style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 700, color: '#5A4E3C' }}>CAT engine</span>
+                  </div>
+                  <div style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 12, flex: 1 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#0A0F1E' }}>Q4 · Thermodynamics</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <div style={{ fontSize: 12.5, padding: '10px 12px', borderRadius: 9, background: 'rgb(0 137 123 / 0.12)', border: '1px solid #00897B', color: '#00695f', fontWeight: 700 }}>Heat flows hot → cold ✓</div>
+                      <div style={{ fontSize: 12.5, padding: '10px 12px', borderRadius: 9, background: '#FFF8F0', border: '1px solid rgb(184 134 11 / 0.2)', color: '#5A4E3C' }}>Cold flows into hot bodies</div>
+                      <div style={{ fontSize: 12.5, padding: '10px 12px', borderRadius: 9, background: '#FFF8F0', border: '1px solid rgb(184 134 11 / 0.2)', color: '#5A4E3C' }}>Temperature never equalizes</div>
+                    </div>
+                    <div style={{ marginTop: 'auto' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11.5, fontWeight: 700, color: '#5A4E3C', marginBottom: 6 }}><span>Difficulty adapting to you</span><span style={{ color: '#A06504' }}>Level 7 / 10</span></div>
+                      <div style={{ height: 9, borderRadius: 999, overflow: 'hidden', background: 'rgb(184 134 11 / 0.18)' }}><div style={{ height: '100%', width: '70%', borderRadius: 999, background: 'linear-gradient(90deg,#A06504,#FFD700)' }} /></div>
+                      <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+                        {[['84%', 'Accuracy'], ['6🔥', 'Streak'], ['Apply', 'Bloom']].map(([v, l]) => (
+                          <div key={l} style={{ borderRadius: 9, padding: 9, textAlign: 'center', background: '#FFF8F0', border: '1px solid rgb(184 134 11 / 0.2)' }}>
+                            <div style={{ fontSize: 14, fontWeight: 800, color: '#0A0F1E' }}>{v}</div>
+                            <div style={{ fontSize: 9.5, textTransform: 'uppercase', letterSpacing: '.06em', color: '#5A4E3C' }}>{l}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div style={{ marginTop: 36, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '14px 32px', color: 'var(--muted)', fontWeight: 700, fontSize: 14.5 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><BookOpen size={20} style={{ color: 'var(--accent-text)' }} /> NCERT-grounded answers</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Quote size={20} style={{ color: 'var(--peacock-teal)' }} /> Verifiable citations</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Layers size={20} style={{ color: 'var(--indigo-ink)' }} /> Bloom’s taxonomy tagging</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><BarChart3 size={20} style={{ color: 'var(--teal-light)' }} /> Computer-adaptive testing</span>
+              </div>
+            </div>
+          </section>
+
+          {/* ───────── HOW IT WORKS ───────── */}
+          <section style={{ padding: 'clamp(64px,9vw,116px) 24px', background: 'var(--bg)' }}>
+            <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+              <div style={{ textAlign: 'center', marginBottom: 52 }}>
+                <span className="eyebrow"><Route size={17} /> How it works</span>
+                <h2 className="h2" style={{ marginTop: 18 }}>From doubt to <span className="grad">mastery</span> in three steps.</h2>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: 22 }}>
+                {STEPS.map((s) => (
+                  <div key={s.n} className="card lift" style={{ padding: 30 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span className="plinth" style={{ width: 56, height: 56 }}><s.Icon size={27} /></span>
+                      <span className="deva" style={{ fontSize: 40, color: 'var(--line)', lineHeight: 1 }}>{s.n}</span>
+                    </div>
+                    <h3 style={{ margin: '20px 0 9px', fontSize: 21, fontWeight: 800, color: 'var(--ink)' }}>{s.title}</h3>
+                    <p style={{ margin: 0, color: 'var(--muted)', lineHeight: 1.6, fontSize: 15 }}>{s.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ───────── PRODUCTIVITY SUITE ───────── */}
+          <section id="tools" style={{ padding: 'clamp(64px,9vw,116px) 24px', background: 'var(--panel-2)' }}>
+            <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+              <div style={{ textAlign: 'center', marginBottom: 52 }}>
+                <span className="eyebrow"><Puzzle size={17} /> Beyond the tutor</span>
+                <h2 className="h2" style={{ marginTop: 18 }}>The <span className="grad">Productivity Suite.</span></h2>
+                <p className="sub">A learning app should protect focus and motivation, not just serve content. These tools — built for Indian students — do exactly that.</p>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 22 }}>
+                {TOOLS.map((t2) => (
+                  <div key={t2.name} className="card lift" style={{ padding: 28 }}>
+                    <span className="plinth" style={{ width: 54, height: 54 }}><t2.Icon size={26} /></span>
+                    <h3 style={{ margin: '18px 0 4px', fontSize: 20, fontWeight: 800, color: 'var(--ink)' }}>{t2.name}</h3>
+                    <div style={{ fontSize: 11.5, fontWeight: 800, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--accent-text)', marginBottom: 10 }}>{t2.tagline}</div>
+                    <p style={{ margin: 0, color: 'var(--muted)', lineHeight: 1.6, fontSize: 14.5 }}>{t2.desc}</p>
+                  </div>
+                ))}
+              </div>
+              <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 15, marginTop: 30 }}>Plus <strong style={{ color: 'var(--accent-text)' }}>Mitram</strong> — your focus companion that runs quick attention checks so you always study at your sharpest.</p>
+            </div>
+          </section>
+
+          {/* ───────── PRICING ───────── */}
+          <section id="pricing" style={{ padding: 'clamp(64px,9vw,116px) 24px', background: 'var(--bg)' }}>
+            <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+              <div style={{ textAlign: 'center', marginBottom: 52 }}>
+                <span className="eyebrow"><Tag size={17} /> Pricing</span>
+                <h2 className="h2" style={{ marginTop: 18 }}>Simple, <span className="grad">transparent</span> plans.</h2>
+                <p className="sub">Choose the plan for your journey. Every plan includes the citation-backed AI tutor.</p>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(250px,1fr))', gap: 20 }}>
+                {PLANS.map((pl) => (
+                  <div key={pl.name} className="card lift" style={{ padding: 28, border: pl.featured ? '2px solid rgb(var(--accent-primary-rgb) / 0.6)' : '1px solid var(--line)' }}>
+                    {pl.badge && (
+                      <span style={{ position: 'absolute', top: 18, right: 18, fontSize: 11, fontWeight: 800, color: '#fff', padding: '4px 11px', borderRadius: 999, background: pl.tint }}>{pl.badge}</span>
+                    )}
+                    <pl.Icon size={38} style={{ color: pl.tint }} />
+                    <h3 style={{ margin: '12px 0 8px', fontSize: 23, fontWeight: 800, color: 'var(--ink)' }}>{pl.name}</h3>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 6 }}>
+                      <span style={{ fontSize: 38, fontWeight: 800, color: 'var(--ink)' }}>{pl.price}</span>
+                      <span style={{ color: 'var(--muted)', fontSize: 14 }}>{pl.unit}</span>
+                    </div>
+                    <p style={{ margin: '0 0 18px', color: 'var(--muted)', fontSize: 13.5 }}>{pl.blurb}</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 22 }}>
+                      {pl.feats.map((ft) => (
+                        <div key={ft} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13.5, color: 'var(--ink)' }}><Check size={18} style={{ color: 'var(--teal-light)', flex: 'none' }} /><span>{ft}</span></div>
+                      ))}
+                    </div>
+                    <button onClick={goSignup} className="btn btn-ghost" style={{ width: '100%', fontSize: 14.5, padding: 12 }}>Choose {pl.name}</button>
+                  </div>
+                ))}
+              </div>
+              <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 14, marginTop: 26 }}>7-day money-back on any paid plan · no-cost EMI available · cancel anytime.</p>
+            </div>
+          </section>
+
+          {/* ───────── COUNTERS BAND ───────── */}
+          <section id="about" style={{ position: 'relative', overflow: 'hidden', padding: 'clamp(60px,8vw,100px) 24px', background: 'linear-gradient(135deg,var(--indigo-deep),var(--night-ink))', color: 'var(--ivory-cream)' }}>
+            <div className="breathe" style={{ position: 'absolute', right: -140, top: -120, width: 460, opacity: 0.14, pointerEvents: 'none' }}>
+              <RingMandala spin="spin-rev" />
+            </div>
+            <div style={{ position: 'relative', zIndex: 1, maxWidth: 1100, margin: '0 auto' }}>
+              <div style={{ textAlign: 'center', marginBottom: 46 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 999, background: 'rgb(255 215 0 / 0.12)', color: 'var(--gold)', fontWeight: 700, fontSize: 13, border: '1px solid rgb(255 215 0 / 0.28)' }}><Sparkles size={17} /> Launching 2026 · Founding learners onboarding</span>
+                <h2 className="h2" style={{ marginTop: 18, color: 'var(--ivory-cream)' }}>Built for every CBSE &amp; ICSE learner.</h2>
+                <p className="sub" style={{ color: 'rgb(255 248 240 / 0.72)' }}>Not vanity metrics — the real capabilities students get from day one.</p>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 18 }}>
+                {COUNTERS.map((c) => (
+                  <div key={c.label} style={{ textAlign: 'center', padding: '26px 16px', borderRadius: 'var(--radius)', background: 'rgb(255 248 240 / 0.06)', border: '1px solid rgb(255 215 0 / 0.22)', backdropFilter: 'blur(6px)' }}>
+                    <c.Icon size={40} style={{ color: 'var(--gold)' }} />
+                    <div style={{ fontSize: 'clamp(34px,4vw,46px)', fontWeight: 800, margin: '8px 0 2px', color: 'var(--ivory-cream)' }}>{c.value}</div>
+                    <div style={{ color: 'rgb(255 248 240 / 0.72)', fontWeight: 700, fontSize: 14 }}>{c.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {/* ───────── TESTIMONIALS ───────── */}
+          <section style={{ padding: 'clamp(64px,9vw,116px) 24px', background: 'var(--bg)' }}>
+            <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
+              <span className="eyebrow"><Heart size={17} /> Built with learners</span>
+              <h2 className="h2" style={{ marginTop: 18 }}>Designed with <span className="grad">real learners.</span></h2>
+              <p className="sub" style={{ marginBottom: 6 }}>We’re building Digi Classroom alongside students. These are the needs they voiced.</p>
+              <p style={{ color: 'var(--muted)', fontSize: 13, fontStyle: 'italic', opacity: 0.8, margin: '4px 0 40px' }}>Illustrative voices from design-partner interviews · launching 2026</p>
+
+              <div className="card" style={{ padding: 'clamp(30px,5vw,52px)', textAlign: 'center' }}>
+                <svg viewBox="0 0 200 200" width={120} height={120} aria-hidden="true" style={{ position: 'absolute', left: -24, bottom: -24, opacity: 0.1 }}>
+                  <circle cx="100" cy="100" r="80" fill="none" stroke="var(--peacock-teal)" strokeWidth="2" strokeDasharray="4 8" />
+                  <circle cx="100" cy="100" r="48" fill="none" stroke="var(--accent-primary)" strokeWidth="2" />
+                  <circle cx="100" cy="100" r="16" fill="var(--gold)" />
+                </svg>
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 4, marginBottom: 22, color: 'var(--gold)' }}>
+                    {[0, 1, 2, 3, 4].map((i) => <Star key={i} size={22} fill="currentColor" />)}
+                  </div>
+                  <blockquote style={{ margin: 0, fontSize: 'clamp(19px,2.6vw,27px)', lineHeight: 1.5, fontStyle: 'italic', color: 'var(--ink)', fontWeight: 600 }}>“{t.quote}”</blockquote>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, marginTop: 28, flexWrap: 'wrap' }}>
+                    <span className="plinth" style={{ width: 52, height: 52, flex: 'none', fontFamily: 'var(--font-body)', fontWeight: 800, fontSize: 18 }}>{initials}</span>
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--ink)' }}>{t.name}</div>
+                      <div style={{ color: 'var(--muted)', fontSize: 14 }}>{t.role}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginTop: 26 }}>
+                <button onClick={() => setActiveT((activeT + TESTIMONIALS.length - 1) % TESTIMONIALS.length)} aria-label="Previous" style={{ width: 44, height: 44, borderRadius: '50%', border: '1px solid var(--line)', background: 'var(--panel)', color: 'var(--ink)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><ChevronLeft size={22} /></button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {TESTIMONIALS.map((_, i) => (
+                    <button key={i} onClick={() => setActiveT(i)} aria-label={`Show testimonial ${i + 1}`} style={{ width: i === activeT ? 26 : 10, height: 10, borderRadius: 999, border: 'none', cursor: 'pointer', transition: 'all .3s', background: i === activeT ? 'linear-gradient(90deg,var(--saffron),var(--gold))' : 'var(--line)' }} />
                   ))}
                 </div>
-                <blockquote className="text-xl md:text-2xl mb-8 italic leading-relaxed">
-                  &ldquo;{testimonials[currentTestimonial].quote}&rdquo;
-                </blockquote>
-                <div className="flex items-center justify-center gap-4">
-                  <span className="indic-icon-plinth w-16 h-16 text-xl">
-                    {testimonials[currentTestimonial].name.charAt(0)}
-                  </span>
-                  <div className="text-left">
-                    <div className="font-bold text-lg">{testimonials[currentTestimonial].name}</div>
-                    <div className="indic-muted">{testimonials[currentTestimonial].grade}</div>
-                  </div>
-                </div>
+                <button onClick={() => setActiveT((activeT + 1) % TESTIMONIALS.length)} aria-label="Next" style={{ width: 44, height: 44, borderRadius: '50%', border: '1px solid var(--line)', background: 'var(--panel)', color: 'var(--ink)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><ChevronRight size={22} /></button>
               </div>
             </div>
+          </section>
 
-            <div className="flex justify-center mt-8 gap-2">
-              {testimonials.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentTestimonial(index)}
-                  aria-label={`Show testimonial ${index + 1}`}
-                  className="w-3 h-3 rounded-full transition-all duration-300"
-                  style={{
-                    background: index === currentTestimonial
-                      ? 'var(--accent-strong)'
-                      : 'rgb(var(--temple-stone-rgb) / 0.35)',
-                  }}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── FAQ ── */}
-      <section className="indic-section--warm py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl mb-6">
-              Frequently Asked <span className="gradient-text-indic-soft">Questions</span>
-            </h2>
-            <p className="indic-muted text-xl max-w-3xl mx-auto">
-              Get answers to common questions about Digi Classroom
-            </p>
-          </div>
-
-          <div className="flex justify-center mb-12">
-            <div className="indic-tile p-2 flex">
-              {(['students', 'teachers', 'parents'] as const).map((category) => (
-                <button
-                  key={category}
-                  onClick={() => setActiveFaqCategory(category)}
-                  className="relative z-10 px-6 py-3 rounded-lg font-bold transition-all duration-300 capitalize"
-                  style={
-                    activeFaqCategory === category
-                      ? { background: 'var(--accent-strong)', color: '#fff' }
-                      : { color: 'var(--bark)' }
-                  }
-                >
-                  {category}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="max-w-4xl mx-auto">
-            <div className="space-y-4">
-              {faqCategories[activeFaqCategory].map((faq, index) => (
-                <div key={index} className="indic-tile overflow-hidden">
+          {/* ───────── FAQ ───────── */}
+          <section id="faq" style={{ padding: 'clamp(64px,9vw,116px) 24px', background: 'var(--panel-2)' }}>
+            <div style={{ maxWidth: 840, margin: '0 auto' }}>
+              <div style={{ textAlign: 'center', marginBottom: 40 }}>
+                <span className="eyebrow"><HelpCircle size={17} /> FAQ</span>
+                <h2 className="h2" style={{ marginTop: 18 }}>Questions, <span className="grad">answered.</span></h2>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 34 }}>
+                {(['students', 'teachers', 'parents'] as const).map((tab) => (
                   <button
-                    onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                    className="relative z-10 w-full px-6 py-4 text-left flex items-center justify-between"
+                    key={tab}
+                    onClick={() => { setFaqTab(tab); setOpenFaq(0) }}
+                    className={chipBase}
+                    style={faqTab === tab
+                      ? { padding: '10px 22px', fontSize: 15, textTransform: 'capitalize', border: '1px solid transparent', background: 'linear-gradient(135deg,var(--kumkum),var(--saffron))', color: '#fff', boxShadow: '0 8px 18px -8px rgba(192,57,43,.6)' }
+                      : { padding: '10px 22px', fontSize: 15, textTransform: 'capitalize', border: '1px solid transparent', color: 'var(--muted)' }}
                   >
-                    {/* A question in an accordion is a control, not a document
-                        heading — kept as a span so it never lands in the outline. */}
-                    <span className="font-bold pr-4">{faq.question}</span>
-                    <ChevronDown
-                      className={`h-5 w-5 shrink-0 transition-transform duration-300 ${openFaq === index ? 'rotate-180' : ''}`}
-                      style={{ color: 'var(--accent-strong)' }}
-                    />
+                    {tab}
                   </button>
-                  {openFaq === index && (
-                    <div className="relative z-10 px-6 pb-4">
-                      <p className="indic-muted leading-relaxed">{faq.answer}</p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Vidyaverse ecosystem trio ── */}
-      <section className="indic-section--warm py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <span className="indic-eyebrow mb-6">
-              <Globe className="w-4 h-4" /> The Vidyaverse ecosystem
-            </span>
-            <h2 className="text-4xl md:text-5xl mt-6 mb-6">
-              One login. <span className="gradient-text-indic-soft">Three platforms.</span>
-            </h2>
-            <p className="indic-muted text-xl max-w-3xl mx-auto">
-              Digi Classroom is part of the Vidyaverse trio — the tutor, the campus OS, and the
-              digital library, all connected.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { icon: Bot, name: 'Digi Classroom', kind: 'AI TUTOR', desc: 'NCERT-grounded tutoring & adaptive practice for Classes 6–12.', here: true },
-              { icon: GraduationCap, name: 'Vidyaverse', kind: 'CAMPUS OS', desc: 'The institution operating system — admissions to ID cards.', here: false },
-              { icon: Library, name: 'PDLMS', kind: 'DIGITAL LIBRARY', desc: 'Multi-tenant digital library of learning resources.', here: false },
-            ].map((app) => (
-              <div
-                key={app.name}
-                className="indic-tile p-8"
-                style={app.here ? { borderColor: 'rgb(var(--accent-primary-rgb) / 0.65)', borderWidth: 2 } : undefined}
-              >
-                {app.here && (
-                  <div className="absolute top-4 right-4 z-10">
-                    <span className="inline-block px-3 py-1 text-[11px] font-bold text-white rounded-full" style={{ background: 'var(--accent-strong)' }}>
-                      YOU’RE HERE
-                    </span>
+                ))}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {faqList.map((f, i) => (
+                  <div key={f.q} className="card" style={{ boxShadow: 'none' }}>
+                    <button onClick={() => setOpenFaq(openFaq === i ? -1 : i)} style={{ width: '100%', background: 'transparent', border: 'none', cursor: 'pointer', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, textAlign: 'left', color: 'var(--ink)', fontFamily: 'var(--font-body)' }}>
+                      <span style={{ fontWeight: 700, fontSize: 16 }}>{f.q}</span>
+                      <ChevronDown size={22} style={{ color: 'var(--accent-text)', flex: 'none', transition: 'transform .3s', transform: openFaq === i ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+                    </button>
+                    {openFaq === i && (
+                      <div style={{ padding: '0 22px 20px', color: 'var(--muted)', lineHeight: 1.65, fontSize: 15 }}>{f.a}</div>
+                    )}
                   </div>
-                )}
-                <div className="relative z-10">
-                  <span className="indic-icon-plinth w-14 h-14 mb-5">
-                    <app.icon className="h-6 w-6" />
-                  </span>
-                  <div className="indic-eyebrow mb-3">{app.kind}</div>
-                  <h3 className="text-2xl mt-3 mb-2">{app.name}</h3>
-                  <p className="indic-muted leading-relaxed">{app.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Newsletter ── */}
-      <section className="indic-section--deep py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-4xl md:text-5xl mb-6">
-              Start learning the way you think.
-            </h2>
-            <p className="indic-muted text-xl mb-12 max-w-3xl mx-auto">
-              Join the founding cohort shaping the future of CBSE &amp; ICSE study. Get updates on new
-              features and launch access.
-            </p>
-
-            <form onSubmit={handleNewsletterSubmit} className="max-w-xl mx-auto">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <input
-                  type="email"
-                  value={newsletterEmail}
-                  onChange={(e) => setNewsletterEmail(e.target.value)}
-                  placeholder="Enter your email address"
-                  aria-label="Email address"
-                  className="flex-1 px-6 py-4 rounded-xl border-0 backdrop-blur-md outline-none focus:ring-2"
-                  style={{
-                    background: 'rgb(var(--ivory-cream-rgb) / 0.12)',
-                    color: 'var(--ivory-cream)',
-                  }}
-                  required
-                />
-                <button
-                  type="submit"
-                  className="indic-cta px-8"
-                  style={{ background: 'var(--gold)', color: 'var(--night-ink)' }}
-                >
-                  <Send className="h-5 w-5" />
-                  Notify me
-                </button>
-                <button
-                  type="button"
-                  onClick={() => router.push('/sign-up')}
-                  className="indic-cta indic-cta--primary px-8"
-                >
-                  <Rocket className="h-5 w-5" />
-                  Start free
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Footer ── */}
-      <footer
-        id="contact"
-        className="py-16"
-        style={{ background: 'var(--night-ink)', color: 'var(--ivory-cream)' }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-            {/* Company Info */}
-            <div className="lg:col-span-2">
-              <div className="flex items-center gap-3 mb-6">
-                <MandalaMark size={40} />
-                <span className="text-2xl" style={{ fontFamily: 'var(--font-display)' }}>Digi Classroom</span>
-              </div>
-              <p className="mb-6 max-w-md" style={{ color: 'rgb(var(--ivory-cream-rgb) / 0.72)' }}>
-                Revolutionizing education with AI-powered, NCERT-grounded learning. Launching 2026 —
-                join the founding cohort shaping the future of CBSE &amp; ICSE study.
-              </p>
-              {/* Ecosystem badge — part of the Vidyaverse trio */}
-              <a
-                href="https://vgraphics.in"
-                className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full mb-6 transition-colors duration-300"
-                style={{
-                  background: 'rgb(var(--ivory-cream-rgb) / 0.05)',
-                  border: '1px solid rgb(var(--gold-rgb) / 0.22)',
-                }}
-              >
-                <span
-                  className="w-2 h-2 rounded-full"
-                  style={{ background: 'linear-gradient(90deg, var(--accent-primary), var(--gold))' }}
-                />
-                <span className="text-xs font-semibold" style={{ color: 'rgb(var(--ivory-cream-rgb) / 0.75)' }}>
-                  Part of the <span className="gradient-text-indic-soft font-bold">Vidyaverse</span> ecosystem — one login across Campus OS, Library &amp; Tutor
-                </span>
-              </a>
-              <div className="flex gap-4">
-                {[Facebook, Twitter, Instagram, Linkedin, Youtube].map((Icon, index) => (
-                  <a
-                    key={index}
-                    href="#"
-                    className="w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 hover:scale-110"
-                    style={{
-                      background: 'rgb(var(--ivory-cream-rgb) / 0.06)',
-                      border: '1px solid rgb(var(--gold-rgb) / 0.18)',
-                    }}
-                  >
-                    <Icon className="h-5 w-5" />
-                  </a>
                 ))}
               </div>
             </div>
+          </section>
 
-            {/* Quick Links */}
-            <div>
-              <h3 className="text-lg mb-6" style={{ color: 'var(--gold)' }}>Quick Links</h3>
-              <ul className="space-y-3">
-                {['About Us', 'Features', 'Pricing', 'Blog', 'Help Center', 'Contact'].map((link) => (
-                  <li key={link}>
-                    <a
-                      href="#"
-                      className="transition-colors duration-300 hover:text-[color:var(--gold)]"
-                      style={{ color: 'rgb(var(--ivory-cream-rgb) / 0.72)' }}
-                    >
-                      {link}
-                    </a>
-                  </li>
+          {/* ───────── ECOSYSTEM ───────── */}
+          <section style={{ padding: 'clamp(64px,9vw,116px) 24px', background: 'var(--bg)' }}>
+            <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+              <div style={{ textAlign: 'center', marginBottom: 48 }}>
+                <span className="eyebrow"><Share2 size={17} /> The Vidyaverse ecosystem</span>
+                <h2 className="h2" style={{ marginTop: 18 }}>One login. <span className="grad">Three platforms.</span></h2>
+                <p className="sub">Digi Classroom is part of the Vidyaverse trio — the tutor, the campus OS, and the digital library, all connected.</p>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(270px,1fr))', gap: 20 }}>
+                {TRIO.map((app) => (
+                  <div key={app.name} className="card lift" style={{ padding: 28 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span className="plinth" style={{ width: 50, height: 50 }}><app.Icon size={25} /></span>
+                      {app.here && (
+                        <span style={{ marginLeft: 'auto', fontSize: 10.5, fontWeight: 800, letterSpacing: '.06em', textTransform: 'uppercase', color: '#fff', padding: '4px 10px', borderRadius: 999, background: 'linear-gradient(135deg,var(--kumkum),var(--saffron))' }}>You’re here</span>
+                      )}
+                    </div>
+                    <h3 style={{ margin: '18px 0 3px', fontSize: 20, fontWeight: 800, color: 'var(--ink)' }}>{app.name}</h3>
+                    <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '.07em', textTransform: 'uppercase', color: 'var(--accent-text)', marginBottom: 10 }}>{app.role}</div>
+                    <p style={{ margin: 0, color: 'var(--muted)', lineHeight: 1.6, fontSize: 14.5 }}>{app.desc}</p>
+                  </div>
                 ))}
-              </ul>
-            </div>
-
-            {/* Contact Info */}
-            <div>
-              <h3 className="text-lg mb-6" style={{ color: 'var(--gold)' }}>Contact Info</h3>
-              <div className="space-y-4" style={{ color: 'rgb(var(--ivory-cream-rgb) / 0.72)' }}>
-                <div className="flex items-center">
-                  <Mail className="h-5 w-5 mr-3" style={{ color: 'var(--accent-primary)' }} />
-                  <span>support@mydigiclassroom.com</span>
-                </div>
-                <div className="flex items-center">
-                  <Phone className="h-5 w-5 mr-3" style={{ color: 'var(--accent-primary)' }} />
-                  <a href="tel:+919310959596" className="transition-colors duration-300 hover:text-[color:var(--gold)]">+91 93109 59596</a>
-                </div>
-                <div className="flex items-start">
-                  <MapPin className="h-5 w-5 mr-3 mt-1" style={{ color: 'var(--accent-primary)' }} />
-                  <span>
-                    Vinstitution, 2nd Floor, Property No. 44, Regal Building,
-                    Connaught Place, New Delhi — 110090
-                  </span>
-                </div>
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Bottom Bar */}
-          <div className="pt-8" style={{ borderTop: '1px solid rgb(var(--gold-rgb) / 0.14)' }}>
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4" style={{ color: 'rgb(var(--ivory-cream-rgb) / 0.6)' }}>
-              <p className="text-center md:text-left leading-relaxed">
-                Digi Classroom is a brand of the Vinstitution segment of VPD Vastus
-                Ventures Private Limited.
-              </p>
-              <div className="flex gap-6">
-                <a href="#" className="transition-colors duration-300 hover:text-[color:var(--gold)]">Privacy Policy</a>
-                <a href="#" className="transition-colors duration-300 hover:text-[color:var(--gold)]">Terms of Service</a>
-                <a href="#" className="transition-colors duration-300 hover:text-[color:var(--gold)]">Cookie Policy</a>
+          {/* ───────── CTA + NEWSLETTER ───────── */}
+          <section style={{ position: 'relative', overflow: 'hidden', padding: 'clamp(64px,9vw,120px) 24px', background: 'linear-gradient(135deg,var(--kumkum),var(--saffron) 70%,var(--turmeric))', color: '#fff', textAlign: 'center' }}>
+            <div className="breathe" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', width: 'min(120vw,900px)', opacity: 0.16, pointerEvents: 'none' }}>
+              <svg viewBox="0 0 200 200" width="100%" className="spin-slow" aria-hidden="true" style={{ transformOrigin: 'center', transformBox: 'fill-box' }}>
+                <circle cx="100" cy="100" r="94" fill="none" stroke="#fff" strokeWidth="1" strokeDasharray="4 9" />
+                <circle cx="100" cy="100" r="68" fill="none" stroke="#fff" strokeWidth="1" />
+                <circle cx="100" cy="100" r="42" fill="none" stroke="#fff" strokeWidth="1" strokeDasharray="2 6" />
+                <circle cx="100" cy="100" r="15" fill="#fff" fillOpacity="0.5" />
+              </svg>
+            </div>
+            <div style={{ position: 'relative', zIndex: 1, maxWidth: 720, margin: '0 auto' }}>
+              <h2 style={{ fontFamily: 'var(--font-body)', fontWeight: 800, letterSpacing: '-.02em', lineHeight: 1.1, margin: 0, fontSize: 'clamp(32px,5vw,56px)' }}>Start learning the way you think.</h2>
+              <p style={{ fontSize: 'clamp(16px,1.8vw,20px)', lineHeight: 1.55, margin: '18px auto 0', maxWidth: '52ch', color: 'rgba(255,255,255,.92)' }}>Join the founding cohort shaping the future of CBSE &amp; ICSE study. Get updates on new features and launch access.</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'center', margin: '32px auto 0', maxWidth: 520 }}>
+                <input type="email" placeholder="Enter your email address" aria-label="Email address" style={{ flex: 1, minWidth: 220, padding: '15px 20px', borderRadius: 999, border: 'none', fontFamily: 'var(--font-body)', fontSize: 15, background: 'rgba(255,255,255,.92)', color: '#241704', outline: 'none' }} />
+                <button className="btn" style={{ background: 'var(--night-ink)', color: '#fff', padding: '15px 28px' }}><Send size={20} /> Notify me</button>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, justifyContent: 'center', marginTop: 22 }}>
+                <button onClick={goSignup} className="btn" style={{ background: '#fff', color: 'var(--kumkum)' }}>Start free <Rocket size={20} /></button>
               </div>
             </div>
+          </section>
+        </main>
+      </div>
 
-            {/* Legal identifiers + copyright — same block across the trio, only the brand name above changes */}
-            <div
-              className="mt-6 pt-6 flex flex-col items-center gap-1.5 text-center text-xs"
-              style={{ borderTop: '1px solid rgb(var(--gold-rgb) / 0.1)', color: 'rgb(var(--ivory-cream-rgb) / 0.35)' }}
-            >
-              <p>PAN: AAMCV2938B &middot; GSTIN: 07AAMCV2938B1ZA &middot; ISO 9001:2015 Certified</p>
-              <p>
-                &copy; {new Date().getFullYear()} VPD Vastus Ventures Pvt. Ltd. All rights reserved.
-                &middot; Proudly powered by Vinstitution &middot; Designed by{' '}
-                <a href="https://vgraphics.in" className="transition-colors duration-300 hover:text-[color:var(--gold)]">
-                  VGraphics.in
-                </a>
-              </p>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </div>
+      {/* Current footer — kept, outside the .dcl scope so it uses app tokens */}
+      <LandingFooter />
+    </>
   )
 }

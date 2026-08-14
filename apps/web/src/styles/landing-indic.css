@@ -1,0 +1,152 @@
+/* ============================================================
+   LANDING — faithful port of design_handoff_digiclassroom_ui/
+   designs/DigiClassroom Landing.dc.html
+
+   The mock's stylesheet, scoped under `.dcl` so its generic class names
+   (.card/.btn/.eyebrow/.h2…) and its surface tokens (--bg/--panel/--ink/
+   --line/--muted…) never leak into the rest of the app. The mock's
+   `[data-theme="dark"]` is mapped to this app's next-themes `.dark` class.
+   Pigment tokens (--saffron/--gold/--accent-*) and the font stacks come from
+   the global indic-* layer; only the surface/semantic tokens are (re)defined
+   here. Material Symbols are replaced with lucide in the markup (handoff #3).
+   ============================================================ */
+
+.dcl {
+  --radius: 20px;
+  /* light theme (default) */
+  --bg: #FFFBF3;
+  --bg-2: #FFF4E6;
+  --panel: #FFFDF9;
+  --panel-2: #FFF6EA;
+  --ink: #241704;
+  --muted: #6E5D45;
+  --line: rgb(184 134 11 / 0.20);
+  --accent-text: #A06504;
+  --chip-bg: #FFF4DC;
+  --nav-bg: rgb(255 252 247 / 0.82);
+  --card-shadow: 0 24px 48px -30px rgba(120, 74, 10, .45);
+
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.dark .dcl {
+  --bg: #0A0F1E;
+  --bg-2: #0C1224;
+  --panel: #121A31;
+  --panel-2: #0E1426;
+  --ink: #FFF8F0;
+  --muted: rgb(255 248 240 / 0.66);
+  --line: rgb(255 215 0 / 0.14);
+  --accent-text: var(--accent-primary-dark);
+  --chip-bg: rgb(255 215 0 / 0.09);
+  --nav-bg: rgb(10 15 30 / 0.72);
+  --card-shadow: 0 24px 54px -28px rgba(0, 0, 0, .72);
+}
+
+.dcl a { color: var(--accent-text); text-decoration: none; transition: color .2s; }
+.dcl a:hover { color: var(--lotus-pink); }
+.dcl ::selection { background: rgb(var(--accent-primary-rgb) / 0.28); }
+
+/* All landing headings ride the body face; the global h1/h2/h3 rule
+   (indic-design-system.css) puts them in the Yatra One display face, which the
+   mock uses only for `.deva` flourishes. */
+.dcl h1, .dcl h2, .dcl h3 { font-family: var(--font-body); }
+.dcl .deva { font-family: var(--font-deva); }
+
+.dcl .grad {
+  background: linear-gradient(110deg, var(--saffron), var(--turmeric) 52%, var(--gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.dcl .plinth {
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--saffron), var(--turmeric));
+  color: #fff;
+  box-shadow: 0 12px 26px -10px rgba(255, 107, 53, .65);
+}
+
+.dcl .eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 16px; border-radius: 999px;
+  background: var(--chip-bg); color: var(--accent-text);
+  font-weight: 700; font-size: 13px; letter-spacing: .03em;
+  border: 1px solid rgb(var(--accent-primary-rgb) / 0.28);
+}
+
+.dcl .card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--card-shadow);
+  position: relative; overflow: hidden;
+  transition: transform .32s cubic-bezier(.2, .7, .2, 1), box-shadow .32s, border-color .32s;
+}
+.dcl .card.lift:hover {
+  transform: translateY(-8px);
+  border-color: rgb(var(--accent-primary-rgb) / 0.45);
+  box-shadow: 0 34px 60px -30px rgba(120, 74, 10, .5);
+}
+
+.dcl .btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  font-family: var(--font-body); font-weight: 700; font-size: 16px;
+  border-radius: 999px; padding: 15px 28px; cursor: pointer;
+  border: 1px solid transparent;
+  transition: transform .2s, box-shadow .2s, background .2s, color .2s;
+  text-decoration: none;
+}
+.dcl .btn-primary {
+  background: linear-gradient(135deg, var(--kumkum), var(--saffron)); color: #fff;
+  box-shadow: 0 14px 30px -12px rgba(192, 57, 43, .6), inset 0 1px 0 rgba(255, 255, 255, .25);
+}
+.dcl .btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 38px -12px rgba(192, 57, 43, .7), inset 0 1px 0 rgba(255, 255, 255, .3);
+  color: #fff;
+}
+.dcl .btn-ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+.dcl .btn-ghost:hover {
+  background: var(--chip-bg); color: var(--accent-text);
+  border-color: rgb(var(--accent-primary-rgb) / 0.4); transform: translateY(-2px);
+}
+
+.dcl .navlink { color: var(--muted); font-weight: 600; transition: color .2s; position: relative; }
+.dcl .navlink:hover { color: var(--accent-text); }
+
+.dcl .h2 {
+  font-family: var(--font-body); font-weight: 800; letter-spacing: -.02em;
+  line-height: 1.08; margin: 0; font-size: clamp(30px, 4.4vw, 52px); color: var(--ink);
+}
+.dcl .sub {
+  color: var(--muted); font-size: clamp(16px, 1.5vw, 20px); line-height: 1.6;
+  margin: 16px auto 0; max-width: 62ch;
+}
+
+@keyframes dcl-spin-slow { to { transform: rotate(360deg); } }
+@keyframes dcl-spin-rev { to { transform: rotate(-360deg); } }
+@keyframes dcl-breathe { 0%, 100% { transform: scale(1); opacity: .9; } 50% { transform: scale(1.05); opacity: 1; } }
+@keyframes dcl-floaty { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-16px); } }
+@keyframes dcl-hint { 0%, 100% { transform: translateY(0); opacity: .9; } 50% { transform: translateY(10px); opacity: .4; } }
+.dcl .spin-slow { animation: dcl-spin-slow 90s linear infinite; transform-origin: center; transform-box: fill-box; }
+.dcl .spin-rev { animation: dcl-spin-rev 70s linear infinite; transform-origin: center; transform-box: fill-box; }
+.dcl .breathe { animation: dcl-breathe 9s ease-in-out infinite; transform-origin: center; }
+.dcl .floaty { animation: dcl-floaty 7s ease-in-out infinite; }
+.dcl .hint { animation: dcl-hint 2s ease-in-out infinite; }
+
+.dcl .nav-links { display: flex; }
+.dcl .nav-cta { display: flex; }
+.dcl .nav-burger { display: none; }
+@media (max-width: 900px) {
+  .dcl .nav-links, .dcl .nav-cta { display: none; }
+  .dcl .nav-burger { display: inline-flex; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dcl .spin-slow, .dcl .spin-rev, .dcl .breathe, .dcl .floaty, .dcl .hint { animation: none !important; }
+}

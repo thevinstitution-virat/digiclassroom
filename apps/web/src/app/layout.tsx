@@ -11,6 +11,8 @@ import "../styles/vg-design-system.css";
 import "../styles/vg-animations.css";
 import "../styles/apple-landing.css";
 import "../styles/whatsapp-chat.css";
+// Landing-only, scoped under `.dcl` — a faithful port of the redesign mock.
+import "../styles/landing-indic.css";
 // Indic design system — vendored from PDLMS (canonical source of truth).
 // Do not edit files under design/indic/; edit them in PDLMS and re-run
 // `node shared/design/indic/sync-indic.mjs`. Order is load-bearing: pigments,
