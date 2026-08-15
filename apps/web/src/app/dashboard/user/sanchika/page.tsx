@@ -490,27 +490,27 @@ export default function SanchikaListPage() {
 
   // ============ RENDER ============
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-blue-900 dark:to-indigo-900">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-primary/10 to-primary/10 dark:from-[var(--night-ink)] dark:via-[var(--indigo-deep)] dark:to-[var(--indigo-ink)]">
       {/* ============ HEADER ============ */}
-      <div className="sticky top-0 z-10 backdrop-blur-md bg-white/80 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+      <div className="sticky top-0 z-10 backdrop-blur-md bg-white/80 border-b border-border shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-3 sm:gap-4">
               <div className="relative flex-shrink-0">
-                <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-blue-600 rounded-2xl blur-lg opacity-30 animate-pulse"></div>
-                <div className="relative bg-gradient-to-r from-orange-500 to-blue-600 p-2 sm:p-3 rounded-2xl shadow-lg">
+                <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-primary/80 rounded-2xl blur-lg opacity-30 animate-pulse"></div>
+                <div className="relative bg-gradient-to-r from-orange-500 to-primary/80 p-2 sm:p-3 rounded-2xl shadow-lg">
                   <BookMarked className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
                 </div>
               </div>
               <div className="min-w-0 flex-1">
-                <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-orange-500 to-blue-600 bg-clip-text text-transparent truncate">
+                <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-orange-500 to-primary/80 bg-clip-text text-transparent truncate">
                   Sanchika Notes
                 </h1>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5 sm:mt-1 flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1 flex items-center gap-1.5 sm:gap-2 flex-wrap">
                   <FileText className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                   <span className="whitespace-nowrap">{filteredNotes.length} of {notes.length} notes</span>
                   {filterBy !== 'all' && (
-                    <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                    <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-primary/15 text-primary">
                       {filterBy === 'favorites' ? 'Favorites' : 'Pinned'}
                     </span>
                   )}
@@ -521,7 +521,7 @@ export default function SanchikaListPage() {
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               {selectionMode && (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="text-sm text-muted-foreground">
                     {selectedNotes.size} selected
                   </span>
                   <button
@@ -541,8 +541,8 @@ export default function SanchikaListPage() {
                 }}
                 className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                   selectionMode
-                    ? 'bg-gray-500 hover:bg-gray-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    ? 'bg-muted/400 hover:bg-muted text-white'
+                    : 'bg-muted text-foreground hover:bg-muted dark:hover:bg-muted'
                 }`}
               >
                 {selectionMode ? 'Cancel' : 'Select'}
@@ -550,7 +550,7 @@ export default function SanchikaListPage() {
 
               <button
                 onClick={() => router.push('/dashboard/user/sanchika/new')}
-                className="group relative inline-flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-orange-500 to-blue-600 hover:from-orange-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 overflow-hidden text-sm sm:text-base"
+                className="group relative inline-flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-orange-500 to-primary/80 hover:from-orange-600 hover:to-primary/80 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 overflow-hidden text-sm sm:text-base"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-200%] group-hover:translate-x-[200%] transition-transform duration-700"></div>
                 <Plus className="h-4 w-4 sm:h-5 sm:w-5 relative z-10 flex-shrink-0" />
@@ -593,10 +593,10 @@ export default function SanchikaListPage() {
             <div className="lg:hidden mb-4">
               <button
                 onClick={() => setShowSidebar(!showSidebar)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-card border border-input rounded-lg shadow-sm hover:shadow-md transition-all duration-200"
               >
-                <Menu className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Menu className="h-5 w-5 text-muted-foreground" />
+                <span className="text-sm font-medium text-foreground">
                   {showSidebar ? 'Hide' : 'Show'} Folders
                 </span>
               </button>
@@ -607,18 +607,18 @@ export default function SanchikaListPage() {
               <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center">
                 {/* Search Bar */}
                 <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <input
                     type="text"
                     placeholder="Search notes by title or content..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-gray-100 placeholder-gray-500 shadow-sm hover:shadow-md"
+                    className="w-full pl-12 pr-4 py-3 bg-card border border-input rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-foreground placeholder-gray-500 shadow-sm hover:shadow-md"
                   />
                   {searchQuery && (
                     <button
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground dark:hover:text-muted-foreground/60"
                     >
                       ✕
                     </button>
@@ -629,11 +629,11 @@ export default function SanchikaListPage() {
                 <div className="flex gap-3 flex-wrap lg:flex-nowrap">
                   {/* Filter Dropdown */}
                   <div className="relative">
-                    <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                     <select
                       value={filterBy}
                       onChange={(e) => setFilterBy(e.target.value as any)}
-                      className="pl-10 pr-8 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-gray-100 cursor-pointer shadow-sm hover:shadow-md appearance-none"
+                      className="pl-10 pr-8 py-3 bg-card border border-input rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-foreground cursor-pointer shadow-sm hover:shadow-md appearance-none"
                     >
                       <option value="all">All Notes</option>
                       <option value="favorites">⭐ Favorites</option>
@@ -643,11 +643,11 @@ export default function SanchikaListPage() {
 
                   {/* Sort Dropdown */}
                   <div className="relative">
-                    <ArrowUpDown className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    <ArrowUpDown className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value as any)}
-                      className="pl-10 pr-8 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-gray-100 cursor-pointer shadow-sm hover:shadow-md appearance-none"
+                      className="pl-10 pr-8 py-3 bg-card border border-input rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-foreground cursor-pointer shadow-sm hover:shadow-md appearance-none"
                     >
                       <option value="recent">Most Recent</option>
                       <option value="oldest">Oldest First</option>
@@ -656,13 +656,13 @@ export default function SanchikaListPage() {
                   </div>
 
                   {/* View Mode Toggle */}
-                  <div className="flex bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl shadow-sm overflow-hidden">
+                  <div className="flex bg-card border border-input rounded-xl shadow-sm overflow-hidden">
                     <button
                       onClick={() => setViewMode('grid')}
                       className={`px-4 py-3 transition-all duration-200 ${
                         viewMode === 'grid'
-                          ? 'bg-gradient-to-r from-orange-500 to-blue-600 text-white'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          ? 'bg-gradient-to-r from-orange-500 to-primary/80 text-white'
+                          : 'text-muted-foreground hover:bg-muted'
                       }`}
                       title="Grid View"
                     >
@@ -672,8 +672,8 @@ export default function SanchikaListPage() {
                       onClick={() => setViewMode('list')}
                       className={`px-4 py-3 transition-all duration-200 ${
                         viewMode === 'list'
-                          ? 'bg-gradient-to-r from-orange-500 to-blue-600 text-white'
-                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          ? 'bg-gradient-to-r from-orange-500 to-primary/80 text-white'
+                          : 'text-muted-foreground hover:bg-muted'
                       }`}
                       title="List View"
                     >
@@ -689,16 +689,16 @@ export default function SanchikaListPage() {
               {loading && (
                 <div className="flex flex-col items-center justify-center py-20">
                   <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-blue-600 rounded-full blur-xl opacity-30 animate-pulse"></div>
-                    <Loader2 className="relative h-16 w-16 text-blue-600 animate-spin" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-primary/80 rounded-full blur-xl opacity-30 animate-pulse"></div>
+                    <Loader2 className="relative h-16 w-16 text-primary animate-spin" />
                   </div>
-                  <p className="mt-6 text-lg font-medium text-gray-700 dark:text-gray-300 animate-pulse">
+                  <p className="mt-6 text-lg font-medium text-foreground animate-pulse">
                     Loading your notes...
                   </p>
                   <div className="mt-4 flex gap-2">
                     <div className="h-2 w-2 bg-orange-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                    <div className="h-2 w-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                    <div className="h-2 w-2 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                    <div className="h-2 w-2 bg-primary/100 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="h-2 w-2 bg-primary/100 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                   </div>
                 </div>
               )}
@@ -726,21 +726,21 @@ export default function SanchikaListPage() {
 
               {!loading && !error && filteredNotes.length === 0 && (
                 <div className="max-w-2xl mx-auto mt-12">
-                  <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-3xl p-12 text-center shadow-xl">
+                  <div className="bg-white/80 backdrop-blur-md border-2 border-dashed border-input rounded-3xl p-12 text-center shadow-xl">
                     <div className="relative inline-block mb-6">
-                      <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-blue-600 rounded-full blur-2xl opacity-20 animate-pulse"></div>
-                      <div className="relative bg-gradient-to-r from-orange-100 to-blue-100 dark:from-orange-900/30 dark:to-blue-900/30 p-6 rounded-full">
+                      <div className="absolute inset-0 bg-gradient-to-r from-orange-500 to-primary/80 rounded-full blur-2xl opacity-20 animate-pulse"></div>
+                      <div className="relative bg-gradient-to-r from-orange-100 to-primary/15 dark:from-orange-900/30 dark:to-primary/15 p-6 rounded-full">
                         {notes.length === 0 ? (
                           <BookOpen className="h-16 w-16 text-orange-600 dark:text-orange-400" />
                         ) : (
-                          <Search className="h-16 w-16 text-blue-600 dark:text-blue-400" />
+                          <Search className="h-16 w-16 text-primary" />
                         )}
                       </div>
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
+                    <h3 className="text-2xl font-bold text-foreground mb-3">
                       {notes.length === 0 ? 'No notes yet' : 'No matching notes'}
                     </h3>
-                    <p className="text-gray-600 dark:text-gray-400 mb-8 text-lg">
+                    <p className="text-muted-foreground mb-8 text-lg">
                       {notes.length === 0
                         ? 'Start your learning journey by creating your first note!'
                         : 'Try adjusting your search or filters to find what you\'re looking for.'}
@@ -748,7 +748,7 @@ export default function SanchikaListPage() {
                     {notes.length === 0 && (
                       <button
                         onClick={() => router.push('/dashboard/user/sanchika/new')}
-                        className="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-orange-500 to-blue-600 hover:from-orange-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                        className="group inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-orange-500 to-primary/80 hover:from-orange-600 hover:to-primary/80 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                       >
                         <Plus className="h-6 w-6" />
                         <span>Create Your First Note</span>
@@ -795,10 +795,10 @@ export default function SanchikaListPage() {
                     }
                     router.push(`/dashboard/user/sanchika/${note.id}`);
                   }}
-                  className={`group relative rounded-xl border-2 border-gray-200 dark:border-gray-700 shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.02] overflow-hidden cursor-pointer ${
+                  className={`group relative rounded-xl border-2 border-border shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 hover:scale-[1.02] overflow-hidden cursor-pointer ${
                     viewMode === 'list' ? 'flex flex-row' : 'flex flex-col'
                   } ${draggedNote?.id === note.id ? 'opacity-50' : ''} ${
-                    selectedNotes.has(note.id) ? 'ring-4 ring-blue-500' : ''
+                    selectedNotes.has(note.id) ? 'ring-4 ring-primary' : ''
                   }`}
                   style={{
                     animation: `fadeInUp 0.5s ease-out ${index * 0.05}s both`,
@@ -869,7 +869,7 @@ export default function SanchikaListPage() {
                   {(!!note.is_pinned || !!note.is_favorite) && (
                     <div className="absolute top-3 right-3 flex gap-1.5 z-10">
                       {!!note.is_pinned && (
-                        <div className="bg-blue-500 text-white p-1 rounded-md shadow-lg">
+                        <div className="bg-primary/100 text-white p-1 rounded-md shadow-lg">
                           <Pin className="h-3 w-3" />
                         </div>
                       )}
@@ -882,10 +882,10 @@ export default function SanchikaListPage() {
                   )}
 
                   {/* Card Content - White Section at Bottom */}
-                  <div className="absolute bottom-0 left-0 right-0 h-[40%] bg-white dark:bg-gray-800 rounded-b-xl">
+                  <div className="absolute bottom-0 left-0 right-0 h-[40%] bg-card rounded-b-xl">
                     <div className="flex flex-col h-full p-3 sm:p-4 pl-4 sm:pl-5">
                       {/* Title */}
-                      <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1.5 sm:mb-2 line-clamp-2 text-sm sm:text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      <h3 className="font-bold text-foreground mb-1.5 sm:mb-2 line-clamp-2 text-sm sm:text-base group-hover:text-primary dark:group-hover:text-primary transition-colors">
                         {note.title}
                       </h3>
 
@@ -904,7 +904,7 @@ export default function SanchikaListPage() {
                           </span>
                         )}
                         {!!note.chapter && (
-                          <span className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-[10px] sm:text-xs font-medium rounded-full">
+                          <span className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-0.5 bg-primary/15 text-primary text-[10px] sm:text-xs font-medium rounded-full">
                             <FileText className="h-2 w-2 sm:h-2.5 sm:w-2.5 flex-shrink-0" />
                             <span className="truncate max-w-[50px] sm:max-w-[60px]">{note.chapter}</span>
                           </span>
@@ -913,7 +913,7 @@ export default function SanchikaListPage() {
 
                       {/* Footer - Action Buttons */}
                       <div className="flex items-center justify-between pt-1.5 sm:pt-2 mt-auto gap-2">
-                        <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 min-w-0 flex-shrink">
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground min-w-0 flex-shrink">
                           <Clock className="h-3 w-3 flex-shrink-0" />
                           <span className="text-[10px] sm:text-xs truncate">
                             {new Date(note.updated_at).toLocaleDateString('en-IN', {
@@ -933,7 +933,7 @@ export default function SanchikaListPage() {
                             className={`p-1.5 sm:p-2 rounded-md transition-all duration-200 ${
                               !!note.is_favorite
                                 ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400'
-                                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 hover:text-yellow-600'
+                                : 'bg-muted text-muted-foreground hover:bg-yellow-100 dark:hover:bg-yellow-900/30 hover:text-yellow-600'
                             }`}
                             title={!!note.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
                           >
@@ -941,7 +941,7 @@ export default function SanchikaListPage() {
                           </button>
 
                           <Link href={`/dashboard/user/sanchika/${note.id}`}>
-                            <button className="p-1.5 sm:p-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-md transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105">
+                            <button className="p-1.5 sm:p-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/80 text-white rounded-md transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105">
                               <Edit3 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                             </button>
                           </Link>
@@ -994,10 +994,10 @@ export default function SanchikaListPage() {
       {/* ============ FOLDER MODAL ============ */}
       {showFolderModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4 border border-gray-200 dark:border-gray-700">
+          <div className="bg-card rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4 border border-border">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                <FolderPlus className="h-6 w-6 text-blue-600" />
+              <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
+                <FolderPlus className="h-6 w-6 text-primary" />
                 Create New Folder
               </h3>
               <button
@@ -1005,14 +1005,14 @@ export default function SanchikaListPage() {
                   setShowFolderModal(false);
                   setNewFolderName('');
                 }}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                className="text-muted-foreground hover:text-foreground dark:hover:text-muted-foreground/60 transition-colors"
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Folder Name
               </label>
               <input
@@ -1021,7 +1021,7 @@ export default function SanchikaListPage() {
                 onChange={(e) => setNewFolderName(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleCreateFolder()}
                 placeholder="e.g., Mathematics, Science, History..."
-                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 dark:text-gray-100 placeholder-gray-500"
+                className="w-full px-4 py-3 bg-muted/40 border border-input rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-foreground placeholder-gray-500"
                 autoFocus
               />
             </div>
@@ -1032,14 +1032,14 @@ export default function SanchikaListPage() {
                   setShowFolderModal(false);
                   setNewFolderName('');
                 }}
-                className="flex-1 px-4 py-3 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-xl transition-all duration-200"
+                className="flex-1 px-4 py-3 bg-muted hover:bg-muted dark:hover:bg-muted text-foreground font-medium rounded-xl transition-all duration-200"
               >
                 Cancel
               </button>
               <button
                 onClick={handleCreateFolder}
                 disabled={!newFolderName.trim() || creatingFolder}
-                className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary hover:to-primary/80 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
                 {creatingFolder ? (
                   <span className="flex items-center justify-center gap-2">

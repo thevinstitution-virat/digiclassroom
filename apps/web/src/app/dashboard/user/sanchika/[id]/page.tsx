@@ -587,7 +587,7 @@ export default function NoteViewEditPage({ params }: NoteViewEditPageProps) {
                     onClick={() => { handleTogglePin(); setShowMoreMenu(false); }}
                     className="menu-item"
                   >
-                    <Pin className={`h-4 w-4 ${note.is_pinned ? 'fill-blue-500 text-blue-500' : ''}`} />
+                    <Pin className={`h-4 w-4 ${note.is_pinned ? 'fill-blue-500 text-primary' : ''}`} />
                     <span>{note.is_pinned ? 'Unpin note' : 'Pin note'}</span>
                   </button>
                   <button
@@ -762,8 +762,8 @@ export default function NoteViewEditPage({ params }: NoteViewEditPageProps) {
 
             {/* BACKLINKS (inbound [[ links) */}
             {note.id && backlinks.length > 0 && (
-              <div className="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+              <div className="mt-6 border-t border-border pt-4">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                   Linked references ({backlinks.length})
                 </h3>
                 <div className="space-y-1">
@@ -771,11 +771,11 @@ export default function NoteViewEditPage({ params }: NoteViewEditPageProps) {
                     <button
                       key={b.id}
                       onClick={() => router.push(`/dashboard/user/sanchika/${b.id}`)}
-                      className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                      className="w-full flex items-center gap-2 text-left px-3 py-2 rounded-lg text-sm text-foreground hover:bg-primary/10 transition-colors"
                     >
-                      <span className="text-purple-500">↩</span>
+                      <span className="text-primary">↩</span>
                       <span className="font-medium truncate">{b.title || 'Untitled'}</span>
-                      {b.subject && <span className="text-xs text-gray-400">· {b.subject}</span>}
+                      {b.subject && <span className="text-xs text-muted-foreground">· {b.subject}</span>}
                     </button>
                   ))}
                 </div>
