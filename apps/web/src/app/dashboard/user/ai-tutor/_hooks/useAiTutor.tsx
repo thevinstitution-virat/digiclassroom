@@ -1425,10 +1425,10 @@ Feel free to ask me any questions related to your studies. I'll provide detailed
     // Gradient colors for each menu item
     const gradients = [
       'from-orange-500 to-red-500',
-      'from-blue-500 to-cyan-500',
+      'from-primary to-cyan-500',
       'from-green-500 to-emerald-500',
-      'from-purple-500 to-indigo-500',
-      'from-pink-500 to-rose-500',
+      'from-primary to-primary/80',
+      'from-primary to-rose-500',
       'from-yellow-500 to-orange-500',
       'from-teal-500 to-green-500'
     ]
@@ -1451,7 +1451,7 @@ Feel free to ask me any questions related to your studies. I'll provide detailed
             >
               <Card
                 onClick={() => handleMenuSelection(menuItem.value)}
-                className="group cursor-pointer h-full border-2 border-orange-200/60 dark:border-orange-700/60 hover:border-blue-400/80 dark:hover:border-blue-500/80 transition-all duration-300 hover:shadow-lg bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm overflow-hidden"
+                className="group cursor-pointer h-full border-2 border-orange-200/60 dark:border-orange-700/60 hover:border-primary/80 dark:hover:border-primary/80 transition-all duration-300 hover:shadow-lg bg-card/90 backdrop-blur-sm overflow-hidden"
               >
                 <CardContent className="p-4">
                   {/* Horizontal layout with icon and text */}
@@ -1462,7 +1462,7 @@ Feel free to ask me any questions related to your studies. I'll provide detailed
 
                     <div className="flex-1 min-w-0">
                       {/* Title */}
-                      <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-200 leading-tight">
+                      <h3 className="text-sm font-semibold text-foreground group-hover:text-primary dark:group-hover:text-primary transition-colors duration-200 leading-tight">
                         {menuItem.text}
                       </h3>
                     </div>
