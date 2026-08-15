@@ -1,5 +1,7 @@
 // src/components/dashboard/DashboardPlaceholder.tsx
-// Shared "feature surface exists, full build coming" placeholder — modern glass card.
+// Shared "feature surface exists, full build coming" placeholder. Rides the Indic
+// `.dcd` shell primitives (.card / .plinth) and design tokens so it matches the
+// role home pages in both light and dark. Presentation only — carries no data.
 
 import type { ComponentType } from 'react';
 import { CheckCircle2 } from 'lucide-react';
@@ -19,31 +21,60 @@ export default function DashboardPlaceholder({
   points,
 }: DashboardPlaceholderProps) {
   return (
-    <div className="flex min-h-[72vh] items-center justify-center px-4">
-      <div className="relative mx-auto w-full max-w-lg overflow-hidden rounded-3xl border border-gray-200/70 bg-white/70 p-10 text-center shadow-xl shadow-gray-300/30 backdrop-blur-xl dark:border-white/10 dark:bg-gray-900/60 dark:shadow-black/30">
-        {/* gradient halo */}
-        <div className="pointer-events-none absolute inset-x-0 -top-24 mx-auto h-48 w-48 rounded-full bg-gradient-to-br from-orange-400/30 to-blue-500/30 blur-3xl" />
+    <div style={{ display: 'flex', minHeight: '72vh', alignItems: 'center', justifyContent: 'center', padding: '0 16px' }}>
+      <div
+        className="card"
+        style={{ position: 'relative', width: '100%', maxWidth: 520, padding: 'clamp(28px,4vw,40px)', textAlign: 'center' }}
+      >
+        {/* gradient halo (turmeric → saffron), off under reduced-motion via tokens only */}
+        <div
+          aria-hidden="true"
+          style={{
+            pointerEvents: 'none', position: 'absolute', insetInline: 0, top: -96, margin: '0 auto',
+            height: 192, width: 192, borderRadius: '50%', filter: 'blur(56px)',
+            background: 'radial-gradient(circle, rgb(var(--saffron-rgb) / 0.28), rgb(var(--turmeric-rgb) / 0.18) 60%, transparent 72%)',
+          }}
+        />
 
-        <div className="relative">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 to-blue-600 text-white shadow-lg shadow-blue-600/25 ring-1 ring-white/20">
-            {Icon ? <Icon className="h-8 w-8" /> : <span className="text-2xl">📋</span>}
-          </div>
-
-          <span className="mb-4 inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" /> Coming soon
+        <div style={{ position: 'relative' }}>
+          <span
+            className="plinth"
+            style={{ width: 64, height: 64, margin: '0 auto 20px', background: 'linear-gradient(135deg,var(--kumkum),var(--saffron))' }}
+          >
+            {Icon ? <Icon className="h-8 w-8" /> : <span style={{ fontSize: 24 }}>📋</span>}
           </span>
 
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{title}</h1>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-gray-500 dark:text-gray-400">{description}</p>
+          <div
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16,
+              borderRadius: 999, padding: '5px 12px', fontSize: 12, fontWeight: 700,
+              border: '1px solid rgb(var(--turmeric-rgb) / 0.28)',
+              background: 'rgb(var(--turmeric-rgb) / 0.10)', color: 'var(--accent-strong)',
+            }}
+          >
+            <span className="dotpulse" style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--turmeric)' }} />
+            Coming soon
+          </div>
+
+          <h1 style={{ margin: 0, fontSize: 'clamp(22px,2.6vw,26px)', fontWeight: 800, letterSpacing: '-.02em', color: 'var(--ink)' }}>
+            {title}
+          </h1>
+          <p style={{ margin: '12px auto 0', maxWidth: 420, fontSize: 14, lineHeight: 1.6, color: 'var(--muted)' }}>
+            {description}
+          </p>
 
           {points && points.length > 0 && (
-            <ul className="mx-auto mt-8 max-w-sm space-y-2.5 text-left">
+            <ul style={{ margin: '32px auto 0', maxWidth: 380, listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'left' }}>
               {points.map((p) => (
                 <li
                   key={p}
-                  className="flex items-start gap-3 rounded-xl border border-gray-100 bg-white/60 px-4 py-2.5 text-sm text-gray-600 dark:border-white/5 dark:bg-white/[0.03] dark:text-gray-300"
+                  style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 12,
+                    borderRadius: 12, border: '1px solid var(--line)', background: 'var(--panel-2)',
+                    padding: '10px 16px', fontSize: 14, color: 'var(--muted)',
+                  }}
                 >
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--emerald)' }} />
                   <span>{p}</span>
                 </li>
               ))}
