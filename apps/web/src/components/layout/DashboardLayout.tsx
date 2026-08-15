@@ -7,9 +7,9 @@
  *
  * The topbar title and the bottom tab bar are driven by whatever nav the role
  * sidebar reports through DashboardShellContext, so they always match the sidebar.
- * The optional "View as" role switcher is rendered only where a caller supplies
- * `viewAs` (the super-admin console, whose viewer may legitimately visit every
- * role dashboard) — presentation only; each route keeps its own access guard.
+ * A user's role — and therefore which dashboard they see — comes from the auth
+ * session on the server; each dashboard route keeps its own access guard. There
+ * is no in-app control that changes your own role.
  */
 
 'use client'
@@ -18,30 +18,14 @@ import React, { ReactNode, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
-import { Menu, Search, Bell, Sun, Moon, GraduationCap, Presentation, Users, Building2, ShieldCheck } from 'lucide-react'
-import type { ComponentType } from 'react'
+import { Menu, Search, Bell, Sun, Moon } from 'lucide-react'
 import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext'
 import { DashboardShellProvider, useDashboardShell } from '@/contexts/DashboardShellContext'
-import type { ViewAsIcon, ViewAsRole } from '@/lib/dashboard/view-as'
-
-export type { ViewAsRole }
-
-// Resolve the view-as icon KEY (a serialisable string that crosses the
-// server→client boundary) to a Lucide component HERE, on the client. The icon
-// components must never travel as props from the server layouts — see view-as.tsx.
-const VIEW_AS_ICONS: Record<ViewAsIcon, ComponentType<{ className?: string }>> = {
-  student: GraduationCap,
-  teacher: Presentation,
-  parent: Users,
-  institution: Building2,
-  admin: ShieldCheck,
-}
 
 interface DashboardLayoutProps {
   children: ReactNode
   sidebar: ReactNode
   header?: ReactNode
-  viewAs?: ViewAsRole[]
 }
 
 function activeByPrefix(pathname: string, hrefs: string[]): string | undefined {
@@ -50,7 +34,7 @@ function activeByPrefix(pathname: string, hrefs: string[]): string | undefined {
     .sort((a, b) => b.length - a.length)[0]
 }
 
-function DashboardLayoutInner({ children, sidebar, header, viewAs }: DashboardLayoutProps) {
+function DashboardLayoutInner({ children, sidebar, header }: DashboardLayoutProps) {
   const { isCollapsed, setSidebarCollapsed } = useSidebar()
   const shell = useDashboardShell()
   const pathname = usePathname()
@@ -73,7 +57,6 @@ function DashboardLayoutInner({ children, sidebar, header, viewAs }: DashboardLa
   // role still gets a usable bar.
   const primaryItems = items.filter((i) => i.primary)
   const bottomItems = (primaryItems.length ? primaryItems : items).slice(0, 4)
-  const viewAsActive = viewAs ? activeByPrefix(pathname, viewAs.map((r) => r.href)) : undefined
 
   const openNav = () => setSidebarCollapsed(false)
   const closeNav = () => setSidebarCollapsed(true)
@@ -154,32 +137,6 @@ function DashboardLayoutInner({ children, sidebar, header, viewAs }: DashboardLa
               </button>
             </div>
           </header>
-
-          {/* View-as role switcher (platform staff only) */}
-          {viewAs && viewAs.length > 0 && (
-            <div style={{ padding: '14px 20px 0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 9, overflowX: 'auto', paddingBottom: 4 }}>
-                <span
-                  style={{
-                    fontSize: 12, fontWeight: 800, letterSpacing: '.06em', textTransform: 'uppercase',
-                    color: 'var(--muted)', flex: 'none', marginRight: 2,
-                  }}
-                >
-                  View as
-                </span>
-                {viewAs.map((r) => {
-                  const Icon = VIEW_AS_ICONS[r.icon]
-                  const on = r.href === viewAsActive
-                  return (
-                    <Link key={r.key} href={r.href} className={`pill ${on ? 'on' : ''}`} style={{ flex: 'none' }}>
-                      <Icon className="h-[17px] w-[17px]" />
-                      {r.label}
-                    </Link>
-                  )
-                })}
-              </div>
-            </div>
-          )}
 
           <main style={{ padding: '22px 20px 40px', maxWidth: 1240, width: '100%' }}>
             {header}
@@ -262,11 +219,11 @@ function DashboardLayoutInner({ children, sidebar, header, viewAs }: DashboardLa
   )
 }
 
-export default function DashboardLayout({ children, sidebar, header, viewAs }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, sidebar, header }: DashboardLayoutProps) {
   return (
     <SidebarProvider>
       <DashboardShellProvider>
-        <DashboardLayoutInner sidebar={sidebar} header={header} viewAs={viewAs}>
+        <DashboardLayoutInner sidebar={sidebar} header={header}>
           {children}
         </DashboardLayoutInner>
       </DashboardShellProvider>

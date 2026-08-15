@@ -7,7 +7,6 @@ import { redirect } from 'next/navigation'
 import { getOrgContextOrNull } from '@/lib/auth/get-org-context'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import ParentSidebar from '@/components/parent/ParentSidebar'
-import { PLATFORM_VIEW_AS_ROLES } from '@/lib/dashboard/view-as'
 
 export default async function ParentLayout({ children }: { children: React.ReactNode }) {
   const ctx = await getOrgContextOrNull()
@@ -24,10 +23,7 @@ export default async function ParentLayout({ children }: { children: React.React
   }
 
   return (
-    <DashboardLayout
-      sidebar={<ParentSidebar />}
-      viewAs={isPlatformStaff ? PLATFORM_VIEW_AS_ROLES : undefined}
-    >
+    <DashboardLayout sidebar={<ParentSidebar />}>
       {children}
     </DashboardLayout>
   )
