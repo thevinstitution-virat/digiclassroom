@@ -13,9 +13,9 @@ export default function InstitutionAnalyticsPage() {
       />
 
       {/* Revenue Analytics Section */}
-      <div className="rounded-2xl border border-gray-200/70 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-gray-900/50">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Revenue Analytics</h2>
-        <p className="text-sm text-gray-500 mb-6">Your institution's captured payments (net of platform fees)</p>
+      <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <h2 className="text-xl font-bold text-foreground mb-2">Revenue Analytics</h2>
+        <p className="text-sm text-muted-foreground mb-6">Your institution's captured payments (net of platform fees)</p>
         <IARevenueClient />
       </div>
     </div>

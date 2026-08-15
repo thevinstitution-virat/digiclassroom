@@ -36,7 +36,7 @@ export default function StudentDetailAnalyticsPage({ params }: { params: { batch
                   <span className="text-muted-foreground whitespace-nowrap">{v.completion.toFixed(0)}%</span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500" style={{ width: `${v.completion}%` }} />
+                  <div className="h-full bg-primary" style={{ width: `${v.completion}%` }} />
                 </div>
               </div>
             ))}
@@ -74,7 +74,7 @@ export default function StudentDetailAnalyticsPage({ params }: { params: { batch
                 {data.weeklyTrend.map((t, i) => (
                   <div key={i} className="flex-1 flex flex-col justify-end items-center group relative h-full">
                     <div 
-                      className="w-full bg-blue-500/80 hover:bg-blue-600 rounded-t-sm transition-all" 
+                      className="w-full bg-primary/80 hover:bg-primary rounded-t-sm transition-all"
                       style={{ height: `${t.engagementScore}%` }}
                     />
                     <span className="text-xs mt-2 text-muted-foreground rotate-45 origin-left truncate w-8">

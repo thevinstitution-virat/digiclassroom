@@ -103,7 +103,7 @@ export default function ClassesManagement() {
   if (!isLoaded || loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     )
   }
@@ -113,11 +113,11 @@ export default function ClassesManagement() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
             <GraduationCap className="w-7 h-7 text-emerald-500" />
             Classes & Sections
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Manage the academic hierarchy for your institution</p>
+          <p className="text-muted-foreground mt-1">Manage the academic hierarchy for your institution</p>
         </div>
         <button
           onClick={() => setShowAddClassModal(true)}
@@ -130,32 +130,32 @@ export default function ClassesManagement() {
       {/* Add Class Modal */}
       {showAddClassModal && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md p-6 border border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-bold mb-4 text-gray-900 dark:text-white">Add New Class</h2>
+          <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md p-6 border border-border">
+            <h2 className="text-lg font-bold mb-4 text-foreground">Add New Class</h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Class Name</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Class Name</label>
                 <input
                   type="text"
                   value={newClassName}
                   onChange={(e) => setNewClassName(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground outline-none focus:ring-2 focus:ring-emerald-500"
                   placeholder="e.g. Class 10"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Level (optional)</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Level (optional)</label>
                 <input
                   type="number"
                   value={newClassLevel}
                   onChange={(e) => setNewClassLevel(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-4 py-2.5 rounded-xl border border-input bg-background text-foreground outline-none focus:ring-2 focus:ring-emerald-500"
                   placeholder="e.g. 10"
                 />
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
-              <button onClick={() => setShowAddClassModal(false)} className="px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+              <button onClick={() => setShowAddClassModal(false)} className="px-4 py-2 text-sm text-muted-foreground hover:bg-muted rounded-lg transition-colors">
                 Cancel
               </button>
               <button onClick={handleAddClass} disabled={saving || !newClassName.trim()} className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-xl disabled:opacity-50 transition-colors">
@@ -168,10 +168,10 @@ export default function ClassesManagement() {
 
       {/* Classes List */}
       {classes.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-12 text-center">
-          <GraduationCap className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-2">No Classes Yet</h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">Start by adding classes for your institution's academic structure.</p>
+        <div className="bg-card rounded-2xl border border-border p-12 text-center">
+          <GraduationCap className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-foreground mb-2">No Classes Yet</h3>
+          <p className="text-muted-foreground mb-6">Start by adding classes for your institution's academic structure.</p>
           <button
             onClick={() => setShowAddClassModal(true)}
             className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium"
@@ -182,22 +182,22 @@ export default function ClassesManagement() {
       ) : (
         <div className="space-y-4">
           {classes.map((cls) => (
-            <div key={cls.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+            <div key={cls.id} className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm hover:shadow-md transition-shadow">
               {/* Class Header */}
-              <div className="flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-gray-800/50">
+              <div className="flex items-center justify-between px-6 py-4 bg-muted/40">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-sm">
                     {cls.level || '#'}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white">{cls.name}</h3>
-                    <span className="text-xs text-gray-500">{cls.sections.length} section{cls.sections.length !== 1 ? 's' : ''}</span>
+                    <h3 className="font-semibold text-foreground">{cls.name}</h3>
+                    <span className="text-xs text-muted-foreground">{cls.sections.length} section{cls.sections.length !== 1 ? 's' : ''}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setAddingSectionToClassId(addingSectionToClassId === cls.id ? null : cls.id)}
-                    className="text-xs px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                    className="text-xs px-3 py-1.5 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
                   >
                     <Plus className="w-3 h-3 inline mr-1" />Section
                   </button>
@@ -209,12 +209,12 @@ export default function ClassesManagement() {
 
               {/* Sections */}
               {cls.sections.length > 0 && (
-                <div className="px-6 py-3 divide-y divide-gray-100 dark:divide-gray-700">
+                <div className="px-6 py-3 divide-y divide-border">
                   {cls.sections.map((section) => (
                     <div key={section.id} className="flex items-center justify-between py-2.5">
                       <div className="flex items-center gap-2">
-                        <ChevronRight className="w-3 h-3 text-gray-400" />
-                        <span className="text-sm text-gray-700 dark:text-gray-300">{section.name}</span>
+                        <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                        <span className="text-sm text-foreground">{section.name}</span>
                       </div>
                     </div>
                   ))}
@@ -223,19 +223,19 @@ export default function ClassesManagement() {
 
               {/* Add Section inline */}
               {addingSectionToClassId === cls.id && (
-                <div className="px-6 py-3 bg-blue-50/50 dark:bg-blue-900/10 border-t border-gray-100 dark:border-gray-700 flex items-center gap-2">
+                <div className="px-6 py-3 bg-primary/5 border-t border-border flex items-center gap-2">
                   <input
                     type="text"
                     value={newSectionName}
                     onChange={(e) => setNewSectionName(e.target.value)}
-                    className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 px-3 py-2 rounded-lg border border-input bg-background text-foreground text-sm outline-none focus:ring-2 focus:ring-primary"
                     placeholder="Section name (e.g. A, B, Science)"
                     onKeyDown={(e) => e.key === 'Enter' && handleAddSection(cls.id)}
                   />
-                  <button onClick={() => handleAddSection(cls.id)} disabled={saving || !newSectionName.trim()} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg disabled:opacity-50 transition-colors">
+                  <button onClick={() => handleAddSection(cls.id)} disabled={saving || !newSectionName.trim()} className="px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm rounded-lg disabled:opacity-50 transition-colors">
                     Add
                   </button>
-                  <button onClick={() => { setAddingSectionToClassId(null); setNewSectionName(''); }} className="px-3 py-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm rounded-lg transition-colors">
+                  <button onClick={() => { setAddingSectionToClassId(null); setNewSectionName(''); }} className="px-3 py-2 text-muted-foreground hover:bg-muted text-sm rounded-lg transition-colors">
                     Cancel
                   </button>
                 </div>

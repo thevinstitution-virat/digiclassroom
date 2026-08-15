@@ -111,7 +111,7 @@ export default function StudentEnrollments() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     )
   }
@@ -121,22 +121,22 @@ export default function StudentEnrollments() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-            <Users className="w-7 h-7 text-blue-500" />
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-3">
+            <Users className="w-7 h-7 text-primary" />
             Student Enrollments
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">Manage student enrollment and bulk import via CSV</p>
+          <p className="text-muted-foreground mt-1">Manage student enrollment and bulk import via CSV</p>
         </div>
       </div>
 
       {/* CSV Import Card */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-8 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+      <div className="bg-card rounded-2xl border border-border p-6 mb-8 shadow-sm">
+        <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 mb-4">
           <FileSpreadsheet className="w-5 h-5 text-emerald-500" />
           Bulk Import (CSV)
         </h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          Upload a CSV file with columns: <code className="bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-xs">name, email, class_id, section_id, roll_number</code>
+        <p className="text-sm text-muted-foreground mb-4">
+          Upload a CSV file with columns: <code className="bg-muted px-1.5 py-0.5 rounded text-xs">name, email, class_id, section_id, roll_number</code>
         </p>
 
         <div className="flex items-center gap-3">
@@ -145,7 +145,7 @@ export default function StudentEnrollments() {
             type="file"
             accept=".csv"
             onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
-            className="flex-1 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
+            className="flex-1 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20"
           />
           <button
             onClick={handleCsvUpload}
@@ -164,10 +164,10 @@ export default function StudentEnrollments() {
               <CheckCircle2 className="w-4 h-4" /> Import Complete
             </div>
             <div className="grid grid-cols-4 gap-4 text-sm">
-              <div><span className="text-gray-500">Total:</span> <strong>{bulkResult.total}</strong></div>
-              <div><span className="text-gray-500">Enrolled:</span> <strong className="text-green-600">{bulkResult.enrolled}</strong></div>
-              <div><span className="text-gray-500">Skipped:</span> <strong className="text-amber-600">{bulkResult.skipped}</strong></div>
-              <div><span className="text-gray-500">Errors:</span> <strong className="text-red-600">{bulkResult.errorCount}</strong></div>
+              <div><span className="text-muted-foreground">Total:</span> <strong>{bulkResult.total}</strong></div>
+              <div><span className="text-muted-foreground">Enrolled:</span> <strong className="text-green-600">{bulkResult.enrolled}</strong></div>
+              <div><span className="text-muted-foreground">Skipped:</span> <strong className="text-amber-600">{bulkResult.skipped}</strong></div>
+              <div><span className="text-muted-foreground">Errors:</span> <strong className="text-red-600">{bulkResult.errorCount}</strong></div>
             </div>
           </div>
         )}
@@ -186,22 +186,22 @@ export default function StudentEnrollments() {
       </div>
 
       {/* Enrollments Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
-        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="font-semibold text-gray-900 dark:text-white">
+      <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-sm">
+        <div className="px-6 py-4 bg-muted/40 border-b border-border">
+          <h3 className="font-semibold text-foreground">
             Current Enrollments ({enrollments.length})
           </h3>
         </div>
 
         {enrollments.length === 0 ? (
           <div className="p-12 text-center">
-            <Users className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-500 dark:text-gray-400">No students enrolled yet. Use CSV import above to add students in bulk.</p>
+            <Users className="w-12 h-12 text-muted-foreground/50 mx-auto mb-4" />
+            <p className="text-muted-foreground">No students enrolled yet. Use CSV import above to add students in bulk.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300">
+              <thead className="bg-muted/40 text-muted-foreground">
                 <tr>
                   <th className="text-left px-6 py-3 font-medium">User ID</th>
                   <th className="text-left px-6 py-3 font-medium">Class</th>
@@ -211,14 +211,14 @@ export default function StudentEnrollments() {
                   <th className="text-right px-6 py-3 font-medium">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              <tbody className="divide-y divide-border">
                 {enrollments.map((e) => (
-                  <tr key={e.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                    <td className="px-6 py-3 font-mono text-xs text-gray-700 dark:text-gray-300">{e.userId.slice(0, 12)}...</td>
-                    <td className="px-6 py-3 text-gray-700 dark:text-gray-300">{e.classId.slice(0, 8)}...</td>
-                    <td className="px-6 py-3 text-gray-700 dark:text-gray-300">{e.sectionId?.slice(0, 8) || '—'}</td>
-                    <td className="px-6 py-3 text-gray-700 dark:text-gray-300">{e.rollNumber || '—'}</td>
-                    <td className="px-6 py-3 text-gray-700 dark:text-gray-300">{e.academicYear}</td>
+                  <tr key={e.id} className="hover:bg-muted/40 transition-colors">
+                    <td className="px-6 py-3 font-mono text-xs text-foreground">{e.userId.slice(0, 12)}...</td>
+                    <td className="px-6 py-3 text-foreground">{e.classId.slice(0, 8)}...</td>
+                    <td className="px-6 py-3 text-foreground">{e.sectionId?.slice(0, 8) || '—'}</td>
+                    <td className="px-6 py-3 text-foreground">{e.rollNumber || '—'}</td>
+                    <td className="px-6 py-3 text-foreground">{e.academicYear}</td>
                     <td className="px-6 py-3 text-right">
                       <button onClick={() => handleDelete(e.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
                         <Trash2 className="w-4 h-4" />
