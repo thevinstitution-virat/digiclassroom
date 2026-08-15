@@ -130,7 +130,7 @@ export default function PractestAdminPage() {
   if (!isLoaded) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
       </div>
     )
   }
@@ -157,11 +157,11 @@ export default function PractestAdminPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
-              <CogIcon className="h-8 w-8 text-blue-600" />
+            <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
+              <CogIcon className="h-8 w-8 text-primary" />
               Practest Admin Panel
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
+            <p className="text-muted-foreground mt-2">
               Manage questions, monitor performance, and configure test settings
             </p>
           </div>
@@ -214,11 +214,11 @@ export default function PractestAdminPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <DocumentTextIcon className="h-5 w-5 text-blue-600" />
+                  <div className="p-2 bg-primary/15 rounded-lg">
+                    <DocumentTextIcon className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Questions</p>
+                    <p className="text-sm text-muted-foreground">Total Questions</p>
                     <p className="text-2xl font-bold">{state.stats.totalQuestions.toLocaleString()}</p>
                   </div>
                 </div>
@@ -232,7 +232,7 @@ export default function PractestAdminPage() {
                     <CheckCircleIcon className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Approved</p>
+                    <p className="text-sm text-muted-foreground">Approved</p>
                     <p className="text-2xl font-bold">{state.stats.approvedQuestions.toLocaleString()}</p>
                   </div>
                 </div>
@@ -246,7 +246,7 @@ export default function PractestAdminPage() {
                     <ClockIcon className="h-5 w-5 text-yellow-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Pending Review</p>
+                    <p className="text-sm text-muted-foreground">Pending Review</p>
                     <p className="text-2xl font-bold">{state.stats.pendingReview}</p>
                   </div>
                 </div>
@@ -256,11 +256,11 @@ export default function PractestAdminPage() {
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <ChartBarIcon className="h-5 w-5 text-purple-600" />
+                  <div className="p-2 bg-primary/15 rounded-lg">
+                    <ChartBarIcon className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Tests</p>
+                    <p className="text-sm text-muted-foreground">Total Tests</p>
                     <p className="text-2xl font-bold">{state.stats.totalTests.toLocaleString()}</p>
                   </div>
                 </div>
@@ -274,7 +274,7 @@ export default function PractestAdminPage() {
                     <UsersIcon className="h-5 w-5 text-orange-600" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Active Users</p>
+                    <p className="text-sm text-muted-foreground">Active Users</p>
                     <p className="text-2xl font-bold">{state.stats.activeUsers.toLocaleString()}</p>
                   </div>
                 </div>
@@ -295,7 +295,7 @@ export default function PractestAdminPage() {
                     <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
                       <div>
                         <p className="font-medium">Mathematics - Class 10</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-muted-foreground">
                           Quadratic Equations • MCQ • Medium
                         </p>
                       </div>

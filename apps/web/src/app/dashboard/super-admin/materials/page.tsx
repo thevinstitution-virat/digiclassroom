@@ -109,8 +109,8 @@ export default function MaterialsManagementPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading materials dashboard...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading materials dashboard...</p>
         </div>
       </div>
     )
@@ -121,10 +121,10 @@ export default function MaterialsManagementPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-100">
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground">
             Materials Management
           </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Manage study materials with Google Drive integration
           </p>
         </div>
@@ -139,7 +139,7 @@ export default function MaterialsManagementPage() {
             variant="outline"
             size="sm"
             onClick={refreshData}
-            className="hover:bg-blue-50 dark:hover:bg-blue-900/30"
+            className="hover:bg-primary/10 dark:hover:bg-primary/15"
           >
             <ArrowPathIcon className="h-4 w-4 mr-2" />
             Refresh
@@ -164,12 +164,12 @@ export default function MaterialsManagementPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Materials</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  <p className="text-sm font-medium text-muted-foreground">Total Materials</p>
+                  <p className="text-2xl font-bold text-foreground">
                     {state.stats.totalMaterials.toLocaleString()}
                   </p>
                 </div>
-                <DocumentTextIcon className="h-8 w-8 text-blue-500" />
+                <DocumentTextIcon className="h-8 w-8 text-primary" />
               </div>
             </CardContent>
           </Card>
@@ -178,8 +178,8 @@ export default function MaterialsManagementPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending Approvals</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  <p className="text-sm font-medium text-muted-foreground">Pending Approvals</p>
+                  <p className="text-2xl font-bold text-foreground">
                     {state.stats.pendingApprovals}
                   </p>
                 </div>
@@ -192,8 +192,8 @@ export default function MaterialsManagementPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Downloads</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  <p className="text-sm font-medium text-muted-foreground">Total Downloads</p>
+                  <p className="text-2xl font-bold text-foreground">
                     {state.stats.totalDownloads.toLocaleString()}
                   </p>
                 </div>
@@ -206,12 +206,12 @@ export default function MaterialsManagementPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Storage Used</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                  <p className="text-sm font-medium text-muted-foreground">Storage Used</p>
+                  <p className="text-2xl font-bold text-foreground">
                     {(state.stats.storageUsed / 1024 / 1024 / 1024).toFixed(1)} GB
                   </p>
                 </div>
-                <FolderIcon className="h-8 w-8 text-purple-500" />
+                <FolderIcon className="h-8 w-8 text-primary" />
               </div>
             </CardContent>
           </Card>
@@ -242,21 +242,21 @@ export default function MaterialsManagementPage() {
                     <CheckCircleIcon className="h-5 w-5 text-green-500" />
                     <div className="flex-1">
                       <p className="text-sm font-medium">Mathematics Chapter 1 Notes approved</p>
-                      <p className="text-xs text-gray-500">2 hours ago</p>
+                      <p className="text-xs text-muted-foreground">2 hours ago</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
-                    <CloudArrowUpIcon className="h-5 w-5 text-blue-500" />
+                    <CloudArrowUpIcon className="h-5 w-5 text-primary" />
                     <div className="flex-1">
                       <p className="text-sm font-medium">Physics Lab Manual uploaded</p>
-                      <p className="text-xs text-gray-500">4 hours ago</p>
+                      <p className="text-xs text-muted-foreground">4 hours ago</p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <ExclamationTriangleIcon className="h-5 w-5 text-orange-500" />
                     <div className="flex-1">
                       <p className="text-sm font-medium">Chemistry Notes pending review</p>
-                      <p className="text-xs text-gray-500">6 hours ago</p>
+                      <p className="text-xs text-muted-foreground">6 hours ago</p>
                     </div>
                   </div>
                 </div>

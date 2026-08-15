@@ -217,13 +217,13 @@ export default function TeacherVerificationPage() {
   const getVerificationBadge = (status: string) => {
     switch (status) {
       case 'unverified':
-        return <Badge variant="outline" className="text-gray-600">Unverified</Badge>
+        return <Badge variant="outline" className="text-muted-foreground">Unverified</Badge>
       case 'verified_email':
-        return <Badge className="bg-blue-100 text-blue-800 border-blue-300">Email Verified</Badge>
+        return <Badge className="bg-primary/15 text-primary border-primary/40">Email Verified</Badge>
       case 'verified_document':
         return <Badge className="bg-green-100 text-green-800 border-green-300">Document Verified</Badge>
       case 'verified_manual':
-        return <Badge className="bg-purple-100 text-purple-800 border-purple-300">Manually Verified</Badge>
+        return <Badge className="bg-primary/15 text-primary border-primary/40">Manually Verified</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
     }
@@ -255,11 +255,11 @@ export default function TeacherVerificationPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-3">
-              <Shield className="h-8 w-8 text-blue-600" />
+            <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
+              <Shield className="h-8 w-8 text-primary" />
               Teacher Verification Management
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
+            <p className="text-muted-foreground mt-2">
               Review and approve teacher verification documents
             </p>
           </div>
@@ -298,7 +298,7 @@ export default function TeacherVerificationPage() {
             {/* Search */}
             <div className="flex-1">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by teacher name, email, or document type..."
                   value={state.searchQuery}
@@ -334,13 +334,13 @@ export default function TeacherVerificationPage() {
         <CardContent>
           {state.loading ? (
             <div className="flex justify-center items-center py-12">
-              <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
+              <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : filteredDocuments.length === 0 ? (
             <div className="text-center py-12">
-              <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No documents found</h3>
-              <p className="text-gray-600">
+              <FileText className="h-16 w-16 text-muted-foreground/60 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">No documents found</h3>
+              <p className="text-muted-foreground">
                 {state.filter === 'pending' 
                   ? 'No pending verification documents' 
                   : `No ${state.filter} documents found`}
@@ -366,7 +366,7 @@ export default function TeacherVerificationPage() {
                       <TableCell>
                         <div>
                           <div className="font-medium">{doc.teacherName}</div>
-                          <div className="text-sm text-gray-500">{doc.teacherEmail}</div>
+                          <div className="text-sm text-muted-foreground">{doc.teacherEmail}</div>
                           {doc.isEducationalDomain && (
                             <Badge variant="outline" className="mt-1 text-xs">
                               {doc.emailDomain}
@@ -380,7 +380,7 @@ export default function TeacherVerificationPage() {
                       <TableCell>
                         <div className="text-sm">
                           <div className="font-medium truncate max-w-[200px]">{doc.fileName}</div>
-                          <div className="text-gray-500">{formatFileSize(doc.fileSize)}</div>
+                          <div className="text-muted-foreground">{formatFileSize(doc.fileSize)}</div>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -389,7 +389,7 @@ export default function TeacherVerificationPage() {
                       <TableCell>
                         {getStatusBadge(doc.status)}
                       </TableCell>
-                      <TableCell className="text-sm text-gray-600">
+                      <TableCell className="text-sm text-muted-foreground">
                         {formatDate(doc.uploadedAt)}
                       </TableCell>
                       <TableCell className="text-right">
@@ -461,26 +461,26 @@ export default function TeacherVerificationPage() {
           
           {state.selectedDocument && (
             <div className="space-y-4">
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-2">
+              <div className="bg-muted/40 p-4 rounded-lg space-y-2">
                 <div>
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Teacher:</span>
+                  <span className="text-sm font-medium text-muted-foreground">Teacher:</span>
                   <p className="font-medium">{state.selectedDocument.teacherName}</p>
-                  <p className="text-sm text-gray-600">{state.selectedDocument.teacherEmail}</p>
+                  <p className="text-sm text-muted-foreground">{state.selectedDocument.teacherEmail}</p>
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Document:</span>
+                  <span className="text-sm font-medium text-muted-foreground">Document:</span>
                   <p className="capitalize">{state.selectedDocument.documentType.replace(/_/g, ' ')}</p>
-                  <p className="text-sm text-gray-600">{state.selectedDocument.fileName}</p>
+                  <p className="text-sm text-muted-foreground">{state.selectedDocument.fileName}</p>
                 </div>
                 <div>
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Current Status:</span>
+                  <span className="text-sm font-medium text-muted-foreground">Current Status:</span>
                   <div className="mt-1">{getVerificationBadge(state.selectedDocument.verificationStatus)}</div>
                 </div>
               </div>
 
               {state.reviewAction === 'reject' && (
                 <div>
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                  <label className="text-sm font-medium text-foreground mb-2 block">
                     Rejection Reason *
                   </label>
                   <Textarea

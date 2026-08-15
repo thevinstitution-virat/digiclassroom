@@ -160,7 +160,7 @@ export default function AdminProfilePage() {
   if (!isLoaded) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     )
   }
@@ -170,15 +170,15 @@ export default function AdminProfilePage() {
       <div className="mx-auto max-w-6xl space-y-8">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-orange-500/10 to-blue-500/10 rounded-full border border-orange-200/50 dark:border-blue-200/20 mb-6 backdrop-blur-sm">
+          <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-orange-500/10 to-primary/10 rounded-full border border-orange-200/50 dark:border-primary/30 mb-6 backdrop-blur-sm">
             <Shield className="h-4 w-4 text-orange-500 mr-2 animate-pulse" />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Administrator Portal</span>
+            <span className="text-sm font-medium text-foreground">Administrator Portal</span>
           </div>
 
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-            <span className="bg-gradient-to-r from-orange-500 to-blue-600 bg-clip-text text-transparent">Admin Profile</span>
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+            <span className="bg-gradient-to-r from-orange-500 to-primary/80 bg-clip-text text-transparent">Admin Profile</span>
           </h1>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             Manage your administrator account and system preferences with advanced controls
           </p>
         </div>
@@ -200,9 +200,9 @@ export default function AdminProfilePage() {
 
         {/* Error Message */}
         {errors.general && (
-          <div className="bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 border border-red-200/50 dark:border-red-800/50 rounded-2xl p-6 backdrop-blur-md shadow-lg">
+          <div className="bg-gradient-to-r from-red-50 to-primary/10 dark:from-red-900/20 dark:to-primary/15 border border-red-200/50 dark:border-red-800/50 rounded-2xl p-6 backdrop-blur-md shadow-lg">
             <div className="flex items-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-red-500 to-pink-500 rounded-xl mr-4 shadow-lg">
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-red-500 to-primary/80 rounded-xl mr-4 shadow-lg">
                 <AlertTriangle className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -216,25 +216,25 @@ export default function AdminProfilePage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Profile Information */}
           <div className="lg:col-span-2 space-y-8">
-            <div className="relative p-8 bg-white/90 dark:bg-gray-900/90 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] border border-gray-200/50 dark:border-gray-700/50 group overflow-hidden backdrop-blur-xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="relative p-8 bg-white/90 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] border border-border/50 group overflow-hidden backdrop-blur-xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 to-primary/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="relative z-10">
                 <div className="flex flex-row items-center justify-between mb-6">
                   <div>
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-orange-500 to-blue-600 rounded-xl shadow-lg">
+                      <div className="inline-flex items-center justify-center w-12 h-12 bg-gradient-to-br from-orange-500 to-primary/80 rounded-xl shadow-lg">
                         <User className="h-6 w-6 text-white" />
                       </div>
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Profile Information</h2>
+                      <h2 className="text-2xl font-bold text-foreground">Profile Information</h2>
                     </div>
-                    <p className="text-gray-600 dark:text-gray-300">
+                    <p className="text-muted-foreground">
                       Your personal information and account details
                     </p>
                   </div>
                   {!isEditing ? (
                     <button
                       onClick={() => setIsEditing(true)}
-                      className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-orange-500 to-blue-600 text-white hover:from-orange-600 hover:to-blue-700 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+                      className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-orange-500 to-primary/80 text-white hover:from-orange-600 hover:to-primary/80 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
                     >
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Profile
@@ -243,7 +243,7 @@ export default function AdminProfilePage() {
                     <div className="flex gap-3">
                       <button
                         onClick={handleCancel}
-                        className="inline-flex items-center px-4 py-2 border-2 border-gray-300 text-gray-700 hover:border-orange-500 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+                        className="inline-flex items-center px-4 py-2 border-2 border-input text-foreground hover:border-orange-500 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
                       >
                         <X className="h-4 w-4 mr-2" />
                         Cancel
@@ -263,7 +263,7 @@ export default function AdminProfilePage() {
                 <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">First Name</label>
+                      <label className="block text-sm font-semibold text-foreground mb-3">First Name</label>
                       {isEditing ? (
                         <input
                           type="text"
@@ -271,13 +271,13 @@ export default function AdminProfilePage() {
                           onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
                           className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent backdrop-blur-sm ${errors.firstName
                             ? 'border-red-500 bg-red-50/50 dark:bg-red-900/20'
-                            : 'border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 hover:border-orange-300 dark:hover:border-orange-600'
+                            : 'border-border bg-white/50 hover:border-orange-300 dark:hover:border-orange-600'
                             }`}
                           placeholder="Enter your first name"
                         />
                       ) : (
-                        <div className="px-4 py-3 bg-gray-50/50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-                          <p className="text-gray-900 dark:text-white font-medium">{profileData.firstName}</p>
+                        <div className="px-4 py-3 bg-muted/30 rounded-xl border border-border">
+                          <p className="text-foreground font-medium">{profileData.firstName}</p>
                         </div>
                       )}
                       {errors.firstName && (
@@ -289,7 +289,7 @@ export default function AdminProfilePage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Last Name</label>
+                      <label className="block text-sm font-semibold text-foreground mb-3">Last Name</label>
                       {isEditing ? (
                         <input
                           type="text"
@@ -297,13 +297,13 @@ export default function AdminProfilePage() {
                           onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
                           className={`w-full px-4 py-3 rounded-xl border-2 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent backdrop-blur-sm ${errors.lastName
                             ? 'border-red-500 bg-red-50/50 dark:bg-red-900/20'
-                            : 'border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 hover:border-orange-300 dark:hover:border-orange-600'
+                            : 'border-border bg-white/50 hover:border-orange-300 dark:hover:border-orange-600'
                             }`}
                           placeholder="Enter your last name"
                         />
                       ) : (
-                        <div className="px-4 py-3 bg-gray-50/50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-                          <p className="text-gray-900 dark:text-white font-medium">{profileData.lastName}</p>
+                        <div className="px-4 py-3 bg-muted/30 rounded-xl border border-border">
+                          <p className="text-foreground font-medium">{profileData.lastName}</p>
                         </div>
                       )}
                       {errors.lastName && (
@@ -316,30 +316,30 @@ export default function AdminProfilePage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Email Address</label>
-                    <div className="px-4 py-3 bg-gray-50/50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-                      <p className="text-gray-900 dark:text-white font-medium">{profileData.emailAddress}</p>
+                    <label className="block text-sm font-semibold text-foreground mb-3">Email Address</label>
+                    <div className="px-4 py-3 bg-muted/30 rounded-xl border border-border">
+                      <p className="text-foreground font-medium">{profileData.emailAddress}</p>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center">
+                    <p className="text-xs text-muted-foreground mt-2 flex items-center">
                       <Lock className="h-3 w-3 mr-1" />
                       Email changes must be made through your authentication provider
                     </p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Role</label>
-                    <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl font-semibold shadow-lg">
+                    <label className="block text-sm font-semibold text-foreground mb-3">Role</label>
+                    <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-red-500 to-primary/80 text-white rounded-xl font-semibold shadow-lg">
                       <Shield className="h-5 w-5 mr-2" />
                       {profileData.role}
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Permissions</label>
+                    <label className="block text-sm font-semibold text-foreground mb-3">Permissions</label>
                     <div className="flex flex-wrap gap-3">
                       {profileData.permissions.map((permission, index) => (
-                        <div key={permission} className={`inline-flex items-center px-3 py-2 rounded-xl text-sm font-semibold text-white shadow-md ${index % 4 === 0 ? 'bg-gradient-to-r from-purple-500 to-indigo-500' :
-                          index % 4 === 1 ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
+                        <div key={permission} className={`inline-flex items-center px-3 py-2 rounded-xl text-sm font-semibold text-white shadow-md ${index % 4 === 0 ? 'bg-gradient-to-r from-primary to-primary/80' :
+                          index % 4 === 1 ? 'bg-gradient-to-r from-primary to-cyan-500' :
                             index % 4 === 2 ? 'bg-gradient-to-r from-green-500 to-emerald-500' :
                               'bg-gradient-to-r from-orange-500 to-red-500'
                           }`}>
@@ -356,25 +356,25 @@ export default function AdminProfilePage() {
           {/* Account Information & Settings */}
           <div className="space-y-8">
             {/* Account Info */}
-            <div className="relative p-6 bg-white/90 dark:bg-gray-900/90 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] border border-gray-200/50 dark:border-gray-700/50 group overflow-hidden backdrop-blur-xl">
+            <div className="relative p-6 bg-white/90 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] border border-border/50 group overflow-hidden backdrop-blur-xl">
               <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="inline-flex items-center justify-center w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl shadow-lg">
                     <Activity className="h-5 w-5 text-white" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Account Info</h3>
+                  <h3 className="text-xl font-bold text-foreground">Account Info</h3>
                 </div>
                 <div className="space-y-4">
-                  <div className="p-4 bg-gray-50/50 dark:bg-gray-800/50 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Last Login</label>
-                    <p className="text-gray-900 dark:text-white font-medium">
+                  <div className="p-4 bg-muted/30 rounded-xl border border-border/50">
+                    <label className="block text-sm font-semibold text-foreground mb-1">Last Login</label>
+                    <p className="text-foreground font-medium">
                       {formatDate(profileData.lastLogin)}
                     </p>
                   </div>
-                  <div className="p-4 bg-gray-50/50 dark:bg-gray-800/50 rounded-xl border border-gray-200/50 dark:border-gray-700/50">
-                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Account Created</label>
-                    <p className="text-gray-900 dark:text-white font-medium">
+                  <div className="p-4 bg-muted/30 rounded-xl border border-border/50">
+                    <label className="block text-sm font-semibold text-foreground mb-1">Account Created</label>
+                    <p className="text-foreground font-medium">
                       {formatDate(profileData.accountCreated)}
                     </p>
                   </div>
@@ -383,33 +383,33 @@ export default function AdminProfilePage() {
             </div>
 
             {/* Quick Actions */}
-            <div className="relative p-6 bg-white/90 dark:bg-gray-900/90 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] border border-gray-200/50 dark:border-gray-700/50 group overflow-hidden backdrop-blur-xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="relative p-6 bg-white/90 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] border border-border/50 group overflow-hidden backdrop-blur-xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               <div className="relative z-10">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="inline-flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl shadow-lg">
+                  <div className="inline-flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-lg">
                     <Settings className="h-5 w-5 text-white" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Quick Actions</h3>
+                  <h3 className="text-xl font-bold text-foreground">Quick Actions</h3>
                 </div>
                 <div className="space-y-3">
                   <a
                     href="/dashboard/super-admin/users"
-                    className="flex items-center w-full p-4 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 hover:from-purple-100 hover:to-indigo-100 dark:hover:from-purple-900/30 dark:hover:to-indigo-900/30 rounded-xl border border-purple-200/50 dark:border-purple-700/50 transition-all duration-300 transform hover:scale-105 group/action"
+                    className="flex items-center w-full p-4 bg-gradient-to-r from-primary/10 to-primary/10 dark:from-primary/15 dark:to-primary/15 hover:from-primary/15 hover:to-primary/15 dark:hover:from-primary/15 dark:hover:to-primary/15 rounded-xl border border-primary/30 transition-all duration-300 transform hover:scale-105 group/action"
                   >
-                    <div className="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-lg mr-3 shadow-md group-hover/action:shadow-lg transition-shadow duration-300">
+                    <div className="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-lg mr-3 shadow-md group-hover/action:shadow-lg transition-shadow duration-300">
                       <Users className="h-4 w-4 text-white" />
                     </div>
-                    <span className="font-semibold text-gray-900 dark:text-white">Manage Users</span>
+                    <span className="font-semibold text-foreground">Manage Users</span>
                   </a>
                   <a
                     href="/dashboard/super-admin/database"
-                    className="flex items-center w-full p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 hover:from-blue-100 hover:to-cyan-100 dark:hover:from-blue-900/30 dark:hover:to-cyan-900/30 rounded-xl border border-blue-200/50 dark:border-blue-700/50 transition-all duration-300 transform hover:scale-105 group/action"
+                    className="flex items-center w-full p-4 bg-gradient-to-r from-primary/10 to-cyan-50 dark:from-primary/10 dark:to-cyan-900/20 hover:from-primary/15 hover:to-cyan-100 dark:hover:from-primary/15 dark:hover:to-cyan-900/30 rounded-xl border border-primary/30 transition-all duration-300 transform hover:scale-105 group/action"
                   >
-                    <div className="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-lg mr-3 shadow-md group-hover/action:shadow-lg transition-shadow duration-300">
+                    <div className="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-br from-primary to-cyan-500 rounded-lg mr-3 shadow-md group-hover/action:shadow-lg transition-shadow duration-300">
                       <Database className="h-4 w-4 text-white" />
                     </div>
-                    <span className="font-semibold text-gray-900 dark:text-white">Database Admin</span>
+                    <span className="font-semibold text-foreground">Database Admin</span>
                   </a>
                   <a
                     href="/dashboard/super-admin/settings"
@@ -418,7 +418,7 @@ export default function AdminProfilePage() {
                     <div className="inline-flex items-center justify-center w-8 h-8 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg mr-3 shadow-md group-hover/action:shadow-lg transition-shadow duration-300">
                       <Monitor className="h-4 w-4 text-white" />
                     </div>
-                    <span className="font-semibold text-gray-900 dark:text-white">System Settings</span>
+                    <span className="font-semibold text-foreground">System Settings</span>
                   </a>
                 </div>
               </div>

@@ -39,32 +39,32 @@ function HealthWidget() {
 
   return (
     <div className="mb-8">
-      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-4 shadow border border-white/20 dark:border-gray-700/20">
+      <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-4 shadow border border-white/20">
         <div className="flex items-center gap-3 mb-2">
           <Activity className="h-5 w-5 text-green-600" />
           <h3 className="font-semibold">Engine Health</h3>
         </div>
-        {isLoading && <p className="text-sm text-gray-500">Checking...</p>}
+        {isLoading && <p className="text-sm text-muted-foreground">Checking...</p>}
         {error && <p className="text-sm text-red-600">Health check failed</p>}
         {data?.health && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
             <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
               <div className="font-medium">Python</div>
-              <div className="text-gray-600 dark:text-gray-300">{data.health.python?.version || 'Unknown'}</div>
+              <div className="text-muted-foreground">{data.health.python?.version || 'Unknown'}</div>
               <div className={data.health.python?.engine_import_ok ? 'text-green-600' : 'text-red-600'}>
                 Engine import: {data.health.python?.engine_import_ok ? 'OK' : 'Fail'}
               </div>
             </div>
-            <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+            <div className="p-3 rounded-lg bg-primary/10">
               <div className="font-medium">Config</div>
-              <div className="text-gray-600 dark:text-gray-300 truncate">{data.health.config?.path || 'Unknown'}</div>
+              <div className="text-muted-foreground truncate">{data.health.config?.path || 'Unknown'}</div>
               <div className={data.health.config?.exists ? 'text-green-600' : 'text-red-600'}>
                 Exists: {data.health.config?.exists ? 'Yes' : 'No'}
               </div>
             </div>
-            <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20">
+            <div className="p-3 rounded-lg bg-primary/10 dark:bg-primary/15">
               <div className="font-medium">Qdrant</div>
-              <div className="text-gray-600 dark:text-gray-300 truncate">{data.health.qdrant?.url || 'Unknown'}</div>
+              <div className="text-muted-foreground truncate">{data.health.qdrant?.url || 'Unknown'}</div>
               <div className={data.health.qdrant?.ok ? 'text-green-600' : 'text-red-600'}>
                 Status: {data.health.qdrant?.ok ? 'OK' : 'Fail'}
               </div>
@@ -368,35 +368,35 @@ export default function UploadPage() {
       <div className="space-y-8">
         {/* Enhanced Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-orange-500/10 to-blue-500/10 backdrop-blur-sm border border-orange-200/30 rounded-2xl px-6 py-3 mb-6">
+          <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-orange-500/10 to-primary/10 backdrop-blur-sm border border-orange-200/30 rounded-2xl px-6 py-3 mb-6">
             <BookOpen className="h-5 w-5 text-orange-500" />
-            <span className="text-sm font-medium bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+            <span className="text-sm font-medium bg-gradient-to-r from-orange-600 to-primary/80 bg-clip-text text-transparent">
               Content Management System
             </span>
           </div>
 
           <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            <span className="bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent flex items-center justify-center gap-4">
+            <span className="bg-gradient-to-r from-orange-600 to-primary/80 bg-clip-text text-transparent flex items-center justify-center gap-4">
               <Database className="h-12 w-12 text-orange-500" />
               Intelligent PDF Upload
             </span>
           </h1>
 
-          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-8">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
             Upload CBSE textbooks with advanced PDF processing and intelligent text extraction powered by AI
           </p>
         </div>
 
         {/* Tab Navigation */}
         <div className="flex justify-center mb-8">
-          <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-2 shadow-xl border border-white/20 dark:border-gray-700/20">
+          <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-2 shadow-xl border border-white/20">
             <div className="flex space-x-2">
               <button
                 onClick={() => setActiveTab('upload')}
                 className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 ${
                   activeTab === 'upload'
-                    ? 'bg-gradient-to-r from-orange-500 to-blue-500 text-white shadow-lg'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-gray-700'
+                    ? 'bg-gradient-to-r from-orange-500 to-primary/80 text-white shadow-lg'
+                    : 'text-muted-foreground hover:text-orange-500 hover:bg-orange-50'
                 }`}
               >
                 <Upload className="h-4 w-4" />
@@ -406,8 +406,8 @@ export default function UploadPage() {
                 onClick={() => setActiveTab('overview')}
                 className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 ${
                   activeTab === 'overview'
-                    ? 'bg-gradient-to-r from-orange-500 to-blue-500 text-white shadow-lg'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-gray-700'
+                    ? 'bg-gradient-to-r from-orange-500 to-primary/80 text-white shadow-lg'
+                    : 'text-muted-foreground hover:text-primary hover:bg-primary/10'
                 }`}
               >
                 <Database className="h-4 w-4" />
@@ -417,8 +417,8 @@ export default function UploadPage() {
                 onClick={() => setActiveTab('manage')}
                 className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 flex items-center space-x-2 ${
                   activeTab === 'manage'
-                    ? 'bg-gradient-to-r from-orange-500 to-blue-500 text-white shadow-lg'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-green-500 hover:bg-green-50 dark:hover:bg-gray-700'
+                    ? 'bg-gradient-to-r from-orange-500 to-primary/80 text-white shadow-lg'
+                    : 'text-muted-foreground hover:text-green-500 hover:bg-green-50'
                 }`}
               >
                 <FolderOpen className="h-4 w-4" />
@@ -436,17 +436,17 @@ export default function UploadPage() {
         {activeTab === 'upload' && (
         <div className="grid gap-8 lg:grid-cols-2">
           {/* Enhanced Upload Form */}
-          <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-8 shadow-xl border border-white/20 dark:border-gray-700/20 hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02]">
+          <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-8 shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02]">
             <div className="mb-8">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl flex items-center justify-center shadow-lg">
                   <Upload className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-primary/80 bg-clip-text text-transparent">
                     Upload Textbook
                   </h2>
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <p className="text-muted-foreground">
                     Select a PDF file and provide metadata for intelligent processing
                   </p>
                 </div>
@@ -455,7 +455,7 @@ export default function UploadPage() {
 
             {/* Ingestion mode toggle — super-admin chooses the lane */}
             <div className="mb-6">
-              <div className="inline-flex rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-1">
+              <div className="inline-flex rounded-xl border border-border bg-background/40 p-1">
                 {([
                   { key: 'pdf', label: 'PDF · Extract-Kit (auto)' },
                   { key: 'markdown', label: 'Enriched Markdown (curated)' },
@@ -466,15 +466,15 @@ export default function UploadPage() {
                     onClick={() => setIngestMode(key)}
                     className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
                       ingestMode === key
-                        ? 'bg-gradient-to-r from-orange-500 to-blue-600 text-white shadow'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+                        ? 'bg-gradient-to-r from-orange-500 to-primary/80 text-white shadow'
+                        : 'text-muted-foreground hover:text-foreground dark:hover:text-foreground'
                     }`}
                   >
                     {label}
                   </button>
                 ))}
               </div>
-              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              <p className="mt-2 text-xs text-muted-foreground">
                 {ingestMode === 'pdf'
                   ? 'Automated OCR + layout + metadata extraction. Use for bulk / un-curated PDFs.'
                   : 'Human-validated markdown (from a chapter skill). Skips OCR — metadata & printed page numbers are read from the file frontmatter for exact citations.'}
@@ -483,8 +483,8 @@ export default function UploadPage() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
               {ingestMode === 'pdf' && (() => {
-                const selectCls = "w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                const labelCls = "block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                const selectCls = "w-full px-4 py-3 bg-muted/40 border border-border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                const labelCls = "block text-sm font-medium text-foreground mb-2"
 
                 const courses = formData.domain ? getCourses(formData.domain) : []
                 const levels = formData.domain && formData.course ? getLevels(formData.domain, formData.course) : []
@@ -590,7 +590,7 @@ export default function UploadPage() {
                         value={formData.bookTitle}
                         onChange={(e) => setFormData({ ...formData, bookTitle: e.target.value })}
                         placeholder="e.g., NCERT Economics Textbook (full title as printed)"
-                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300"
+                        className="w-full px-4 py-3 bg-muted/40 border border-border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300"
                         required
                       />
                     </div>
@@ -599,13 +599,13 @@ export default function UploadPage() {
               })()}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   {ingestMode === 'pdf' ? 'PDF File' : 'Enriched Markdown File (.md)'}
                 </label>
                 {ingestMode === 'markdown' && (
-                  <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+                  <p className="mb-2 text-xs text-muted-foreground">
                     Metadata (book, subject, class, chapter, page numbers) is read from the file&apos;s
-                    <code className="mx-1 px-1 rounded bg-gray-100 dark:bg-gray-700">BOOK_METADATA</code>
+                    <code className="mx-1 px-1 rounded bg-muted">BOOK_METADATA</code>
                     frontmatter. Only <strong>APPROVED</strong> files are indexed.
                   </p>
                 )}
@@ -614,7 +614,7 @@ export default function UploadPage() {
                     type="file"
                     accept={ingestMode === 'pdf' ? '.pdf' : '.md,text/markdown'}
                     onChange={(e) => setFormData({ ...formData, file: e.target.files?.[0] || null })}
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
+                    className="w-full px-4 py-3 bg-muted/40 border border-border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
                     required
                   />
                 </div>
@@ -672,11 +672,11 @@ export default function UploadPage() {
             {/* Progress Bar */}
             {isUploading && (
               <div className="mt-6 space-y-3">
-                <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                <div className="flex justify-between text-sm text-muted-foreground">
                   <span>{currentStep}</span>
                   <span>{uploadProgress}%</span>
                 </div>
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
                   <div
                     className="bg-gradient-to-r from-orange-500 to-red-500 h-3 rounded-full transition-all duration-500 ease-out"
                     style={{ width: `${uploadProgress}%` }}
@@ -687,16 +687,16 @@ export default function UploadPage() {
           </div>
 
           {/* Results Panel */}
-          <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-8 shadow-xl border border-white/20 dark:border-gray-700/20">
+          <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-8 shadow-xl border border-white/20">
             <div className="flex items-center space-x-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg">
+              <div className="w-12 h-12 bg-gradient-to-r from-primary to-primary/80 rounded-2xl flex items-center justify-center shadow-lg">
                 <BarChart3 className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
                   Upload Results
                 </h2>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-muted-foreground">
                   Processing status and statistics
                 </p>
               </div>
@@ -737,9 +737,9 @@ export default function UploadPage() {
 
                 {/* Extraction Method */}
                 {result.extractionMethod && (
-                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
-                    <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">Extraction Method</h4>
-                    <p className="text-blue-700 dark:text-blue-300 text-sm">
+                  <div className="p-4 bg-primary/10 rounded-xl border border-primary/30">
+                    <h4 className="font-semibold text-primary mb-2">Extraction Method</h4>
+                    <p className="text-primary text-sm">
                       {getExtractionMethodDescription(result.extractionMethod)}
                     </p>
                   </div>
@@ -754,11 +754,11 @@ export default function UploadPage() {
                       </div>
                       <div className="text-sm text-orange-700 dark:text-orange-300">Total Pages</div>
                     </div>
-                    <div className="p-4 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl border border-blue-200/50 dark:border-blue-800/50">
-                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/10 dark:from-primary/10 dark:to-primary/15 rounded-xl border border-primary/30">
+                      <div className="text-2xl font-bold text-primary">
                         {result.stats.totalChunks}
                       </div>
-                      <div className="text-sm text-blue-700 dark:text-blue-300">Content Chunks</div>
+                      <div className="text-sm text-primary">Content Chunks</div>
                     </div>
                     <div className="p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border border-green-200/50 dark:border-green-800/50">
                       <div className="text-2xl font-bold text-green-600 dark:text-green-400">
@@ -766,11 +766,11 @@ export default function UploadPage() {
                       </div>
                       <div className="text-sm text-green-700 dark:text-green-300">Total Words</div>
                     </div>
-                    <div className="p-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200/50 dark:border-purple-800/50">
-                      <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                    <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/10 dark:from-primary/15 dark:to-primary/15 rounded-xl border border-primary/30">
+                      <div className="text-2xl font-bold text-primary">
                         {Math.round(result.stats.processingTime / 1000)}s
                       </div>
-                      <div className="text-sm text-purple-700 dark:text-purple-300">Processing Time</div>
+                      <div className="text-sm text-primary">Processing Time</div>
                     </div>
                   </div>
                 )}
@@ -784,13 +784,13 @@ export default function UploadPage() {
                       </div>
                       <div className="text-sm text-cyan-700 dark:text-cyan-300">Tables Found</div>
                     </div>
-                    <div className="p-4 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 rounded-xl border border-indigo-200/50 dark:border-indigo-800/50">
-                      <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                    <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/10 dark:from-primary/15 dark:to-primary/15 rounded-xl border border-primary/30">
+                      <div className="text-2xl font-bold text-primary">
                         {result.additionalStats.equationsFound || 0}
                       </div>
-                      <div className="text-sm text-indigo-700 dark:text-indigo-300">Equations Found</div>
+                      <div className="text-sm text-primary">Equations Found</div>
                     </div>
-                    <div className="p-4 bg-gradient-to-br from-rose-50 to-pink-50 dark:from-rose-900/20 dark:to-pink-900/20 rounded-xl border border-rose-200/50 dark:border-rose-800/50">
+                    <div className="p-4 bg-gradient-to-br from-rose-50 to-primary/10 dark:from-rose-900/20 dark:to-primary/15 rounded-xl border border-rose-200/50 dark:border-rose-800/50">
                       <div className="text-2xl font-bold text-rose-600 dark:text-rose-400">
                         {result.additionalStats.figuresFound || 0}
                       </div>
@@ -828,26 +828,26 @@ export default function UploadPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 mb-4">
-                      <div className="p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg">
+                      <div className="p-3 bg-white/50 rounded-lg">
                         <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                           {result.validationStats.validCount}
                         </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">Valid Chunks</div>
+                        <div className="text-sm text-muted-foreground">Valid Chunks</div>
                       </div>
-                      <div className="p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg">
+                      <div className="p-3 bg-white/50 rounded-lg">
                         <div className="text-2xl font-bold text-red-600 dark:text-red-400">
                           {result.validationStats.invalidCount}
                         </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">Invalid Chunks</div>
+                        <div className="text-sm text-muted-foreground">Invalid Chunks</div>
                       </div>
                     </div>
 
                     {result.validationStats.invalidChunks && result.validationStats.invalidChunks.length > 0 && (
-                      <div className="mt-4 p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg">
-                        <h5 className="font-semibold text-sm text-gray-700 dark:text-gray-300 mb-2">
+                      <div className="mt-4 p-3 bg-white/50 rounded-lg">
+                        <h5 className="font-semibold text-sm text-foreground mb-2">
                           Validation Errors ({result.validationStats.invalidChunks.length}):
                         </h5>
-                        <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1 max-h-32 overflow-y-auto">
+                        <ul className="text-xs text-muted-foreground space-y-1 max-h-32 overflow-y-auto">
                           {result.validationStats.invalidChunks.slice(0, 10).map((invalid, index) => (
                             <li key={index} className="flex items-start space-x-2">
                               <span className="text-red-500">•</span>
@@ -855,7 +855,7 @@ export default function UploadPage() {
                             </li>
                           ))}
                           {result.validationStats.invalidChunks.length > 10 && (
-                            <li className="text-gray-500 italic">
+                            <li className="text-muted-foreground italic">
                               ... and {result.validationStats.invalidChunks.length - 10} more
                             </li>
                           )}
@@ -864,7 +864,7 @@ export default function UploadPage() {
                     )}
 
                     {result.strategy && (
-                      <div className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+                      <div className="mt-4 text-sm text-muted-foreground">
                         <strong>Extraction Strategy:</strong> {result.strategy}
                       </div>
                     )}
@@ -885,11 +885,11 @@ export default function UploadPage() {
               </div>
             ) : (
               <div className="text-center py-12">
-                <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                <FileText className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-muted-foreground mb-2">
                   Ready for Upload
                 </h3>
-                <p className="text-gray-500 dark:text-gray-500">
+                <p className="text-muted-foreground dark:text-muted-foreground">
                   Upload results and statistics will appear here
                 </p>
               </div>

@@ -99,14 +99,14 @@ export default function AdminTeacherActivityPage() {
     if (type.includes('deleted') || type.includes('rejected'))
   return 'text-red-600 bg-red-50'
     if (type.includes('updated') || type.includes('assigned'))
-  return 'text-blue-600 bg-blue-50'
-    return 'text-gray-600 bg-gray-50'
+  return 'text-primary bg-primary/10'
+    return 'text-muted-foreground bg-muted/40'
   }
 
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     )
   }
@@ -115,15 +115,15 @@ export default function AdminTeacherActivityPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Teacher Activity Monitoring</h1>
-        <p className="text-gray-600 mt-2">Monitor teacher activities and performance metrics</p>
+        <h1 className="text-3xl font-bold text-foreground">Teacher Activity Monitoring</h1>
+        <p className="text-muted-foreground mt-2">Monitor teacher activities and performance metrics</p>
       </div>
 
       {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Teachers</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Teachers</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{teacherStats.length}</div>
@@ -132,7 +132,7 @@ export default function AdminTeacherActivityPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Classes</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Classes</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
@@ -143,7 +143,7 @@ export default function AdminTeacherActivityPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Students</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Students</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
@@ -154,7 +154,7 @@ export default function AdminTeacherActivityPage() {
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Validations</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Validations</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
@@ -174,24 +174,24 @@ export default function AdminTeacherActivityPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 font-medium text-gray-700">Teacher</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">Status</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">Classes</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">Students</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">Validations</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">Activities</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">Last Active</th>
-                  <th className="text-center py-3 px-4 font-medium text-gray-700">Actions</th>
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-4 font-medium text-foreground">Teacher</th>
+                  <th className="text-center py-3 px-4 font-medium text-foreground">Status</th>
+                  <th className="text-center py-3 px-4 font-medium text-foreground">Classes</th>
+                  <th className="text-center py-3 px-4 font-medium text-foreground">Students</th>
+                  <th className="text-center py-3 px-4 font-medium text-foreground">Validations</th>
+                  <th className="text-center py-3 px-4 font-medium text-foreground">Activities</th>
+                  <th className="text-center py-3 px-4 font-medium text-foreground">Last Active</th>
+                  <th className="text-center py-3 px-4 font-medium text-foreground">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {teacherStats.map((teacher) => (
-                  <tr key={teacher.teacherId} className="border-b border-gray-100 hover:bg-gray-50">
+                  <tr key={teacher.teacherId} className="border-b border-border hover:bg-muted/50">
                     <td className="py-3 px-4">
                       <div>
-                        <p className="font-medium text-gray-900">{teacher.teacherName}</p>
-                        <p className="text-sm text-gray-600">{teacher.email}</p>
+                        <p className="font-medium text-foreground">{teacher.teacherName}</p>
+                        <p className="text-sm text-muted-foreground">{teacher.email}</p>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-center">
@@ -212,11 +212,11 @@ export default function AdminTeacherActivityPage() {
                     <td className="py-3 px-4 text-center">
                       <div className="text-sm">
                         <span className="font-medium">{teacher.approvedValidations}</span>
-                        <span className="text-gray-500">/{teacher.totalValidations}</span>
+                        <span className="text-muted-foreground">/{teacher.totalValidations}</span>
                       </div>
                     </td>
                     <td className="py-3 px-4 text-center font-medium">{teacher.totalActivities}</td>
-                    <td className="py-3 px-4 text-center text-sm text-gray-600">
+                    <td className="py-3 px-4 text-center text-sm text-muted-foreground">
                       {teacher.lastActivityAt
                         ? new Date(teacher.lastActivityAt).toLocaleDateString()
                         : 'Never'}
@@ -224,7 +224,7 @@ export default function AdminTeacherActivityPage() {
                     <td className="py-3 px-4 text-center">
                       <button
                         onClick={() => setSelectedTeacher(teacher.teacherId)}
-                        className="inline-flex items-center gap-1 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        className="inline-flex items-center gap-1 px-3 py-1 text-sm text-primary hover:bg-primary/10 rounded transition-colors"
                       >
                         <Eye className="h-4 w-4" />
                         View
@@ -252,7 +252,7 @@ export default function AdminTeacherActivityPage() {
               </div>
               <button
                 onClick={() => setSelectedTeacher(null)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-muted-foreground hover:text-foreground"
               >
                 Close
               </button>
@@ -261,26 +261,26 @@ export default function AdminTeacherActivityPage() {
           <CardContent>
             {activityLoading ? (
               <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
               </div>
             ) : activities.length === 0 ? (
-              <div className="text-center py-8 text-gray-600">No activities found</div>
+              <div className="text-center py-8 text-muted-foreground">No activities found</div>
             ) : (
               <div className="space-y-3">
                 {activities.map((activity) => (
                   <div
                     key={activity.id}
-                    className="flex items-start gap-3 p-3 border border-gray-200 rounded-lg"
+                    className="flex items-start gap-3 p-3 border border-border rounded-lg"
                   >
                     <div className={`p-2 rounded ${getActivityColor(activity.activityType)}`}>
                       {getActivityIcon(activity.activityType)}
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium text-gray-900">{activity.activityDescription}</p>
-                      <p className="text-sm text-gray-600 mt-1">
+                      <p className="font-medium text-foreground">{activity.activityDescription}</p>
+                      <p className="text-sm text-muted-foreground mt-1">
                         {activity.activityType.replace(/_/g, ' ')}
                       </p>
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         {new Date(activity.createdAt).toLocaleString()}
                       </p>
                     </div>
