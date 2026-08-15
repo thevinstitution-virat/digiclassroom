@@ -55,22 +55,22 @@ export default function InstitutionFeaturesPage() {
   }
 
   if (loading) {
-    return <div className="px-4 py-10 text-gray-500">Loading features…</div>
+    return <div className="px-4 py-10 text-muted-foreground">Loading features…</div>
   }
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-2xl font-bold text-transparent">
+          <h1 className="grad text-2xl font-bold">
             Features
           </h1>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+          <p className="mt-1 text-sm text-muted-foreground">
             Turn features on or off for your institution.
             {plan && <span className="ml-1">Plan: <strong>{plan}</strong>.</span>}
           </p>
         </div>
-        {saving && <span className="text-xs text-gray-400">Saving…</span>}
+        {saving && <span className="text-xs text-muted-foreground">Saving…</span>}
       </div>
 
       {error && (
@@ -79,15 +79,15 @@ export default function InstitutionFeaturesPage() {
         </div>
       )}
 
-      <ul className="mt-6 divide-y divide-gray-100 rounded-2xl border border-gray-200 bg-white dark:divide-gray-700 dark:border-gray-700 dark:bg-gray-800">
+      <ul className="mt-6 divide-y divide-border rounded-2xl border border-border bg-card">
         {catalog.map((f) => {
           const isAllowed = allowed.includes(f.key)
           const isOn = enabled.includes(f.key)
           return (
             <li key={f.key} className="flex items-center justify-between gap-4 px-5 py-4">
               <div className={isAllowed ? '' : 'opacity-50'}>
-                <p className="font-semibold text-gray-900 dark:text-white">{f.name}</p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="font-semibold text-foreground">{f.name}</p>
+                <p className="text-sm text-muted-foreground">
                   {f.description}
                   {!isAllowed && <span className="ml-2 text-amber-600">· not in your plan</span>}
                 </p>
@@ -99,7 +99,7 @@ export default function InstitutionFeaturesPage() {
                 disabled={!isAllowed || saving}
                 onClick={() => toggle(f.key)}
                 className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full transition-colors ${
-                  isOn ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'
+                  isOn ? 'bg-primary' : 'bg-muted'
                 } ${!isAllowed ? 'cursor-not-allowed opacity-40' : 'cursor-pointer'}`}
               >
                 <span
@@ -113,7 +113,7 @@ export default function InstitutionFeaturesPage() {
         })}
       </ul>
 
-      <p className="mt-4 text-xs text-gray-400">
+      <p className="mt-4 text-xs text-muted-foreground">
         Features outside your plan are managed by the platform team (super_admin).
       </p>
     </div>
