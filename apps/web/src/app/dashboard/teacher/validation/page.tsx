@@ -135,7 +135,7 @@ export default function TeacherValidationPage() {
 
   const getRatingColor = (rating: number | null) => {
     if (!rating)
-  return 'text-gray-400'
+  return 'text-muted-foreground'
     if (rating >= 4)
   return 'text-green-600'
     if (rating >= 3)
@@ -155,7 +155,7 @@ export default function TeacherValidationPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     )
   }
@@ -164,20 +164,20 @@ export default function TeacherValidationPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Answer Validation</h1>
-        <p className="text-gray-600 mt-2">Review and validate AI-generated answers with multi-dimensional scoring</p>
+        <h1 className="text-3xl font-bold text-foreground">Answer Validation</h1>
+        <p className="text-muted-foreground mt-2">Review and validate AI-generated answers with multi-dimensional scoring</p>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex gap-2 border-b border-gray-200">
+      <div className="flex gap-2 border-b border-border">
         {(['pending', 'validated', 'all'] as const).map((status) => (
           <button
             key={status}
             onClick={() => setFilter(status)}
             className={`px-4 py-2 font-medium capitalize transition-colors ${
               filter === status
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {status}
@@ -189,9 +189,9 @@ export default function TeacherValidationPage() {
       {items.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <CheckSquare className="h-16 w-16 text-gray-300 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No items to validate</h3>
-            <p className="text-gray-600">
+            <CheckSquare className="h-16 w-16 text-muted-foreground/60 mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">No items to validate</h3>
+            <p className="text-muted-foreground">
               {filter === 'pending' ? 'All caught up! No pending validations.' : `No ${filter} items found.`}
             </p>
           </CardContent>
@@ -204,7 +204,7 @@ export default function TeacherValidationPage() {
               <Card
                 key={item.id}
                 className={`cursor-pointer transition-all ${
-                  selectedItem?.id === item.id ? 'ring-2 ring-blue-500' : 'hover:shadow-md'
+                  selectedItem?.id === item.id ? 'ring-2 ring-primary' : 'hover:shadow-md'
                 }`}
                 onClick={() => setSelectedItem(item)}
               >
@@ -232,9 +232,9 @@ export default function TeacherValidationPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-xs font-medium text-gray-600 mb-1">Question:</p>
-                  <p className="text-sm text-gray-700 line-clamp-2 mb-2">{item.questionText}</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs font-medium text-muted-foreground mb-1">Question:</p>
+                  <p className="text-sm text-foreground line-clamp-2 mb-2">{item.questionText}</p>
+                  <p className="text-xs text-muted-foreground">
                     {new Date(item.createdAt).toLocaleDateString()}
                   </p>
                 </CardContent>
@@ -252,32 +252,32 @@ export default function TeacherValidationPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Question */}
-                  <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <h4 className="font-medium text-blue-900 mb-2">Question:</h4>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{selectedItem.questionText}</p>
+                  <div className="p-4 bg-primary/10 rounded-lg border border-primary/30">
+                    <h4 className="font-medium text-primary mb-2">Question:</h4>
+                    <p className="text-sm text-foreground whitespace-pre-wrap">{selectedItem.questionText}</p>
                   </div>
 
                   {/* Answer */}
-                  <div className="p-4 bg-gray-50 rounded-lg">
+                  <div className="p-4 bg-muted/40 rounded-lg">
                     <h4 className="font-medium mb-2">AI-Generated Answer:</h4>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap max-h-64 overflow-y-auto">{selectedItem.answerText}</p>
+                    <p className="text-sm text-foreground whitespace-pre-wrap max-h-64 overflow-y-auto">{selectedItem.answerText}</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <span className="text-gray-600">Subject:</span>
+                      <span className="text-muted-foreground">Subject:</span>
                       <p className="font-medium">{selectedItem.subject}</p>
                     </div>
                     <div>
-                      <span className="text-gray-600">Class:</span>
+                      <span className="text-muted-foreground">Class:</span>
                       <p className="font-medium">{selectedItem.classLevel}</p>
                     </div>
                     <div>
-                      <span className="text-gray-600">Board:</span>
+                      <span className="text-muted-foreground">Board:</span>
                       <p className="font-medium">{selectedItem.board}</p>
                     </div>
                     <div>
-                      <span className="text-gray-600">User Rating:</span>
+                      <span className="text-muted-foreground">User Rating:</span>
                       <p className="font-medium">{selectedItem.starRating ? `${selectedItem.starRating}⭐` : 'N/A'}</p>
                     </div>
                   </div>
@@ -285,21 +285,21 @@ export default function TeacherValidationPage() {
                   {selectedItem.validationStatus === 'pending' && (
                     <>
                       {/* Overall Score Display */}
-                      <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                      <div className="p-4 bg-gradient-to-r from-primary/10 to-primary/10 rounded-lg border border-primary/30">
                         <div className="text-center">
-                          <p className="text-sm text-gray-600 mb-1">Overall Score</p>
-                          <p className="text-4xl font-bold text-blue-600">{overallScore}</p>
-                          <p className="text-xs text-gray-500 mt-1">Average of 5 dimensions</p>
+                          <p className="text-sm text-muted-foreground mb-1">Overall Score</p>
+                          <p className="text-4xl font-bold text-primary">{overallScore}</p>
+                          <p className="text-xs text-muted-foreground mt-1">Average of 5 dimensions</p>
                         </div>
                       </div>
 
                       {/* Multi-Dimensional Scores */}
                       <div className="space-y-4 border-t pt-4">
-                        <h4 className="font-semibold text-gray-900">Quality Dimensions (0-100)</h4>
+                        <h4 className="font-semibold text-foreground">Quality Dimensions (0-100)</h4>
 
                         {/* Accuracy Score */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-foreground mb-2">
                             Accuracy Score
                           </label>
                           <input
@@ -310,16 +310,16 @@ export default function TeacherValidationPage() {
                             onChange={(e) => setAccuracyScore(parseInt(e.target.value))}
                             className="w-full"
                           />
-                          <div className="flex justify-between text-xs text-gray-600 mt-1">
+                          <div className="flex justify-between text-xs text-muted-foreground mt-1">
                             <span>0</span>
-                            <span className="font-semibold text-blue-600">{accuracyScore}</span>
+                            <span className="font-semibold text-primary">{accuracyScore}</span>
                             <span>100</span>
                           </div>
                         </div>
 
                         {/* Completeness Score */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-foreground mb-2">
                             Completeness Score
                           </label>
                           <input
@@ -330,16 +330,16 @@ export default function TeacherValidationPage() {
                             onChange={(e) => setCompletenessScore(parseInt(e.target.value))}
                             className="w-full"
                           />
-                          <div className="flex justify-between text-xs text-gray-600 mt-1">
+                          <div className="flex justify-between text-xs text-muted-foreground mt-1">
                             <span>0</span>
-                            <span className="font-semibold text-blue-600">{completenessScore}</span>
+                            <span className="font-semibold text-primary">{completenessScore}</span>
                             <span>100</span>
                           </div>
                         </div>
 
                         {/* CBSE Alignment Score */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-foreground mb-2">
                             CBSE Alignment Score
                           </label>
                           <input
@@ -350,16 +350,16 @@ export default function TeacherValidationPage() {
                             onChange={(e) => setCbseAlignmentScore(parseInt(e.target.value))}
                             className="w-full"
                           />
-                          <div className="flex justify-between text-xs text-gray-600 mt-1">
+                          <div className="flex justify-between text-xs text-muted-foreground mt-1">
                             <span>0</span>
-                            <span className="font-semibold text-blue-600">{cbseAlignmentScore}</span>
+                            <span className="font-semibold text-primary">{cbseAlignmentScore}</span>
                             <span>100</span>
                           </div>
                         </div>
 
                         {/* Clarity Score */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-foreground mb-2">
                             Clarity Score
                           </label>
                           <input
@@ -370,16 +370,16 @@ export default function TeacherValidationPage() {
                             onChange={(e) => setClarityScore(parseInt(e.target.value))}
                             className="w-full"
                           />
-                          <div className="flex justify-between text-xs text-gray-600 mt-1">
+                          <div className="flex justify-between text-xs text-muted-foreground mt-1">
                             <span>0</span>
-                            <span className="font-semibold text-blue-600">{clarityScore}</span>
+                            <span className="font-semibold text-primary">{clarityScore}</span>
                             <span>100</span>
                           </div>
                         </div>
 
                         {/* Citation Quality Score */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-foreground mb-2">
                             Citation Quality Score
                           </label>
                           <input
@@ -390,9 +390,9 @@ export default function TeacherValidationPage() {
                             onChange={(e) => setCitationQualityScore(parseInt(e.target.value))}
                             className="w-full"
                           />
-                          <div className="flex justify-between text-xs text-gray-600 mt-1">
+                          <div className="flex justify-between text-xs text-muted-foreground mt-1">
                             <span>0</span>
-                            <span className="font-semibold text-blue-600">{citationQualityScore}</span>
+                            <span className="font-semibold text-primary">{citationQualityScore}</span>
                             <span>100</span>
                           </div>
                         </div>
@@ -400,17 +400,17 @@ export default function TeacherValidationPage() {
 
                       {/* Detailed Feedback */}
                       <div className="space-y-4 border-t pt-4">
-                        <h4 className="font-semibold text-gray-900">Detailed Feedback</h4>
+                        <h4 className="font-semibold text-foreground">Detailed Feedback</h4>
 
                         {/* Strengths */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-foreground mb-1">
                             Strengths
                           </label>
                           <textarea
                             value={strengths}
                             onChange={(e) => setStrengths(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                             rows={2}
                             placeholder="What did the answer do well?"
                           />
@@ -418,13 +418,13 @@ export default function TeacherValidationPage() {
 
                         {/* Weaknesses */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-foreground mb-1">
                             Weaknesses
                           </label>
                           <textarea
                             value={weaknesses}
                             onChange={(e) => setWeaknesses(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                             rows={2}
                             placeholder="What needs improvement?"
                           />
@@ -432,13 +432,13 @@ export default function TeacherValidationPage() {
 
                         {/* Suggestions */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-foreground mb-1">
                             Suggestions
                           </label>
                           <textarea
                             value={suggestions}
                             onChange={(e) => setSuggestions(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                             rows={2}
                             placeholder="How can this be improved?"
                           />
@@ -446,13 +446,13 @@ export default function TeacherValidationPage() {
 
                         {/* Improvement Notes */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-foreground mb-1">
                             Improvement Notes
                           </label>
                           <textarea
                             value={improvementNotes}
                             onChange={(e) => setImprovementNotes(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                             rows={2}
                             placeholder="Additional notes for improvement..."
                           />
@@ -466,9 +466,9 @@ export default function TeacherValidationPage() {
                           id="approve-pregen"
                           checked={approveForPregen}
                           onChange={(e) => setApproveForPregen(e.target.checked)}
-                          className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                          className="h-4 w-4 text-green-600 focus:ring-green-500 border-input rounded"
                         />
-                        <label htmlFor="approve-pregen" className="text-sm font-medium text-gray-700 cursor-pointer">
+                        <label htmlFor="approve-pregen" className="text-sm font-medium text-foreground cursor-pointer">
                           Approve for Pre-generation {overallScore >= 85 && '(Score ≥85 - Auto-approved)'}
                         </label>
                       </div>
@@ -478,7 +478,7 @@ export default function TeacherValidationPage() {
                         <Button
                           onClick={handleValidate}
                           disabled={submitting}
-                          className="w-full bg-blue-600 hover:bg-blue-700"
+                          className="w-full bg-primary hover:bg-primary/90"
                         >
                           {submitting ? 'Submitting...' : 'Submit Validation'}
                         </Button>
@@ -487,8 +487,8 @@ export default function TeacherValidationPage() {
                   )}
 
                   {selectedItem.validationStatus !== 'pending' && (
-                    <div className="p-4 bg-gray-50 rounded-lg">
-                      <p className="text-sm text-gray-600">
+                    <div className="p-4 bg-muted/40 rounded-lg">
+                      <p className="text-sm text-muted-foreground">
                         This content has already been {selectedItem.validationStatus}.
                       </p>
                     </div>
@@ -498,8 +498,8 @@ export default function TeacherValidationPage() {
             ) : (
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12">
-                  <CheckSquare className="h-12 w-12 text-gray-300 mb-4" />
-                  <p className="text-gray-600">Select an item to validate</p>
+                  <CheckSquare className="h-12 w-12 text-muted-foreground/60 mb-4" />
+                  <p className="text-muted-foreground">Select an item to validate</p>
                 </CardContent>
               </Card>
             )}

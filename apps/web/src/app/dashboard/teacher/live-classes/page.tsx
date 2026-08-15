@@ -11,11 +11,11 @@ export default function TeacherLiveClassesPage() {
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-10">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">My Live Classes</h1>
-        <p className="text-slate-600">Schedule and manage live Zoom classes for your assigned classes.</p>
+        <h1 className="text-3xl font-bold text-foreground mb-2">My Live Classes</h1>
+        <p className="text-muted-foreground">Schedule and manage live Zoom classes for your assigned classes.</p>
       </div>
 
-      <div className="bg-white p-6 rounded-xl border shadow-sm space-y-4 max-w-xl">
+      <div className="bg-card p-6 rounded-xl border shadow-sm space-y-4 max-w-xl">
         <h2 className="text-lg font-semibold">Select Class</h2>
         <div className="space-y-2">
           <Label>Class ID</Label>
@@ -23,7 +23,7 @@ export default function TeacherLiveClassesPage() {
         </div>
       </div>
 
-      <div className="bg-white p-6 rounded-xl border shadow-sm">
+      <div className="bg-card p-6 rounded-xl border shadow-sm">
         <LiveClassesWidget classId={classId} isTeacher={true} />
       </div>
     </div>

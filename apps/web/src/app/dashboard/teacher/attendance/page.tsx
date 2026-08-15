@@ -164,22 +164,22 @@ export default function TeacherAttendancePage() {
           <CardContent>
             {loadingStudents || loadingRecords ? (
               <div className="flex h-32 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : students.length === 0 ? (
-              <div className="text-center p-8 text-slate-500 border border-dashed rounded-lg">
+              <div className="text-center p-8 text-muted-foreground border border-dashed rounded-lg">
                 No students enrolled in this class.
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="border rounded-lg divide-y">
                   {students.map(student => (
-                    <div key={student.id} className="flex items-center justify-between p-4 hover:bg-slate-50">
+                    <div key={student.id} className="flex items-center justify-between p-4 hover:bg-muted/40">
                       <div>
                         <p className="font-medium">{student.firstName} {student.lastName}</p>
-                        <p className="text-sm text-slate-500">{student.email}</p>
+                        <p className="text-sm text-muted-foreground">{student.email}</p>
                       </div>
-                      <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
+                      <div className="flex items-center gap-2 bg-muted p-1 rounded-lg">
                         <Button
                           type="button"
                           variant={attendanceMap[student.id] === 'present' ? 'default' : 'ghost'}
@@ -223,7 +223,7 @@ export default function TeacherAttendancePage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="text-center p-12 text-slate-500">
+        <div className="text-center p-12 text-muted-foreground">
           Please select a class to mark attendance.
         </div>
       )}

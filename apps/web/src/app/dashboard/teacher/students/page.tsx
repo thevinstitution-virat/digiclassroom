@@ -139,7 +139,7 @@ export default function TeacherStudentsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     )
   }
@@ -149,8 +149,8 @@ export default function TeacherStudentsPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Student Management</h1>
-          <p className="text-gray-600 mt-2">View and manage students in your classes</p>
+          <h1 className="text-3xl font-bold text-foreground">Student Management</h1>
+          <p className="text-muted-foreground mt-2">View and manage students in your classes</p>
         </div>
         <Button onClick={() => setShowAssignModal(true)} className="flex items-center gap-2">
           <UserPlus className="h-4 w-4" />
@@ -162,11 +162,11 @@ export default function TeacherStudentsPage() {
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
-            <label className="text-sm font-medium text-gray-700">Filter by Class:</label>
+            <label className="text-sm font-medium text-foreground">Filter by Class:</label>
             <select
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
             >
               <option value="">All Classes</option>
               {classes.map((cls) => (
@@ -183,9 +183,9 @@ export default function TeacherStudentsPage() {
       {students.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Users className="h-16 w-16 text-gray-300 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No students found</h3>
-            <p className="text-gray-600 mb-4">
+            <Users className="h-16 w-16 text-muted-foreground/60 mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">No students found</h3>
+            <p className="text-muted-foreground mb-4">
               {selectedClass ? 'No students in this class yet' : 'Assign students to your classes to get started'}
             </p>
             <Button onClick={() => setShowAssignModal(true)}>
@@ -207,24 +207,24 @@ export default function TeacherStudentsPage() {
               {students.map((student) => (
                 <div
                   key={student.id}
-                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
+                  className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                      <span className="text-blue-600 font-semibold">
+                    <div className="w-10 h-10 bg-primary/15 rounded-full flex items-center justify-center">
+                      <span className="text-primary font-semibold">
                         {student?.name?.split(' ')[0][0]}{student?.name?.split(' ').slice(1).join(' ')[0]}
                       </span>
                     </div>
                     <div>
-                      <h4 className="font-medium text-gray-900">
+                      <h4 className="font-medium text-foreground">
                         {student?.name?.split(' ')[0]} {student?.name?.split(' ').slice(1).join(' ')}
                       </h4>
-                      <p className="text-sm text-gray-600">{student.email}</p>
+                      <p className="text-sm text-muted-foreground">{student.email}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">
                     {student.className && (
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <BookOpen className="h-4 w-4" />
                         <span>{student.className}</span>
                       </div>
@@ -253,7 +253,7 @@ export default function TeacherStudentsPage() {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle>Assign Student to Class</CardTitle>
-                <button onClick={() => setShowAssignModal(false)} className="text-gray-400 hover:text-gray-600">
+                <button onClick={() => setShowAssignModal(false)} className="text-muted-foreground hover:text-foreground">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -262,14 +262,14 @@ export default function TeacherStudentsPage() {
             <CardContent>
               <form onSubmit={handleAssignStudent} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Student *
                   </label>
                   <select
                     required
                     value={selectedStudent}
                     onChange={(e) => setSelectedStudent(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="">Select a student</option>
                     {students.map((student) => (
@@ -281,14 +281,14 @@ export default function TeacherStudentsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Class *
                   </label>
                   <select
                     required
                     value={assignToClass}
                     onChange={(e) => setAssignToClass(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="">Select a class</option>
                     {classes.map((cls) => (

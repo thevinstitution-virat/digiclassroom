@@ -89,8 +89,8 @@ export default function TeacherHomeworkPage() {
       </div>
 
       {isCreating && (
-        <Card className="border-blue-200 shadow-sm">
-          <CardHeader className="bg-blue-50/50 pb-4">
+        <Card className="border-primary/30 shadow-sm">
+          <CardHeader className="bg-primary/10 pb-4">
             <CardTitle className="text-lg">New Assignment</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
@@ -135,12 +135,12 @@ export default function TeacherHomeworkPage() {
       {selectedClassId ? (
         isLoading ? (
           <div className="flex h-32 items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
           <div className="grid gap-4">
             {data?.homeworks.length === 0 ? (
-              <div className="rounded-lg border border-dashed p-12 text-center text-slate-500">
+              <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
                 <FileText className="mx-auto h-12 w-12 opacity-20 mb-4" />
                 <p>No homework assigned for this class yet.</p>
               </div>
@@ -180,22 +180,22 @@ export default function TeacherHomeworkPage() {
                   </CardHeader>
                   <CardContent>
                     {hw.description && (
-                      <p className="text-slate-700 whitespace-pre-wrap mb-4">{hw.description}</p>
+                      <p className="text-foreground whitespace-pre-wrap mb-4">{hw.description}</p>
                     )}
                     
                     {viewingSubmissionsFor === hw.id && (
-                      <div className="mt-4 p-4 bg-slate-50 rounded-lg border">
+                      <div className="mt-4 p-4 bg-muted/40 rounded-lg border">
                         <h4 className="font-semibold mb-3">Completed By:</h4>
                         {isLoadingSubmissions ? (
-                          <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                         ) : submissionsData?.submissions.length === 0 ? (
-                          <p className="text-sm text-slate-500">No submissions yet.</p>
+                          <p className="text-sm text-muted-foreground">No submissions yet.</p>
                         ) : (
                           <ul className="space-y-2">
                             {submissionsData?.submissions.map(sub => (
                               <li key={sub.id} className="flex justify-between text-sm">
                                 <span>{sub.student_name}</span>
-                                <span className="text-slate-500">{format(new Date(sub.submitted_at), 'PPP p')}</span>
+                                <span className="text-muted-foreground">{format(new Date(sub.submitted_at), 'PPP p')}</span>
                               </li>
                             ))}
                           </ul>
@@ -209,7 +209,7 @@ export default function TeacherHomeworkPage() {
           </div>
         )
       ) : (
-        <div className="rounded-lg border border-dashed p-12 text-center text-slate-500">
+        <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
           <p>Select a class to view or assign homework.</p>
         </div>
       )}

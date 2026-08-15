@@ -58,7 +58,7 @@ export default async function CertificatePage({ params }: { params: { certificat
   });
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-4 md:p-8">
+    <div className="min-h-screen bg-muted/30 p-4 md:p-8">
       {/* Print CSS Injection */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
@@ -99,47 +99,47 @@ export default async function CertificatePage({ params }: { params: { certificat
       <div className="mt-8 flex justify-center w-full">
         <div 
           id="printable-certificate" 
-          className="relative bg-white text-slate-900 border-8 border-double border-slate-200 p-12 md:p-24 shadow-2xl overflow-hidden"
+          className="relative bg-card text-foreground border-8 border-double border-border p-12 md:p-24 shadow-2xl overflow-hidden"
           style={{ width: '1056px', height: '816px', maxWidth: '100%', aspectRatio: '11/8' }}
         >
           {/* Subtle background pattern */}
           <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#0f172a 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
           
           <div className="relative z-10 flex flex-col h-full items-center text-center justify-center space-y-8">
-            <div className="uppercase tracking-[0.2em] text-sm font-semibold text-slate-500 mb-4">
+            <div className="uppercase tracking-[0.2em] text-sm font-semibold text-muted-foreground mb-4">
               {row.orgName}
             </div>
 
-            <h1 className="text-5xl md:text-6xl font-serif text-slate-800 tracking-tight">
+            <h1 className="text-5xl md:text-6xl font-serif text-foreground tracking-tight">
               Certificate of Completion
             </h1>
 
-            <div className="text-lg text-slate-600 mt-8 mb-4">
+            <div className="text-lg text-muted-foreground mt-8 mb-4">
               This is to certify that
             </div>
 
-            <div className="text-4xl font-bold text-slate-900 border-b-2 border-slate-200 pb-2 px-12 inline-block">
+            <div className="text-4xl font-bold text-foreground border-b-2 border-border pb-2 px-12 inline-block">
               {row.studentName}
             </div>
 
-            <div className="text-lg text-slate-600 mt-6 max-w-2xl leading-relaxed">
+            <div className="text-lg text-muted-foreground mt-6 max-w-2xl leading-relaxed">
               has successfully completed all requirements and videos for the batch
               <br />
-              <strong className="text-slate-800 mt-2 block text-2xl">{row.batchName}</strong>
-              <span className="text-sm text-slate-500 block mt-2">({row.domainName} / {row.courseName} / {row.levelName})</span>
+              <strong className="text-foreground mt-2 block text-2xl">{row.batchName}</strong>
+              <span className="text-sm text-muted-foreground block mt-2">({row.domainName} / {row.courseName} / {row.levelName})</span>
             </div>
 
             <div className="w-full flex justify-between items-end mt-auto pt-16 px-12">
               <div className="flex flex-col items-center">
-                <div className="text-slate-400 mb-2 italic">Issued on</div>
-                <div className="font-medium text-slate-800 border-t border-slate-300 pt-2 w-48">
+                <div className="text-muted-foreground mb-2 italic">Issued on</div>
+                <div className="font-medium text-foreground border-t border-input pt-2 w-48">
                   {dateStr}
                 </div>
               </div>
               
               <div className="flex flex-col items-center">
-                <div className="text-slate-400 mb-2 italic">Certificate ID</div>
-                <div className="font-mono text-sm text-slate-800 border-t border-slate-300 pt-2 w-64">
+                <div className="text-muted-foreground mb-2 italic">Certificate ID</div>
+                <div className="font-mono text-sm text-foreground border-t border-input pt-2 w-64">
                   {row.certificate.certificateNumber}
                 </div>
               </div>

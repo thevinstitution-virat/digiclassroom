@@ -104,7 +104,7 @@ export default function TeacherClassesPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     )
   }
@@ -114,8 +114,8 @@ export default function TeacherClassesPage() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">My Classes</h1>
-          <p className="text-gray-600 mt-2">Manage your classes and students</p>
+          <h1 className="text-3xl font-bold text-foreground">My Classes</h1>
+          <p className="text-muted-foreground mt-2">Manage your classes and students</p>
         </div>
         <Button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
@@ -127,9 +127,9 @@ export default function TeacherClassesPage() {
       {classes.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <BookOpen className="h-16 w-16 text-gray-300 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No classes yet</h3>
-            <p className="text-gray-600 mb-4">Create your first class to get started</p>
+            <BookOpen className="h-16 w-16 text-muted-foreground/60 mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">No classes yet</h3>
+            <p className="text-muted-foreground mb-4">Create your first class to get started</p>
             <Button onClick={() => setShowCreateModal(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Create Class
@@ -160,15 +160,15 @@ export default function TeacherClassesPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <div className="flex items-center text-sm text-gray-600">
+                  <div className="flex items-center text-sm text-muted-foreground">
                     <Users className="h-4 w-4 mr-2" />
                     {cls.studentCount} students
                   </div>
                   {cls.description && (
-                    <p className="text-sm text-gray-600 line-clamp-2">{cls.description}</p>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{cls.description}</p>
                   )}
                   <div className="pt-3 border-t">
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-muted-foreground">
                       Created {new Date(cls.createdAt).toLocaleDateString()}
                     </p>
                   </div>
@@ -186,7 +186,7 @@ export default function TeacherClassesPage() {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle>Create New Class</CardTitle>
-                <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600">
+                <button onClick={() => setShowCreateModal(false)} className="text-muted-foreground hover:text-foreground">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -195,7 +195,7 @@ export default function TeacherClassesPage() {
             <CardContent>
               <form onSubmit={handleCreateClass} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Class Name *
                   </label>
                   <input
@@ -203,20 +203,20 @@ export default function TeacherClassesPage() {
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                     placeholder="e.g., Morning Batch"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Subject *
                   </label>
                   <select
                     required
                     value={formData.subject}
                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="">Select a subject</option>
                     {subjects.map((subject) => (
@@ -227,14 +227,14 @@ export default function TeacherClassesPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-foreground mb-1">
                       Grade Level *
                     </label>
                     <select
                       required
                       value={formData.gradeLevel}
                       onChange={(e) => setFormData({ ...formData, gradeLevel: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                     >
                       {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((grade) => (
                         <option key={grade} value={grade}>Grade {grade}</option>
@@ -243,27 +243,27 @@ export default function TeacherClassesPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-foreground mb-1">
                       Section
                     </label>
                     <input
                       type="text"
                       value={formData.section}
                       onChange={(e) => setFormData({ ...formData, section: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                       placeholder="e.g., A"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Description
                   </label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                     rows={3}
                     placeholder="Optional description"
                   />

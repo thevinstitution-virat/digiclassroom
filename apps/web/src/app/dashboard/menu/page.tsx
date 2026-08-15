@@ -47,7 +47,7 @@ export default async function MenuDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 to-primary/15 dark:from-[var(--night-ink)] dark:to-[var(--navy-deep)]">
       <MenuDashboard userRole={userRole as any} />
     </div>
   )
