@@ -105,10 +105,10 @@ function BatchAnalyticsView({ batchId }: { batchId: string }) {
                 {rankingQuery.data.map((r, i) => (
                   <div key={i} className="flex-1 flex flex-col justify-end group relative h-full">
                     <div 
-                      className={`w-full rounded-t-sm transition-all ${r.isYou ? 'bg-blue-500' : 'bg-muted'}`} 
+                      className={`w-full rounded-t-sm transition-all ${r.isYou ? 'bg-primary/100' : 'bg-muted'}`} 
                       style={{ height: `${r.score}%` }}
                     />
-                    {r.isYou && <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-blue-500 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded shadow-sm whitespace-nowrap z-10">You ({r.score.toFixed(0)})</div>}
+                    {r.isYou && <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded shadow-sm whitespace-nowrap z-10">You ({r.score.toFixed(0)})</div>}
                   </div>
                 ))}
               </div>
@@ -127,9 +127,9 @@ function BatchAnalyticsView({ batchId }: { batchId: string }) {
               {days.map(d => {
                 const mins = heatmapMap.get(d) || 0;
                 let bgClass = 'bg-muted/50';
-                if (mins > 0 && mins <= 30) bgClass = 'bg-blue-200 dark:bg-blue-900/50';
-                else if (mins > 30 && mins <= 60) bgClass = 'bg-blue-400 dark:bg-blue-700/70';
-                else if (mins > 60) bgClass = 'bg-blue-600 dark:bg-blue-500';
+                if (mins > 0 && mins <= 30) bgClass = 'bg-primary/30';
+                else if (mins > 30 && mins <= 60) bgClass = 'bg-primary/60';
+                else if (mins > 60) bgClass = 'bg-primary dark:bg-primary/100';
                 
                 return (
                   <div key={d} className="flex flex-col items-center">

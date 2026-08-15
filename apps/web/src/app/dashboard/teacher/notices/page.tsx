@@ -48,8 +48,8 @@ export default function TeacherNoticesPage() {
       </div>
 
       {isCreating && (
-        <Card className="border-blue-200 shadow-sm">
-          <CardHeader className="bg-blue-50/50 pb-4">
+        <Card className="border-primary/30 shadow-sm">
+          <CardHeader className="bg-primary/10 pb-4">
             <CardTitle className="text-lg">New Announcement</CardTitle>
           </CardHeader>
           <CardContent className="pt-4">
@@ -99,12 +99,12 @@ export default function TeacherNoticesPage() {
 
       {isLoading ? (
         <div className="flex h-32 items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
       ) : (
         <div className="grid gap-4">
           {data?.notices.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-12 text-center text-slate-500">
+            <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
               <Megaphone className="mx-auto h-12 w-12 opacity-20 mb-4" />
               <p>No notices found.</p>
             </div>
@@ -133,7 +133,7 @@ export default function TeacherNoticesPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-slate-700 whitespace-pre-wrap">{notice.content}</p>
+                  <p className="text-foreground whitespace-pre-wrap">{notice.content}</p>
                 </CardContent>
               </Card>
             ))
