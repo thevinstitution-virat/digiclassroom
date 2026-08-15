@@ -65,12 +65,12 @@ export default function AcceptInvitationPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-orange-50/70 via-background to-indigo-50/60 p-5 dark:from-slate-950 dark:via-background dark:to-indigo-950/40">
-      <div className="pointer-events-none absolute -right-40 -top-40 h-80 w-80 rounded-full bg-blue-400/20 blur-3xl dark:bg-blue-500/15" />
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-orange-50/70 via-background to-primary/10 p-5 dark:from-[var(--night-ink)] dark:via-background dark:to-primary/40">
+      <div className="pointer-events-none absolute -right-40 -top-40 h-80 w-80 rounded-full bg-primary/60 blur-3xl dark:bg-primary/100" />
       <div className="pointer-events-none absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-orange-400/20 blur-3xl dark:bg-orange-500/10" />
 
       <div className="relative w-full max-w-md rounded-2xl border border-border/70 bg-card/90 p-8 text-center shadow-elev-3 backdrop-blur-xl">
-        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 via-indigo-500 to-blue-600 text-white shadow-lg ring-1 ring-white/20">
+        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500 via-primary to-primary/80 text-white shadow-lg ring-1 ring-white/20">
           <Building2 className="h-8 w-8" />
         </div>
 

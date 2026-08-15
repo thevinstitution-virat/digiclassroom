@@ -121,7 +121,7 @@ export default async function CitationQualityDashboard() {
     // Status color helper
     const precisionStatus =
         overallPrecision === null
-            ? 'text-gray-500'
+            ? 'text-muted-foreground'
             : overallPrecision >= 0.95
                 ? 'text-green-600'
                 : overallPrecision >= 0.85
@@ -131,8 +131,8 @@ export default async function CitationQualityDashboard() {
     return (
         <div className="p-8 max-w-7xl mx-auto">
             <div className="mb-8">
-                <h1 className="text-2xl font-bold text-gray-900">Citation Quality Dashboard</h1>
-                <p className="text-gray-500 text-sm mt-1">
+                <h1 className="text-2xl font-bold text-foreground">Citation Quality Dashboard</h1>
+                <p className="text-muted-foreground text-sm mt-1">
                     7-day window · {totalSessions} total sessions ·
                     Updated: {new Date().toLocaleString('en-IN')}
                 </p>
@@ -141,8 +141,8 @@ export default async function CitationQualityDashboard() {
             {/* Key Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
                 {/* Precision */}
-                <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <div className="bg-card rounded-xl border border-border p-5 shadow-sm">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         NCERT Citation Precision
                     </p>
                     <p className={`text-3xl font-bold mt-2 ${precisionStatus}`}>
@@ -150,60 +150,60 @@ export default async function CitationQualityDashboard() {
                             ? `${(overallPrecision * 100).toFixed(1)}%`
                             : 'No data'}
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">Target: ≥ 95%</p>
+                    <p className="text-xs text-muted-foreground mt-1">Target: ≥ 95%</p>
                 </div>
 
                 {/* Total Sessions */}
-                <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <div className="bg-card rounded-xl border border-border p-5 shadow-sm">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Total Sessions
                     </p>
-                    <p className="text-3xl font-bold mt-2 text-gray-900">{totalSessions}</p>
-                    <p className="text-xs text-gray-400 mt-1">Last 7 days</p>
+                    <p className="text-3xl font-bold mt-2 text-foreground">{totalSessions}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Last 7 days</p>
                 </div>
 
                 {/* Scope Violations */}
-                <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <div className="bg-card rounded-xl border border-border p-5 shadow-sm">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Scope Violations
                     </p>
-                    <p className="text-3xl font-bold mt-2 text-gray-900">
+                    <p className="text-3xl font-bold mt-2 text-foreground">
                         {scopeViolationRate}%
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">Expected: &lt; 5%</p>
+                    <p className="text-xs text-muted-foreground mt-1">Expected: &lt; 5%</p>
                 </div>
 
                 {/* Avg Confidence */}
-                <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <div className="bg-card rounded-xl border border-border p-5 shadow-sm">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                         Avg Confidence
                     </p>
-                    <p className="text-3xl font-bold mt-2 text-gray-900">
+                    <p className="text-3xl font-bold mt-2 text-foreground">
                         {avgConfidence !== null
                             ? `${(avgConfidence * 100).toFixed(0)}%`
                             : 'No data'}
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">Response quality</p>
+                    <p className="text-xs text-muted-foreground mt-1">Response quality</p>
                 </div>
             </div>
 
             {/* Recent Traces */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Sessions</h2>
+            <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
+                <h2 className="text-lg font-semibold text-foreground mb-4">Recent Sessions</h2>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead>
-                            <tr className="border-b border-gray-100">
-                                <th className="text-left py-2 px-3 text-gray-500 font-medium">
+                            <tr className="border-b border-border">
+                                <th className="text-left py-2 px-3 text-muted-foreground font-medium">
                                     Time
                                 </th>
-                                <th className="text-left py-2 px-3 text-gray-500 font-medium">
+                                <th className="text-left py-2 px-3 text-muted-foreground font-medium">
                                     Session
                                 </th>
-                                <th className="text-left py-2 px-3 text-gray-500 font-medium">
+                                <th className="text-left py-2 px-3 text-muted-foreground font-medium">
                                     Agent
                                 </th>
-                                <th className="text-right py-2 px-3 text-gray-500 font-medium">
+                                <th className="text-right py-2 px-3 text-muted-foreground font-medium">
                                     Status
                                 </th>
                             </tr>
@@ -212,9 +212,9 @@ export default async function CitationQualityDashboard() {
                             {tracesData.slice(0, 20).map((trace: any) => (
                                 <tr
                                     key={trace.id}
-                                    className="border-b border-gray-50 hover:bg-gray-50"
+                                    className="border-b border-border hover:bg-muted/50"
                                 >
-                                    <td className="py-2 px-3 text-gray-600">
+                                    <td className="py-2 px-3 text-muted-foreground">
                                         {new Date(trace.timestamp).toLocaleString('en-IN', {
                                             hour: '2-digit',
                                             minute: '2-digit',
@@ -222,10 +222,10 @@ export default async function CitationQualityDashboard() {
                                             month: 'short',
                                         })}
                                     </td>
-                                    <td className="py-2 px-3 text-gray-700 font-mono text-xs">
+                                    <td className="py-2 px-3 text-foreground font-mono text-xs">
                                         {(trace.sessionId || trace.id)?.slice(0, 12)}...
                                     </td>
-                                    <td className="py-2 px-3 text-gray-700">
+                                    <td className="py-2 px-3 text-foreground">
                                         {trace.name || 'unknown'}
                                     </td>
                                     <td className="py-2 px-3 text-right">
@@ -244,7 +244,7 @@ export default async function CitationQualityDashboard() {
                     </table>
                 </div>
                 {tracesData.length === 0 && (
-                    <p className="text-center text-gray-400 py-8">
+                    <p className="text-center text-muted-foreground py-8">
                         No traces found in the last 7 days. Send some test queries to see data.
                     </p>
                 )}

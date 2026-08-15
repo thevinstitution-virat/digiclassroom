@@ -63,7 +63,7 @@ export default function PublicPricingPage() {
         'No credit card required'
       ],
       icon: Sparkles,
-      gradient: 'from-gray-500 to-gray-600',
+      gradient: 'from-muted-foreground/60 to-muted-foreground/70',
       badge: 'Try Free'
     },
     {
@@ -85,7 +85,7 @@ export default function PublicPricingPage() {
         'Email support'
       ],
       icon: BookOpen,
-      gradient: 'from-blue-500 to-cyan-500'
+      gradient: 'from-primary to-cyan-500'
     },
     {
       id: 'classic',
@@ -133,7 +133,7 @@ export default function PublicPricingPage() {
       ],
       highlighted: true,
       icon: Crown,
-      gradient: 'from-orange-500 to-blue-600',
+      gradient: 'from-orange-500 to-primary/80',
       badge: 'Best Value'
     }
   ]
@@ -148,7 +148,7 @@ export default function PublicPricingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-primary/10 dark:from-[var(--night-ink)] dark:via-[var(--navy-deep)] dark:to-[var(--night-ink)]">
       {/* Navigation */}
       <Navbar />
 
@@ -162,16 +162,16 @@ export default function PublicPricingPage() {
           >
             <div className="flex items-center justify-center mb-4">
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-orange-400 to-blue-500 rounded-full blur-xl opacity-50 animate-pulse"></div>
-                <div className="relative bg-gradient-to-r from-orange-500 to-blue-600 p-4 rounded-full">
+                <div className="absolute inset-0 bg-gradient-to-r from-orange-400 to-primary/80 rounded-full blur-xl opacity-50 animate-pulse"></div>
+                <div className="relative bg-gradient-to-r from-orange-500 to-primary/80 p-4 rounded-full">
                   <Brain className="h-12 w-12 text-white" />
                 </div>
               </div>
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent mb-4">
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 to-primary/80 bg-clip-text text-transparent mb-4">
               AI Tutor Subscription Plans
             </h1>
-            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Choose the perfect plan for your learning journey. All plans include access to our advanced AI tutor with personalized learning support.
             </p>
           </motion.div>
@@ -190,8 +190,8 @@ export default function PublicPricingPage() {
               <Card className={`h-full border-2 transition-all duration-300 hover:shadow-xl ${
                 plan.highlighted
                   ? 'border-orange-300 dark:border-orange-600 shadow-lg'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-orange-200 dark:hover:border-orange-600'
-              } ${selectedPlan === plan.id ? 'ring-2 ring-orange-500' : ''} dark:bg-gray-900`}>
+                  : 'border-border hover:border-orange-200 dark:hover:border-orange-600'
+              } ${selectedPlan === plan.id ? 'ring-2 ring-orange-500' : ''}`}>
                 <CardHeader>
                   {/* Badge */}
                   {plan.badge && (
@@ -206,22 +206,22 @@ export default function PublicPricingPage() {
                   </div>
 
                   {/* Plan Name */}
-                  <CardTitle className="text-2xl font-bold text-gray-800 dark:text-white">
+                  <CardTitle className="text-2xl font-bold text-foreground">
                     {plan.name}
                   </CardTitle>
 
                   {/* Price */}
                   <div className="mt-4">
                     <div className="flex items-baseline">
-                      <span className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+                      <span className="text-4xl font-bold bg-gradient-to-r from-orange-600 to-primary/80 bg-clip-text text-transparent">
                         ₹{plan.price}
                       </span>
-                      <span className="text-gray-500 dark:text-gray-400 ml-2">/{plan.period}</span>
+                      <span className="text-muted-foreground ml-2">/{plan.period}</span>
                     </div>
                   </div>
 
                   {/* Description */}
-                  <CardDescription className="mt-2 text-gray-600 dark:text-gray-300">
+                  <CardDescription className="mt-2 text-muted-foreground">
                     {plan.description}
                   </CardDescription>
                 </CardHeader>
@@ -230,16 +230,16 @@ export default function PublicPricingPage() {
                   {/* Key Stats */}
                   <div className="mb-6 space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Daily Questions:</span>
-                      <span className="font-semibold text-gray-800 dark:text-white">{plan.dailyQuestions}</span>
+                      <span className="text-muted-foreground">Daily Questions:</span>
+                      <span className="font-semibold text-foreground">{plan.dailyQuestions}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Board Access:</span>
-                      <span className="font-semibold text-gray-800 dark:text-white">{plan.boardAccess}</span>
+                      <span className="text-muted-foreground">Board Access:</span>
+                      <span className="font-semibold text-foreground">{plan.boardAccess}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Class Access:</span>
-                      <span className="font-semibold text-gray-800 dark:text-white">{plan.classAccess}</span>
+                      <span className="text-muted-foreground">Class Access:</span>
+                      <span className="font-semibold text-foreground">{plan.classAccess}</span>
                     </div>
                   </div>
 
@@ -248,7 +248,7 @@ export default function PublicPricingPage() {
                     {plan.features.map((feature, idx) => (
                       <li key={idx} className="flex items-start text-sm">
                         <Check className="h-4 w-4 text-green-600 dark:text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                        <span className="text-gray-700 dark:text-gray-300">{feature}</span>
+                        <span className="text-foreground">{feature}</span>
                       </li>
                     ))}
                   </ul>
@@ -258,8 +258,8 @@ export default function PublicPricingPage() {
                     onClick={() => handleGetStarted(plan)}
                     className={`w-full ${
                       plan.highlighted
-                        ? 'bg-gradient-to-r from-orange-500 to-blue-600 hover:from-orange-600 hover:to-blue-700 text-white'
-                        : 'bg-white dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-600 hover:border-orange-400 dark:hover:border-orange-500 text-gray-800 dark:text-white'
+                        ? 'bg-gradient-to-r from-orange-500 to-primary/80 hover:from-orange-600 hover:to-primary/80 text-white'
+                        : 'bg-card border-2 border-input hover:border-orange-400 dark:hover:border-orange-500 text-foreground'
                     } font-semibold transition-all duration-200 transform hover:scale-105`}
                   >
                     {plan.price === 0 ? 'Start Free Trial' : 'Get Started'}
@@ -273,7 +273,7 @@ export default function PublicPricingPage() {
 
         {/* Feature Comparison */}
         <div className="mt-16">
-          <h2 className="text-3xl font-bold text-center mb-8 bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+          <h2 className="text-3xl font-bold text-center mb-8 bg-gradient-to-r from-orange-600 to-primary/80 bg-clip-text text-transparent">
             Why Choose AI Tutor?
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -288,22 +288,22 @@ export default function PublicPricingPage() {
                 icon: TrendingUp,
                 title: 'Track Progress',
                 description: 'Monitor your improvement with detailed analytics',
-                gradient: 'from-blue-500 to-cyan-500'
+                gradient: 'from-primary to-cyan-500'
               },
               {
                 icon: Award,
                 title: 'Expert Content',
                 description: 'Curriculum-aligned content by subject experts',
-                gradient: 'from-purple-500 to-indigo-500'
+                gradient: 'from-primary to-primary/80'
               }
             ].map((feature, idx) => (
-              <Card key={idx} className="border-2 border-gray-200 dark:border-gray-700 hover:border-orange-200 dark:hover:border-orange-600 transition-all duration-300 hover:shadow-lg dark:bg-gray-900">
+              <Card key={idx} className="border-2 border-border hover:border-orange-200 dark:hover:border-orange-600 transition-all duration-300 hover:shadow-lg">
                 <CardContent className="pt-6">
                   <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${feature.gradient} flex items-center justify-center mb-4`}>
                     <feature.icon className="h-6 w-6 text-white" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">{feature.title}</h3>
-                  <p className="text-gray-600 dark:text-gray-300">{feature.description}</p>
+                  <h3 className="text-xl font-bold text-foreground mb-2">{feature.title}</h3>
+                  <p className="text-muted-foreground">{feature.description}</p>
                 </CardContent>
               </Card>
             ))}
@@ -312,10 +312,10 @@ export default function PublicPricingPage() {
 
         {/* FAQ or Support */}
         <div className="mt-12 text-center">
-          <p className="text-gray-600 dark:text-gray-300 mb-4">
+          <p className="text-muted-foreground mb-4">
             Have questions? Need help choosing the right plan?
           </p>
-          <Button variant="outline" className="border-2 border-orange-300 dark:border-orange-600 hover:border-orange-400 dark:hover:border-orange-500 bg-white dark:bg-gray-800 text-gray-800 dark:text-white hover:bg-orange-50 dark:hover:bg-gray-700 transition-all duration-200">
+          <Button variant="outline" className="border-2 border-orange-300 dark:border-orange-600 hover:border-orange-400 dark:hover:border-orange-500 bg-card text-foreground hover:bg-orange-50 transition-all duration-200">
             Contact Support
             <ChevronRight className="ml-2 h-4 w-4" />
           </Button>

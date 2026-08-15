@@ -106,21 +106,21 @@ function SetupRoleClient() {
 
   if (isPending) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
-      <div className="max-w-2xl w-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 to-primary/15 dark:from-[var(--night-ink)] dark:to-[var(--navy-deep)] flex items-center justify-center p-4">
+      <div className="max-w-2xl w-full bg-card rounded-2xl shadow-xl p-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="h-16 w-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
             <UserGroupIcon className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+          <h1 className="text-3xl font-bold text-foreground mb-2">
             Setup Your Role
           </h1>
 
@@ -132,7 +132,7 @@ function SetupRoleClient() {
             </div>
           )}
 
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-muted-foreground">
             Help us personalize your Virat Gyankosh experience
           </p>
         </div>
@@ -140,30 +140,30 @@ function SetupRoleClient() {
         {/* Role Display */}
         <div className="space-y-6">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            <h2 className="text-lg font-semibold text-foreground mb-4">
               1. Your Role
             </h2>
-            <div className="p-4 rounded-xl border-2 border-blue-500 bg-blue-50 dark:bg-blue-900/20">
+            <div className="p-4 rounded-xl border-2 border-primary bg-primary/10">
               <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-blue-500 text-white">
+                <div className="p-2 rounded-lg bg-primary/100 text-white">
                   <AcademicCapIcon className="h-6 w-6" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                  <h3 className="font-semibold text-foreground">
                     Learning User
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     Access learning content, AI tutoring, and personalized study materials
                   </p>
                 </div>
-                <CheckCircleIcon className="h-5 w-5 text-blue-500 ml-auto" />
+                <CheckCircleIcon className="h-5 w-5 text-primary ml-auto" />
               </div>
             </div>
           </div>
 
           {/* Persona Selection */}
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            <h2 className="text-lg font-semibold text-foreground mb-4">
               2. Tell Us About Yourself
             </h2>
             <div className="grid grid-cols-1 gap-3">
@@ -172,17 +172,17 @@ function SetupRoleClient() {
                   key={persona.value}
                   onClick={() => setSelectedPersona(persona.value)}
                   className={`p-4 rounded-xl border-2 transition-all text-left ${selectedPersona === persona.value
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                    : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                    ? 'border-primary bg-primary/10'
+                    : 'border-border hover:border-border dark:hover:border-border0'
                     }`}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{persona.icon}</span>
                     <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                      <h3 className="font-semibold text-foreground">
                         {persona.title}
                       </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-sm text-muted-foreground">
                         {persona.description}
                       </p>
                     </div>
@@ -206,7 +206,7 @@ function SetupRoleClient() {
               <button
                 onClick={handleRoleAssignment}
                 disabled={isAssigning}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2"
+                className="w-full bg-primary hover:bg-primary/90 disabled:bg-primary/60 text-white font-semibold py-3 px-6 rounded-xl transition-colors flex items-center justify-center gap-2"
               >
                 {isAssigning ? (
                   <>
@@ -225,8 +225,8 @@ function SetupRoleClient() {
         </div>
 
         {/* Footer */}
-        <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700 text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+        <div className="mt-8 pt-6 border-t border-border text-center">
+          <p className="text-sm text-muted-foreground">
             Your role can be changed later by contacting support
           </p>
         </div>
@@ -238,7 +238,7 @@ function SetupRoleClient() {
 
 export default function SetupRolePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary"></div></div>}>
       <SetupRoleClient />
     </Suspense>
   )
