@@ -14,10 +14,10 @@ export function StudentNoticesWidget() {
   }
 
   return (
-    <Card className="border-blue-200 shadow-sm">
-      <CardHeader className="bg-blue-50/50 pb-4">
+    <Card className="border-primary/30 shadow-sm">
+      <CardHeader className="bg-primary/10 pb-4">
         <div className="flex items-center gap-2">
-          <Megaphone className="h-5 w-5 text-blue-600" />
+          <Megaphone className="h-5 w-5 text-primary" />
           <CardTitle className="text-lg">Recent Announcements</CardTitle>
         </div>
       </CardHeader>
@@ -28,7 +28,7 @@ export function StudentNoticesWidget() {
             <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap line-clamp-3">
               {notice.content}
             </p>
-            <div className="text-xs text-slate-400 mt-2">
+            <div className="text-xs text-muted-foreground mt-2">
               {format(new Date(notice.created_at), 'MMM d, yyyy')} • {notice.author_name}
             </div>
           </div>

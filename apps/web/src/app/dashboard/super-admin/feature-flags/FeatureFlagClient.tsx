@@ -18,7 +18,7 @@ export default function FeatureFlagClient() {
   if (isLoading) {
     return (
       <div className="flex h-48 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-slate-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     )
   }
@@ -92,8 +92,8 @@ export default function FeatureFlagClient() {
                   disabled={updateFeatures.isPending}
                 />
               </div>
-              <div className="flex items-center justify-between space-x-2 bg-indigo-50/50 p-2 rounded-md border border-indigo-100">
-                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-indigo-900">
+              <div className="flex items-center justify-between space-x-2 bg-primary/10 p-2 rounded-md border border-primary/20">
+                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-primary">
                   Teachers Can Upload Videos
                 </label>
                 <Switch 
@@ -102,8 +102,8 @@ export default function FeatureFlagClient() {
                   disabled={updateFeatures.isPending}
                 />
               </div>
-              <div className="flex items-center justify-between space-x-2 bg-indigo-50/50 p-2 rounded-md border border-indigo-100">
-                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-indigo-900">
+              <div className="flex items-center justify-between space-x-2 bg-primary/10 p-2 rounded-md border border-primary/20">
+                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-primary">
                   Teachers Can Schedule Live
                 </label>
                 <Switch 
@@ -128,7 +128,7 @@ export default function FeatureFlagClient() {
       ))}
       
       {tenants?.length === 0 && (
-        <div className="rounded-lg border border-dashed p-8 text-center text-slate-500">
+        <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
           No institutions found.
         </div>
       )}
