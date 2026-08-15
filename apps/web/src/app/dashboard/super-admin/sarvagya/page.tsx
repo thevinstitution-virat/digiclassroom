@@ -69,8 +69,8 @@ export default function AdminSarvagyaPage() {
             label: 'LLM Provider',
             value: status?.url || '—',
             icon: Globe,
-            gradient: 'from-blue-500 to-cyan-500',
-            bgColor: 'from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 border-blue-200/30'
+            gradient: 'from-primary to-cyan-500',
+            bgColor: 'from-primary/10 to-cyan-50 dark:from-primary dark:to-cyan-950 border-primary/20'
         },
         {
             label: 'API Key',
@@ -97,7 +97,7 @@ export default function AdminSarvagyaPage() {
             name: 'Manage User Subscriptions & Credits',
             href: '/dashboard/super-admin/users',
             description: 'Navigate to user management to view and adjust individual user access and credits',
-            gradient: 'from-blue-500 to-cyan-500',
+            gradient: 'from-primary to-cyan-500',
             icon: Users
         },
         {
@@ -111,26 +111,26 @@ export default function AdminSarvagyaPage() {
 
     const creditStats = [
         { label: 'Default Monthly Quota', value: '100', icon: Coins, gradient: 'from-amber-500 to-orange-500', bgColor: 'from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950 border-amber-200/30' },
-        { label: 'Credit Cost per Query', value: '1', icon: Zap, gradient: 'from-purple-500 to-indigo-500', bgColor: 'from-purple-50 to-indigo-50 dark:from-purple-950 dark:to-indigo-950 border-purple-200/30' },
+        { label: 'Credit Cost per Query', value: '1', icon: Zap, gradient: 'from-primary to-primary/80', bgColor: 'from-primary/10 to-primary/10 dark:from-primary dark:to-primary border-primary/20' },
         { label: 'Microservice Backend', value: 'FastAPI', icon: Database, gradient: 'from-green-500 to-emerald-500', bgColor: 'from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border-green-200/30' },
-        { label: 'AI Engine', value: 'Surfsense', icon: Brain, gradient: 'from-blue-500 to-cyan-500', bgColor: 'from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 border-blue-200/30' },
+        { label: 'AI Engine', value: 'Surfsense', icon: Brain, gradient: 'from-primary to-cyan-500', bgColor: 'from-primary/10 to-cyan-50 dark:from-primary dark:to-cyan-950 border-primary/20' },
     ]
 
     if (loading) {
         return (
             <div className="space-y-8">
                 <div className="container mx-auto px-4 py-8 max-w-7xl">
-                    <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-12 shadow-xl border border-white/20 dark:border-gray-700/20">
+                    <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-12 shadow-xl border border-white/20">
                         <div className="text-center">
                             <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg animate-pulse">
                                 <Brain className="h-10 w-10 text-white" />
                             </div>
                             <h3 className="text-3xl font-bold mb-4">
-                                <span className="bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+                                <span className="bg-gradient-to-r from-orange-600 to-primary/80 bg-clip-text text-transparent">
                                     Loading Sarvagya Config...
                                 </span>
                             </h3>
-                            <p className="text-gray-600 dark:text-gray-400 text-lg max-w-md mx-auto">
+                            <p className="text-muted-foreground text-lg max-w-md mx-auto">
                                 Checking microservice connectivity and configuration
                             </p>
                         </div>
@@ -154,27 +154,27 @@ export default function AdminSarvagyaPage() {
                     </div>
 
                     <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                        <span className="bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent flex items-center justify-center gap-4">
+                        <span className="bg-gradient-to-r from-orange-600 to-primary/80 bg-clip-text text-transparent flex items-center justify-center gap-4">
                             <Brain className="h-12 w-12 text-amber-500" />
                             Sarvagya AI Config
                         </span>
                     </h1>
 
-                    <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-8">
+                    <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
                         Manage the Sarvagya (Surfsense) AI research microservice, credit policies, and service connectivity
                     </p>
                 </div>
 
                 {/* Service Status Banner */}
-                <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 dark:border-gray-700/20">
+                <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                             <div className={`w-12 h-12 bg-gradient-to-r ${status?.isOnline ? 'from-green-500 to-emerald-500' : 'from-red-500 to-orange-500'} rounded-2xl flex items-center justify-center shadow-lg`}>
                                 <Activity className="h-6 w-6 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Sarvagya Service Status</h2>
-                                <p className="text-gray-600 dark:text-gray-400">
+                                <h2 className="text-xl font-bold text-foreground">Sarvagya Service Status</h2>
+                                <p className="text-muted-foreground">
                                     Internal LLM provider connectivity and health
                                 </p>
                             </div>
@@ -184,9 +184,9 @@ export default function AdminSarvagyaPage() {
                             <button
                                 onClick={checkServiceStatus}
                                 disabled={refreshing}
-                                className="p-2 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+                                className="p-2 bg-muted rounded-xl hover:bg-muted dark:hover:bg-muted transition-colors disabled:opacity-50"
                             >
-                                <RefreshCw className={`w-5 h-5 text-gray-600 dark:text-gray-300 ${refreshing ? 'animate-spin' : ''}`} />
+                                <RefreshCw className={`w-5 h-5 text-muted-foreground ${refreshing ? 'animate-spin' : ''}`} />
                             </button>
 
                             <div className={`flex items-center gap-3 px-6 py-3 border rounded-xl ${status?.isOnline
@@ -197,7 +197,7 @@ export default function AdminSarvagyaPage() {
                                     ? <CheckCircle className="h-5 w-5 text-green-500" />
                                     : <AlertTriangle className="h-5 w-5 text-red-500" />
                                 }
-                                <span className="text-lg font-bold text-gray-700 dark:text-gray-300">
+                                <span className="text-lg font-bold text-foreground">
                                     {status?.isOnline ? 'Online' : 'Offline'}
                                 </span>
                             </div>
@@ -206,17 +206,17 @@ export default function AdminSarvagyaPage() {
                 </div>
 
                 {/* Configuration Cards */}
-                <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-8 shadow-xl border border-white/20 dark:border-gray-700/20">
+                <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-8 shadow-xl border border-white/20">
                     <div className="mb-8">
                         <div className="flex items-center space-x-3 mb-4">
-                            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg">
+                            <div className="w-12 h-12 bg-gradient-to-r from-primary to-primary/80 rounded-2xl flex items-center justify-center shadow-lg">
                                 <Settings className="h-6 w-6 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+                                <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-primary/80 bg-clip-text text-transparent">
                                     Service Configuration
                                 </h2>
-                                <p className="text-gray-600 dark:text-gray-400">
+                                <p className="text-muted-foreground">
                                     Current microservice connection parameters
                                 </p>
                             </div>
@@ -233,26 +233,26 @@ export default function AdminSarvagyaPage() {
                                     <div className={`w-10 h-10 bg-gradient-to-r ${item.gradient} rounded-xl flex items-center justify-center shadow-md`}>
                                         <item.icon className="h-5 w-5 text-white" />
                                     </div>
-                                    <h3 className="font-bold text-gray-800 dark:text-gray-200">{item.label}</h3>
+                                    <h3 className="font-bold text-foreground">{item.label}</h3>
                                 </div>
-                                <p className="text-gray-700 dark:text-gray-300 font-medium text-lg truncate">{item.value}</p>
+                                <p className="text-foreground font-medium text-lg truncate">{item.value}</p>
                             </div>
                         ))}
                     </div>
                 </div>
 
                 {/* Credit System Stats */}
-                <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-8 shadow-xl border border-white/20 dark:border-gray-700/20">
+                <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-8 shadow-xl border border-white/20">
                     <div className="mb-8">
                         <div className="flex items-center space-x-3 mb-4">
                             <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg">
                                 <Coins className="h-6 w-6 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+                                <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-primary/80 bg-clip-text text-transparent">
                                     System Architecture & Defaults
                                 </h2>
-                                <p className="text-gray-600 dark:text-gray-400">
+                                <p className="text-muted-foreground">
                                     Current platform-wide architecture and static credit policies
                                 </p>
                             </div>
@@ -271,10 +271,10 @@ export default function AdminSarvagyaPage() {
                                     </div>
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                                    <p className="text-sm font-bold text-foreground mb-2">
                                         {stat.label}
                                     </p>
-                                    <p className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-gray-100 dark:to-gray-300 bg-clip-text text-transparent">
+                                    <p className="text-3xl font-bold bg-gradient-to-r from-[#FF6B35] via-[#F5A623] to-[#FFD700] bg-clip-text text-transparent">
                                         {stat.value}
                                     </p>
                                 </div>
@@ -284,17 +284,17 @@ export default function AdminSarvagyaPage() {
                 </div>
 
                 {/* Quick Actions */}
-                <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-8 shadow-xl border border-white/20 dark:border-gray-700/20">
+                <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-8 shadow-xl border border-white/20">
                     <div className="mb-8">
                         <div className="flex items-center space-x-3 mb-4">
-                            <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-2xl flex items-center justify-center shadow-lg">
+                            <div className="w-12 h-12 bg-gradient-to-r from-primary to-primary/80 rounded-2xl flex items-center justify-center shadow-lg">
                                 <Zap className="h-6 w-6 text-white" />
                             </div>
                             <div>
-                                <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+                                <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-primary/80 bg-clip-text text-transparent">
                                     Quick Actions
                                 </h2>
-                                <p className="text-gray-600 dark:text-gray-400">
+                                <p className="text-muted-foreground">
                                     Manage Sarvagya resources and settings
                                 </p>
                             </div>
@@ -306,7 +306,7 @@ export default function AdminSarvagyaPage() {
                             <a
                                 key={action.name}
                                 href={action.href}
-                                className="block p-6 bg-gradient-to-r from-white to-gray-50 dark:from-gray-800 dark:to-gray-700 border border-gray-200/50 dark:border-gray-600/50 rounded-2xl hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] group"
+                                className="block p-6 bg-gradient-to-r from-[var(--panel)] to-[var(--panel-2)] border border-border/50 rounded-2xl hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] group"
                             >
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center space-x-4">
@@ -314,10 +314,10 @@ export default function AdminSarvagyaPage() {
                                             <action.icon className="h-6 w-6 text-white" />
                                         </div>
                                         <div>
-                                            <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-1">
+                                            <h3 className="text-lg font-bold text-foreground mb-1">
                                                 {action.name}
                                             </h3>
-                                            <p className="text-gray-600 dark:text-gray-400 text-sm">
+                                            <p className="text-muted-foreground text-sm">
                                                 {action.description}
                                             </p>
                                         </div>

@@ -129,19 +129,19 @@ export default function DatabaseManagementPage() {
       <div className="mx-auto max-w-4xl space-y-6">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-orange-500/10 to-blue-500/10 backdrop-blur-sm border border-orange-200/30 rounded-2xl px-6 py-3 mb-4">
+          <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-orange-500/10 to-primary/10 backdrop-blur-sm border border-orange-200/30 rounded-2xl px-6 py-3 mb-4">
             <Database className="h-6 w-6 text-orange-500" />
-            <span className="text-lg font-semibold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+            <span className="text-lg font-semibold bg-gradient-to-r from-orange-600 to-primary/80 bg-clip-text text-transparent">
               Database Management
             </span>
           </div>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-muted-foreground">
             Manage dictionary database tables and migrations
           </p>
         </div>
 
         {/* Status Card */}
-        <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50">
+        <Card className="bg-white/80 backdrop-blur-xl border-border/50">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Settings className="h-5 w-5" />
@@ -167,7 +167,7 @@ export default function DatabaseManagementPage() {
             </div>
 
             {status && (
-              <div className="space-y-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <div className="space-y-3 p-4 bg-muted/30 rounded-lg">
                 <div className="flex items-center justify-between">
                   <span>Table Exists:</span>
                   <Badge variant={status.tableExists ? "default" : "destructive"}>
@@ -199,8 +199,8 @@ export default function DatabaseManagementPage() {
                 </div>
 
                 {status.message && (
-                  <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border-l-4 border-blue-500">
-                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <div className="mt-3 p-3 bg-primary/10 rounded border-l-4 border-primary">
+                    <p className="text-sm text-primary">
                       {status.message}
                     </p>
                   </div>
@@ -211,7 +211,7 @@ export default function DatabaseManagementPage() {
         </Card>
 
         {/* Migration Actions */}
-        <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50">
+        <Card className="bg-white/80 backdrop-blur-xl border-border/50">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Play className="h-5 w-5" />
@@ -226,7 +226,7 @@ export default function DatabaseManagementPage() {
               <Button 
                 onClick={runMigration}
                 disabled={isLoading}
-                className="h-12 bg-gradient-to-r from-orange-500 to-blue-500 hover:from-orange-600 hover:to-blue-600 text-white font-medium"
+                className="h-12 bg-gradient-to-r from-orange-500 to-primary/80 hover:from-orange-600 hover:to-primary/80 text-white font-medium"
               >
                 {isLoading ? (
                   <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -251,7 +251,7 @@ export default function DatabaseManagementPage() {
               </Button>
             </div>
 
-            <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+            <div className="text-sm text-muted-foreground space-y-1">
               <p><strong>Full Migration:</strong> Creates the dictionary_words table and populates it with essential vocabulary (40+ words)</p>
               <p><strong>Add Common Words:</strong> Adds additional common words to an existing table (15+ words)</p>
             </div>
@@ -260,7 +260,7 @@ export default function DatabaseManagementPage() {
 
         {/* Migration Results */}
         {migrationResult && (
-          <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50">
+          <Card className="bg-white/80 backdrop-blur-xl border-border/50">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 {migrationResult.success ? (
@@ -302,14 +302,14 @@ export default function DatabaseManagementPage() {
         )}
 
         {/* Instructions */}
-        <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50">
+        <Card className="bg-white/80 backdrop-blur-xl border-border/50">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <AlertCircle className="h-5 w-5" />
               <span>Instructions</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+          <CardContent className="space-y-3 text-sm text-muted-foreground">
             <div className="space-y-2">
               <p><strong>Step 1:</strong> Click "Check Status" to see the current database state</p>
               <p><strong>Step 2:</strong> If the table doesn't exist, click "Run Full Migration"</p>

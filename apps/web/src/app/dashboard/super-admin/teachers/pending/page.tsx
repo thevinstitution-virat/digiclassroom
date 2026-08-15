@@ -119,7 +119,7 @@ export default function AdminPendingTeachersPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     )
   }
@@ -128,20 +128,20 @@ export default function AdminPendingTeachersPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Teacher Approval Management</h1>
-        <p className="text-gray-600 mt-2">Review and approve teacher registration requests</p>
+        <h1 className="text-3xl font-bold text-foreground">Teacher Approval Management</h1>
+        <p className="text-muted-foreground mt-2">Review and approve teacher registration requests</p>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex gap-2 border-b border-gray-200">
+      <div className="flex gap-2 border-b border-border">
         {(['pending', 'approved', 'rejected', 'all'] as const).map((status) => (
           <button
             key={status}
             onClick={() => setFilter(status)}
             className={`px-4 py-2 font-medium capitalize transition-colors ${
               filter === status
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {status}
@@ -153,9 +153,9 @@ export default function AdminPendingTeachersPage() {
       {teachers.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Clock className="h-16 w-16 text-gray-300 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No teachers found</h3>
-            <p className="text-gray-600">
+            <Clock className="h-16 w-16 text-muted-foreground/60 mb-4" />
+            <h3 className="text-lg font-semibold text-foreground mb-2">No teachers found</h3>
+            <p className="text-muted-foreground">
               {filter === 'pending' ? 'No pending teacher requests' : `No ${filter} teachers found`}
             </p>
           </CardContent>
@@ -179,34 +179,34 @@ export default function AdminPendingTeachersPage() {
                 {/* Teacher Details */}
                 <div className="space-y-3">
                   <div className="flex items-start gap-2">
-                    <Award className="h-4 w-4 text-gray-400 mt-0.5" />
+                    <Award className="h-4 w-4 text-muted-foreground mt-0.5" />
                     <div className="flex-1">
-                      <p className="text-sm text-gray-600">Qualification</p>
+                      <p className="text-sm text-muted-foreground">Qualification</p>
                       <p className="font-medium">{teacher.qualification}</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-2">
-                    <Briefcase className="h-4 w-4 text-gray-400 mt-0.5" />
+                    <Briefcase className="h-4 w-4 text-muted-foreground mt-0.5" />
                     <div className="flex-1">
-                      <p className="text-sm text-gray-600">Experience</p>
+                      <p className="text-sm text-muted-foreground">Experience</p>
                       <p className="font-medium">{teacher.experienceYears} years</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-2">
-                    <Award className="h-4 w-4 text-gray-400 mt-0.5" />
+                    <Award className="h-4 w-4 text-muted-foreground mt-0.5" />
                     <div className="flex-1">
-                      <p className="text-sm text-gray-600">Specialization</p>
+                      <p className="text-sm text-muted-foreground">Specialization</p>
                       <p className="font-medium">{teacher.specialization.join(', ')}</p>
                     </div>
                   </div>
 
                   {teacher.phone && (
                     <div className="flex items-start gap-2">
-                      <Mail className="h-4 w-4 text-gray-400 mt-0.5" />
+                      <Mail className="h-4 w-4 text-muted-foreground mt-0.5" />
                       <div className="flex-1">
-                        <p className="text-sm text-gray-600">Phone</p>
+                        <p className="text-sm text-muted-foreground">Phone</p>
                         <p className="font-medium">{teacher.phone}</p>
                       </div>
                     </div>
@@ -223,13 +223,13 @@ export default function AdminPendingTeachersPage() {
 
                 {/* Approval Date */}
                 {teacher.approvedAt && (
-                  <div className="text-sm text-gray-600">
+                  <div className="text-sm text-muted-foreground">
                     Approved on {new Date(teacher.approvedAt).toLocaleDateString()}
                   </div>
                 )}
 
                 {/* Registration Date */}
-                <div className="text-sm text-gray-600 pt-3 border-t">
+                <div className="text-sm text-muted-foreground pt-3 border-t">
                   Registered on {new Date(teacher.createdAt).toLocaleDateString()}
                 </div>
 
@@ -277,7 +277,7 @@ export default function AdminPendingTeachersPage() {
                     setSelectedTeacher(null)
                     setRejectionReason('')
                   }}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -289,13 +289,13 @@ export default function AdminPendingTeachersPage() {
             <CardContent>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Rejection Reason *
                   </label>
                   <textarea
                     value={rejectionReason}
                     onChange={(e) => setRejectionReason(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                     rows={4}
                     placeholder="Explain why this application is being rejected..."
                     required

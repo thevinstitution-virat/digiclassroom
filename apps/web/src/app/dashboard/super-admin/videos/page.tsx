@@ -46,7 +46,7 @@ export default function SuperAdminVideosPage() {
 
       {/* Context banner */}
       {workingContext.type === 'global' ? (
-        <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300">
+        <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">
           <Globe className="h-4 w-4 shrink-0" />
           <span><strong>Global content</strong> — this video will be visible to all institutions.</span>
         </div>

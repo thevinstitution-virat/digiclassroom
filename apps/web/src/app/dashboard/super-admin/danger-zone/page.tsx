@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { AlertTriangle, Trash2, Database, ShieldAlert, Loader2, CheckCircle } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 
-const cardClass = 'rounded-2xl border border-rose-200/50 bg-white p-6 shadow-sm dark:border-rose-900/30 dark:bg-gray-900/50'
+const cardClass = 'rounded-2xl border border-rose-200/50 bg-card p-6 shadow-sm dark:border-rose-900/30'
 
 export default function AdminDangerZonePage() {
   const [qdrantConfirm, setQdrantConfirm] = useState('')
@@ -57,11 +57,11 @@ export default function AdminDangerZonePage() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="mb-8 border-l-4 border-rose-500 pl-4">
-        <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+        <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight text-foreground">
           <AlertTriangle className="h-8 w-8 text-rose-500" />
           Danger Zone
         </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
+        <p className="mt-2 text-muted-foreground">
           Destructive, irreversible platform operations. Proceed with extreme caution. These actions can affect performance and data availability across the entire platform.
         </p>
       </div>
@@ -73,9 +73,9 @@ export default function AdminDangerZonePage() {
             <div className="space-y-3 flex-1">
               <div className="flex items-center gap-2">
                 <Database className="h-5 w-5 text-rose-600" />
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Clear Qdrant Index</h2>
+                <h2 className="text-xl font-semibold text-foreground">Clear Qdrant Index</h2>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 This will wipe the entire Qdrant vector store. All AI semantic search embeddings will be lost and must be rebuilt. The platform will fall back to standard keyword search until the index is reconstructed.
               </p>
               
@@ -95,7 +95,7 @@ export default function AdminDangerZonePage() {
                 value={qdrantConfirm} 
                 onChange={(e) => setQdrantConfirm(e.target.value)} 
                 placeholder="DELETE"
-                className="border-rose-200 bg-white focus-visible:ring-rose-500 dark:border-rose-800 dark:bg-gray-950"
+                className="border-rose-200 bg-card focus-visible:ring-rose-500 dark:border-rose-800"
               />
               <button
                 onClick={handleClearQdrant}
@@ -115,9 +115,9 @@ export default function AdminDangerZonePage() {
             <div className="space-y-3 flex-1">
               <div className="flex items-center gap-2">
                 <Trash2 className="h-5 w-5 text-rose-600" />
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Purge Application Cache</h2>
+                <h2 className="text-xl font-semibold text-foreground">Purge Application Cache</h2>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 Flushes the semantic cache and Redis AI caches. Users may experience temporary latency spikes on complex queries as the caches are rebuilt from cold state.
               </p>
               
@@ -137,7 +137,7 @@ export default function AdminDangerZonePage() {
                 value={cacheConfirm} 
                 onChange={(e) => setCacheConfirm(e.target.value)} 
                 placeholder="DELETE"
-                className="border-rose-200 bg-white focus-visible:ring-rose-500 dark:border-rose-800 dark:bg-gray-950"
+                className="border-rose-200 bg-card focus-visible:ring-rose-500 dark:border-rose-800"
               />
               <button
                 onClick={handleClearCache}

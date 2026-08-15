@@ -170,30 +170,30 @@ export default function UserManagementPage() {
     <div className="space-y-8">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-blue-600 text-white shadow-lg shadow-blue-600/20">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-primary/80 text-white shadow-lg shadow-primary/20">
           <Users className="h-6 w-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">User Management</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">User Management</h1>
+          <p className="text-sm text-muted-foreground">
             Every user across all institutions and direct sign-ups — roles, status &amp; access.
           </p>
         </div>
       </div>
 
       {/* User Management Content */}
-      <div className="space-y-6 rounded-2xl border border-gray-200/70 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-gray-900/50">
+      <div className="space-y-6 rounded-2xl border border-border/70 bg-card p-6 shadow-sm dark:border-white/10">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">User Accounts</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Manage accounts, roles, and permissions</p>
+            <h2 className="text-lg font-semibold text-foreground">User Accounts</h2>
+            <p className="text-sm text-muted-foreground">Manage accounts, roles, and permissions</p>
           </div>
 
           <div className="flex items-center gap-3">
             <button
               onClick={() => fetchUsers(currentPage)}
               disabled={loading}
-              className="px-4 py-2 h-10 rounded-xl border border-gray-200 hover:border-gray-400 hover:bg-gray-50 font-medium transition-all flex items-center"
+              className="px-4 py-2 h-10 rounded-xl border border-border hover:border-input hover:bg-muted/50 font-medium transition-all flex items-center"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
@@ -201,7 +201,7 @@ export default function UserManagementPage() {
 
             <button
               onClick={() => { setAddError(''); setShowAddModal(true) }}
-              className="px-6 py-3 h-12 bg-gradient-to-r from-orange-500 to-blue-600 hover:from-orange-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center"
+              className="px-6 py-3 h-12 bg-gradient-to-r from-orange-500 to-primary/80 hover:from-orange-600 hover:to-primary/80 text-white font-semibold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center"
             >
               <Users className="h-4 w-4 mr-2" />
               <span>Add User</span>
@@ -238,13 +238,13 @@ export default function UserManagementPage() {
 
       {/* Pagination */}
       {(currentPage > 1 || hasNextPage) && (
-        <div className="flex items-center justify-between bg-white dark:bg-gray-800 px-6 py-3 border border-gray-200 dark:border-gray-700 rounded-lg">
-          <div className="text-sm text-gray-700 dark:text-gray-300">Page {currentPage} · {totalUsers} users</div>
+        <div className="flex items-center justify-between bg-card px-6 py-3 border border-border rounded-lg">
+          <div className="text-sm text-foreground">Page {currentPage} · {totalUsers} users</div>
           <div className="flex space-x-2">
             <button onClick={handlePrevPage} disabled={currentPage === 1 || loading}
-              className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">Previous</button>
+              className="px-3 py-1 text-sm border border-input rounded hover:bg-muted/50 disabled:opacity-50">Previous</button>
             <button onClick={handleNextPage} disabled={!hasNextPage || loading}
-              className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">Next</button>
+              className="px-3 py-1 text-sm border border-input rounded hover:bg-muted/50 disabled:opacity-50">Next</button>
           </div>
         </div>
       )}
@@ -261,33 +261,33 @@ export default function UserManagementPage() {
       {/* Add-user modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowAddModal(false)}>
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md rounded-2xl bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Add User</h3>
-              <button onClick={() => setShowAddModal(false)} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+              <h3 className="text-lg font-bold text-foreground">Add User</h3>
+              <button onClick={() => setShowAddModal(false)} className="rounded-lg p-1 text-muted-foreground hover:bg-muted">
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mb-4 text-sm text-muted-foreground">
               Creates the account and emails a welcome / sign-in link.
             </p>
             <div className="space-y-3">
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Full name</label>
+                <label className="mb-1 block text-sm font-medium text-foreground">Full name</label>
                 <input value={addForm.name} onChange={(e) => setAddForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="e.g. Anita Sharma"
-                  className="w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-900 dark:text-white" />
+                  className="w-full rounded-xl border border-input px-3 py-2 outline-none focus:border-primary focus:ring-2 focus:ring-primary/30 dark:text-white" />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Email</label>
+                <label className="mb-1 block text-sm font-medium text-foreground">Email</label>
                 <input type="email" value={addForm.email} onChange={(e) => setAddForm(f => ({ ...f, email: e.target.value }))}
                   placeholder="user@example.com"
-                  className="w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-900 dark:text-white" />
+                  className="w-full rounded-xl border border-input px-3 py-2 outline-none focus:border-primary focus:ring-2 focus:ring-primary/30 dark:text-white" />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Role</label>
+                <label className="mb-1 block text-sm font-medium text-foreground">Role</label>
                 <select value={addForm.role} onChange={(e) => setAddForm(f => ({ ...f, role: e.target.value }))}
-                  className="w-full rounded-xl border border-gray-300 px-3 py-2 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-600 dark:bg-gray-900 dark:text-white">
+                  className="w-full rounded-xl border border-input px-3 py-2 outline-none focus:border-primary focus:ring-2 focus:ring-primary/30 dark:text-white">
                   {USER_ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                 </select>
               </div>
@@ -295,9 +295,9 @@ export default function UserManagementPage() {
             </div>
             <div className="mt-6 flex justify-end gap-3">
               <button onClick={() => setShowAddModal(false)}
-                className="rounded-xl border border-gray-200 px-4 py-2 font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-700">Cancel</button>
+                className="rounded-xl border border-border px-4 py-2 font-medium text-foreground hover:bg-muted/50">Cancel</button>
               <button onClick={handleAddUser} disabled={addLoading || !addForm.email}
-                className="rounded-xl bg-gradient-to-r from-orange-500 to-blue-600 px-5 py-2 font-semibold text-white shadow disabled:opacity-50">
+                className="rounded-xl bg-gradient-to-r from-orange-500 to-primary/80 px-5 py-2 font-semibold text-white shadow disabled:opacity-50">
                 {addLoading ? 'Adding…' : 'Add User'}
               </button>
             </div>

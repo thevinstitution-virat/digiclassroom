@@ -14,8 +14,8 @@ export default function SuperAdminLiveClassesPage() {
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-10">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">Super Admin - Live Classes</h1>
-        <p className="text-slate-600">Schedule and manage live classes across all institutions.</p>
+        <h1 className="text-3xl font-bold text-foreground mb-2">Super Admin - Live Classes</h1>
+        <p className="text-muted-foreground">Schedule and manage live classes across all institutions.</p>
       </div>
 
       {isGlobal ? (
@@ -24,7 +24,7 @@ export default function SuperAdminLiveClassesPage() {
         </div>
       ) : (
         <>
-          <div className="bg-white p-6 rounded-xl border shadow-sm space-y-4">
+          <div className="bg-card p-6 rounded-xl border shadow-sm space-y-4">
             <h2 className="text-lg font-semibold">Target Configuration</h2>
             <div className="grid grid-cols-1 gap-4 max-w-sm">
               <div className="space-y-2">
@@ -34,7 +34,7 @@ export default function SuperAdminLiveClassesPage() {
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-xl border shadow-sm">
+          <div className="bg-card p-6 rounded-xl border shadow-sm">
             <LiveClassesWidget classId={classId} tenantId={tenantId} isTeacher={true} />
           </div>
         </>

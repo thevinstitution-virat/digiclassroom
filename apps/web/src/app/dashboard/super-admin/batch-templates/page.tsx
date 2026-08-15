@@ -79,10 +79,10 @@ export default function BatchTemplatesPage() {
     <div className="mx-auto max-w-5xl px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-2xl font-bold text-transparent">
+          <h1 className="bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-2xl font-bold text-transparent">
             Batch Templates
           </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-300">
+          <p className="mt-2 text-muted-foreground">
             Manage global templates that institution admins can clone.
           </p>
         </div>
@@ -137,7 +137,7 @@ export default function BatchTemplatesPage() {
         </Dialog>
       </div>
 
-      <div className="rounded-md border bg-white dark:bg-gray-800">
+      <div className="rounded-md border bg-card">
         <Table>
           <TableHeader>
             <TableRow>

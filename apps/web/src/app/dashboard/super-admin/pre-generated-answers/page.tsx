@@ -89,7 +89,7 @@ export default function PreGeneratedAnswersPage() {
     <div className="container mx-auto p-6">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Pre-Generated Answers</h1>
-        <p className="text-gray-600">
+        <p className="text-muted-foreground">
           Manage pre-computed answers for frequently asked questions
         </p>
       </div>
@@ -97,17 +97,17 @@ export default function PreGeneratedAnswersPage() {
       {/* Statistics */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-sm font-medium text-gray-500">Total Answers</h3>
-            <p className="text-3xl font-bold text-blue-600">{stats.total}</p>
+          <div className="bg-card p-6 rounded-lg shadow">
+            <h3 className="text-sm font-medium text-muted-foreground">Total Answers</h3>
+            <p className="text-3xl font-bold text-primary">{stats.total}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-sm font-medium text-gray-500">Total Cache Hits</h3>
+          <div className="bg-card p-6 rounded-lg shadow">
+            <h3 className="text-sm font-medium text-muted-foreground">Total Cache Hits</h3>
             <p className="text-3xl font-bold text-green-600">{stats.totalHits}</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h3 className="text-sm font-medium text-gray-500">Avg Hits/Answer</h3>
-            <p className="text-3xl font-bold text-purple-600">
+          <div className="bg-card p-6 rounded-lg shadow">
+            <h3 className="text-sm font-medium text-muted-foreground">Avg Hits/Answer</h3>
+            <p className="text-3xl font-bold text-primary">
               {stats.avgHitsPerAnswer.toFixed(1)}
             </p>
           </div>
@@ -115,16 +115,16 @@ export default function PreGeneratedAnswersPage() {
       )}
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
+      <div className="bg-card p-4 rounded-lg shadow mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-foreground mb-1">
               Subject
             </label>
             <select
               value={filter.subject}
               onChange={(e) => setFilter({ ...filter, subject: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              className="w-full border border-input rounded-md px-3 py-2"
             >
               <option value="">All Subjects</option>
               <option value="Physics">Physics</option>
@@ -135,13 +135,13 @@ export default function PreGeneratedAnswersPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-foreground mb-1">
               Class
             </label>
             <select
               value={filter.classLevel}
               onChange={(e) => setFilter({ ...filter, classLevel: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              className="w-full border border-input rounded-md px-3 py-2"
             >
               <option value="">All Classes</option>
               <option value="9">Class 9</option>
@@ -151,13 +151,13 @@ export default function PreGeneratedAnswersPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-foreground mb-1">
               Board
             </label>
             <select
               value={filter.board}
               onChange={(e) => setFilter({ ...filter, board: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              className="w-full border border-input rounded-md px-3 py-2"
             >
               <option value="">All Boards</option>
               <option value="CBSE">CBSE</option>
@@ -170,7 +170,7 @@ export default function PreGeneratedAnswersPage() {
                 setFilter({ subject: '', classLevel: '', board: '' });
                 setPage(1);
               }}
-              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-4 rounded-md"
+              className="w-full bg-muted hover:bg-muted text-foreground font-medium py-2 px-4 rounded-md"
             >
               Clear Filters
             </button>
@@ -179,62 +179,62 @@ export default function PreGeneratedAnswersPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
+      <div className="bg-card rounded-lg shadow overflow-hidden">
         {loading ? (
           <div className="p-8 text-center">
-            <p className="text-gray-500">Loading...</p>
+            <p className="text-muted-foreground">Loading...</p>
           </div>
         ) : answers.length === 0 ? (
           <div className="p-8 text-center">
-            <p className="text-gray-500">No pre-generated answers found</p>
+            <p className="text-muted-foreground">No pre-generated answers found</p>
           </div>
         ) : (
           <>
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/40">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Question
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Subject
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Class
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Board
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Hits
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Last Served
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-card divide-y divide-border">
                 {answers.map((answer) => (
                   <tr key={answer.id}>
-                    <td className="px-6 py-4 text-sm text-gray-900 max-w-md truncate">
+                    <td className="px-6 py-4 text-sm text-foreground max-w-md truncate">
                       {answer.question_text}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {answer.subject}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {answer.class_level}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {answer.board}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600">
                       {answer.hit_count}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {answer.last_served_at
                         ? new Date(answer.last_served_at).toLocaleDateString()
                         : 'Never'}
@@ -253,22 +253,22 @@ export default function PreGeneratedAnswersPage() {
             </table>
 
             {/* Pagination */}
-            <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-gray-200">
-              <div className="text-sm text-gray-700">
+            <div className="bg-muted/40 px-6 py-3 flex items-center justify-between border-t border-border">
+              <div className="text-sm text-foreground">
                 Page {page} of {totalPages}
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => setPage(Math.max(1, page - 1))}
                   disabled={page === 1}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 border border-input rounded-md text-sm font-medium text-foreground bg-card hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Previous
                 </button>
                 <button
                   onClick={() => setPage(Math.min(totalPages, page + 1))}
                   disabled={page === totalPages}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 border border-input rounded-md text-sm font-medium text-foreground bg-card hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                 </button>
