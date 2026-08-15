@@ -289,17 +289,17 @@ export const BalloonHunt: React.FC<BalloonHuntProps> = ({
             <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <Target className="h-10 w-10 text-white" />
             </div>
-            <h2 className="text-3xl font-bold text-gray-800 mb-2">🎈 Balloon Hunt</h2>
-            <h3 className="text-2xl font-bold text-gray-600 mb-4">गुब्बारा शिकार</h3>
+            <h2 className="text-3xl font-bold text-foreground mb-2">🎈 Balloon Hunt</h2>
+            <h3 className="text-2xl font-bold text-muted-foreground mb-4">गुब्बारा शिकार</h3>
           </div>
           
           <div className="space-y-6">
             <div className="bg-blue-50 rounded-xl p-6">
-              <p className="text-lg text-gray-700 mb-3">
+              <p className="text-lg text-foreground mb-3">
                 <strong>English:</strong> Find and tap the colorful balloons as quickly as possible! 
                 Ignore the gray balloons - they're just distractors.
               </p>
-              <p className="text-lg text-gray-700">
+              <p className="text-lg text-foreground">
                 <strong>हिंदी:</strong> रंग-बिरंगे गुब्बारों को जल्दी से ढूंढें और उन पर टैप करें! 
                 स्लेटी गुब्बारों को नज़रअंदाज़ करें।
               </p>
@@ -311,21 +311,21 @@ export const BalloonHunt: React.FC<BalloonHuntProps> = ({
                   🎈
                 </div>
                 <p className="text-green-600 font-semibold">✓ Tap These!</p>
-                <p className="text-sm text-gray-600">रंगीन गुब्बारे</p>
+                <p className="text-sm text-muted-foreground">रंगीन गुब्बारे</p>
               </div>
               <div className="text-center">
                 <div className="w-16 h-16 bg-blue-400 rounded-full flex items-center justify-center text-white text-2xl mb-2 mx-auto">
                   🎈
                 </div>
                 <p className="text-green-600 font-semibold">✓ Tap These!</p>
-                <p className="text-sm text-gray-600">रंगीन गुब्बारे</p>
+                <p className="text-sm text-muted-foreground">रंगीन गुब्बारे</p>
               </div>
               <div className="text-center">
                 <div className="w-16 h-16 bg-gray-400 rounded-full flex items-center justify-center text-white text-2xl mb-2 mx-auto">
                   ⚫
                 </div>
                 <p className="text-red-600 font-semibold">✗ Ignore These</p>
-                <p className="text-sm text-gray-600">स्लेटी गुब्बारे</p>
+                <p className="text-sm text-muted-foreground">स्लेटी गुब्बारे</p>
               </div>
             </div>
             
@@ -341,7 +341,7 @@ export const BalloonHunt: React.FC<BalloonHuntProps> = ({
           <div className="flex gap-4 mt-8">
             <button
               onClick={() => setGameState('demo')}
-              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-xl transition-colors"
+              className="flex-1 bg-muted hover:bg-muted text-foreground font-semibold py-3 px-6 rounded-xl transition-colors"
             >
               Practice First / पहले अभ्यास करें
             </button>
@@ -385,7 +385,7 @@ export const BalloonHunt: React.FC<BalloonHuntProps> = ({
           >
             {countdown}
           </motion.div>
-          <p className="text-2xl text-gray-600">Get Ready! / तैयार हो जाओ!</p>
+          <p className="text-2xl text-muted-foreground">Get Ready! / तैयार हो जाओ!</p>
         </div>
       </div>
     )
@@ -398,14 +398,14 @@ export const BalloonHunt: React.FC<BalloonHuntProps> = ({
           <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
             <Trophy className="h-10 w-10 text-white" />
           </div>
-          <h3 className="text-3xl font-bold text-gray-800 mb-2">Great Job! 🎉</h3>
-          <h4 className="text-2xl font-bold text-gray-600 mb-4">बहुत बढ़िया!</h4>
-          <p className="text-xl text-gray-700 mb-6">
+          <h3 className="text-3xl font-bold text-foreground mb-2">Great Job! 🎉</h3>
+          <h4 className="text-2xl font-bold text-muted-foreground mb-4">बहुत बढ़िया!</h4>
+          <p className="text-xl text-foreground mb-6">
             You found <span className="font-bold text-blue-600">{score}</span> balloons!
           </p>
           <div className="bg-blue-50 rounded-xl p-4">
-            <p className="text-gray-600">Processing your results...</p>
-            <p className="text-gray-600">आपके परिणाम संसाधित हो रहे हैं...</p>
+            <p className="text-muted-foreground">Processing your results...</p>
+            <p className="text-muted-foreground">आपके परिणाम संसाधित हो रहे हैं...</p>
           </div>
         </div>
       </div>
@@ -428,7 +428,7 @@ export const BalloonHunt: React.FC<BalloonHuntProps> = ({
             </div>
           </div>
           
-          <div className="flex items-center gap-2 text-gray-600">
+          <div className="flex items-center gap-2 text-muted-foreground">
             <Clock className="h-5 w-5" />
             <span className="font-semibold text-lg">
               {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}
@@ -438,7 +438,7 @@ export const BalloonHunt: React.FC<BalloonHuntProps> = ({
         
         {/* Progress Bar */}
         <div className="max-w-4xl mx-auto mt-3">
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full bg-muted rounded-full h-2">
             <div 
               className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-300"
               style={{ width: `${Math.min(100, (1 - timeRemaining / config.duration!) * 100)}%` }}
@@ -499,7 +499,7 @@ export const BalloonHunt: React.FC<BalloonHuntProps> = ({
         {/* Fallback message if no balloons */}
         {gameState === 'active' && currentBalloons.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center text-gray-600">
+            <div className="text-center text-muted-foreground">
               <div className="text-2xl mb-2">🎈</div>
               <div>Looking for balloons...</div>
             </div>

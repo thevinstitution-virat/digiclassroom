@@ -118,7 +118,7 @@ export const EnhancedLandingPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900">
+    <div className="min-h-screen bg-card">
       {/* Navigation */}
       <Navbar />
 
@@ -131,21 +131,21 @@ export const EnhancedLandingPage: React.FC = () => {
           <div className="mb-6 mt-8">
             <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-orange-500/10 to-blue-500/10 rounded-full border border-orange-200/50 dark:border-blue-200/20 mb-6 backdrop-blur-sm">
               <Zap className="h-4 w-4 text-orange-500 mr-2 animate-pulse" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Powered by Advanced AI & Machine Learning</span>
+              <span className="text-sm font-medium text-foreground">Powered by Advanced AI & Machine Learning</span>
             </div>
           </div>
 
-          <h1 className="text-5xl md:text-7xl font-bold text-gray-900 dark:text-white mb-6">
+          <h1 className="text-5xl md:text-7xl font-bold text-foreground mb-6">
             <span className="bg-gradient-to-r from-orange-500 to-blue-600 bg-clip-text text-transparent">Digi Classroom</span>
             <br />
             <span className="text-4xl md:text-5xl">Next-Gen Learning Platform</span>
           </h1>
 
-          <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-8 italic underline decoration-orange-500 decoration-2 underline-offset-4">
+          <p className="text-xl md:text-2xl text-muted-foreground mb-8 italic underline decoration-orange-500 decoration-2 underline-offset-4">
             AI-Powered • Adaptive • Comprehensive
           </p>
 
-          <p className="text-lg md:text-xl text-gray-700 dark:text-gray-300 mb-12 max-w-4xl mx-auto leading-relaxed">
+          <p className="text-lg md:text-xl text-foreground mb-12 max-w-4xl mx-auto leading-relaxed">
             Experience revolutionary education with our <strong>Agentic RAG AI system</strong>,
             advanced <em>e-Learning Practest engine</em>, and comprehensive CBSE curriculum coverage.
             Transform your learning journey with intelligent tutoring and adaptive assessments.
@@ -169,35 +169,35 @@ export const EnhancedLandingPage: React.FC = () => {
               { label: 'Success Rate', value: '98%', icon: Target, color: 'text-green-500' },
               { label: 'Learning Paths', value: '1000+', icon: TrendingUp, color: 'text-orange-500' }
             ].map((stat, index) => (
-              <div key={index} className="text-center p-4 bg-white/20 dark:bg-gray-800/20 backdrop-blur-md rounded-xl border border-white/30 dark:border-gray-700/30 hover:bg-white/30 dark:hover:bg-gray-800/30 transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
+              <div key={index} className="text-center p-4 bg-white/20 backdrop-blur-md rounded-xl border border-white/30 hover:bg-white/30 dark:hover:bg-gray-800/30 transition-all duration-300 transform hover:scale-105 hover:shadow-lg">
                 <stat.icon className={`h-8 w-8 mx-auto mb-2 ${stat.color} animate-pulse`} />
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stat.value}</div>
-                <div className="text-sm text-gray-600 dark:text-gray-300">{stat.label}</div>
+                <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+                <div className="text-sm text-muted-foreground">{stat.label}</div>
               </div>
             ))}
           </div>
         </div>
 
         <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
-          <ChevronDown className="w-6 h-6 text-gray-400 hover:text-orange-500 transition-colors duration-300" />
+          <ChevronDown className="w-6 h-6 text-muted-foreground hover:text-orange-500 transition-colors duration-300" />
         </div>
       </section>
 
       {/* Features Section */}
-      <section id="features" ref={featuresRef} className="py-20 bg-gray-50 dark:bg-gray-800">
+      <section id="features" ref={featuresRef} className="py-20 bg-muted/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
               Platform <span className="bg-gradient-to-r from-orange-500 to-blue-600 bg-clip-text text-transparent">Features</span>
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
               Discover the cutting-edge technology that powers personalized learning experiences
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {platformFeatures.map((feature, index) => (
-              <div key={index} className={`relative p-8 bg-white dark:bg-gray-900 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border border-gray-200 dark:border-gray-700 group overflow-hidden`}>
+              <div key={index} className={`relative p-8 bg-card rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border border-border group overflow-hidden`}>
                 <div className={`absolute inset-0 bg-gradient-to-br ${feature.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
                 <div className="relative z-10">
                   <div className={`inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br ${feature.color} rounded-xl mb-6 shadow-lg ${feature.glowColor}`}>
@@ -207,9 +207,9 @@ export const EnhancedLandingPage: React.FC = () => {
                     <span className={`inline-block px-3 py-1 text-xs font-semibold bg-gradient-to-r ${feature.color} text-white rounded-full mb-2`}>
                       {feature.highlight}
                     </span>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">{feature.title}</h3>
+                    <h3 className="text-xl font-bold text-foreground">{feature.title}</h3>
                   </div>
-                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">{feature.description}</p>
+                  <p className="text-muted-foreground leading-relaxed">{feature.description}</p>
                 </div>
               </div>
             ))}
@@ -218,44 +218,44 @@ export const EnhancedLandingPage: React.FC = () => {
       </section>
 
       {/* Plans Preview Section */}
-      <section id="plans" className="py-20 bg-white dark:bg-gray-900">
+      <section id="plans" className="py-20 bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
               Simple, <span className="bg-gradient-to-r from-orange-500 to-blue-600 bg-clip-text text-transparent">Transparent Pricing</span>
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
               Choose the perfect plan for your learning journey. All plans include access to our advanced AI tutor.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             {/* Free Trial Plan */}
-            <div className="relative p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border border-gray-200 dark:border-gray-600">
+            <div className="relative p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border border-border">
               <div className="absolute top-4 right-4">
                 <span className="inline-block px-3 py-1 text-xs font-semibold bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-full">
                   Try Free
                 </span>
               </div>
               <div className="mb-4">
-                <Sparkles className="h-10 w-10 text-gray-600 dark:text-gray-300 mb-3" />
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Free Trial</h3>
+                <Sparkles className="h-10 w-10 text-muted-foreground mb-3" />
+                <h3 className="text-2xl font-bold text-foreground mb-2">Free Trial</h3>
                 <div className="flex items-baseline mb-2">
-                  <span className="text-4xl font-bold text-gray-900 dark:text-white">₹0</span>
-                  <span className="text-gray-600 dark:text-gray-400 ml-2">/ 7 days</span>
+                  <span className="text-4xl font-bold text-foreground">₹0</span>
+                  <span className="text-muted-foreground ml-2">/ 7 days</span>
                 </div>
-                <p className="text-gray-600 dark:text-gray-300 text-sm">Try all features with limited questions</p>
+                <p className="text-muted-foreground text-sm">Try all features with limited questions</p>
               </div>
               <ul className="space-y-2 mb-6">
-                <li className="flex items-start text-sm text-gray-700 dark:text-gray-300">
+                <li className="flex items-start text-sm text-foreground">
                   <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
                   <span>15 questions total</span>
                 </li>
-                <li className="flex items-start text-sm text-gray-700 dark:text-gray-300">
+                <li className="flex items-start text-sm text-foreground">
                   <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
                   <span>All boards & classes</span>
                 </li>
-                <li className="flex items-start text-sm text-gray-700 dark:text-gray-300">
+                <li className="flex items-start text-sm text-foreground">
                   <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
                   <span>No credit card required</span>
                 </li>
@@ -266,23 +266,23 @@ export const EnhancedLandingPage: React.FC = () => {
             <div className="relative p-6 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 border border-blue-200 dark:border-blue-700">
               <div className="mb-4">
                 <BookOpen className="h-10 w-10 text-blue-600 dark:text-blue-400 mb-3" />
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Basic</h3>
+                <h3 className="text-2xl font-bold text-foreground mb-2">Basic</h3>
                 <div className="flex items-baseline mb-2">
-                  <span className="text-4xl font-bold text-gray-900 dark:text-white">₹249</span>
-                  <span className="text-gray-600 dark:text-gray-400 ml-2">/ month</span>
+                  <span className="text-4xl font-bold text-foreground">₹249</span>
+                  <span className="text-muted-foreground ml-2">/ month</span>
                 </div>
-                <p className="text-gray-600 dark:text-gray-300 text-sm">Perfect for focused learning</p>
+                <p className="text-muted-foreground text-sm">Perfect for focused learning</p>
               </div>
               <ul className="space-y-2 mb-6">
-                <li className="flex items-start text-sm text-gray-700 dark:text-gray-300">
+                <li className="flex items-start text-sm text-foreground">
                   <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
                   <span>30 questions per day</span>
                 </li>
-                <li className="flex items-start text-sm text-gray-700 dark:text-gray-300">
+                <li className="flex items-start text-sm text-foreground">
                   <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
                   <span>1 board, 1 class</span>
                 </li>
-                <li className="flex items-start text-sm text-gray-700 dark:text-gray-300">
+                <li className="flex items-start text-sm text-foreground">
                   <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
                   <span>Email support</span>
                 </li>
@@ -298,23 +298,23 @@ export const EnhancedLandingPage: React.FC = () => {
               </div>
               <div className="mb-4">
                 <MessageSquare className="h-10 w-10 text-green-600 dark:text-green-400 mb-3" />
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Classic</h3>
+                <h3 className="text-2xl font-bold text-foreground mb-2">Classic</h3>
                 <div className="flex items-baseline mb-2">
-                  <span className="text-4xl font-bold text-gray-900 dark:text-white">₹499</span>
-                  <span className="text-gray-600 dark:text-gray-400 ml-2">/ month</span>
+                  <span className="text-4xl font-bold text-foreground">₹499</span>
+                  <span className="text-muted-foreground ml-2">/ month</span>
                 </div>
-                <p className="text-gray-600 dark:text-gray-300 text-sm">For dedicated learners</p>
+                <p className="text-muted-foreground text-sm">For dedicated learners</p>
               </div>
               <ul className="space-y-2 mb-6">
-                <li className="flex items-start text-sm text-gray-700 dark:text-gray-300">
+                <li className="flex items-start text-sm text-foreground">
                   <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
                   <span>60 questions per day</span>
                 </li>
-                <li className="flex items-start text-sm text-gray-700 dark:text-gray-300">
+                <li className="flex items-start text-sm text-foreground">
                   <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
                   <span>1 board, 1 class</span>
                 </li>
-                <li className="flex items-start text-sm text-gray-700 dark:text-gray-300">
+                <li className="flex items-start text-sm text-foreground">
                   <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
                   <span>Priority support</span>
                 </li>
@@ -330,23 +330,23 @@ export const EnhancedLandingPage: React.FC = () => {
               </div>
               <div className="mb-4">
                 <Crown className="h-10 w-10 text-orange-600 dark:text-orange-400 mb-3" />
-                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Pro</h3>
+                <h3 className="text-2xl font-bold text-foreground mb-2">Pro</h3>
                 <div className="flex items-baseline mb-2">
-                  <span className="text-4xl font-bold text-gray-900 dark:text-white">₹999</span>
-                  <span className="text-gray-600 dark:text-gray-400 ml-2">/ month</span>
+                  <span className="text-4xl font-bold text-foreground">₹999</span>
+                  <span className="text-muted-foreground ml-2">/ month</span>
                 </div>
-                <p className="text-gray-600 dark:text-gray-300 text-sm">Ultimate flexibility</p>
+                <p className="text-muted-foreground text-sm">Ultimate flexibility</p>
               </div>
               <ul className="space-y-2 mb-6">
-                <li className="flex items-start text-sm text-gray-700 dark:text-gray-300">
+                <li className="flex items-start text-sm text-foreground">
                   <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
                   <span>150 questions per day</span>
                 </li>
-                <li className="flex items-start text-sm text-gray-700 dark:text-gray-300">
+                <li className="flex items-start text-sm text-foreground">
                   <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
                   <span>1 board, ALL classes</span>
                 </li>
-                <li className="flex items-start text-sm text-gray-700 dark:text-gray-300">
+                <li className="flex items-start text-sm text-foreground">
                   <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0" />
                   <span>Early access to features</span>
                 </li>
@@ -363,7 +363,7 @@ export const EnhancedLandingPage: React.FC = () => {
               View Full Pricing Details
               <ArrowRight className="h-5 w-5" />
             </a>
-            <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+            <p className="mt-4 text-sm text-muted-foreground">
               Compare all features and find the perfect plan for your needs
             </p>
           </div>
@@ -402,13 +402,13 @@ export const EnhancedLandingPage: React.FC = () => {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-20 bg-white dark:bg-gray-900">
+      <section className="py-20 bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
               Student <span className="bg-gradient-to-r from-orange-500 to-blue-600 bg-clip-text text-transparent">Success Stories</span>
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
               Hear from students who transformed their learning journey with Digi Classroom
             </p>
           </div>
@@ -421,7 +421,7 @@ export const EnhancedLandingPage: React.FC = () => {
                     <Star key={i} className="h-6 w-6 text-yellow-400 fill-current" />
                   ))}
                 </div>
-                <blockquote className="text-xl md:text-2xl text-gray-700 dark:text-gray-300 mb-8 italic leading-relaxed">
+                <blockquote className="text-xl md:text-2xl text-foreground mb-8 italic leading-relaxed">
                   "{testimonials[currentTestimonial].quote}"
                 </blockquote>
                 <div className="flex items-center justify-center space-x-4">
@@ -429,10 +429,10 @@ export const EnhancedLandingPage: React.FC = () => {
                     {testimonials[currentTestimonial].name.charAt(0)}
                   </div>
                   <div className="text-left">
-                    <div className="font-semibold text-gray-900 dark:text-white text-lg">
+                    <div className="font-semibold text-foreground text-lg">
                       {testimonials[currentTestimonial].name}
                     </div>
-                    <div className="text-gray-600 dark:text-gray-400">
+                    <div className="text-muted-foreground">
                       {testimonials[currentTestimonial].grade}
                     </div>
                   </div>
@@ -456,20 +456,20 @@ export const EnhancedLandingPage: React.FC = () => {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-20 bg-gray-50 dark:bg-gray-800">
+      <section className="py-20 bg-muted/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-6">
+            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
               Frequently Asked <span className="bg-gradient-to-r from-orange-500 to-blue-600 bg-clip-text text-transparent">Questions</span>
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
               Get answers to common questions about Digi Classroom
             </p>
           </div>
 
           {/* FAQ Category Tabs */}
           <div className="flex justify-center mb-12">
-            <div className="bg-white dark:bg-gray-900 rounded-xl p-2 shadow-lg border border-gray-200 dark:border-gray-700">
+            <div className="bg-card rounded-xl p-2 shadow-lg border border-border">
               {(['students', 'teachers', 'parents'] as const).map((category) => (
                 <button
                   key={category}
@@ -477,7 +477,7 @@ export const EnhancedLandingPage: React.FC = () => {
                   className={`px-6 py-3 rounded-lg font-semibold transition-all duration-300 capitalize ${
                     activeFaqCategory === category
                       ? 'bg-gradient-to-r from-orange-500 to-blue-600 text-white shadow-lg'
-                      : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   {category}
@@ -490,17 +490,17 @@ export const EnhancedLandingPage: React.FC = () => {
           <div className="max-w-4xl mx-auto">
             <div className="space-y-4">
               {faqCategories[activeFaqCategory].map((faq, index) => (
-                <div key={index} className="bg-white dark:bg-gray-900 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div key={index} className="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
                   <button
                     onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                    className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors duration-300"
+                    className="w-full px-6 py-4 text-left flex items-center justify-between hover:bg-muted/50 dark:hover:bg-gray-800 transition-colors duration-300"
                   >
-                    <span className="font-semibold text-gray-900 dark:text-white pr-4">{faq.question}</span>
-                    <ChevronDown className={`h-5 w-5 text-gray-500 transition-transform duration-300 ${openFaq === index ? 'rotate-180' : ''}`} />
+                    <span className="font-semibold text-foreground pr-4">{faq.question}</span>
+                    <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-300 ${openFaq === index ? 'rotate-180' : ''}`} />
                   </button>
                   {openFaq === index && (
                     <div className="px-6 pb-4">
-                      <p className="text-gray-600 dark:text-gray-300 leading-relaxed">{faq.answer}</p>
+                      <p className="text-muted-foreground leading-relaxed">{faq.answer}</p>
                     </div>
                   )}
                 </div>
@@ -533,7 +533,7 @@ export const EnhancedLandingPage: React.FC = () => {
                 />
                 <button
                   type="submit"
-                  className="px-8 py-4 bg-white text-blue-600 font-semibold rounded-xl hover:bg-gray-100 transition-colors duration-300 flex items-center gap-2"
+                  className="px-8 py-4 bg-white text-blue-600 font-semibold rounded-xl hover:bg-muted transition-colors duration-300 flex items-center gap-2"
                 >
                   <Send className="h-5 w-5" />
                   Subscribe
@@ -556,7 +556,7 @@ export const EnhancedLandingPage: React.FC = () => {
                 </div>
                 <span className="text-2xl font-bold">Digi Classroom</span>
               </div>
-              <p className="text-gray-300 mb-6 max-w-md">
+              <p className="text-muted-foreground/60 mb-6 max-w-md">
                 Revolutionizing education with AI-powered learning experiences. Join thousands of students and educators in transforming the future of learning.
               </p>
               <div className="flex space-x-4">
@@ -574,7 +574,7 @@ export const EnhancedLandingPage: React.FC = () => {
               <ul className="space-y-3">
                 {['About Us', 'Features', 'Pricing', 'Blog', 'Help Center', 'Contact'].map((link) => (
                   <li key={link}>
-                    <a href="#" className="text-gray-300 hover:text-white transition-colors duration-300">{link}</a>
+                    <a href="#" className="text-muted-foreground/60 hover:text-white transition-colors duration-300">{link}</a>
                   </li>
                 ))}
               </ul>
@@ -586,15 +586,15 @@ export const EnhancedLandingPage: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center">
                   <Mail className="h-5 w-5 text-orange-500 mr-3" />
-                  <span className="text-gray-300">support@mydigiclassroom.com</span>
+                  <span className="text-muted-foreground/60">support@mydigiclassroom.com</span>
                 </div>
                 <div className="flex items-center">
                   <Phone className="h-5 w-5 text-orange-500 mr-3" />
-                  <span className="text-gray-300">+91 9310959596</span>
+                  <span className="text-muted-foreground/60">+91 9310959596</span>
                 </div>
                 <div className="flex items-start">
                   <MapPin className="h-5 w-5 text-orange-500 mr-3 mt-1" />
-                  <span className="text-gray-300">Connaught Place, New Delhi, India</span>
+                  <span className="text-muted-foreground/60">Connaught Place, New Delhi, India</span>
                 </div>
               </div>
             </div>
@@ -603,13 +603,13 @@ export const EnhancedLandingPage: React.FC = () => {
           {/* Bottom Bar */}
           <div className="border-t border-gray-800 pt-8">
             <div className="flex flex-col md:flex-row justify-between items-center">
-              <p className="text-gray-400 mb-4 md:mb-0">
+              <p className="text-muted-foreground mb-4 md:mb-0">
                 © 2024 Digi Classroom. All rights reserved.
               </p>
               <div className="flex space-x-6">
-                <a href="#" className="text-gray-400 hover:text-white transition-colors duration-300">Privacy Policy</a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors duration-300">Terms of Service</a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors duration-300">Cookie Policy</a>
+                <a href="#" className="text-muted-foreground hover:text-white transition-colors duration-300">Privacy Policy</a>
+                <a href="#" className="text-muted-foreground hover:text-white transition-colors duration-300">Terms of Service</a>
+                <a href="#" className="text-muted-foreground hover:text-white transition-colors duration-300">Cookie Policy</a>
               </div>
             </div>
           </div>

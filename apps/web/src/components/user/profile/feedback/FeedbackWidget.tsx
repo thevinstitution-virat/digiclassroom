@@ -196,7 +196,7 @@ export function FeedbackWidget(props: FeedbackWidgetProps) {
             'disabled:opacity-50 disabled:cursor-not-allowed',
             thumbsRating === 'up'
               ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
-              : 'text-gray-400 hover:text-green-600'
+              : 'text-muted-foreground hover:text-green-600'
           )}
           aria-label="Like this answer"
         >
@@ -214,7 +214,7 @@ export function FeedbackWidget(props: FeedbackWidgetProps) {
             'disabled:opacity-50 disabled:cursor-not-allowed',
             thumbsRating === 'down'
               ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-              : 'text-gray-400 hover:text-red-600'
+              : 'text-muted-foreground hover:text-red-600'
           )}
           aria-label="Dislike this answer"
         >

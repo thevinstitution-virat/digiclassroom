@@ -133,12 +133,12 @@ const StreamingChatMessage: React.FC<StreamingChatMessageProps> = ({
       {/* Column: bubble on top, stop button below */}
       <div className="flex flex-col gap-1.5 min-w-0 flex-1">
         {/* ── Chat bubble ─────────────────────────────────────────── */}
-        <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm self-start max-w-[90%]">
+        <div className="bg-white border border-border rounded-2xl rounded-tl-sm px-4 py-3 shadow-sm self-start max-w-[90%]">
           {showDots ? (
             <TypingDots />
           ) : (
             <>
-              <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap break-words">
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-words">
                 {text}
               </p>
               {status === "error" && (
@@ -156,7 +156,7 @@ const StreamingChatMessage: React.FC<StreamingChatMessageProps> = ({
           <button
             type="button"
             onClick={onStop}
-            className="flex items-center gap-1.5 self-start px-3 py-1 rounded-full border border-gray-200 bg-white text-xs text-gray-400 hover:text-red-500 hover:border-red-300 transition-all duration-150"
+            className="flex items-center gap-1.5 self-start px-3 py-1 rounded-full border border-border bg-white text-xs text-muted-foreground hover:text-red-500 hover:border-red-300 transition-all duration-150"
           >
             <Square size={9} className="fill-current" aria-hidden="true" />
             Stop generating

@@ -49,16 +49,16 @@ export default function TodaysProgress({ onStartQuiz, onViewStats }: TodaysProgr
     return (
       <Card className="animate-pulse">
         <CardHeader>
-          <div className="h-6 bg-gray-200 rounded w-1/2"></div>
-          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+          <div className="h-6 bg-muted rounded w-1/2"></div>
+          <div className="h-4 bg-muted rounded w-3/4"></div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-8 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-muted rounded"></div>
+            <div className="h-8 bg-muted rounded"></div>
             <div className="grid grid-cols-3 gap-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-16 bg-gray-200 rounded"></div>
+                <div key={i} className="h-16 bg-muted rounded"></div>
               ))}
             </div>
           </div>
@@ -90,7 +90,7 @@ export default function TodaysProgress({ onStartQuiz, onViewStats }: TodaysProgr
   return "text-yellow-600"
     if (todayProgress.percentage >= 25)
   return "text-orange-600"
-    return "text-gray-600"
+    return "text-muted-foreground"
   }
 
   const getProgressBgColor = () => {
@@ -102,7 +102,7 @@ export default function TodaysProgress({ onStartQuiz, onViewStats }: TodaysProgr
   return "from-yellow-50 to-amber-50 dark:from-yellow-950 dark:to-amber-950 border-yellow-200 dark:border-yellow-800"
     if (todayProgress.percentage >= 25)
   return "from-orange-50 to-red-50 dark:from-orange-950 dark:to-red-950 border-orange-200 dark:border-orange-800"
-    return "from-gray-50 to-slate-50 dark:from-gray-950 dark:to-slate-950 border-gray-200 dark:border-gray-800"
+    return "from-gray-50 to-slate-50 dark:from-gray-950 dark:to-slate-950 border-border dark:border-gray-800"
   }
 
   return (
@@ -122,7 +122,7 @@ export default function TodaysProgress({ onStartQuiz, onViewStats }: TodaysProgr
             <div className={`text-2xl font-bold ${getProgressColor()}`}>
               {todayProgress.percentage.toFixed(0)}%
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-sm text-muted-foreground">
               Complete
             </div>
           </div>
@@ -133,7 +133,7 @@ export default function TodaysProgress({ onStartQuiz, onViewStats }: TodaysProgr
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="font-medium">Daily Goal Progress</span>
-            <span className="text-gray-600 dark:text-gray-400">
+            <span className="text-muted-foreground">
               {todayProgress.wordsLearned} / {todayProgress.goal} words
             </span>
           </div>
@@ -142,7 +142,7 @@ export default function TodaysProgress({ onStartQuiz, onViewStats }: TodaysProgr
             className="h-3"
           />
           <div className="text-center">
-            <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <p className="text-sm font-medium text-foreground">
               {getMotivationalMessage()}
             </p>
           </div>
@@ -150,32 +150,32 @@ export default function TodaysProgress({ onStartQuiz, onViewStats }: TodaysProgr
 
         {/* Quick Stats Grid */}
         <div className="grid grid-cols-3 gap-4">
-          <div className="text-center p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg border">
+          <div className="text-center p-3 bg-white/50 rounded-lg border">
             <BookOpenIcon className="h-6 w-6 mx-auto mb-1 text-blue-600" />
-            <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+            <div className="text-lg font-bold text-foreground">
               {stats.todayWordsSearched}
             </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">
+            <div className="text-xs text-muted-foreground">
               Words Searched
             </div>
           </div>
           
-          <div className="text-center p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg border">
+          <div className="text-center p-3 bg-white/50 rounded-lg border">
             <TrophyIcon className="h-6 w-6 mx-auto mb-1 text-yellow-600" />
-            <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+            <div className="text-lg font-bold text-foreground">
               {stats.todayQuizzesCompleted}
             </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">
+            <div className="text-xs text-muted-foreground">
               Quizzes Done
             </div>
           </div>
           
-          <div className="text-center p-3 bg-white/50 dark:bg-gray-800/50 rounded-lg border">
+          <div className="text-center p-3 bg-white/50 rounded-lg border">
             <FireIcon className="h-6 w-6 mx-auto mb-1 text-orange-600" />
-            <div className="text-lg font-bold text-gray-900 dark:text-gray-100">
+            <div className="text-lg font-bold text-foreground">
               {streakInfo.current}
             </div>
-            <div className="text-xs text-gray-600 dark:text-gray-400">
+            <div className="text-xs text-muted-foreground">
               Day Streak
             </div>
           </div>
@@ -216,7 +216,7 @@ export default function TodaysProgress({ onStartQuiz, onViewStats }: TodaysProgr
         {/* Achievements & Milestones */}
         {(todayProgress.percentage >= 100 || streakInfo.current >= 3) && (
           <div className="space-y-2">
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <h4 className="text-sm font-medium text-foreground">
               Today's Achievements
             </h4>
             <div className="flex flex-wrap gap-2">
@@ -247,7 +247,7 @@ export default function TodaysProgress({ onStartQuiz, onViewStats }: TodaysProgr
         {/* Weekly Progress Mini Chart */}
         {dailyActivity.length > 0 && (
           <div className="space-y-2">
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <h4 className="text-sm font-medium text-foreground">
               7-Day Activity
             </h4>
             <div className="flex items-end space-x-1 h-12">
@@ -262,11 +262,11 @@ export default function TodaysProgress({ onStartQuiz, onViewStats }: TodaysProgr
                           ? 'bg-green-500' 
                           : day.wordsLearned > 0 
                             ? 'bg-blue-400' 
-                            : 'bg-gray-200 dark:bg-gray-700'
+                            : 'bg-muted'
                       }`}
                       style={{ height: `${Math.min(height, 100)}%` }}
                     />
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="text-xs text-muted-foreground mt-1">
                       {new Date(day.date).toLocaleDateString('en', { weekday: 'short' })[0]}
                     </div>
                   </div>

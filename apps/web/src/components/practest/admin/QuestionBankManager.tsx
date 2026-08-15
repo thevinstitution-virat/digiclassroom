@@ -166,7 +166,7 @@ export default function QuestionBankManager({ onQuestionEdit, onError }: Questio
       case 'DRAFT':
         return <Badge variant="outline">Draft</Badge>
       case 'RETIRED':
-        return <Badge variant="outline" className="bg-gray-100 text-gray-600">Retired</Badge>
+        return <Badge variant="outline" className="bg-muted text-muted-foreground">Retired</Badge>
       default:
         return <Badge variant="outline">{status}</Badge>
     }
@@ -268,7 +268,7 @@ export default function QuestionBankManager({ onQuestionEdit, onError }: Questio
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600 dark:text-gray-400">
+              <span className="text-sm text-muted-foreground">
                 {selectedQuestions.size} of {questions.length} selected
               </span>
               
@@ -391,7 +391,7 @@ export default function QuestionBankManager({ onQuestionEdit, onError }: Questio
                       <TableCell>
                         <div>
                           <p className="font-medium">{question.subject}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="text-sm text-muted-foreground">
                             {question.chapter}
                           </p>
                         </div>
@@ -410,7 +410,7 @@ export default function QuestionBankManager({ onQuestionEdit, onError }: Questio
                       <TableCell>
                         <div className="text-sm">
                           <p>{question.usage_count} uses</p>
-                          <p className="text-gray-600 dark:text-gray-400">
+                          <p className="text-muted-foreground">
                             {Math.round((question.correct_attempts / Math.max(question.total_attempts, 1)) * 100)}% correct
                           </p>
                         </div>
@@ -465,7 +465,7 @@ export default function QuestionBankManager({ onQuestionEdit, onError }: Questio
 
           {/* Pagination */}
           <div className="flex items-center justify-between mt-4">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-sm text-muted-foreground">
               Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} questions
             </div>
             

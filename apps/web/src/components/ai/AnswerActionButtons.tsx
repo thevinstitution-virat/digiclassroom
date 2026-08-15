@@ -761,7 +761,7 @@ export default function AnswerActionButtons({
   return (
     <div className="mt-3 space-y-4">
       {/* Action Buttons Row - Enhanced with better icons and styling */}
-      <div className="flex flex-wrap gap-2 border-t border-gray-200 dark:border-gray-700 pt-3">
+      <div className="flex flex-wrap gap-2 border-t border-border pt-3">
         {/* Translate Button - Globe icon with simplified label */}
         <Button
           variant="outline"
@@ -876,7 +876,7 @@ export default function AnswerActionButtons({
               <X className="h-4 w-4 text-rose-600 dark:text-rose-400" />
             </Button>
           </div>
-          <div className="prose prose-sm max-w-none text-gray-700 dark:text-gray-300">
+          <div className="prose prose-sm max-w-none text-foreground">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {altExplanation}
             </ReactMarkdown>
@@ -901,7 +901,7 @@ export default function AnswerActionButtons({
               <Volume2 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
             </Button>
           </div>
-          <div className="prose prose-sm max-w-none text-gray-700 dark:text-gray-300">
+          <div className="prose prose-sm max-w-none text-foreground">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {translatedText}
             </ReactMarkdown>
@@ -988,12 +988,12 @@ export default function AnswerActionButtons({
           </DialogHeader>
           <div className="space-y-4 py-4">
             {/* Save Mode Toggle */}
-            <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="flex rounded-lg border border-border overflow-hidden">
               <button
                 onClick={() => setSaveMode('new')}
                 className={`flex-1 px-4 py-2.5 text-sm font-medium transition-all ${saveMode === 'new'
                   ? 'bg-gradient-to-r from-orange-500 to-blue-500 text-white'
-                  : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  : 'bg-muted/40 text-muted-foreground hover:bg-muted'
                   }`}
               >
                 📝 Create New Note
@@ -1002,7 +1002,7 @@ export default function AnswerActionButtons({
                 onClick={() => setSaveMode('append')}
                 className={`flex-1 px-4 py-2.5 text-sm font-medium transition-all ${saveMode === 'append'
                   ? 'bg-gradient-to-r from-orange-500 to-blue-500 text-white'
-                  : 'bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  : 'bg-muted/40 text-muted-foreground hover:bg-muted'
                   }`}
               >
                 📎 Append to Existing
@@ -1012,7 +1012,7 @@ export default function AnswerActionButtons({
             {/* NEW NOTE MODE */}
             {saveMode === 'new' && (
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                <label className="text-sm font-medium text-foreground mb-2 block">
                   Note Title
                 </label>
                 <Input
@@ -1027,13 +1027,13 @@ export default function AnswerActionButtons({
             {/* APPEND TO EXISTING NOTE MODE */}
             {saveMode === 'append' && (
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                <label className="text-sm font-medium text-foreground mb-2 block">
                   Select Existing Note
                 </label>
                 <select
                   value={selectedNoteId}
                   onChange={(e) => setSelectedNoteId(e.target.value)}
-                  className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 bg-card border border-input rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   disabled={isLoadingNotes}
                 >
                   <option value="">-- Select a note --</option>
@@ -1044,7 +1044,7 @@ export default function AnswerActionButtons({
                   ))}
                 </select>
                 {existingNotes.length === 0 && !isLoadingNotes && (
-                  <p className="text-xs text-gray-500 mt-1">No existing notes found. Create a new note instead.</p>
+                  <p className="text-xs text-muted-foreground mt-1">No existing notes found. Create a new note instead.</p>
                 )}
                 {selectedNoteId && (
                   <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
@@ -1059,7 +1059,7 @@ export default function AnswerActionButtons({
             {/* Folder Selection - Only for new notes */}
             {saveMode === 'new' && (
               <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                <label className="text-sm font-medium text-foreground mb-2 block">
                   Save to Folder
                 </label>
                 {isCreatingFolder ? (
@@ -1088,7 +1088,7 @@ export default function AnswerActionButtons({
                     <select
                       value={selectedFolderId}
                       onChange={(e) => setSelectedFolderId(e.target.value)}
-                      className="flex-1 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="flex-1 px-3 py-2 bg-card border border-input rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       disabled={isLoadingFolders}
                     >
                       <option value="none">-- No folder --</option>
@@ -1109,7 +1109,7 @@ export default function AnswerActionButtons({
                     </Button>
                   </div>
                 )}
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Organize your notes by agent type or create custom folders
                 </p>
               </div>
@@ -1141,7 +1141,7 @@ export default function AnswerActionButtons({
 
             {/* Tags Input */}
             <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+              <label className="text-sm font-medium text-foreground mb-2 block">
                 Tags (Optional)
               </label>
               <div className="flex gap-2 mb-2">
@@ -1178,9 +1178,9 @@ export default function AnswerActionButtons({
               )}
             </div>
 
-            <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
-              <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Preview:</p>
-              <p className="text-sm text-gray-800 dark:text-gray-200 line-clamp-3">
+            <div className="bg-muted/40 p-3 rounded-lg border border-border">
+              <p className="text-xs text-muted-foreground mb-1">Preview:</p>
+              <p className="text-sm text-foreground line-clamp-3">
                 {answer.substring(0, 150)}...
               </p>
             </div>

@@ -194,7 +194,7 @@ export function FeedbackWidget(props: FeedbackWidgetProps) {
             'disabled:opacity-50 disabled:cursor-not-allowed',
             thumbsRating === 'up'
               ? 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400'
-              : 'text-gray-400 hover:text-green-600'
+              : 'text-muted-foreground hover:text-green-600'
           )}
           aria-label="Like this answer"
         >
@@ -212,7 +212,7 @@ export function FeedbackWidget(props: FeedbackWidgetProps) {
             'disabled:opacity-50 disabled:cursor-not-allowed',
             thumbsRating === 'down'
               ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-              : 'text-gray-400 hover:text-red-600'
+              : 'text-muted-foreground hover:text-red-600'
           )}
           aria-label="Dislike this answer"
         >
@@ -221,7 +221,7 @@ export function FeedbackWidget(props: FeedbackWidgetProps) {
       </div>
 
       {/* Vertical Divider */}
-      <div className="h-6 w-px bg-gray-200 dark:bg-gray-700 opacity-50" />
+      <div className="h-6 w-px bg-muted opacity-50" />
 
       {/* Star Rating */}
       <div className="flex items-center gap-0.5">
@@ -245,7 +245,7 @@ export function FeedbackWidget(props: FeedbackWidgetProps) {
                 'h-4 w-4 transition-all duration-150',
                 (hoveredStar >= star || starRating >= star)
                   ? 'fill-orange-400 text-orange-400'
-                  : 'text-gray-300 dark:text-gray-600'
+                  : 'text-muted-foreground/60 dark:text-muted-foreground'
               )}
             />
           </motion.button>

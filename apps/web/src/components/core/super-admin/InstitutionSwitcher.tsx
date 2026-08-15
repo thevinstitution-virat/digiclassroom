@@ -59,19 +59,19 @@ export function InstitutionSwitcher() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-200 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-border dark:border-slate-800 bg-muted/40 dark:bg-slate-900 px-3 py-2 text-sm text-foreground dark:text-slate-200 transition-colors hover:bg-muted dark:hover:bg-slate-800"
       >
         <span className="flex min-w-0 items-center gap-2">
           {isGlobal ? (
             <Globe className="h-4 w-4 shrink-0 text-blue-500" />
           ) : (
-            <Building2 className="h-4 w-4 shrink-0 text-slate-500" />
+            <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
           )}
           <span className="truncate font-medium">{context.label}</span>
         </span>
         <ChevronDown
           className={cx(
-            'h-4 w-4 shrink-0 text-slate-500 transition-transform duration-150',
+            'h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-150',
             open && 'rotate-180',
           )}
         />
@@ -79,7 +79,7 @@ export function InstitutionSwitcher() {
 
       {/* ── Dropdown ── */}
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-full overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-lg">
+        <div className="absolute left-0 top-full z-50 mt-1 w-full overflow-hidden rounded-lg border border-border dark:border-slate-800 bg-white dark:bg-slate-950 shadow-lg">
 
           {/* Global Platform — always first */}
           <OptionRow
@@ -95,7 +95,7 @@ export function InstitutionSwitcher() {
 
           {/* Loading state */}
           {isLoading && (
-            <div className="flex items-center justify-center gap-2 py-4 text-xs text-slate-500">
+            <div className="flex items-center justify-center gap-2 py-4 text-xs text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               Loading institutions…
             </div>
@@ -110,7 +110,7 @@ export function InstitutionSwitcher() {
 
           {/* Empty state */}
           {!isLoading && !isError && (!tenants || tenants.length === 0) && (
-            <p className="px-3 py-3 text-xs text-slate-500">
+            <p className="px-3 py-3 text-xs text-muted-foreground">
               No institutions found.
             </p>
           )}
@@ -120,7 +120,7 @@ export function InstitutionSwitcher() {
             {tenants?.map((tenant, idx) => (
               <OptionRow
                 key={tenant.tenant_id}
-                icon={<Building2 className="h-4 w-4 text-slate-500" />}
+                icon={<Building2 className="h-4 w-4 text-muted-foreground" />}
                 label={tenant.tenant_name || tenant.tenant_id}
                 active={context.tenantId === tenant.tenant_id}
                 isLast={idx === tenants.length - 1}
@@ -160,8 +160,8 @@ function OptionRow({
       type="button"
       onClick={onClick}
       className={cx(
-        'flex w-full items-start gap-3 px-3 py-2.5 text-left text-sm transition-colors hover:bg-slate-50 dark:hover:bg-slate-900',
-        active ? 'bg-indigo-50/50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' : 'text-slate-800 dark:text-slate-200',
+        'flex w-full items-start gap-3 px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted/40 dark:hover:bg-slate-900',
+        active ? 'bg-indigo-50/50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' : 'text-foreground dark:text-slate-200',
         isFirst && 'rounded-t-lg',
         isLast && 'rounded-b-lg',
       )}
@@ -177,7 +177,7 @@ function OptionRow({
           {label}
         </span>
         {sublabel && (
-          <span className="block truncate text-xs text-slate-500 dark:text-slate-400">
+          <span className="block truncate text-xs text-muted-foreground dark:text-muted-foreground">
             {sublabel}
           </span>
         )}

@@ -60,7 +60,7 @@ export function FolderTreeSidebar({
   const itemBase =
     'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors text-left';
   const itemIdle =
-    'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/60';
+    'text-foreground hover:bg-muted/60';
   const itemActive =
     'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-medium';
   const dropHi = 'ring-2 ring-blue-400 ring-inset bg-blue-50 dark:bg-blue-900/20';
@@ -79,10 +79,10 @@ export function FolderTreeSidebar({
       : {};
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-3">
+    <div className="bg-card rounded-xl shadow-sm border border-border p-3">
       {/* Header */}
       <div className="flex items-center justify-between px-1 mb-3">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Folders
         </h3>
         <div className="flex items-center gap-1">
@@ -92,7 +92,7 @@ export function FolderTreeSidebar({
               onClick={onCreateFolder}
               title="New folder"
               aria-label="New folder"
-              className="p-1.5 rounded-md text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+              className="p-1.5 rounded-md text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
             >
               <FolderPlus className="h-4 w-4" />
             </button>
@@ -103,7 +103,7 @@ export function FolderTreeSidebar({
               onClick={onManageFolders}
               title="Manage folders"
               aria-label="Manage folders"
-              className="p-1.5 rounded-md text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+              className="p-1.5 rounded-md text-muted-foreground hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
             >
               <Settings2 className="h-4 w-4" />
             </button>
@@ -128,9 +128,9 @@ export function FolderTreeSidebar({
         </button>
 
         {/* User folders */}
-        <div className="pt-2 mt-1 border-t border-gray-100 dark:border-gray-700/60 space-y-1">
+        <div className="pt-2 mt-1 border-t border-border/60 space-y-1">
           {folders.length === 0 ? (
-            <p className="px-3 py-3 text-xs text-gray-400 dark:text-gray-500">
+            <p className="px-3 py-3 text-xs text-muted-foreground">
               No folders yet. Click the <FolderPlus className="inline h-3.5 w-3.5 -mt-0.5" /> icon to create one.
             </p>
           ) : (
@@ -141,7 +141,7 @@ export function FolderTreeSidebar({
                   <FolderIcon className="h-4 w-4 flex-shrink-0" style={{ color: tint(f.color) }} />
                   <span className="truncate flex-1">{f.name}</span>
                   {typeof f.note_count === 'number' && (
-                    <span className="ml-auto text-xs px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                    <span className="ml-auto text-xs px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">
                       {f.note_count}
                     </span>
                   )}

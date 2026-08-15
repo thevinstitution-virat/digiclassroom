@@ -66,7 +66,7 @@ export default function InstitutionOnboardingWizard({ initialData }: { initialDa
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 dark:bg-gray-950">
+    <div className="min-h-screen bg-muted/40 py-12 px-4 sm:px-6 lg:px-8 dark:bg-gray-950">
       <div className="mx-auto max-w-3xl space-y-8">
         
         {/* Header */}
@@ -74,8 +74,8 @@ export default function InstitutionOnboardingWizard({ initialData }: { initialDa
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 shadow-lg">
             <Rocket className="h-8 w-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Welcome to your Institution</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">Let's finish setting up your branding and contact details.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome to your Institution</h1>
+          <p className="mt-2 text-muted-foreground">Let's finish setting up your branding and contact details.</p>
         </div>
 
         {/* Stepper */}
@@ -86,28 +86,28 @@ export default function InstitutionOnboardingWizard({ initialData }: { initialDa
                 <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
                   i < step ? 'bg-green-500 text-white'
                   : i === step ? 'bg-violet-600 text-white shadow-md'
-                  : 'bg-gray-200 text-gray-500 dark:bg-gray-800 dark:text-gray-400'}`}>
+                  : 'bg-muted text-muted-foreground dark:text-muted-foreground'}`}>
                   {i < step ? <Check className="h-4 w-4" /> : i + 1}
                 </div>
-                <span className={`hidden sm:block text-sm font-medium ${i === step ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>{label}</span>
+                <span className={`hidden sm:block text-sm font-medium ${i === step ? 'text-foreground' : 'text-muted-foreground'}`}>{label}</span>
               </div>
               {i < STEPS.length - 1 && (
-                <div className={`mx-4 h-0.5 w-12 sm:w-24 transition-colors ${i < step ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-800'}`} />
+                <div className={`mx-4 h-0.5 w-12 sm:w-24 transition-colors ${i < step ? 'bg-green-500' : 'bg-muted'}`} />
               )}
             </div>
           ))}
         </div>
 
         {/* Form Card */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-8">
+        <div className="rounded-2xl border border-border bg-white p-6 shadow-sm dark:border-gray-800 sm:p-8">
           
           {/* STEP 0: Branding */}
           {step === 0 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
               <div className="space-y-4">
                 <div>
-                  <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                    <ImageIcon className="h-4 w-4 text-gray-400" /> Logo URL <span className="text-red-500">*</span>
+                  <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-foreground">
+                    <ImageIcon className="h-4 w-4 text-muted-foreground" /> Logo URL <span className="text-red-500">*</span>
                   </label>
                   <div className="flex gap-4">
                     <input
@@ -115,10 +115,10 @@ export default function InstitutionOnboardingWizard({ initialData }: { initialDa
                       value={formData.logoUrl}
                       onChange={(e) => updateField('logoUrl', e.target.value)}
                       placeholder="https://example.com/logo.png"
-                      className="flex-1 rounded-xl border border-gray-300 px-4 py-2.5 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:border-gray-700 dark:bg-gray-950"
+                      className="flex-1 rounded-xl border border-input px-4 py-2.5 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:bg-gray-950"
                     />
                     {formData.logoUrl && (
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-gray-50 overflow-hidden dark:border-gray-700 dark:bg-gray-800">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-muted/40 overflow-hidden">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={formData.logoUrl} alt="Logo preview" className="max-h-full max-w-full object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
                       </div>
@@ -127,19 +127,19 @@ export default function InstitutionOnboardingWizard({ initialData }: { initialDa
                 </div>
 
                 <div>
-                  <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                    <ImageIcon className="h-4 w-4 text-gray-400" /> Banner URL <span className="text-gray-400 font-normal">(optional)</span>
+                  <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-foreground">
+                    <ImageIcon className="h-4 w-4 text-muted-foreground" /> Banner URL <span className="text-muted-foreground font-normal">(optional)</span>
                   </label>
                   <input
                     type="url"
                     value={formData.bannerUrl}
                     onChange={(e) => updateField('bannerUrl', e.target.value)}
                     placeholder="https://example.com/banner.jpg"
-                    className="w-full rounded-xl border border-gray-300 px-4 py-2.5 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:border-gray-700 dark:bg-gray-950"
+                    className="w-full rounded-xl border border-input px-4 py-2.5 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:bg-gray-950"
                   />
-                  <p className="mt-1.5 text-xs text-gray-500">Recommended size: 1200x300px.</p>
+                  <p className="mt-1.5 text-xs text-muted-foreground">Recommended size: 1200x300px.</p>
                   {formData.bannerUrl && (
-                    <div className="mt-3 h-24 w-full rounded-xl border border-gray-200 bg-gray-50 overflow-hidden dark:border-gray-700 dark:bg-gray-800 relative">
+                    <div className="mt-3 h-24 w-full rounded-xl border border-border bg-muted/40 overflow-hidden relative">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={formData.bannerUrl} alt="Banner preview" className="absolute inset-0 h-full w-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
                     </div>
@@ -147,11 +147,11 @@ export default function InstitutionOnboardingWizard({ initialData }: { initialDa
                 </div>
 
                 <div>
-                  <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                    <Palette className="h-4 w-4 text-gray-400" /> Primary Color <span className="text-red-500">*</span>
+                  <label className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
+                    <Palette className="h-4 w-4 text-muted-foreground" /> Primary Color <span className="text-red-500">*</span>
                   </label>
                   <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex h-11 w-11 overflow-hidden rounded-xl border border-gray-300 dark:border-gray-700 focus-within:ring-2 focus-within:ring-violet-500">
+                    <div className="flex h-11 w-11 overflow-hidden rounded-xl border border-input focus-within:ring-2 focus-within:ring-violet-500">
                       <input
                         type="color"
                         value={formData.primaryColor}
@@ -159,7 +159,7 @@ export default function InstitutionOnboardingWizard({ initialData }: { initialDa
                         className="h-16 w-16 -translate-x-2 -translate-y-2 cursor-pointer"
                       />
                     </div>
-                    <div className="h-8 w-[1px] bg-gray-200 dark:bg-gray-700 mx-2" />
+                    <div className="h-8 w-[1px] bg-muted mx-2" />
                     {PRESET_COLORS.map(color => (
                       <button
                         key={color}
@@ -181,54 +181,54 @@ export default function InstitutionOnboardingWizard({ initialData }: { initialDa
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
               <div className="grid gap-6 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                    <Mail className="h-4 w-4 text-gray-400" /> Contact Email <span className="text-red-500">*</span>
+                  <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-foreground">
+                    <Mail className="h-4 w-4 text-muted-foreground" /> Contact Email <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="email"
                     value={formData.contactEmail}
                     onChange={(e) => updateField('contactEmail', e.target.value)}
                     placeholder="office@institution.edu"
-                    className="w-full rounded-xl border border-gray-300 px-4 py-2.5 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:border-gray-700 dark:bg-gray-950"
+                    className="w-full rounded-xl border border-input px-4 py-2.5 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:bg-gray-950"
                   />
                 </div>
                 <div>
-                  <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                    <Phone className="h-4 w-4 text-gray-400" /> Phone <span className="text-gray-400 font-normal">(optional)</span>
+                  <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-foreground">
+                    <Phone className="h-4 w-4 text-muted-foreground" /> Phone <span className="text-muted-foreground font-normal">(optional)</span>
                   </label>
                   <input
                     type="tel"
                     value={formData.contactPhone}
                     onChange={(e) => updateField('contactPhone', e.target.value)}
                     placeholder="+1 (555) 000-0000"
-                    className="w-full rounded-xl border border-gray-300 px-4 py-2.5 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:border-gray-700 dark:bg-gray-950"
+                    className="w-full rounded-xl border border-input px-4 py-2.5 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:bg-gray-950"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  <Globe className="h-4 w-4 text-gray-400" /> Website <span className="text-gray-400 font-normal">(optional)</span>
+                <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-foreground">
+                  <Globe className="h-4 w-4 text-muted-foreground" /> Website <span className="text-muted-foreground font-normal">(optional)</span>
                 </label>
                 <input
                   type="url"
                   value={formData.website}
                   onChange={(e) => updateField('website', e.target.value)}
                   placeholder="https://institution.edu"
-                  className="w-full rounded-xl border border-gray-300 px-4 py-2.5 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:border-gray-700 dark:bg-gray-950"
+                  className="w-full rounded-xl border border-input px-4 py-2.5 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:bg-gray-950"
                 />
               </div>
 
               <div>
-                <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                  <MapPin className="h-4 w-4 text-gray-400" /> Address <span className="text-red-500">*</span>
+                <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-foreground">
+                  <MapPin className="h-4 w-4 text-muted-foreground" /> Address <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   value={formData.address}
                   onChange={(e) => updateField('address', e.target.value)}
                   placeholder="123 Education Lane&#10;City, State 12345"
                   rows={3}
-                  className="w-full rounded-xl border border-gray-300 px-4 py-2.5 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:border-gray-700 dark:bg-gray-950"
+                  className="w-full rounded-xl border border-input px-4 py-2.5 outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-200 dark:bg-gray-950"
                 />
               </div>
             </div>
@@ -237,7 +237,7 @@ export default function InstitutionOnboardingWizard({ initialData }: { initialDa
           {/* STEP 2: Review */}
           {step === 2 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
-              <div className="rounded-xl border border-gray-200 overflow-hidden dark:border-gray-800">
+              <div className="rounded-xl border border-border overflow-hidden dark:border-gray-800">
                 {/* Mock Header */}
                 <div 
                   className="flex items-center gap-3 px-4 py-3 text-white shadow-sm"
@@ -254,16 +254,16 @@ export default function InstitutionOnboardingWizard({ initialData }: { initialDa
                   <div className="font-semibold text-white">Your Dashboard</div>
                 </div>
                 
-                <div className="bg-gray-50 p-4 dark:bg-gray-900 space-y-3">
-                  <p className="text-sm text-gray-500 dark:text-gray-400">This is a preview of how your brand color and logo will appear in the navigation bar.</p>
+                <div className="bg-muted/40 p-4 space-y-3">
+                  <p className="text-sm text-muted-foreground">This is a preview of how your brand color and logo will appear in the navigation bar.</p>
                   <dl className="grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
                     <div>
-                      <dt className="text-gray-500 dark:text-gray-400">Email</dt>
-                      <dd className="font-medium text-gray-900 dark:text-white mt-0.5">{formData.contactEmail}</dd>
+                      <dt className="text-muted-foreground">Email</dt>
+                      <dd className="font-medium text-foreground mt-0.5">{formData.contactEmail}</dd>
                     </div>
                     <div>
-                      <dt className="text-gray-500 dark:text-gray-400">Address</dt>
-                      <dd className="font-medium text-gray-900 dark:text-white mt-0.5 whitespace-pre-wrap">{formData.address}</dd>
+                      <dt className="text-muted-foreground">Address</dt>
+                      <dd className="font-medium text-foreground mt-0.5 whitespace-pre-wrap">{formData.address}</dd>
                     </div>
                   </dl>
                 </div>
@@ -285,7 +285,7 @@ export default function InstitutionOnboardingWizard({ initialData }: { initialDa
           <button
             onClick={() => setStep(s => Math.max(0, s - 1))}
             disabled={step === 0 || mutation.isPending}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 dark:border-gray-800 dark:text-gray-300 dark:hover:bg-gray-900"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-border px-5 py-2.5 text-sm font-medium text-foreground hover:bg-muted/50 disabled:opacity-40 dark:border-gray-800 dark:text-muted-foreground/60 dark:hover:bg-gray-900"
           >
             <ChevronLeft className="h-4 w-4" /> Back
           </button>
@@ -294,7 +294,7 @@ export default function InstitutionOnboardingWizard({ initialData }: { initialDa
             <button
               onClick={() => setStep(s => s + 1)}
               disabled={!canNext()}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-gray-800 disabled:opacity-40 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-gray-800 disabled:opacity-40 dark:bg-white dark:text-foreground dark:hover:bg-muted"
             >
               Next <ChevronRight className="h-4 w-4" />
             </button>

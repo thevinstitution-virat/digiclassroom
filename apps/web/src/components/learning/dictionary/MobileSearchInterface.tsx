@@ -175,17 +175,17 @@ export default function MobileSearchInterface({
     <div className={`relative ${className}`}>
       {/* Floating Search Bar (appears on scroll) */}
       {isScrolled && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border-b border-gray-200/50 dark:border-gray-700/50 p-4 md:hidden">
+        <div className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-xl border-b border-border/50 p-4 md:hidden">
           <div className="flex items-center space-x-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 ref={inputRef}
                 placeholder="Search words..."
                 value={searchQuery}
                 onChange={(e) => onSearchQueryChange(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearchSubmit(e)}
-                className="pl-10 pr-10 h-10 bg-gray-50/80 dark:bg-gray-800/80 border-gray-200/50 dark:border-gray-700/50 rounded-full"
+                className="pl-10 pr-10 h-10 bg-muted/40 border-border/50 rounded-full"
               />
               {searchQuery && (
                 <Button
@@ -213,7 +213,7 @@ export default function MobileSearchInterface({
       {/* Main Search Interface */}
       <Card 
         ref={searchContainerRef}
-        className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50 shadow-xl"
+        className="bg-white/90 backdrop-blur-xl border-border/50 shadow-xl"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -228,7 +228,7 @@ export default function MobileSearchInterface({
                 Word Search
               </span>
             </h2>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">
+            <p className="text-muted-foreground text-sm">
               Discover meanings, translations, and pronunciations
             </p>
           </div>
@@ -236,7 +236,7 @@ export default function MobileSearchInterface({
           {/* Search Form */}
           <form onSubmit={handleSearchSubmit} className="space-y-4">
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 ref={inputRef}
                 placeholder="Type any English word..."
@@ -244,7 +244,7 @@ export default function MobileSearchInterface({
                 onChange={(e) => onSearchQueryChange(e.target.value)}
                 onFocus={handleInputFocus}
                 onBlur={handleInputBlur}
-                className="pl-12 pr-20 h-14 text-base bg-gray-50/80 dark:bg-gray-700/80 backdrop-blur-sm border-gray-200/50 dark:border-gray-600/50 rounded-xl focus:ring-2 focus:ring-orange-500 transition-all duration-200"
+                className="pl-12 pr-20 h-14 text-base bg-muted/40 backdrop-blur-sm border-border/50 rounded-xl focus:ring-2 focus:ring-orange-500 transition-all duration-200"
                 disabled={isSearching}
               />
               
@@ -255,7 +255,7 @@ export default function MobileSearchInterface({
                   variant="ghost"
                   size="sm"
                   onClick={clearSearch}
-                  className="absolute right-12 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
+                  className="absolute right-12 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 rounded-full hover:bg-muted dark:hover:bg-gray-600"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -299,7 +299,7 @@ export default function MobileSearchInterface({
           </form>
 
           {/* Quick Actions */}
-          <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
             <Button
               variant="outline"
               size="sm"
@@ -311,7 +311,7 @@ export default function MobileSearchInterface({
               {showFilters && <Badge variant="secondary" className="ml-1">On</Badge>}
             </Button>
 
-            <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+            <div className="flex items-center space-x-2 text-xs text-muted-foreground">
               <Zap className="h-3 w-3" />
               <span>{cacheStats.totalCachedResults} cached</span>
               <span>•</span>
@@ -323,12 +323,12 @@ export default function MobileSearchInterface({
 
       {/* Search Suggestions Dropdown */}
       {showSuggestions && (searchQuery.length > 0 || recentSearches.length > 0 || popularWords.length > 0) && (
-        <Card className="absolute top-full left-0 right-0 z-40 mt-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50 shadow-xl max-h-80 overflow-y-auto">
+        <Card className="absolute top-full left-0 right-0 z-40 mt-2 bg-white/95 backdrop-blur-xl border-border/50 shadow-xl max-h-80 overflow-y-auto">
           <CardContent className="p-4">
             {/* Matching Suggestions */}
             {searchQuery.length > 0 && suggestions.length > 0 && (
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 flex items-center">
+                <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center">
                   <Search className="h-3 w-3 mr-1" />
                   Suggestions
                 </h4>
@@ -341,7 +341,7 @@ export default function MobileSearchInterface({
                       onClick={() => handleSuggestionSelect(suggestion)}
                       className="w-full justify-start h-10 px-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-blue-50 dark:hover:from-orange-900/20 dark:hover:to-blue-900/20"
                     >
-                      <Search className="h-3 w-3 mr-2 text-gray-400" />
+                      <Search className="h-3 w-3 mr-2 text-muted-foreground" />
                       <span className="truncate">{suggestion}</span>
                     </Button>
                   ))}
@@ -352,7 +352,7 @@ export default function MobileSearchInterface({
             {/* Recent Searches */}
             {recentSearches.length > 0 && (
               <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 flex items-center">
+                <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center">
                   <Clock className="h-3 w-3 mr-1" />
                   Recent
                 </h4>
@@ -376,7 +376,7 @@ export default function MobileSearchInterface({
             {/* Popular Words */}
             {popularWords.length > 0 && (
               <div>
-                <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 flex items-center">
+                <h4 className="text-sm font-medium text-muted-foreground mb-2 flex items-center">
                   <TrendingUp className="h-3 w-3 mr-1" />
                   Popular
                 </h4>

@@ -198,7 +198,7 @@ export default function FocusShield() {
       entertainment: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
       news: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
       gaming: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-      custom: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+      custom: 'bg-muted text-foreground'
     }
     return colors[category as keyof typeof colors] || colors.custom
   }
@@ -413,22 +413,22 @@ export default function FocusShield() {
             <div className="text-center">
               <ClockIcon className="h-8 w-8 mx-auto mb-2 text-blue-600" />
               <div className="text-2xl font-bold">0</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Hours Focused Today</div>
+              <div className="text-sm text-muted-foreground">Hours Focused Today</div>
             </div>
             <div className="text-center">
               <ShieldCheckIcon className="h-8 w-8 mx-auto mb-2 text-green-600" />
               <div className="text-2xl font-bold">0</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Sessions This Week</div>
+              <div className="text-sm text-muted-foreground">Sessions This Week</div>
             </div>
             <div className="text-center">
               <BellSlashIcon className="h-8 w-8 mx-auto mb-2 text-red-600" />
               <div className="text-2xl font-bold">{blockedSites.filter(s => s.isBlocked).length}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Sites Blocked</div>
+              <div className="text-sm text-muted-foreground">Sites Blocked</div>
             </div>
             <div className="text-center">
               <GlobeAltIcon className="h-8 w-8 mx-auto mb-2 text-purple-600" />
               <div className="text-2xl font-bold">{whitelistedSites.length}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Educational Sites</div>
+              <div className="text-sm text-muted-foreground">Educational Sites</div>
             </div>
           </div>
         </CardContent>

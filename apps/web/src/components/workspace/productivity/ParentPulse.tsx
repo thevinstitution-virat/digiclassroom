@@ -121,7 +121,7 @@ export default function ParentPulse() {
           <CardContent className="p-4 text-center">
             <ClockIcon className="h-8 w-8 mx-auto mb-2 text-blue-600" />
             <div className="text-2xl font-bold">{weeklyStats.totalStudyHours}h</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">This Week</div>
+            <div className="text-sm text-muted-foreground">This Week</div>
           </CardContent>
         </Card>
         
@@ -129,7 +129,7 @@ export default function ParentPulse() {
           <CardContent className="p-4 text-center">
             <AcademicCapIcon className="h-8 w-8 mx-auto mb-2 text-green-600" />
             <div className="text-2xl font-bold">{weeklyStats.focusScore}%</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Focus Score</div>
+            <div className="text-sm text-muted-foreground">Focus Score</div>
           </CardContent>
         </Card>
         
@@ -137,7 +137,7 @@ export default function ParentPulse() {
           <CardContent className="p-4 text-center">
             <TrophyIcon className="h-8 w-8 mx-auto mb-2 text-yellow-600" />
             <div className="text-2xl font-bold">{weeklyStats.completedTasks}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Tasks Done</div>
+            <div className="text-sm text-muted-foreground">Tasks Done</div>
           </CardContent>
         </Card>
         
@@ -145,7 +145,7 @@ export default function ParentPulse() {
           <CardContent className="p-4 text-center">
             <CalendarDaysIcon className="h-8 w-8 mx-auto mb-2 text-purple-600" />
             <div className="text-2xl font-bold">{upcomingEvents.filter(e => e.type === 'test').length}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Upcoming Tests</div>
+            <div className="text-sm text-muted-foreground">Upcoming Tests</div>
           </CardContent>
         </Card>
       </div>
@@ -225,7 +225,7 @@ export default function ParentPulse() {
                   <CalendarDaysIcon className="h-5 w-5 text-blue-600" />
                   <div>
                     <div className="font-medium">{event.event}</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">{event.date}</div>
+                    <div className="text-sm text-muted-foreground">{event.date}</div>
                   </div>
                 </div>
                 <Badge variant={event.priority === 'high' ? 'destructive' : 'secondary'}>
@@ -281,7 +281,7 @@ export default function ParentPulse() {
                   <EnvelopeIcon className="h-6 w-6 text-blue-600" />
                   <div>
                     <div className="font-medium">Email</div>
-                    <div className="text-sm text-gray-600">Detailed reports</div>
+                    <div className="text-sm text-muted-foreground">Detailed reports</div>
                   </div>
                   <input
                     type="checkbox"
@@ -299,7 +299,7 @@ export default function ParentPulse() {
                   <PhoneIcon className="h-6 w-6 text-green-600" />
                   <div>
                     <div className="font-medium">SMS</div>
-                    <div className="text-sm text-gray-600">Quick alerts</div>
+                    <div className="text-sm text-muted-foreground">Quick alerts</div>
                   </div>
                   <input
                     type="checkbox"
@@ -317,7 +317,7 @@ export default function ParentPulse() {
                   <BellIcon className="h-6 w-6 text-purple-600" />
                   <div>
                     <div className="font-medium">WhatsApp</div>
-                    <div className="text-sm text-gray-600">Instant updates</div>
+                    <div className="text-sm text-muted-foreground">Instant updates</div>
                   </div>
                   <input
                     type="checkbox"
@@ -430,9 +430,9 @@ export default function ParentPulse() {
             <div className="p-3 border rounded-lg">
               <div className="flex items-center justify-between mb-2">
                 <span className="font-medium">Mrs. Sharma (Math Teacher)</span>
-                <span className="text-sm text-gray-600">2 days ago</span>
+                <span className="text-sm text-muted-foreground">2 days ago</span>
               </div>
-              <p className="text-sm text-gray-700 dark:text-gray-300">
+              <p className="text-sm text-foreground">
                 Arjun is showing excellent progress in algebra. I recommend additional 
                 practice with word problems to strengthen application skills.
               </p>
@@ -441,9 +441,9 @@ export default function ParentPulse() {
             <div className="p-3 border rounded-lg">
               <div className="flex items-center justify-between mb-2">
                 <span className="font-medium">VG Kosh Support</span>
-                <span className="text-sm text-gray-600">1 week ago</span>
+                <span className="text-sm text-muted-foreground">1 week ago</span>
               </div>
-              <p className="text-sm text-gray-700 dark:text-gray-300">
+              <p className="text-sm text-foreground">
                 Thank you for your feedback about the new productivity features. 
                 We've implemented your suggestions in the latest update.
               </p>

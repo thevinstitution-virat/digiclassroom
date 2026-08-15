@@ -203,14 +203,14 @@ export default function PDFViewer({
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
-          className={`bg-white dark:bg-gray-900 rounded-lg shadow-2xl overflow-hidden ${
+          className={`bg-card rounded-lg shadow-2xl overflow-hidden ${
             isFullscreen ? 'w-full h-full' : 'w-[95vw] h-[95vh] max-w-6xl'
           }`}
         >
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+          <div className="flex items-center justify-between p-4 border-b border-border bg-muted/40">
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
+              <h2 className="text-lg font-semibold text-foreground truncate">
                 {material.title}
               </h2>
               <div className="flex items-center space-x-2 mt-1">
@@ -260,8 +260,8 @@ export default function PDFViewer({
 
           {/* Progress Bar */}
           {readingProgress.totalPages > 1 && (
-            <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
+            <div className="px-4 py-2 bg-muted/40 border-b border-border">
+              <div className="flex items-center justify-between text-sm text-muted-foreground mb-1">
                 <span>
                   Page {readingProgress.currentPage} of {readingProgress.totalPages}
                 </span>
@@ -277,12 +277,12 @@ export default function PDFViewer({
           )}
 
           {/* PDF Viewer */}
-          <div className="flex-1 relative bg-gray-100 dark:bg-gray-800">
+          <div className="flex-1 relative bg-muted">
             {isLoading && (
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600 dark:text-gray-400">Loading PDF...</p>
+                  <p className="text-muted-foreground">Loading PDF...</p>
                 </div>
               </div>
             )}
@@ -293,10 +293,10 @@ export default function PDFViewer({
                   <div className="text-red-500 mb-4">
                     <DocumentArrowDownIcon className="h-16 w-16 mx-auto" />
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                  <h3 className="text-lg font-semibold text-foreground mb-2">
                     Unable to Display PDF
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  <p className="text-muted-foreground mb-4">
                     {error}
                   </p>
                   <Button onClick={handleDownload} className="w-full">
@@ -321,8 +321,8 @@ export default function PDFViewer({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between p-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-            <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex items-center justify-between p-3 border-t border-border bg-muted/40">
+            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
               <span>Size: {(material.fileSize / 1024 / 1024).toFixed(1)} MB</span>
               <span>Downloads: {material.downloadCount}</span>
               <span>Difficulty: {material.metadata.difficulty}</span>

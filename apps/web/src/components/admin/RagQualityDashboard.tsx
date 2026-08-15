@@ -72,10 +72,10 @@ export default function RagQualityDashboard() {
   // ── Loading ──
   if (loading && !data) {
     return (
-      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-12 shadow-xl border border-white/20 dark:border-gray-700/20">
+      <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-12 shadow-xl border border-white/20">
         <div className="flex items-center justify-center gap-3">
           <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-gray-600 dark:text-gray-400 text-lg">Loading RAG quality metrics…</span>
+          <span className="text-muted-foreground text-lg">Loading RAG quality metrics…</span>
         </div>
       </div>
     );
@@ -84,10 +84,10 @@ export default function RagQualityDashboard() {
   // ── Error ──
   if (err) {
     return (
-      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-12 shadow-xl border border-red-200/30 dark:border-red-700/20">
+      <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-12 shadow-xl border border-red-200/30 dark:border-red-700/20">
         <div className="text-center">
           <div className="text-red-500 text-xl font-semibold mb-2">Failed to load</div>
-          <p className="text-gray-600 dark:text-gray-400">{err}</p>
+          <p className="text-muted-foreground">{err}</p>
           <button
             onClick={fetchData}
             className="mt-4 px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl text-sm font-medium hover:shadow-lg transition-all"
@@ -102,15 +102,15 @@ export default function RagQualityDashboard() {
   // ── Empty ──
   if (!data || data.summary.sampleSize === 0) {
     return (
-      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-12 shadow-xl border border-white/20 dark:border-gray-700/20">
+      <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-12 shadow-xl border border-white/20">
         <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-r from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 rounded-2xl flex items-center justify-center">
-            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-8 h-8 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">No RAGAS Data Yet</h3>
-          <p className="text-gray-600 dark:text-gray-400 text-sm max-w-md mx-auto">
+          <h3 className="text-lg font-semibold text-foreground mb-1">No RAGAS Data Yet</h3>
+          <p className="text-muted-foreground text-sm max-w-md mx-auto">
             No RAGAS-scored conversations found in this time window. Scores are captured automatically during AI chat sessions.
           </p>
         </div>
@@ -127,14 +127,14 @@ export default function RagQualityDashboard() {
           <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
             RAG Quality Metrics
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+          <p className="text-muted-foreground text-sm mt-1">
             RAGAS evaluation scores — last {days} days
           </p>
         </div>
         <select
           value={days}
           onChange={(e) => setDays(parseInt(e.target.value, 10))}
-          className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm font-medium shadow-sm hover:shadow transition-all"
+          className="px-4 py-2 border border-input rounded-xl bg-card text-foreground text-sm font-medium shadow-sm hover:shadow transition-all"
         >
           {[7, 14, 30, 60, 90, 180].map((d) => (
             <option key={d} value={d}>{d} days</option>
@@ -169,14 +169,14 @@ export default function RagQualityDashboard() {
           );
         })}
       </div>
-      <div className="text-sm text-gray-500 dark:text-gray-400 pl-1">
+      <div className="text-sm text-muted-foreground pl-1">
         Based on <strong>{data.summary.sampleSize.toLocaleString()}</strong> evaluated conversations
       </div>
 
       {/* Trend Chart */}
       {data.trend.length > 1 && (
-        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 dark:border-gray-700/20">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Daily Trend</h3>
+        <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20">
+          <h3 className="text-lg font-bold text-foreground mb-4">Daily Trend</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data.trend}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -213,8 +213,8 @@ export default function RagQualityDashboard() {
 
       {/* By Agent Chart */}
       {data.byAgent.length > 0 && (
-        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 dark:border-gray-700/20">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">By Agent</h3>
+        <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20">
+          <h3 className="text-lg font-bold text-foreground mb-4">By Agent</h3>
           <ResponsiveContainer width="100%" height={320}>
             <BarChart data={data.byAgent}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -243,7 +243,7 @@ export default function RagQualityDashboard() {
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead>
-                <tr className="text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+                <tr className="text-muted-foreground border-b border-border">
                   <th className="py-2 font-medium">Agent</th>
                   <th className="py-2 font-medium text-right">Samples</th>
                   {METRICS.map((m) => (
@@ -253,11 +253,11 @@ export default function RagQualityDashboard() {
               </thead>
               <tbody>
                 {data.byAgent.map((row) => (
-                  <tr key={row.agent} className="border-b border-gray-100 dark:border-gray-800">
-                    <td className="py-2 font-medium text-gray-900 dark:text-gray-100">
+                  <tr key={row.agent} className="border-b border-border dark:border-gray-800">
+                    <td className="py-2 font-medium text-foreground">
                       {row.agent.replace(/_/g, ' ')}
                     </td>
-                    <td className="py-2 text-right text-gray-600 dark:text-gray-400">{row.count}</td>
+                    <td className="py-2 text-right text-muted-foreground">{row.count}</td>
                     {METRICS.map((m) => (
                       <td key={m} className="py-2 text-right">
                         <ScoreBadge value={row[m]} />
@@ -291,7 +291,7 @@ function MetricCard({
 }) {
   const pct = value !== null ? `${(value * 100).toFixed(1)}%` : '—';
   const tone =
-    value === null ? 'text-gray-400'
+    value === null ? 'text-muted-foreground'
     : value >= 0.8 ? 'text-emerald-600 dark:text-emerald-400'
     : value >= 0.6 ? 'text-amber-600 dark:text-amber-400'
     : 'text-rose-600 dark:text-rose-400';
@@ -302,7 +302,7 @@ function MetricCard({
         <div className={`w-8 h-8 bg-gradient-to-r ${iconGradient} rounded-lg flex items-center justify-center shadow-sm`}>
           <div className="w-3 h-3 rounded-full bg-white/80" />
         </div>
-        <span className="text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-400">
+        <span className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
           {label}
         </span>
       </div>
@@ -312,7 +312,7 @@ function MetricCard({
 }
 
 function ScoreBadge({ value }: { value: number | null }) {
-  if (value === null) return <span className="text-gray-400">—</span>;
+  if (value === null) return <span className="text-muted-foreground">—</span>;
 
   const pct = (value * 100).toFixed(1);
   const cls =

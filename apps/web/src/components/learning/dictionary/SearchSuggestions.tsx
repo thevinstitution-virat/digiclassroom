@@ -123,7 +123,7 @@ export default function SearchSuggestions({
       case 'popular':
         return <TrendingUp className="h-3 w-3 text-green-500" />
       default:
-        return <Search className="h-3 w-3 text-gray-500" />
+        return <Search className="h-3 w-3 text-muted-foreground" />
     }
   }
 
@@ -148,7 +148,7 @@ export default function SearchSuggestions({
     <div className={`space-y-3 ${className}`}>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center space-x-2">
+        <h4 className="text-sm font-medium text-foreground flex items-center space-x-2">
           <Search className="h-4 w-4" />
           <span>Suggestions</span>
         </h4>
@@ -183,7 +183,7 @@ export default function SearchSuggestions({
                     {getSuggestionLabel(suggestion.type)}
                   </Badge>
                   {suggestion.count && (
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                    <span className="text-xs text-muted-foreground">
                       {suggestion.count}x
                     </span>
                   )}
@@ -196,8 +196,8 @@ export default function SearchSuggestions({
 
       {/* Quick Stats */}
       {(recentSearches.length > 0 || mostSearched.length > 0) && (
-        <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+        <div className="pt-3 border-t border-border">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span className="flex items-center space-x-1">
               <History className="h-3 w-3" />
               <span>{recentSearches.length} recent</span>

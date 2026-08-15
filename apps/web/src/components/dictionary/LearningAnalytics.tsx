@@ -170,7 +170,7 @@ export default function LearningAnalytics({ className = '' }: LearningAnalyticsP
       case 'suggestion': return 'border-l-blue-500 bg-blue-50 dark:bg-blue-900/20'
       case 'milestone': return 'border-l-green-500 bg-green-50 dark:bg-green-900/20'
       case 'warning': return 'border-l-red-500 bg-red-50 dark:bg-red-900/20'
-      default: return 'border-l-gray-500 bg-gray-50 dark:bg-gray-900/20'
+      default: return 'border-l-gray-500 bg-background/20'
     }
   }
 
@@ -211,25 +211,25 @@ export default function LearningAnalytics({ className = '' }: LearningAnalyticsP
               <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                 {stats.totalWordsLearned}
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Words Learned</div>
+              <div className="text-sm text-muted-foreground">Words Learned</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
                 {learningProgress.streakDays}
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Day Streak</div>
+              <div className="text-sm text-muted-foreground">Day Streak</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                 {cacheStats.cacheHitRate}%
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Cache Hit Rate</div>
+              <div className="text-sm text-muted-foreground">Cache Hit Rate</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                 {Math.round((learningProgress.weeklyProgress / learningProgress.weeklyGoal) * 100)}%
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Weekly Goal</div>
+              <div className="text-sm text-muted-foreground">Weekly Goal</div>
             </div>
           </div>
         </CardContent>
@@ -237,7 +237,7 @@ export default function LearningAnalytics({ className = '' }: LearningAnalyticsP
 
       {/* Learning Insights */}
       {learningInsights.length > 0 && (
-        <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50">
+        <Card className="bg-white/90 backdrop-blur-xl border-border/50">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
               <Brain className="h-5 w-5 text-orange-500" />
@@ -258,10 +258,10 @@ export default function LearningAnalytics({ className = '' }: LearningAnalyticsP
                   <div className="flex items-start space-x-3">
                     {insight.icon}
                     <div className="flex-1">
-                      <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-1">
+                      <h4 className="font-medium text-foreground mb-1">
                         {insight.title}
                       </h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      <p className="text-sm text-muted-foreground mb-2">
                         {insight.description}
                       </p>
                       {insight.action && (
@@ -289,7 +289,7 @@ export default function LearningAnalytics({ className = '' }: LearningAnalyticsP
 
         {/* Progress Tab */}
         <TabsContent value="progress" className="space-y-4">
-          <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50">
+          <Card className="bg-white/90 backdrop-blur-xl border-border/50">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <TrendingUp className="h-5 w-5 text-green-500" />
@@ -302,19 +302,19 @@ export default function LearningAnalytics({ className = '' }: LearningAnalyticsP
                 <h4 className="font-medium mb-3">Vocabulary Mastery</h4>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Learning</span>
+                    <span className="text-sm text-muted-foreground">Learning</span>
                     <span className="text-sm font-medium">{learningProgress.learningWords}</span>
                   </div>
                   <Progress value={(learningProgress.learningWords / learningProgress.totalWords) * 100} className="h-2" />
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Familiar</span>
+                    <span className="text-sm text-muted-foreground">Familiar</span>
                     <span className="text-sm font-medium">{learningProgress.familiarWords}</span>
                   </div>
                   <Progress value={(learningProgress.familiarWords / learningProgress.totalWords) * 100} className="h-2" />
                   
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Mastered</span>
+                    <span className="text-sm text-muted-foreground">Mastered</span>
                     <span className="text-sm font-medium">{learningProgress.masteredWords}</span>
                   </div>
                   <Progress value={(learningProgress.masteredWords / learningProgress.totalWords) * 100} className="h-2" />
@@ -326,7 +326,7 @@ export default function LearningAnalytics({ className = '' }: LearningAnalyticsP
                 <h4 className="font-medium mb-3">Recent Activity</h4>
                 <div className="space-y-2">
                   {favoriteStats.recentlyAdded.slice(0, 5).map((word, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <div key={index} className="flex items-center justify-between p-2 bg-muted/40 rounded-lg">
                       <div className="flex items-center space-x-2">
                         <BookOpen className="h-4 w-4 text-blue-500" />
                         <span className="font-medium">{word.word}</span>
@@ -334,7 +334,7 @@ export default function LearningAnalytics({ className = '' }: LearningAnalyticsP
                           {word.masteryLevel}
                         </Badge>
                       </div>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-muted-foreground">
                         {new Date(word.addedAt).toLocaleDateString()}
                       </span>
                     </div>
@@ -347,7 +347,7 @@ export default function LearningAnalytics({ className = '' }: LearningAnalyticsP
 
         {/* Patterns Tab */}
         <TabsContent value="patterns" className="space-y-4">
-          <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50">
+          <Card className="bg-white/90 backdrop-blur-xl border-border/50">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Activity className="h-5 w-5 text-blue-500" />
@@ -406,7 +406,7 @@ export default function LearningAnalytics({ className = '' }: LearningAnalyticsP
 
         {/* Performance Tab */}
         <TabsContent value="performance" className="space-y-4">
-          <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50">
+          <Card className="bg-white/90 backdrop-blur-xl border-border/50">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Zap className="h-5 w-5 text-yellow-500" />
@@ -419,21 +419,21 @@ export default function LearningAnalytics({ className = '' }: LearningAnalyticsP
                   <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400 mb-2">
                     {cacheStats.totalSearchHistory}
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Total Searches</div>
+                  <div className="text-sm text-muted-foreground">Total Searches</div>
                 </div>
                 
                 <div className="text-center p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg">
                   <div className="text-3xl font-bold text-green-600 dark:text-green-400 mb-2">
                     {learningProgress.totalReviews}
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Total Reviews</div>
+                  <div className="text-sm text-muted-foreground">Total Reviews</div>
                 </div>
                 
                 <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg">
                   <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-2">
                     {Math.round(learningProgress.averageAccuracy)}%
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Accuracy Rate</div>
+                  <div className="text-sm text-muted-foreground">Accuracy Rate</div>
                 </div>
               </div>
             </CardContent>
@@ -442,7 +442,7 @@ export default function LearningAnalytics({ className = '' }: LearningAnalyticsP
 
         {/* Goals Tab */}
         <TabsContent value="goals" className="space-y-4">
-          <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50">
+          <Card className="bg-white/90 backdrop-blur-xl border-border/50">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Target className="h-5 w-5 text-purple-500" />
@@ -454,7 +454,7 @@ export default function LearningAnalytics({ className = '' }: LearningAnalyticsP
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-medium">Weekly Goal Progress</span>
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="text-sm text-muted-foreground">
                     {learningProgress.weeklyProgress} / {learningProgress.weeklyGoal} words
                   </span>
                 </div>
@@ -462,7 +462,7 @@ export default function LearningAnalytics({ className = '' }: LearningAnalyticsP
                   value={(learningProgress.weeklyProgress / learningProgress.weeklyGoal) * 100} 
                   className="h-3"
                 />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <div className="flex justify-between text-xs text-muted-foreground mt-1">
                   <span>0</span>
                   <span>{learningProgress.weeklyGoal} words</span>
                 </div>
@@ -472,11 +472,11 @@ export default function LearningAnalytics({ className = '' }: LearningAnalyticsP
               <div>
                 <h4 className="font-medium mb-3">Suggested Goals</h4>
                 <div className="space-y-3">
-                  <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div className="p-3 border border-border rounded-lg">
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="font-medium">Master 5 more words</span>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-muted-foreground">
                           Review your familiar words to reach mastery
                         </p>
                       </div>
@@ -484,11 +484,11 @@ export default function LearningAnalytics({ className = '' }: LearningAnalyticsP
                     </div>
                   </div>
                   
-                  <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  <div className="p-3 border border-border rounded-lg">
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="font-medium">Maintain 14-day streak</span>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-muted-foreground">
                           Double your current streak for consistent learning
                         </p>
                       </div>

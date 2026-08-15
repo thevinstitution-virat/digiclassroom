@@ -133,18 +133,18 @@ export default function BulkActions({
       {showRoleModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
+            <h3 className="text-lg font-medium text-foreground mb-4">
               Change Role for {selectedUsers.length} Users
             </h3>
             
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Select New Role
               </label>
               <select
                 value={selectedRole}
                 onChange={(e) => setSelectedRole(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select a role...</option>
                 {USER_ROLES.map(role => (
@@ -158,7 +158,7 @@ export default function BulkActions({
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowRoleModal(false)}
-                className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded hover:bg-gray-50"
+                className="px-4 py-2 text-sm text-foreground border border-input rounded hover:bg-muted/50"
               >
                 Cancel
               </button>
@@ -178,18 +178,18 @@ export default function BulkActions({
       {showStatusModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
+            <h3 className="text-lg font-medium text-foreground mb-4">
               Change Status for {selectedUsers.length} Users
             </h3>
             
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Select New Status
               </label>
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">Select a status...</option>
                 {USER_STATUSES.map(status => (
@@ -203,7 +203,7 @@ export default function BulkActions({
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowStatusModal(false)}
-                className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded hover:bg-gray-50"
+                className="px-4 py-2 text-sm text-foreground border border-input rounded hover:bg-muted/50"
               >
                 Cancel
               </button>
@@ -223,12 +223,12 @@ export default function BulkActions({
       {showEmailModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-lg">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
+            <h3 className="text-lg font-medium text-foreground mb-4">
               Send Email to {selectedUsers.length} Users
             </h3>
             
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Message
               </label>
               <textarea
@@ -236,14 +236,14 @@ export default function BulkActions({
                 onChange={(e) => setEmailMessage(e.target.value)}
                 rows={4}
                 placeholder="Enter your message..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
             
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowEmailModal(false)}
-                className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded hover:bg-gray-50"
+                className="px-4 py-2 text-sm text-foreground border border-input rounded hover:bg-muted/50"
               >
                 Cancel
               </button>
@@ -263,11 +263,11 @@ export default function BulkActions({
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
+            <h3 className="text-lg font-medium text-foreground mb-4">
               Delete {selectedUsers.length} Users
             </h3>
             
-            <p className="text-sm text-gray-600 mb-6">
+            <p className="text-sm text-muted-foreground mb-6">
               Are you sure you want to delete {selectedUsers.length} user{selectedUsers.length !== 1 ? 's' : ''}? 
               This action cannot be undone.
             </p>
@@ -275,7 +275,7 @@ export default function BulkActions({
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 text-sm text-gray-700 border border-gray-300 rounded hover:bg-gray-50"
+                className="px-4 py-2 text-sm text-foreground border border-input rounded hover:bg-muted/50"
               >
                 Cancel
               </button>

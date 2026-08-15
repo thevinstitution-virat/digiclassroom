@@ -90,7 +90,7 @@ export default function MenuDashboard({ userRole = 'student' }: MenuDashboardPro
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-gray-600 dark:text-gray-400 text-lg"
+            className="text-muted-foreground text-lg"
           >
             Choose your learning path and explore educational tools
           </motion.p>
@@ -123,7 +123,7 @@ export default function MenuDashboard({ userRole = 'student' }: MenuDashboardPro
                       <item.icon className="h-6 w-6 text-white" />
                     </div>
                     <div className="flex-1">
-                      <CardTitle className="text-xl font-bold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 transition-colors">
+                      <CardTitle className="text-xl font-bold text-foreground group-hover:text-blue-600 transition-colors">
                         {item.title}
                       </CardTitle>
                     </div>
@@ -131,7 +131,7 @@ export default function MenuDashboard({ userRole = 'student' }: MenuDashboardPro
                 </CardHeader>
                 
                 <CardContent className="pt-0">
-                  <p className="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
+                  <p className="text-muted-foreground mb-6 leading-relaxed">
                     {item.description}
                   </p>
                   
@@ -187,10 +187,10 @@ export default function MenuDashboard({ userRole = 'student' }: MenuDashboardPro
         >
           <Card className="bg-white/60 backdrop-blur-sm border-0 shadow-lg">
             <CardContent className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              <h3 className="text-lg font-semibold text-foreground mb-2">
                 Need Help Getting Started?
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
+              <p className="text-muted-foreground mb-4">
                 Our AI Tutor is ready to guide you through your learning journey
               </p>
               <Button 

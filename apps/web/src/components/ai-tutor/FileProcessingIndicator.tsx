@@ -67,7 +67,7 @@ export function FileProcessingIndicator({
       case 'error':
         return 'border-red-200 bg-red-50/50'
       default:
-        return 'border-gray-200 bg-gray-50/50'
+        return 'border-border bg-muted/30'
     }
   }
 
@@ -140,7 +140,7 @@ export function FileProcessingIndicator({
               {/* Header */}
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center space-x-2">
-                  <h4 className="text-sm font-medium text-gray-900 truncate">
+                  <h4 className="text-sm font-medium text-foreground truncate">
                     {file.file.name}
                   </h4>
                   {getStatusIcon()}
@@ -156,7 +156,7 @@ export function FileProcessingIndicator({
               </div>
 
               {/* File Details */}
-              <div className="flex items-center space-x-4 text-xs text-gray-500 mb-2">
+              <div className="flex items-center space-x-4 text-xs text-muted-foreground mb-2">
                 <span>{formatFileSize(file.file.size)}</span>
                 <span>{file.file.type}</span>
                 {file.result?.confidence && (
@@ -169,9 +169,9 @@ export function FileProcessingIndicator({
               {/* Status and Progress */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-700">{getStatusText()}</span>
+                  <span className="text-sm text-foreground">{getStatusText()}</span>
                   {file.status === 'processing' && (
-                    <span className="text-xs text-gray-500">{file.progress}%</span>
+                    <span className="text-xs text-muted-foreground">{file.progress}%</span>
                   )}
                 </div>
 
@@ -194,7 +194,7 @@ export function FileProcessingIndicator({
                 {file.status === 'completed' && file.result?.text && (
                   <div className="mt-3 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">
+                      <span className="text-sm font-medium text-foreground">
                         Extracted Text:
                       </span>
                       <div className="flex items-center space-x-1">
@@ -219,7 +219,7 @@ export function FileProcessingIndicator({
                       </div>
                     </div>
 
-                    <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-md p-3">
+                    <div className="bg-white/80 backdrop-blur-sm border border-border rounded-md p-3">
                       <AnimatePresence mode="wait">
                         {showFullText ? (
                           <motion.div
@@ -227,7 +227,7 @@ export function FileProcessingIndicator({
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            className="text-sm text-gray-700 whitespace-pre-wrap max-h-40 overflow-y-auto"
+                            className="text-sm text-foreground whitespace-pre-wrap max-h-40 overflow-y-auto"
                           >
                             {file.result.text}
                           </motion.div>
@@ -237,7 +237,7 @@ export function FileProcessingIndicator({
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="text-sm text-gray-700"
+                            className="text-sm text-foreground"
                           >
                             {truncateText(file.result.text)}
                           </motion.div>

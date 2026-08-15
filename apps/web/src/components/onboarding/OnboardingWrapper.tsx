@@ -89,10 +89,10 @@ export default function OnboardingWrapper({ children }: { children: React.ReactN
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+            <div className="min-h-screen flex items-center justify-center bg-background">
                 <div className="flex flex-col items-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                    <p className="text-gray-500 font-medium">Checking profile details...</p>
+                    <p className="text-muted-foreground font-medium">Checking profile details...</p>
                 </div>
             </div>
         )

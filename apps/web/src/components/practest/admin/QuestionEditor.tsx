@@ -272,7 +272,7 @@ export default function QuestionEditor({ question, onSaved, onCancel, onError }:
     <div className="space-y-6">
       <div className="prose dark:prose-invert max-w-none">
         <h3>Question Preview</h3>
-        <div className="p-4 border rounded-lg bg-gray-50 dark:bg-gray-800">
+        <div className="p-4 border rounded-lg bg-muted/40">
           <p className="text-lg">{formData.question_text}</p>
           {formData.question_image_url && (
             <img src={formData.question_image_url} alt="Question" className="mt-4 max-w-full h-auto" />
@@ -394,7 +394,7 @@ export default function QuestionEditor({ question, onSaved, onCancel, onError }:
                     <Input type="number" value={formData.casa_page} onChange={(e) => handleInputChange('casa_page', e.target.value)} placeholder="e.g. 142" />
                   </div>
                   <div className="md:col-span-4">
-                    <Label>Source anchor <span className="text-xs text-gray-400">(NCERT corpus chunk id — edition-resilient)</span></Label>
+                    <Label>Source anchor <span className="text-xs text-muted-foreground">(NCERT corpus chunk id — edition-resilient)</span></Label>
                     <Input value={formData.casa_anchor} onChange={(e) => handleInputChange('casa_anchor', e.target.value)} placeholder="qdrant point id / stable locator" />
                   </div>
                 </div>
@@ -412,7 +412,7 @@ export default function QuestionEditor({ question, onSaved, onCancel, onError }:
                       )}
                     </div>
                     {casaResult?.matched && (
-                      <div className="mt-2 rounded-lg border border-gray-100 bg-gray-50 p-3 text-xs text-gray-600 dark:border-white/5 dark:bg-white/5 dark:text-gray-300">
+                      <div className="mt-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground dark:border-white/5 dark:bg-white/5 dark:text-muted-foreground/60">
                         <span className="font-semibold">Matched source</span>
                         {casaResult.matched.page ? ` · p.${casaResult.matched.page}` : ''}
                         {casaResult.matched.chapter ? ` · ${casaResult.matched.chapter}` : ''}:
@@ -421,7 +421,7 @@ export default function QuestionEditor({ question, onSaved, onCancel, onError }:
                     )}
                   </div>
                 ) : (
-                  <p className="mt-3 text-xs text-gray-400">Save the question first, then verify its citation against the NCERT corpus.</p>
+                  <p className="mt-3 text-xs text-muted-foreground">Save the question first, then verify its citation against the NCERT corpus.</p>
                 )}
               </CardContent>
             </Card>

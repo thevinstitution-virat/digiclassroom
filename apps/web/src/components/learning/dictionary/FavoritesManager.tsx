@@ -74,7 +74,7 @@ export default function FavoritesManager({ className = '' }: FavoritesManagerPro
       case 'learning': return 'bg-yellow-100 text-yellow-800 border-yellow-300'
       case 'familiar': return 'bg-blue-100 text-blue-800 border-blue-300'
       case 'mastered': return 'bg-green-100 text-green-800 border-green-300'
-      default: return 'bg-gray-100 text-gray-800 border-gray-300'
+      default: return 'bg-muted text-foreground border-input'
     }
   }
 
@@ -129,7 +129,7 @@ export default function FavoritesManager({ className = '' }: FavoritesManagerPro
 
   if (isLoading) {
     return (
-      <Card className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50 ${className}`}>
+      <Card className={`bg-white/80 backdrop-blur-xl border-border/50 ${className}`}>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Heart className="h-5 w-5 animate-pulse text-red-500" />
@@ -138,9 +138,9 @@ export default function FavoritesManager({ className = '' }: FavoritesManagerPro
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-3/4" />
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/2" />
+            <div className="h-4 bg-muted rounded animate-pulse" />
+            <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
+            <div className="h-4 bg-muted rounded animate-pulse w-1/2" />
           </div>
         </CardContent>
       </Card>
@@ -168,25 +168,25 @@ export default function FavoritesManager({ className = '' }: FavoritesManagerPro
               <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
                 {learningProgress.totalWords}
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Total Words</div>
+              <div className="text-sm text-muted-foreground">Total Words</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                 {learningProgress.masteredWords}
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Mastered</div>
+              <div className="text-sm text-muted-foreground">Mastered</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                 {learningProgress.streakDays}
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Day Streak</div>
+              <div className="text-sm text-muted-foreground">Day Streak</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                 {learningProgress.weeklyProgress}/{learningProgress.weeklyGoal}
               </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Weekly Goal</div>
+              <div className="text-sm text-muted-foreground">Weekly Goal</div>
             </div>
           </div>
 
@@ -194,7 +194,7 @@ export default function FavoritesManager({ className = '' }: FavoritesManagerPro
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Weekly Progress</span>
-              <span className="text-sm text-gray-600 dark:text-gray-400">
+              <span className="text-sm text-muted-foreground">
                 {Math.round((learningProgress.weeklyProgress / learningProgress.weeklyGoal) * 100)}%
               </span>
             </div>
@@ -207,7 +207,7 @@ export default function FavoritesManager({ className = '' }: FavoritesManagerPro
       </Card>
 
       {/* Favorites Management */}
-      <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50">
+      <Card className="bg-white/90 backdrop-blur-xl border-border/50">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
@@ -251,11 +251,11 @@ export default function FavoritesManager({ className = '' }: FavoritesManagerPro
         <CardContent>
           {favoriteWords.length === 0 ? (
             <div className="text-center py-8">
-              <Heart className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+              <Heart className="h-12 w-12 text-muted-foreground/60 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">
                 No favorite words yet
               </h3>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-muted-foreground">
                 Start adding words to your favorites to track your learning progress
               </p>
             </div>
@@ -274,11 +274,11 @@ export default function FavoritesManager({ className = '' }: FavoritesManagerPro
 
                 {allTags.length > 0 && (
                   <div className="flex items-center space-x-2">
-                    <Tag className="h-4 w-4 text-gray-500" />
+                    <Tag className="h-4 w-4 text-muted-foreground" />
                     <select
                       value={filterTag}
                       onChange={(e) => setFilterTag(e.target.value)}
-                      className="text-sm border border-gray-300 rounded px-2 py-1 bg-white dark:bg-gray-700 dark:border-gray-600"
+                      className="text-sm border border-input rounded px-2 py-1 bg-white"
                     >
                       <option value="">All Tags</option>
                       {allTags.map(tag => (
@@ -292,12 +292,12 @@ export default function FavoritesManager({ className = '' }: FavoritesManagerPro
               {/* Words List */}
               <div className="space-y-4">
                 {getFilteredWords().map((word) => (
-                  <Card key={word.id} className="border-gray-200/50 dark:border-gray-700/50">
+                  <Card key={word.id} className="border-border/50">
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-3 mb-2">
-                            <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                            <h4 className="text-lg font-bold text-foreground">
                               {word.word}
                             </h4>
                             <Badge className={getMasteryColor(word.masteryLevel)}>
@@ -324,7 +324,7 @@ export default function FavoritesManager({ className = '' }: FavoritesManagerPro
                           <p className="text-lg font-semibold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent mb-2">
                             {word.hindiTranslation}
                           </p>
-                          <p className="text-gray-600 dark:text-gray-400 mb-3">
+                          <p className="text-muted-foreground mb-3">
                             {word.englishDefinition}
                           </p>
 
@@ -362,7 +362,7 @@ export default function FavoritesManager({ className = '' }: FavoritesManagerPro
                           )}
 
                           {/* Stats */}
-                          <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400">
+                          <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                             <span className="flex items-center space-x-1">
                               <Calendar className="h-3 w-3" />
                               <span>Added {new Date(word.addedAt).toLocaleDateString()}</span>
@@ -415,7 +415,7 @@ export default function FavoritesManager({ className = '' }: FavoritesManagerPro
                       </div>
 
                       {/* Add Tag Input */}
-                      <div className="flex items-center space-x-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center space-x-2 mt-3 pt-3 border-t border-border">
                         <Input
                           placeholder="Add tag..."
                           value={newTag}

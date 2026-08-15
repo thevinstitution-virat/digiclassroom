@@ -47,7 +47,7 @@ export function LengthSelector({ value, onChange, disabled = false, className }:
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="start" sideOffset={8} className="w-72 p-1.5">
-        <DropdownMenuLabel className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+        <DropdownMenuLabel className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Answer length
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -69,11 +69,11 @@ export function LengthSelector({ value, onChange, disabled = false, className }:
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-medium text-gray-900">{tier.label}</span>
-                  <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">{tier.marks}</span>
+                  <span className="text-sm font-medium text-foreground">{tier.label}</span>
+                  <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">{tier.marks}</span>
                   {isActive && <Check className="h-3.5 w-3.5 text-blue-600" />}
                 </div>
-                <p className="truncate text-xs text-gray-500">{tier.wordRange} · {tier.hint}</p>
+                <p className="truncate text-xs text-muted-foreground">{tier.wordRange} · {tier.hint}</p>
               </div>
             </DropdownMenuItem>
           )

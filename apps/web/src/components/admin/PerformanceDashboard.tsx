@@ -119,7 +119,7 @@ export default function PerformanceDashboard() {
       case 'critical':
         return 'bg-red-500'
       default:
-        return 'bg-gray-500'
+        return 'bg-muted/400'
     }
   }
 

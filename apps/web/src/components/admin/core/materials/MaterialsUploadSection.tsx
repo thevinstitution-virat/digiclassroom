@@ -388,19 +388,19 @@ export default function MaterialsUploadSection({ onUploadComplete }: MaterialsUp
             className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
               isDragActive 
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-                : 'border-gray-300 dark:border-gray-600 hover:border-blue-400'
+                : 'border-input hover:border-blue-400'
             }`}
           >
             <input {...getInputProps()} />
-            <CloudArrowUpIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <CloudArrowUpIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             {isDragActive ? (
               <p className="text-blue-600 dark:text-blue-400">Drop the files here...</p>
             ) : (
               <div>
-                <p className="text-gray-600 dark:text-gray-400 mb-2">
+                <p className="text-muted-foreground mb-2">
                   Drag and drop PDF files here, or click to select files
                 </p>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Maximum file size: 50MB per file
                 </p>
               </div>
@@ -442,7 +442,7 @@ export default function MaterialsUploadSection({ onUploadComplete }: MaterialsUp
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">Upload Progress</span>
-                  <span className="text-sm text-gray-500">{Math.round(uploadProgress)}%</span>
+                  <span className="text-sm text-muted-foreground">{Math.round(uploadProgress)}%</span>
                 </div>
                 <Progress value={uploadProgress} className="w-full" />
               </div>
@@ -488,7 +488,7 @@ function FileUploadItem({ file, materialTypes, subjects, studyMaterialTypes, onU
       case 'uploading':
         return <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600" />
       default:
-        return <DocumentTextIcon className="h-5 w-5 text-gray-400" />
+        return <DocumentTextIcon className="h-5 w-5 text-muted-foreground" />
     }
   }
 
@@ -499,7 +499,7 @@ function FileUploadItem({ file, materialTypes, subjects, studyMaterialTypes, onU
           {getStatusIcon()}
           <div>
             <p className="font-medium text-sm">{file.name}</p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               {(file.size / 1024 / 1024).toFixed(1)} MB
             </p>
           </div>

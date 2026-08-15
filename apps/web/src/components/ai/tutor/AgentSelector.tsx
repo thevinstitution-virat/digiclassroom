@@ -226,7 +226,7 @@ export function AgentSelector({ value, onChange, disabled = false, className, dr
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="start" sideOffset={8} className="w-72 p-1.5">
-        <DropdownMenuLabel className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+        <DropdownMenuLabel className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Switch tutor
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -249,10 +249,10 @@ export function AgentSelector({ value, onChange, disabled = false, className, dr
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-medium text-gray-900">{agent.title}</span>
+                  <span className="text-sm font-medium text-foreground">{agent.title}</span>
                   {isActive && <Check className="h-3.5 w-3.5 text-blue-600" />}
                 </div>
-                <p className="truncate text-xs text-gray-500">{agent.description}</p>
+                <p className="truncate text-xs text-muted-foreground">{agent.description}</p>
               </div>
             </DropdownMenuItem>
           )

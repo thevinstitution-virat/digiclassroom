@@ -278,7 +278,7 @@ export default function FlashBharat() {
           <CardContent className="pt-6">
             <AcademicCapIcon className="h-16 w-16 mx-auto mb-4 text-blue-600" />
             <h3 className="text-xl font-semibold mb-2">Ready to Review?</h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-muted-foreground mb-4">
               Test your knowledge with culturally-relevant flashcards
             </p>
             <Button onClick={startReview} size="lg" className="bg-blue-600 hover:bg-blue-700">
@@ -468,7 +468,7 @@ export default function FlashBharat() {
           <CardContent className="p-4 text-center">
             <TrophyIcon className="h-8 w-8 mx-auto mb-2 text-yellow-600" />
             <div className="text-2xl font-bold">#{userStats.rank}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Your Rank</div>
+            <div className="text-sm text-muted-foreground">Your Rank</div>
           </CardContent>
         </Card>
         
@@ -476,7 +476,7 @@ export default function FlashBharat() {
           <CardContent className="p-4 text-center">
             <StarIcon className="h-8 w-8 mx-auto mb-2 text-blue-600" />
             <div className="text-2xl font-bold">{userStats.totalPoints}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Total Points</div>
+            <div className="text-sm text-muted-foreground">Total Points</div>
           </CardContent>
         </Card>
         
@@ -484,7 +484,7 @@ export default function FlashBharat() {
           <CardContent className="p-4 text-center">
             <FireIcon className="h-8 w-8 mx-auto mb-2 text-orange-600" />
             <div className="text-2xl font-bold">{userStats.currentStreak}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Current Streak</div>
+            <div className="text-sm text-muted-foreground">Current Streak</div>
           </CardContent>
         </Card>
         
@@ -492,7 +492,7 @@ export default function FlashBharat() {
           <CardContent className="p-4 text-center">
             <UsersIcon className="h-8 w-8 mx-auto mb-2 text-green-600" />
             <div className="text-2xl font-bold">{userStats.battlesWon}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Battles Won</div>
+            <div className="text-sm text-muted-foreground">Battles Won</div>
           </CardContent>
         </Card>
       </div>
@@ -511,14 +511,14 @@ export default function FlashBharat() {
                   <span className="text-2xl">{entry.badge}</span>
                   <div>
                     <div className="font-medium">#{entry.rank} {entry.name}</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <div className="text-sm text-muted-foreground">
                       {entry.streak} day streak
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="font-bold text-blue-600">{entry.points}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">points</div>
+                  <div className="text-sm text-muted-foreground">points</div>
                 </div>
               </div>
             ))}
@@ -535,12 +535,12 @@ export default function FlashBharat() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {achievements.map((achievement) => (
-              <div key={achievement.id} className={`p-4 border rounded-lg ${achievement.unlocked ? 'bg-yellow-50 border-yellow-300' : 'bg-gray-50 border-gray-300'}`}>
+              <div key={achievement.id} className={`p-4 border rounded-lg ${achievement.unlocked ? 'bg-yellow-50 border-yellow-300' : 'bg-muted/40 border-input'}`}>
                 <div className="flex items-center space-x-3 mb-2">
                   <span className="text-2xl">{achievement.icon}</span>
                   <div>
                     <div className="font-medium">{achievement.name}</div>
-                    <div className="text-sm text-gray-600">{achievement.description}</div>
+                    <div className="text-sm text-muted-foreground">{achievement.description}</div>
                   </div>
                 </div>
                 <div className="space-y-1">

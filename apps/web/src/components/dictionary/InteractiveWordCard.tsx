@@ -91,7 +91,7 @@ export default function InteractiveWordCard({
       case 'easy': return 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/20 dark:text-green-300'
       case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/20 dark:text-yellow-300'
       case 'hard': return 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/20 dark:text-red-300'
-      default: return 'bg-gray-100 text-gray-800 border-gray-300 dark:bg-gray-900/20 dark:text-gray-300'
+      default: return 'bg-muted text-foreground border-input/20 dark:text-muted-foreground/60'
     }
   }
 
@@ -171,7 +171,7 @@ export default function InteractiveWordCard({
   }
 
   return (
-    <Card className={`group hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50 ${className}`}>
+    <Card className={`group hover:shadow-lg transition-all duration-300 transform hover:scale-[1.02] bg-white/90 backdrop-blur-xl border-border/50 ${className}`}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -230,7 +230,7 @@ export default function InteractiveWordCard({
                 variant="ghost"
                 size="sm"
                 onClick={handleFavoriteToggle}
-                className={`h-8 w-8 p-0 ${isWordFavorite ? 'text-red-500 hover:text-red-600' : 'text-gray-400 hover:text-red-500'}`}
+                className={`h-8 w-8 p-0 ${isWordFavorite ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground hover:text-red-500'}`}
               >
                 <Heart className={`h-4 w-4 ${isWordFavorite ? 'fill-current' : ''}`} />
               </Button>
@@ -239,7 +239,7 @@ export default function InteractiveWordCard({
                 variant="ghost"
                 size="sm"
                 onClick={handleCopy}
-                className="h-8 w-8 p-0 text-gray-400 hover:text-blue-500"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-blue-500"
               >
                 {copied ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
               </Button>
@@ -248,7 +248,7 @@ export default function InteractiveWordCard({
                 variant="ghost"
                 size="sm"
                 onClick={handleShare}
-                className="h-8 w-8 p-0 text-gray-400 hover:text-green-500"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-green-500"
               >
                 {shared ? <CheckCircle className="h-4 w-4 text-green-500" /> : <Share2 className="h-4 w-4" />}
               </Button>
@@ -258,7 +258,7 @@ export default function InteractiveWordCard({
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsExpanded(!isExpanded)}
-                  className="h-8 w-8 p-0 text-gray-400 hover:text-gray-600"
+                  className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                 >
                   {isExpanded ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                 </Button>
@@ -274,13 +274,13 @@ export default function InteractiveWordCard({
           <div className="mb-4">
             <div className="flex items-center space-x-2 mb-2">
               <Globe className="h-4 w-4 text-orange-500" />
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Hindi Translation</span>
+              <span className="text-sm font-medium text-muted-foreground">Hindi Translation</span>
             </div>
             <p className="text-xl font-semibold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
               {wordData.hindiTranslation}
             </p>
             {wordData.devanagariScript && (
-              <p className="text-lg text-gray-600 dark:text-gray-400 mt-1">
+              <p className="text-lg text-muted-foreground mt-1">
                 {wordData.devanagariScript}
               </p>
             )}
@@ -291,16 +291,16 @@ export default function InteractiveWordCard({
         <div className="mb-4">
           <div className="flex items-center space-x-2 mb-2">
             <BookOpen className="h-4 w-4 text-blue-500" />
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Definition</span>
+            <span className="text-sm font-medium text-muted-foreground">Definition</span>
           </div>
-          <p className="text-gray-900 dark:text-gray-100 leading-relaxed">
+          <p className="text-foreground leading-relaxed">
             {wordData.englishDefinition}
           </p>
         </div>
 
         {/* Expanded Content */}
         {isExpanded && (
-          <div className="space-y-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+          <div className="space-y-4 border-t border-border pt-4">
             {/* Word Statistics */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {wordData.frequencyRank && (
@@ -308,20 +308,20 @@ export default function InteractiveWordCard({
                   <div className="text-lg font-bold text-purple-600 dark:text-purple-400">
                     #{wordData.frequencyRank}
                   </div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">Frequency Rank</div>
+                  <div className="text-xs text-muted-foreground">Frequency Rank</div>
                 </div>
               )}
               <div className="text-center">
                 <div className="text-lg font-bold text-green-600 dark:text-green-400">
                   {wordData.word.length}
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">Letters</div>
+                <div className="text-xs text-muted-foreground">Letters</div>
               </div>
               <div className="text-center">
                 <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
                   {wordData.word.split('').filter(c => 'aeiouAEIOU'.includes(c)).length}
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-400">Vowels</div>
+                <div className="text-xs text-muted-foreground">Vowels</div>
               </div>
             </div>
 
@@ -329,7 +329,7 @@ export default function InteractiveWordCard({
             <div className="space-y-3">
               {/* Rating */}
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                <span className="text-sm font-medium text-muted-foreground">
                   Was this helpful?
                 </span>
                 <div className="flex items-center space-x-2">

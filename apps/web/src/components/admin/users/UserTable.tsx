@@ -62,7 +62,7 @@ export default function UserTable({
 
   const SortIcon = ({ field }: { field: string }) => {
     if (sortField !== field) {
-      return <span className="text-gray-400">↕️</span>
+      return <span className="text-muted-foreground">↕️</span>
     }
     return <span>{sortDirection === 'asc' ? '↑' : '↓'}</span>
   }
@@ -71,9 +71,9 @@ export default function UserTable({
     return (
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <div className="animate-pulse">
-          <div className="h-12 bg-gray-200"></div>
+          <div className="h-12 bg-muted"></div>
           {[1, 2, 3, 4, 5].map(i => (
-            <div key={i} className="h-16 bg-gray-100 border-t"></div>
+            <div key={i} className="h-16 bg-muted border-t"></div>
           ))}
         </div>
       </div>
@@ -83,22 +83,22 @@ export default function UserTable({
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted/40">
             <tr>
               <th className="px-6 py-3 text-left">
                 <input
                   type="checkbox"
                   checked={selectedUsers.length === users.length && users.length > 0}
                   onChange={(e) => handleSelectAll(e.target.checked)}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="rounded border-input text-blue-600 focus:ring-blue-500"
                 />
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 User
               </th>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted"
                 onClick={() => handleSort('email')}
               >
                 <div className="flex items-center gap-1">
@@ -106,21 +106,21 @@ export default function UserTable({
                 </div>
               </th>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted"
                 onClick={() => handleSort('role')}
               >
                 <div className="flex items-center gap-1">
                   Role <SortIcon field="role" />
                 </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Institution
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Status
               </th>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted"
                 onClick={() => handleSort('createdAt')}
               >
                 <div className="flex items-center gap-1">
@@ -128,27 +128,27 @@ export default function UserTable({
                 </div>
               </th>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted"
                 onClick={() => handleSort('lastSignInAt')}
               >
                 <div className="flex items-center gap-1">
                   Last Login <SortIcon field="lastSignInAt" />
                 </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white divide-y divide-border">
             {users.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-50">
+              <tr key={user.id} className="hover:bg-muted/50">
                 <td className="px-6 py-4">
                   <input
                     type="checkbox"
                     checked={selectedUsers.includes(user.id)}
                     onChange={(e) => handleSelectUser(user.id, e.target.checked)}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-input text-blue-600 focus:ring-blue-500"
                   />
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -164,24 +164,24 @@ export default function UserTable({
                         />
                       ) : (
                         <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                          <span className="text-sm font-medium text-gray-700">
+                          <span className="text-sm font-medium text-foreground">
                             {getUserDisplayName(user).charAt(0).toUpperCase()}
                           </span>
                         </div>
                       )}
                     </div>
                     <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-foreground">
                         {getUserDisplayName(user)}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-muted-foreground">
                         ID: {user.id.slice(0, 8)}...
                       </div>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{user.email}</div>
+                  <div className="text-sm text-foreground">{user.email}</div>
                   {user.emailVerified ? (
                     <div className="text-xs text-green-600">✓ Verified</div>
                   ) : (
@@ -193,18 +193,18 @@ export default function UserTable({
                     {getUserRoleLabel(user.role)}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                  {user.institution ?? <span className="text-gray-400">—</span>}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                  {user.institution ?? <span className="text-muted-foreground">—</span>}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getUserStatusColor(user.status)}`}>
                     {user.status.charAt(0).toUpperCase() + user.status.slice(1)}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                   {formatDate(user.createdAt)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                   {formatDate(user.lastSignInAt)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -234,7 +234,7 @@ export default function UserTable({
       
       {users.length === 0 && (
         <div className="text-center py-12">
-          <div className="text-gray-500">
+          <div className="text-muted-foreground">
             <div className="text-4xl mb-4">👥</div>
             <h3 className="text-lg font-medium">No users found</h3>
             <p className="text-sm">Try adjusting your search or filters</p>
