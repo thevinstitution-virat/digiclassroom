@@ -44,25 +44,25 @@ export default function SanchikaGraphPage() {
 
   return (
     <div className="flex flex-col h-screen">
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card">
         <button
           onClick={() => router.push('/dashboard/user/sanchika')}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+          className="p-2 rounded-lg hover:bg-muted dark:hover:bg-muted"
           aria-label="Back to notes"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <Network className="h-5 w-5 text-purple-600" />
-        <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">Knowledge Graph</h1>
-        <span className="text-sm text-gray-500">{data.nodes.length} notes · {data.links.length} links</span>
+        <Network className="h-5 w-5 text-primary" />
+        <h1 className="text-lg font-bold text-foreground">Knowledge Graph</h1>
+        <span className="text-sm text-muted-foreground">{data.nodes.length} notes · {data.links.length} links</span>
       </div>
 
-      <div ref={wrapRef} className="flex-1 relative bg-gray-50 dark:bg-gray-950 overflow-hidden">
+      <div ref={wrapRef} className="flex-1 relative bg-muted/40 overflow-hidden">
         {loading ? (
-          <div className="absolute inset-0 flex items-center justify-center text-gray-500">Loading graph…</div>
+          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">Loading graph…</div>
         ) : data.nodes.length === 0 ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500 gap-2">
-            <Network className="h-10 w-10 text-gray-300" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground gap-2">
+            <Network className="h-10 w-10 text-muted-foreground/60" />
             <p>No notes yet — create some and connect them with [[wiki links]].</p>
           </div>
         ) : (

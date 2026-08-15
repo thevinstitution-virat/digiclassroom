@@ -151,12 +151,12 @@ export default function MaterialsPage() {
 
   const getTypeColor = (type: string) => {
     const colors = {
-      notes: 'bg-blue-50 text-blue-600',
+      notes: 'bg-primary/10 text-primary',
       summaries: 'bg-green-50 text-green-600',
-      mind_maps: 'bg-purple-50 text-purple-600',
+      mind_maps: 'bg-primary/10 text-primary',
       quizzes: 'bg-orange-50 text-orange-600',
-      textbooks: 'bg-indigo-50 text-indigo-600',
-      reference: 'bg-gray-50 text-gray-600'
+      textbooks: 'bg-primary/10 text-primary',
+      reference: 'bg-muted/40 text-muted-foreground'
     }
     return colors[type as keyof typeof colors] || colors.reference
   }

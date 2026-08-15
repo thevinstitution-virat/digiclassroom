@@ -191,7 +191,7 @@ export default function AITutorPage() {
                                 <div className="prose prose-sm max-w-none">
                                   <div className="whitespace-pre-wrap">{message.content}</div>
                                   {message.agentType && (
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center">
+                                    <div className="text-xs text-muted-foreground mt-2 flex items-center">
                                       <Bot className="h-3 w-3 mr-1" />
                                       Agent System Response: {formatContextHeader(message.agentType)}
                                     </div>
@@ -250,11 +250,11 @@ export default function AITutorPage() {
 
                               {/* REMOVED: Detailed sources section - too long and annoying for users */}
                               {false && message.sources && message.sources.length > 0 && (
-                                <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                                <div className="mt-4 p-4 bg-muted/40 rounded-xl border border-border overflow-hidden">
                                   <div className="flex items-center justify-between mb-3">
                                     <div className="flex items-center">
-                                      <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-2" />
-                                      <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Sources & References</h4>
+                                      <BookOpen className="h-5 w-5 text-primary mr-2" />
+                                      <h4 className="text-sm font-semibold text-foreground">Sources & References</h4>
                                     </div>
                                     {message.metadata && (
                                       <Badge variant="outline" className="text-xs">
@@ -264,37 +264,37 @@ export default function AITutorPage() {
                                   </div>
                                   <div className="space-y-3 overflow-hidden">
                                     {message.sources.map((source, index) => (
-                                      <div key={source.id} className={`p-3 rounded-lg border transition-colors hover:border-blue-300 overflow-hidden ${source.display_format === 'student_friendly' ? 'bg-blue-50/90 border-blue-200' :
+                                      <div key={source.id} className={`p-3 rounded-lg border transition-colors hover:border-primary/40 overflow-hidden ${source.display_format === 'student_friendly' ? 'bg-primary/10 border-primary/30' :
                                         source.display_format === 'academic' ? 'bg-green-50/90 border-green-200' :
-                                          source.display_format === 'accessible' ? 'bg-purple-50/90 border-purple-200' :
-                                            'bg-white border-gray-200'
+                                          source.display_format === 'accessible' ? 'bg-primary/10 border-primary/30' :
+                                            'bg-card border-border'
                                         }`}>
                                         <div className="flex items-start gap-2">
                                           <Badge className="shrink-0 mt-0.5 text-xs">{index + 1}</Badge>
                                           <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1">
-                                              <h5 className="font-medium text-gray-900 dark:text-gray-100 text-sm">{source.title}</h5>
+                                              <h5 className="font-medium text-foreground text-sm">{source.title}</h5>
                                               {source.trust_indicator && (
                                                 <span className="text-base" title={source.trust_indicator.description}>
                                                   {source.trust_indicator.visual}
                                                 </span>
                                               )}
                                             </div>
-                                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                                            <p className="text-xs text-muted-foreground mb-2">
                                               <span className="font-medium">{source.chapter}</span>
                                               {source.page !== 'Unknown Page' && (
                                                 <span> • Page {source.page}</span>
                                               )}
                                               <span> • {source.subject} {source.class}</span>
                                             </p>
-                                            <p className="text-sm text-gray-700 dark:text-gray-300 italic line-clamp-2 break-words overflow-hidden">
+                                            <p className="text-sm text-foreground italic line-clamp-2 break-words overflow-hidden">
                                               "{source.content_preview}"
                                             </p>
 
                                             {/* Role-specific explanation */}
                                             {source.role_explanation && (
-                                              <div className="mt-2 p-2 bg-white/60 dark:bg-gray-700/60 rounded text-gray-700 dark:text-gray-300">
-                                                <div className="font-medium text-xs text-gray-600 dark:text-gray-400 mb-1">
+                                              <div className="mt-2 p-2 bg-white/60 rounded text-foreground">
+                                                <div className="font-medium text-xs text-muted-foreground mb-1">
                                                   {source.display_format === 'student_friendly' ? '📚 For Students:' :
                                                     source.display_format === 'academic' ? '👩‍🏫 For Teachers:' :
                                                       '👨‍👩‍👧‍👦 For Parents:'}
@@ -305,7 +305,7 @@ export default function AITutorPage() {
 
                                             {/* Trust indicator explanation */}
                                             {source.trust_indicator && (
-                                              <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
+                                              <div className="mt-2 text-xs text-muted-foreground">
                                                 <span className="font-medium">Reliability:</span> {source.trust_indicator.userFriendlyExplanation}
                                               </div>
                                             )}
@@ -344,7 +344,7 @@ export default function AITutorPage() {
                                     ))}
                                   </div>
                                   {message.metadata && message.metadata.search_time && (
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center">
+                                    <div className="text-xs text-muted-foreground mt-2 flex items-center">
                                       <Zap className="h-3 w-3 mr-1" />
                                       Search completed in {message.metadata.search_time}ms using {message.metadata.search_strategies?.join(', ') || 'enhanced search'}
                                     </div>
@@ -500,7 +500,7 @@ export default function AITutorPage() {
 
                               {/* Feedback Widget - Show for all assistant messages that have an ID */}
                               {message.role === 'assistant' && message.id && message.id !== 'initial_greeting' && (
-                                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                                <div className="mt-4 pt-4 border-t border-border">
                                   <FeedbackWidget 
                                     messageId={message.id}
                                     sessionId={sessionId}
