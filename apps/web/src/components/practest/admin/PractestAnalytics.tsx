@@ -110,7 +110,7 @@ export default function PractestAnalytics() {
                 <DocumentTextIcon className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Total Tests</p>
+                <p className="text-sm text-muted-foreground">Total Tests</p>
                 <p className="text-2xl font-bold">{analyticsData.overview.totalTests.toLocaleString()}</p>
                 <div className="flex items-center gap-1 mt-1">
                   <TrendingUpIcon className="h-3 w-3 text-green-600" />
@@ -128,7 +128,7 @@ export default function PractestAnalytics() {
                 <UsersIcon className="h-5 w-5 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Active Users</p>
+                <p className="text-sm text-muted-foreground">Active Users</p>
                 <p className="text-2xl font-bold">{analyticsData.overview.activeUsers.toLocaleString()}</p>
                 <div className="flex items-center gap-1 mt-1">
                   <TrendingUpIcon className="h-3 w-3 text-green-600" />
@@ -146,7 +146,7 @@ export default function PractestAnalytics() {
                 <ChartBarIcon className="h-5 w-5 text-purple-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Avg Score</p>
+                <p className="text-sm text-muted-foreground">Avg Score</p>
                 <p className="text-2xl font-bold">{analyticsData.overview.averageScore}%</p>
                 <div className="flex items-center gap-1 mt-1">
                   <TrendingUpIcon className="h-3 w-3 text-green-600" />
@@ -164,7 +164,7 @@ export default function PractestAnalytics() {
                 <CheckCircleIcon className="h-5 w-5 text-orange-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Completion Rate</p>
+                <p className="text-sm text-muted-foreground">Completion Rate</p>
                 <p className="text-2xl font-bold">{analyticsData.overview.testCompletionRate}%</p>
                 <div className="flex items-center gap-1 mt-1">
                   <TrendingDownIcon className="h-3 w-3 text-red-600" />
@@ -182,7 +182,7 @@ export default function PractestAnalytics() {
                 <ClockIcon className="h-5 w-5 text-yellow-600" />
               </div>
               <div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">Avg Response</p>
+                <p className="text-sm text-muted-foreground">Avg Response</p>
                 <p className="text-2xl font-bold">{analyticsData.systemMetrics.apiResponseTime}ms</p>
                 <div className="flex items-center gap-1 mt-1">
                   <TrendingDownIcon className="h-3 w-3 text-green-600" />
@@ -229,7 +229,7 @@ export default function PractestAnalytics() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-muted-foreground">
                           {question.usageCount} uses
                         </p>
                       </div>
@@ -237,7 +237,7 @@ export default function PractestAnalytics() {
                     
                     <div className="grid grid-cols-3 gap-4">
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Correct Rate</p>
+                        <p className="text-sm text-muted-foreground">Correct Rate</p>
                         <div className="flex items-center gap-2">
                           <Progress value={question.correctRate} className="flex-1 h-2" />
                           <span className="text-sm font-medium">{question.correctRate.toFixed(1)}%</span>
@@ -245,12 +245,12 @@ export default function PractestAnalytics() {
                       </div>
                       
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Avg Time</p>
+                        <p className="text-sm text-muted-foreground">Avg Time</p>
                         <p className="font-medium">{Math.floor(question.averageTime / 60)}:{(question.averageTime % 60).toString().padStart(2, '0')}</p>
                       </div>
                       
                       <div>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Discrimination</p>
+                        <p className="text-sm text-muted-foreground">Discrimination</p>
                         <div className="flex items-center gap-2">
                           <Progress value={question.discriminationIndex * 100} className="flex-1 h-2" />
                           <span className="text-sm font-medium">{question.discriminationIndex.toFixed(2)}</span>
@@ -281,7 +281,7 @@ export default function PractestAnalytics() {
                         </div>
                         <div>
                           <p className="font-medium">{performer.userName}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                          <p className="text-sm text-muted-foreground">
                             {performer.testsCompleted} tests completed
                           </p>
                         </div>
@@ -307,7 +307,7 @@ export default function PractestAnalytics() {
                       <div className="flex justify-between items-center">
                         <span className="font-medium">Class {classData.class}</span>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                          <span className="text-sm text-muted-foreground">
                             {classData.testsCompleted} tests
                           </span>
                           <Badge variant="outline">
@@ -417,13 +417,13 @@ export default function PractestAnalytics() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-64 flex items-center justify-center border-2 border-dashed border-gray-300 rounded-lg">
+              <div className="h-64 flex items-center justify-center border-2 border-dashed border-input rounded-lg">
                 <div className="text-center">
-                  <ChartBarIcon className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <ChartBarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground">
                     Interactive charts and trend analysis will be implemented here
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">
+                  <p className="text-sm text-muted-foreground dark:text-muted-foreground mt-1">
                     Using libraries like Chart.js or Recharts
                   </p>
                 </div>

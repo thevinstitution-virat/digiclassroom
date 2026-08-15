@@ -125,7 +125,7 @@ export default function QualityMetricsDashboard() {
   if (loading && !data) {
     return (
       <div className="flex items-center justify-center h-96">
-        <div className="text-lg text-gray-600 dark:text-gray-400">Loading metrics...</div>
+        <div className="text-lg text-muted-foreground">Loading metrics...</div>
       </div>
     )
   }
@@ -171,7 +171,7 @@ export default function QualityMetricsDashboard() {
   return 'text-yellow-600 dark:text-yellow-400'
       return 'text-red-600 dark:text-red-400'
     }
-    return 'text-gray-600 dark:text-gray-400'
+    return 'text-muted-foreground'
   }
 
   // Performance breakdown chart data
@@ -226,10 +226,10 @@ export default function QualityMetricsDashboard() {
   }
 
   return (
-    <div className="space-y-6 p-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div className="space-y-6 p-6 bg-background min-h-screen">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-3xl font-bold text-foreground">
           Quality Metrics Dashboard
         </h1>
         
@@ -238,7 +238,7 @@ export default function QualityMetricsDashboard() {
           <select
             value={timeWindow}
             onChange={(e) => setTimeWindow(e.target.value)}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            className="px-4 py-2 border border-input rounded-lg bg-card text-foreground"
           >
             <option value="1h">Last Hour</option>
             <option value="24h">Last 24 Hours</option>
@@ -254,7 +254,7 @@ export default function QualityMetricsDashboard() {
               onChange={(e) => setAutoRefresh(e.target.checked)}
               className="w-4 h-4"
             />
-            <span className="text-sm text-gray-700 dark:text-gray-300">Auto-refresh (60s)</span>
+            <span className="text-sm text-foreground">Auto-refresh (60s)</span>
           </label>
         </div>
       </div>
@@ -262,64 +262,64 @@ export default function QualityMetricsDashboard() {
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric Card: Avg User Rating */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Avg User Rating</div>
+        <div className="bg-card p-6 rounded-lg shadow">
+          <div className="text-sm text-muted-foreground mb-2">Avg User Rating</div>
           <div className={`text-3xl font-bold ${getStatusColor(data.metrics.avgUserRating, 'avgUserRating')}`}>
             {data.metrics.avgUserRating} / 5.0
           </div>
         </div>
 
         {/* Metric Card: Avg Faithfulness */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Avg Faithfulness</div>
+        <div className="bg-card p-6 rounded-lg shadow">
+          <div className="text-sm text-muted-foreground mb-2">Avg Faithfulness</div>
           <div className={`text-3xl font-bold ${getStatusColor(data.metrics.avgFaithfulness, 'avgFaithfulness')}`}>
             {data.metrics.avgFaithfulness}
           </div>
         </div>
 
         {/* Metric Card: Avg Relevance */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Avg Relevance</div>
+        <div className="bg-card p-6 rounded-lg shadow">
+          <div className="text-sm text-muted-foreground mb-2">Avg Relevance</div>
           <div className={`text-3xl font-bold ${getStatusColor(data.metrics.avgRelevance, 'avgRelevance')}`}>
             {data.metrics.avgRelevance}
           </div>
         </div>
 
         {/* Metric Card: Avg Response Time */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Avg Response Time</div>
+        <div className="bg-card p-6 rounded-lg shadow">
+          <div className="text-sm text-muted-foreground mb-2">Avg Response Time</div>
           <div className={`text-3xl font-bold ${getStatusColor(data.metrics.avgResponseTime, 'avgResponseTime')}`}>
             {data.metrics.avgResponseTime}ms
           </div>
         </div>
 
         {/* Metric Card: Total Answers */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Answers</div>
-          <div className="text-3xl font-bold text-gray-900 dark:text-white">
+        <div className="bg-card p-6 rounded-lg shadow">
+          <div className="text-sm text-muted-foreground mb-2">Total Answers</div>
+          <div className="text-3xl font-bold text-foreground">
             {data.metrics.totalAnswers}
           </div>
         </div>
 
         {/* Metric Card: Cache Hit Rate */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Cache Hit Rate</div>
+        <div className="bg-card p-6 rounded-lg shadow">
+          <div className="text-sm text-muted-foreground mb-2">Cache Hit Rate</div>
           <div className={`text-3xl font-bold ${getStatusColor(data.metrics.cacheHitRate, 'cacheHitRate')}`}>
             {(data.metrics.cacheHitRate * 100).toFixed(1)}%
           </div>
         </div>
 
         {/* Metric Card: Active Alerts */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Active Alerts</div>
+        <div className="bg-card p-6 rounded-lg shadow">
+          <div className="text-sm text-muted-foreground mb-2">Active Alerts</div>
           <div className={`text-3xl font-bold ${data.metrics.alertCount > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
             {data.metrics.alertCount}
           </div>
         </div>
 
         {/* Metric Card: Satisfaction Rate */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Satisfaction Rate</div>
+        <div className="bg-card p-6 rounded-lg shadow">
+          <div className="text-sm text-muted-foreground mb-2">Satisfaction Rate</div>
           <div className={`text-3xl font-bold ${getStatusColor(data.metrics.satisfactionRate, 'satisfactionRate')}`}>
             {(data.metrics.satisfactionRate * 100).toFixed(1)}%
           </div>
@@ -329,16 +329,16 @@ export default function QualityMetricsDashboard() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Performance Breakdown Chart */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+        <div className="bg-card p-6 rounded-lg shadow">
+          <h2 className="text-xl font-bold text-foreground mb-4">
             Performance Breakdown
           </h2>
           <Bar data={performanceChartData} options={{ responsive: true, maintainAspectRatio: true }} />
         </div>
 
         {/* Trend Chart */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+        <div className="bg-card p-6 rounded-lg shadow">
+          <h2 className="text-xl font-bold text-foreground mb-4">
             Quality Trends
           </h2>
           <Line data={trendChartData} options={{ responsive: true, maintainAspectRatio: true }} />
@@ -347,8 +347,8 @@ export default function QualityMetricsDashboard() {
 
       {/* Active Alerts Panel */}
       {data.alerts.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+        <div className="bg-card p-6 rounded-lg shadow">
+          <h2 className="text-xl font-bold text-foreground mb-4">
             Active Alerts ({data.alerts.length})
           </h2>
           <div className="space-y-2">
@@ -363,14 +363,14 @@ export default function QualityMetricsDashboard() {
               >
                 <div className="flex justify-between items-start">
                   <div>
-                    <div className="font-semibold text-gray-900 dark:text-white">
+                    <div className="font-semibold text-foreground">
                       {alert.type.replace(/_/g, ' ').toUpperCase()}
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    <div className="text-sm text-muted-foreground mt-1">
                       {alert.message}
                     </div>
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-500">
+                  <div className="text-xs text-muted-foreground dark:text-muted-foreground">
                     {new Date(alert.createdAt).toLocaleString()}
                   </div>
                 </div>

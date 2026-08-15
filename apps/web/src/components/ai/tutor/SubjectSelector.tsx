@@ -87,7 +87,7 @@ export function SubjectSelector({ value, options, onChange, disabled = false, cl
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="start" sideOffset={8} className="max-h-80 w-60 overflow-y-auto p-1.5">
-        <DropdownMenuLabel className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+        <DropdownMenuLabel className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Switch subject
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -108,7 +108,7 @@ export function SubjectSelector({ value, options, onChange, disabled = false, cl
               <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
                 <SubjectIcon className="h-3.5 w-3.5" />
               </span>
-              <span className="flex-1 truncate text-sm font-medium text-gray-900">{prettySubject(subject)}</span>
+              <span className="flex-1 truncate text-sm font-medium text-foreground">{prettySubject(subject)}</span>
               {isActive && <Check className="h-3.5 w-3.5 flex-shrink-0 text-blue-600" />}
             </DropdownMenuItem>
           )

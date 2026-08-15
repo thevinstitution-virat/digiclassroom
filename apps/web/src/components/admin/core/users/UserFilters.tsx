@@ -48,8 +48,8 @@ export default function UserFilters({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-medium text-gray-900">User Filters</h3>
-          <p className="text-sm text-gray-500">
+          <h3 className="text-lg font-medium text-foreground">User Filters</h3>
+          <p className="text-sm text-muted-foreground">
             Showing {filteredUsers} of {totalUsers} users
           </p>
         </div>
@@ -75,7 +75,7 @@ export default function UserFilters({
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
         {/* Search */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-foreground mb-1">
             Search Users
           </label>
           <div className="relative">
@@ -84,23 +84,23 @@ export default function UserFilters({
               placeholder="Search by name, email, or ID..."
               value={filters.search}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 pl-10 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <span className="text-gray-400">🔍</span>
+              <span className="text-muted-foreground">🔍</span>
             </div>
           </div>
         </div>
 
         {/* Role Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-foreground mb-1">
             Role
           </label>
           <select
             value={filters.role}
             onChange={(e) => handleRoleChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Roles</option>
             {USER_ROLES.map(role => (
@@ -113,13 +113,13 @@ export default function UserFilters({
 
         {/* Status Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-foreground mb-1">
             Status
           </label>
           <select
             value={filters.status}
             onChange={(e) => handleStatusChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Statuses</option>
             {USER_STATUSES.map(status => (
@@ -132,14 +132,14 @@ export default function UserFilters({
 
         {/* Sort */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-foreground mb-1">
             Sort By
           </label>
           <div className="flex space-x-2">
             <select
               value={filters.sortBy}
               onChange={(e) => handleSortChange(e.target.value, filters.sortOrder)}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="createdAt">Registration Date</option>
               <option value="name">Name</option>
@@ -149,7 +149,7 @@ export default function UserFilters({
             </select>
             <button
               onClick={() => handleSortChange(filters.sortBy, filters.sortOrder === 'asc' ? 'desc' : 'asc')}
-              className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 border border-input rounded-md hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-blue-500"
               title={`Sort ${filters.sortOrder === 'asc' ? 'Descending' : 'Ascending'}`}
             >
               {filters.sortOrder === 'asc' ? '↑' : '↓'}
@@ -161,11 +161,11 @@ export default function UserFilters({
       {/* Advanced Filters */}
       {showAdvanced && (
         <div className="border-t pt-4">
-          <h4 className="text-sm font-medium text-gray-900 mb-3">Advanced Filters</h4>
+          <h4 className="text-sm font-medium text-foreground mb-3">Advanced Filters</h4>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Date Range */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Registration Date From
               </label>
               <input
@@ -177,12 +177,12 @@ export default function UserFilters({
                     from: e.target.value ? new Date(e.target.value) : null
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Registration Date To
               </label>
               <input
@@ -194,17 +194,17 @@ export default function UserFilters({
                     to: e.target.value ? new Date(e.target.value) : null
                   }
                 })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
 
             {/* Email Verification Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Email Status
               </label>
               <select
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">All</option>
                 <option value="verified">Verified</option>
@@ -219,7 +219,7 @@ export default function UserFilters({
       {hasActiveFilters && (
         <div className="mt-4 pt-4 border-t">
           <div className="flex items-center space-x-2 flex-wrap">
-            <span className="text-sm font-medium text-gray-700">Active filters:</span>
+            <span className="text-sm font-medium text-foreground">Active filters:</span>
             
             {filters.search && (
               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">

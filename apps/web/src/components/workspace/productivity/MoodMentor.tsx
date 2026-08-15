@@ -54,7 +54,7 @@ export default function MoodMentor() {
   const moodOptions = [
     { value: 'excellent', label: 'Excellent', emoji: '😄', color: 'text-green-600' },
     { value: 'good', label: 'Good', emoji: '😊', color: 'text-blue-600' },
-    { value: 'neutral', label: 'Neutral', emoji: '😐', color: 'text-gray-600' },
+    { value: 'neutral', label: 'Neutral', emoji: '😐', color: 'text-muted-foreground' },
     { value: 'stressed', label: 'Stressed', emoji: '😰', color: 'text-orange-600' },
     { value: 'overwhelmed', label: 'Overwhelmed', emoji: '😵', color: 'text-red-600' }
   ]
@@ -224,7 +224,7 @@ export default function MoodMentor() {
                   className={`p-3 text-center border rounded-lg transition-all ${
                     currentMood === option.value 
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-950' 
-                      : 'border-gray-200 hover:border-gray-300'
+                      : 'border-border hover:border-border'
                   }`}
                 >
                   <div className="text-2xl mb-1">{option.emoji}</div>
@@ -286,7 +286,7 @@ export default function MoodMentor() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Mood Trend */}
-            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-background rounded-lg">
               <span className="font-medium">Mood Trend:</span>
               <Badge variant={getMoodTrend() === 'improving' ? 'default' : getMoodTrend() === 'declining' ? 'destructive' : 'secondary'}>
                 {getMoodTrend() === 'improving' ? '📈 Improving' : 
@@ -306,7 +306,7 @@ export default function MoodMentor() {
                       <span className="text-lg">{moodOption?.emoji}</span>
                       <span className="text-sm">{entry.date.toLocaleDateString()}</span>
                     </div>
-                    <div className="text-xs text-gray-600 dark:text-gray-400">
+                    <div className="text-xs text-muted-foreground">
                       E:{entry.energy} M:{entry.motivation}
                     </div>
                   </div>
@@ -315,7 +315,7 @@ export default function MoodMentor() {
             </div>
 
             {moodHistory.length === 0 && (
-              <div className="text-center text-gray-500 py-4">
+              <div className="text-center text-muted-foreground py-4">
                 No mood data yet. Start by checking in your mood above!
               </div>
             )}
@@ -367,7 +367,7 @@ export default function MoodMentor() {
           {/* Chat Messages */}
           <div className="h-64 overflow-y-auto border rounded-lg p-4 space-y-3">
             {chatMessages.length === 0 ? (
-              <div className="text-center text-gray-500">
+              <div className="text-center text-muted-foreground">
                 <SparklesIcon className="h-8 w-8 mx-auto mb-2" />
                 <p>Start a conversation with your AI study coach!</p>
                 <p className="text-sm">Ask about study strategies, motivation, or share your concerns.</p>
@@ -378,7 +378,7 @@ export default function MoodMentor() {
                   <div className={`max-w-xs p-3 rounded-lg ${
                     message.isUser 
                       ? 'bg-blue-600 text-white' 
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100'
+                      : 'bg-muted text-foreground'
                   }`}>
                     <p className="text-sm">{message.text}</p>
                     <p className="text-xs opacity-70 mt-1">

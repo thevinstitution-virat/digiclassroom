@@ -497,7 +497,7 @@ export default function CurricuTimer({
             <div className="text-center">
               <ClockIcon className="h-12 w-12 mx-auto mb-4 text-blue-600 animate-spin" />
               <h3 className="text-lg font-semibold mb-2">Loading Your Personalized Schedule...</h3>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-muted-foreground">
                 Analyzing {selectedBoard} Grade {selectedGrade} {selectedSubject} curriculum
               </p>
             </div>
@@ -644,7 +644,7 @@ export default function CurricuTimer({
                 </Badge>
               </div>
 
-              <div className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="text-sm text-muted-foreground">
                 <strong>Chapter:</strong> {schedule.chapter?.title}
               </div>
 
@@ -698,7 +698,7 @@ export default function CurricuTimer({
                 <Badge variant="outline" className="text-lg px-4 py-2">
                   {currentSession.topic}
                 </Badge>
-                <div className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="text-sm text-muted-foreground">
                   {currentSession.subject} • Grade {currentSession.grade} • {currentSession.board}
                 </div>
                 <div className="flex justify-center space-x-4 text-sm">
@@ -725,7 +725,7 @@ export default function CurricuTimer({
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="8"
-                  className="text-gray-200 dark:text-gray-700"
+                  className="text-gray-200 dark:text-foreground"
                 />
                 <circle
                   cx="100"
@@ -744,16 +744,16 @@ export default function CurricuTimer({
               </svg>
 
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <div className="text-4xl font-mono font-bold text-gray-900 dark:text-gray-100">
+                <div className="text-4xl font-mono font-bold text-foreground">
                   {formatTime(timeLeft)}
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                <div className="text-sm text-muted-foreground mt-1">
                   {isPaused ? 'Paused' :
                    isRunning ? (isIdle ? 'Idle' : 'Active') :
                    'Ready'}
                 </div>
                 {isRunning && (
-                  <div className="text-xs text-gray-500 mt-1">
+                  <div className="text-xs text-muted-foreground mt-1">
                     {Math.round(progress)}% complete
                   </div>
                 )}
@@ -769,7 +769,7 @@ export default function CurricuTimer({
                     {engagementStatus.icon} {engagementStatus.level}
                   </span>
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-muted-foreground">
                   Score: {getCurrentEngagementScore()}/100
                 </div>
               </div>
@@ -803,7 +803,7 @@ export default function CurricuTimer({
 
             {/* Session Info */}
             {schedule && !isRunning && (
-              <div className="text-sm text-gray-600 dark:text-gray-400">
+              <div className="text-sm text-muted-foreground">
                 Next session: {schedule.sessionDuration} minutes on {schedule.topic}
               </div>
             )}
@@ -817,7 +817,7 @@ export default function CurricuTimer({
           <CardContent className="p-4 text-center">
             <TrophyIcon className="h-8 w-8 mx-auto mb-2 text-yellow-600" />
             <div className="text-2xl font-bold">{stats.sessionsCompleted}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Sessions Completed</div>
+            <div className="text-sm text-muted-foreground">Sessions Completed</div>
           </CardContent>
         </Card>
 
@@ -825,7 +825,7 @@ export default function CurricuTimer({
           <CardContent className="p-4 text-center">
             <ClockIcon className="h-8 w-8 mx-auto mb-2 text-blue-600" />
             <div className="text-2xl font-bold">{Math.round(stats.totalFocusTime / 60)}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Total Hours</div>
+            <div className="text-sm text-muted-foreground">Total Hours</div>
           </CardContent>
         </Card>
 
@@ -833,7 +833,7 @@ export default function CurricuTimer({
           <CardContent className="p-4 text-center">
             <FireIcon className="h-8 w-8 mx-auto mb-2 text-orange-600" />
             <div className="text-2xl font-bold">{stats.currentStreak}</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Current Streak</div>
+            <div className="text-sm text-muted-foreground">Current Streak</div>
           </CardContent>
         </Card>
 
@@ -841,7 +841,7 @@ export default function CurricuTimer({
           <CardContent className="p-4 text-center">
             <ChartBarIcon className="h-8 w-8 mx-auto mb-2 text-green-600" />
             <div className="text-2xl font-bold">{stats.averageEngagement}%</div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Avg Engagement</div>
+            <div className="text-sm text-muted-foreground">Avg Engagement</div>
           </CardContent>
         </Card>
       </div>
@@ -861,28 +861,28 @@ export default function CurricuTimer({
                 <div className="text-lg font-bold text-green-600">
                   {Math.round(metrics.activeTime / 1000)}s
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Active Time</div>
+                <div className="text-sm text-muted-foreground">Active Time</div>
               </div>
 
               <div className="text-center">
                 <div className="text-lg font-bold text-yellow-600">
                   {Math.round(metrics.idleTime / 1000)}s
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Idle Time</div>
+                <div className="text-sm text-muted-foreground">Idle Time</div>
               </div>
 
               <div className="text-center">
                 <div className="text-lg font-bold text-blue-600">
                   {metrics.interactions}
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Interactions</div>
+                <div className="text-sm text-muted-foreground">Interactions</div>
               </div>
 
               <div className="text-center">
                 <div className="text-lg font-bold text-purple-600">
                   {metrics.focusEvents}
                 </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">Focus Events</div>
+                <div className="text-sm text-muted-foreground">Focus Events</div>
               </div>
             </div>
 

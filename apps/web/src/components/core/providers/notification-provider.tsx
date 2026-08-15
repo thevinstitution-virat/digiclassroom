@@ -91,17 +91,17 @@ function NotificationItem({ notification, onRemove }: NotificationItemProps) {
         </div>
         
         <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
+          <h4 className="text-sm font-medium text-foreground">
             {title}
           </h4>
-          <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+          <p className="mt-1 text-sm text-muted-foreground">
             {message}
           </p>
         </div>
         
         <button
           onClick={onRemove}
-          className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+          className="flex-shrink-0 p-1 text-muted-foreground hover:text-foreground dark:hover:text-gray-200 transition-colors"
         >
           <XMarkIcon className="w-4 h-4" />
         </button>

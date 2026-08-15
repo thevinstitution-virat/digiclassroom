@@ -587,7 +587,7 @@ export default function OfflineOrbit() {
             <div className="text-center">
               <CircleStackIcon className="h-12 w-12 mx-auto mb-4 text-indigo-600 animate-pulse" />
               <h3 className="text-lg font-semibold mb-2">Initializing OfflineOrbit...</h3>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-muted-foreground">
                 Setting up offline capabilities and service workers
               </p>
             </div>
@@ -644,14 +644,14 @@ export default function OfflineOrbit() {
               <connectionStatus.icon className={`h-8 w-8 ${connectionStatus.color}`} />
               <div>
                 <h3 className="text-lg font-semibold">{connectionStatus.text}</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-muted-foreground">
                   {syncStatus.isOnline
                     ? 'Auto-sync enabled - your data is being backed up automatically'
                     : 'Working offline - all features available, will sync when connection returns'
                   }
                 </p>
                 {connectionInfo && (
-                  <div className="text-xs text-gray-500 mt-1">
+                  <div className="text-xs text-muted-foreground mt-1">
                     {connectionInfo.downlink && `${connectionInfo.downlink} Mbps`}
                     {connectionInfo.rtt && ` • ${connectionInfo.rtt}ms latency`}
                     {connectionInfo.saveData && ' • Data Saver Mode'}
@@ -693,7 +693,7 @@ export default function OfflineOrbit() {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span>Last Sync:</span>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-sm text-muted-foreground">
                   {formatLastSync(syncStatus.lastSyncTime)}
                 </span>
               </div>
@@ -744,7 +744,7 @@ export default function OfflineOrbit() {
                   {syncRecommendations.map((rec, index) => (
                     <li key={index} className="flex items-start space-x-2">
                       <span className="text-blue-600 mt-0.5">•</span>
-                      <span className="text-gray-600 dark:text-gray-400">{rec}</span>
+                      <span className="text-muted-foreground">{rec}</span>
                     </li>
                   ))}
                 </ul>
@@ -769,7 +769,7 @@ export default function OfflineOrbit() {
               </div>
               <Progress value={storageUsage.percentage} className="h-2" />
 
-              <div className="flex justify-between text-xs text-gray-500">
+              <div className="flex justify-between text-xs text-muted-foreground">
                 <span>Available: {storageUsage.available} MB</span>
                 <span>{storageUsage.percentage}% used</span>
               </div>
@@ -846,39 +846,39 @@ export default function OfflineOrbit() {
             <div className="text-center p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
               <BookOpenIcon className="h-8 w-8 mx-auto mb-2 text-blue-600" />
               <div className="text-2xl font-bold">{offlineData.flashcards}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Flashcards</div>
+              <div className="text-sm text-muted-foreground">Flashcards</div>
             </div>
 
             <div className="text-center p-4 bg-green-50 dark:bg-green-950 rounded-lg border border-green-200 dark:border-green-800">
               <ClockIcon className="h-8 w-8 mx-auto mb-2 text-green-600" />
               <div className="text-2xl font-bold">{offlineData.studySessions}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Study Sessions</div>
+              <div className="text-sm text-muted-foreground">Study Sessions</div>
             </div>
 
             <div className="text-center p-4 bg-purple-50 dark:bg-purple-950 rounded-lg border border-purple-200 dark:border-purple-800">
               <DocumentArrowDownIcon className="h-8 w-8 mx-auto mb-2 text-purple-600" />
               <div className="text-2xl font-bold">{offlineData.dictionaryWords}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Dictionary Words</div>
+              <div className="text-sm text-muted-foreground">Dictionary Words</div>
             </div>
 
             <div className="text-center p-4 bg-orange-50 dark:bg-orange-950 rounded-lg border border-orange-200 dark:border-orange-800">
               <ArrowUpTrayIcon className="h-8 w-8 mx-auto mb-2 text-orange-600" />
               <div className="text-2xl font-bold">{syncStatus.pendingItems}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Pending Sync</div>
+              <div className="text-sm text-muted-foreground">Pending Sync</div>
             </div>
           </div>
 
           {/* Data Size Information */}
-          <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+          <div className="mt-6 p-4 bg-background rounded-lg">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Total Offline Data Size:</span>
-              <span className="text-sm text-gray-600 dark:text-gray-400">
+              <span className="text-sm text-muted-foreground">
                 {Math.round(offlineData.totalSize / 1024)} KB
               </span>
             </div>
             <div className="flex items-center justify-between mt-2">
               <span className="text-sm font-medium">Last Updated:</span>
-              <span className="text-sm text-gray-600 dark:text-gray-400">
+              <span className="text-sm text-muted-foreground">
                 {formatLastSync(offlineData.lastSync)}
               </span>
             </div>
@@ -1068,7 +1068,7 @@ export default function OfflineOrbit() {
           </div>
 
           {/* Connection Quality Indicator */}
-          <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+          <div className="mt-6 p-4 bg-background rounded-lg">
             <div className="flex items-center justify-between">
               <span className="font-medium">Current Connection Quality:</span>
               <div className="flex items-center space-x-2">
@@ -1091,7 +1091,7 @@ export default function OfflineOrbit() {
             </div>
 
             {connectionInfo && (
-              <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              <div className="mt-2 text-sm text-muted-foreground">
                 Speed: {connectionInfo.downlink ? `${connectionInfo.downlink} Mbps` : 'Unknown'} •
                 Latency: {connectionInfo.rtt ? `${connectionInfo.rtt}ms` : 'Unknown'}
               </div>

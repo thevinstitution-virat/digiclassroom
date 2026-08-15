@@ -141,7 +141,7 @@ export default function AdvancedSearchFilters({
         <Button
           variant="outline"
           onClick={onToggleVisibility}
-          className="flex items-center space-x-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50 hover:bg-gradient-to-r hover:from-orange-50 hover:to-blue-50 dark:hover:from-orange-900/20 dark:hover:to-blue-900/20"
+          className="flex items-center space-x-2 bg-white/80 backdrop-blur-xl border-border/50 hover:bg-gradient-to-r hover:from-orange-50 hover:to-blue-50 dark:hover:from-orange-900/20 dark:hover:to-blue-900/20"
         >
           <Filter className="h-4 w-4" />
           <span>Advanced Filters</span>
@@ -153,7 +153,7 @@ export default function AdvancedSearchFilters({
         </Button>
 
         {resultCount > 0 && (
-          <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="text-sm text-muted-foreground">
             {resultCount} result{resultCount !== 1 ? 's' : ''} found
           </div>
         )}
@@ -161,7 +161,7 @@ export default function AdvancedSearchFilters({
 
       {/* Advanced Filters Panel */}
       {isVisible && (
-        <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50 mb-6">
+        <Card className="bg-white/90 backdrop-blur-xl border-border/50 mb-6">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -178,7 +178,7 @@ export default function AdvancedSearchFilters({
                   variant="outline"
                   size="sm"
                   onClick={handleReset}
-                  className="text-gray-600 hover:text-gray-800"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   <X className="h-4 w-4 mr-1" />
                   Reset
@@ -187,7 +187,7 @@ export default function AdvancedSearchFilters({
                   variant="ghost"
                   size="sm"
                   onClick={onToggleVisibility}
-                  className="text-gray-600 hover:text-gray-800"
+                  className="text-muted-foreground hover:text-foreground"
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -197,18 +197,18 @@ export default function AdvancedSearchFilters({
           <CardContent className="space-y-6">
             {/* Sorting Options */}
             <div className="space-y-3">
-              <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center space-x-2">
+              <h4 className="font-medium text-foreground flex items-center space-x-2">
                 <SortAsc className="h-4 w-4" />
                 <span>Sort Results</span>
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">Sort By</label>
+                  <label className="text-sm text-muted-foreground mb-2 block">Sort By</label>
                   <Select
                     value={localFilters.sortBy}
                     onValueChange={(value) => updateFilter('sortBy', value)}
                   >
-                    <SelectTrigger className="bg-gray-50/80 dark:bg-gray-700/80">
+                    <SelectTrigger className="bg-muted/40">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -224,12 +224,12 @@ export default function AdvancedSearchFilters({
                   </Select>
                 </div>
                 <div>
-                  <label className="text-sm text-gray-600 dark:text-gray-400 mb-2 block">Order</label>
+                  <label className="text-sm text-muted-foreground mb-2 block">Order</label>
                   <Select
                     value={localFilters.sortOrder}
                     onValueChange={(value) => updateFilter('sortOrder', value)}
                   >
-                    <SelectTrigger className="bg-gray-50/80 dark:bg-gray-700/80">
+                    <SelectTrigger className="bg-muted/40">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -253,7 +253,7 @@ export default function AdvancedSearchFilters({
 
             {/* Part of Speech Filter */}
             <div className="space-y-3">
-              <h4 className="font-medium text-gray-900 dark:text-gray-100 flex items-center space-x-2">
+              <h4 className="font-medium text-foreground flex items-center space-x-2">
                 <BookOpen className="h-4 w-4" />
                 <span>Part of Speech</span>
               </h4>
@@ -279,7 +279,7 @@ export default function AdvancedSearchFilters({
 
             {/* Difficulty Level Filter */}
             <div className="space-y-3">
-              <h4 className="font-medium text-gray-900 dark:text-gray-100">Difficulty Level</h4>
+              <h4 className="font-medium text-foreground">Difficulty Level</h4>
               <div className="flex flex-wrap gap-2">
                 {difficultyOptions.map(option => (
                   <Button
@@ -301,7 +301,7 @@ export default function AdvancedSearchFilters({
 
             {/* Feature Filters */}
             <div className="space-y-3">
-              <h4 className="font-medium text-gray-900 dark:text-gray-100">Features</h4>
+              <h4 className="font-medium text-foreground">Features</h4>
               <div className="space-y-3">
                 <div className="flex items-center space-x-3">
                   <input
@@ -309,7 +309,7 @@ export default function AdvancedSearchFilters({
                     id="hasAudio"
                     checked={localFilters.hasAudio}
                     onChange={(e) => updateFilter('hasAudio', e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                    className="h-4 w-4 rounded border-input text-blue-500 focus:ring-blue-500"
                   />
                   <label htmlFor="hasAudio" className="flex items-center space-x-2 text-sm cursor-pointer">
                     <Volume2 className="h-4 w-4 text-blue-500" />
@@ -322,7 +322,7 @@ export default function AdvancedSearchFilters({
                     id="hasHindi"
                     checked={localFilters.hasHindiTranslation}
                     onChange={(e) => updateFilter('hasHindiTranslation', e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                    className="h-4 w-4 rounded border-input text-orange-500 focus:ring-orange-500"
                   />
                   <label htmlFor="hasHindi" className="flex items-center space-x-2 text-sm cursor-pointer">
                     <Globe className="h-4 w-4 text-orange-500" />
@@ -334,7 +334,7 @@ export default function AdvancedSearchFilters({
 
             {/* Frequency Range */}
             <div className="space-y-3">
-              <h4 className="font-medium text-gray-900 dark:text-gray-100">Word Frequency</h4>
+              <h4 className="font-medium text-foreground">Word Frequency</h4>
               <div className="px-3">
                 <input
                   type="range"
@@ -345,7 +345,7 @@ export default function AdvancedSearchFilters({
                   step={10}
                   className="w-full accent-orange-500"
                 />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
+                <div className="flex justify-between text-xs text-muted-foreground mt-1">
                   <span>Most Common ({localFilters.frequencyRange[0]})</span>
                   <span>Least Common ({localFilters.frequencyRange[1]})</span>
                 </div>
@@ -354,7 +354,7 @@ export default function AdvancedSearchFilters({
 
             {/* Source Filter */}
             <div className="space-y-3">
-              <h4 className="font-medium text-gray-900 dark:text-gray-100">Data Source</h4>
+              <h4 className="font-medium text-foreground">Data Source</h4>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                 {sourceOptions.map(option => (
                   <Button

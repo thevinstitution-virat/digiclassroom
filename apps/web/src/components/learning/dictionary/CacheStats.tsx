@@ -108,7 +108,7 @@ export default function CacheStats({ className = '', showControls = true }: Cach
 
   if (isLoading) {
     return (
-      <Card className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50 ${className}`}>
+      <Card className={`bg-white/80 backdrop-blur-xl border-border/50 ${className}`}>
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Database className="h-5 w-5 animate-pulse" />
@@ -117,9 +117,9 @@ export default function CacheStats({ className = '', showControls = true }: Cach
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-3/4" />
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/2" />
+            <div className="h-4 bg-muted rounded animate-pulse" />
+            <div className="h-4 bg-muted rounded animate-pulse w-3/4" />
+            <div className="h-4 bg-muted rounded animate-pulse w-1/2" />
           </div>
         </CardContent>
       </Card>
@@ -127,7 +127,7 @@ export default function CacheStats({ className = '', showControls = true }: Cach
   }
 
   return (
-    <Card className={`bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl border-gray-200/50 dark:border-gray-700/50 ${className}`}>
+    <Card className={`bg-white/80 backdrop-blur-xl border-border/50 ${className}`}>
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
@@ -179,25 +179,25 @@ export default function CacheStats({ className = '', showControls = true }: Cach
             <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
               {cacheStats.totalCachedResults}
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Cached Results</div>
+            <div className="text-sm text-muted-foreground">Cached Results</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-green-600 dark:text-green-400">
               {cacheStats.cacheHitRate}%
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Hit Rate</div>
+            <div className="text-sm text-muted-foreground">Hit Rate</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
               {cacheStats.totalSearchHistory}
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Total Searches</div>
+            <div className="text-sm text-muted-foreground">Total Searches</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
               {formatCacheSize(cacheStats.cacheSize)}
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Cache Size</div>
+            <div className="text-sm text-muted-foreground">Cache Size</div>
           </div>
         </div>
 
@@ -208,7 +208,7 @@ export default function CacheStats({ className = '', showControls = true }: Cach
               <Target className="h-4 w-4" />
               <span>Cache Efficiency</span>
             </span>
-            <span className="text-sm text-gray-600 dark:text-gray-400">
+            <span className="text-sm text-muted-foreground">
               {cacheStats.cacheHitRate}%
             </span>
           </div>
@@ -216,7 +216,7 @@ export default function CacheStats({ className = '', showControls = true }: Cach
             value={cacheStats.cacheHitRate} 
             className="h-2"
           />
-          <div className="text-xs text-gray-500 dark:text-gray-400">
+          <div className="text-xs text-muted-foreground">
             Higher hit rates mean faster search responses
           </div>
         </div>
@@ -263,8 +263,8 @@ export default function CacheStats({ className = '', showControls = true }: Cach
         )}
 
         {/* Cache Maintenance */}
-        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+        <div className="pt-4 border-t border-border">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span className="flex items-center space-x-2">
               <History className="h-4 w-4" />
               <span>Last Cleanup</span>

@@ -47,12 +47,12 @@ export default function JoinInstitutionPanel({ requestedClass, requestedBoard }:
   const filtered = institutions.filter((i) => i.name.toLowerCase().includes(search.trim().toLowerCase()))
 
   return (
-    <div className="rounded-2xl border border-white/20 bg-white/90 p-8 shadow-xl backdrop-blur-xl dark:border-gray-700/20 dark:bg-gray-800/90">
+    <div className="rounded-2xl border border-white/20 bg-white/90 p-8 shadow-xl backdrop-blur-xl">
       <div className="mb-6 flex items-center gap-3">
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg"><Building2 className="h-6 w-6 text-white" /></div>
         <div>
           <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">Your Institution</h2>
-          <p className="text-gray-600 dark:text-gray-400">Join your school/college or stay independent</p>
+          <p className="text-muted-foreground">Join your school/college or stay independent</p>
         </div>
       </div>
 

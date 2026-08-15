@@ -70,8 +70,8 @@ export default function VisualizationRenderer({ visualizations }: VisualizationR
 
   return (
     <div className="mt-6 space-y-6">
-      <div className="border-t border-gray-200 pt-4">
-        <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+      <div className="border-t border-border pt-4">
+        <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
           <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
           </svg>
@@ -146,7 +146,7 @@ function VisualizationCard({ visualization, index }: VisualizationCardProps) {
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+    <div className="border border-border rounded-lg overflow-hidden bg-white shadow-sm">
       {/* Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
@@ -155,12 +155,12 @@ function VisualizationCard({ visualization, index }: VisualizationCardProps) {
         <div className="flex items-center gap-3">
           <span className="text-2xl">{getIcon()}</span>
           <div className="text-left">
-            <h4 className="font-semibold text-gray-900">{getTypeLabel()}</h4>
-            <p className="text-xs text-gray-600 mt-0.5">{visualization.educationalValue}</p>
+            <h4 className="font-semibold text-foreground">{getTypeLabel()}</h4>
+            <p className="text-xs text-muted-foreground mt-0.5">{visualization.educationalValue}</p>
           </div>
         </div>
         <svg
-          className={`w-5 h-5 text-gray-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          className={`w-5 h-5 text-muted-foreground transition-transform ${isExpanded ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -180,8 +180,8 @@ function VisualizationCard({ visualization, index }: VisualizationCardProps) {
             <MarkdownVisualization content={visualization.content as string} />
           ) : visualization.format === 'echarts' ? (
             <Suspense fallback={
-              <div className="flex items-center justify-center h-64 bg-gray-50 rounded">
-                <div className="flex items-center gap-2 text-gray-600">
+              <div className="flex items-center justify-center h-64 bg-muted/40 rounded">
+                <div className="flex items-center gap-2 text-muted-foreground">
                   <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
@@ -200,7 +200,7 @@ function VisualizationCard({ visualization, index }: VisualizationCardProps) {
           )}
 
           {visualization.caption && visualization.format !== 'echarts' && (
-            <p className="text-xs text-gray-500 italic mt-3 text-center">
+            <p className="text-xs text-muted-foreground italic mt-3 text-center">
               {visualization.caption}
             </p>
           )}
@@ -216,26 +216,26 @@ interface MarkdownVisualizationProps {
 
 function MarkdownVisualization({ content }: MarkdownVisualizationProps) {
   return (
-    <div className="prose prose-sm max-w-none prose-table:border-collapse prose-table:w-full prose-th:bg-blue-50 prose-th:border prose-th:border-gray-300 prose-th:px-4 prose-th:py-2 prose-th:text-left prose-th:font-semibold prose-th:text-gray-900 prose-td:border prose-td:border-gray-300 prose-td:px-4 prose-td:py-2 prose-td:text-gray-700">
+    <div className="prose prose-sm max-w-none prose-table:border-collapse prose-table:w-full prose-th:bg-blue-50 prose-th:border prose-th:border-input prose-th:px-4 prose-th:py-2 prose-th:text-left prose-th:font-semibold prose-th:text-foreground prose-td:border prose-td:border-input prose-td:px-4 prose-td:py-2 prose-td:text-foreground">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
           table: ({ node, ...props }) => (
             <div className="overflow-x-auto my-4">
-              <table className="min-w-full border-collapse border border-gray-300 shadow-sm rounded-lg" {...props} />
+              <table className="min-w-full border-collapse border border-input shadow-sm rounded-lg" {...props} />
             </div>
           ),
           thead: ({ node, ...props }) => (
             <thead className="bg-gradient-to-r from-blue-50 to-indigo-50" {...props} />
           ),
           th: ({ node, ...props }) => (
-            <th className="border border-gray-300 px-4 py-3 text-left font-semibold text-gray-900 text-sm" {...props} />
+            <th className="border border-input px-4 py-3 text-left font-semibold text-foreground text-sm" {...props} />
           ),
           td: ({ node, ...props }) => (
-            <td className="border border-gray-300 px-4 py-2 text-gray-700 text-sm" {...props} />
+            <td className="border border-input px-4 py-2 text-foreground text-sm" {...props} />
           ),
           tr: ({ node, ...props }) => (
-            <tr className="hover:bg-gray-50 transition-colors" {...props} />
+            <tr className="hover:bg-muted/50 transition-colors" {...props} />
           ),
         }}
       >
@@ -318,8 +318,8 @@ function MermaidVisualization({ content, id }: MermaidVisualizationProps) {
   return (
     <div className="relative">
       {isRendering && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-50 rounded">
-          <div className="flex items-center gap-2 text-gray-600">
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/40 rounded">
+          <div className="flex items-center gap-2 text-muted-foreground">
             <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />

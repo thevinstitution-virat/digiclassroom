@@ -110,17 +110,17 @@ export function LiveClassesWidget({ classId, isTeacher, tenantId }: { classId: s
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
           </div>
         ) : classes?.length === 0 ? (
-          <div className="text-center p-8 border rounded-lg bg-slate-50/50 text-muted-foreground">
+          <div className="text-center p-8 border rounded-lg bg-muted/40 text-muted-foreground">
             No upcoming live classes scheduled.
           </div>
         ) : (
           <div className="grid gap-4">
             {classes?.map((c: any) => (
-              <Card key={c.id} className="overflow-hidden hover:border-slate-300 transition-colors">
+              <Card key={c.id} className="overflow-hidden hover:border-input transition-colors">
                 <div className="p-4 flex items-center justify-between">
                   <div>
-                    <h4 className="font-medium text-slate-900">{c.title}</h4>
-                    <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
+                    <h4 className="font-medium text-foreground">{c.title}</h4>
+                    <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Clock className="w-4 h-4" />
                         {format(new Date(c.scheduledStartTime), 'PPp')}

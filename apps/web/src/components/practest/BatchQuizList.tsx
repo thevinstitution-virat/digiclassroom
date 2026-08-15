@@ -25,7 +25,7 @@ export function BatchQuizList() {
 
   if (activeBatches.length === 0) {
     return (
-      <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border-white/20">
+      <Card className="bg-white/90 backdrop-blur-xl border-white/20">
         <CardContent className="p-12 text-center text-muted-foreground">
           You are not actively enrolled in any batches.
         </CardContent>
@@ -35,7 +35,7 @@ export function BatchQuizList() {
 
   if (activeSession) {
     return (
-      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/20 overflow-hidden">
+      <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 overflow-hidden">
         <BatchQuizActive
           quizId={activeQuizId!}
           session={activeSession}
@@ -54,7 +54,7 @@ export function BatchQuizList() {
 
   if (resultAttemptId) {
     return (
-      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/20 overflow-hidden">
+      <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 overflow-hidden">
         <BatchQuizResult
           attemptId={resultAttemptId}
           onBack={() => {
@@ -95,7 +95,7 @@ function BatchQuizzes({ batch, onStart }: { batch: any, onStart: (id: string, s:
   if (!quizzesQuery.data || quizzesQuery.data.length === 0) return null;
 
   return (
-    <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border-white/20">
+    <Card className="bg-white/90 backdrop-blur-xl border-white/20">
       <CardHeader>
         <CardTitle>{batch.batchName} Quizzes</CardTitle>
         <CardDescription>Assessments assigned for this batch</CardDescription>

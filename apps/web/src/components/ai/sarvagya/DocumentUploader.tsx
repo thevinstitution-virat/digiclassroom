@@ -105,19 +105,19 @@ export function DocumentUploader({ spaceId, onUploadStarted }: DocumentUploaderP
             {/* Dropzone */}
             <div
                 {...getRootProps()}
-                className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer ${isDragActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors cursor-pointer ${isDragActive ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-border dark:border-slate-700 hover:border-input dark:hover:border-slate-600'
                     } ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
             >
                 <input {...getInputProps()} />
                 <div className="flex flex-col items-center gap-2">
-                    <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
-                        <UploadCloud className="w-5 h-5 text-slate-500" />
+                    <div className="w-10 h-10 bg-muted dark:bg-slate-800 rounded-full flex items-center justify-center">
+                        <UploadCloud className="w-5 h-5 text-muted-foreground" />
                     </div>
                     <div>
-                        <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <p className="text-sm font-medium text-foreground dark:text-slate-300">
                             Drop PDF, TXT, or Image here
                         </p>
-                        <p className="text-xs text-slate-500 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                             Up to 10MB per file. OCR supported.
                         </p>
                     </div>
@@ -126,30 +126,30 @@ export function DocumentUploader({ spaceId, onUploadStarted }: DocumentUploaderP
 
             <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-slate-200 dark:border-slate-700" />
+                    <span className="w-full border-t border-border dark:border-slate-700" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white dark:bg-slate-900 px-2 text-slate-500">Or add web link</span>
+                    <span className="bg-white dark:bg-slate-900 px-2 text-muted-foreground">Or add web link</span>
                 </div>
             </div>
 
             {/* URL Input */}
             <form onSubmit={handleUrlSubmit} className="flex gap-2">
                 <div className="relative flex-1">
-                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <LinkIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                         type="url"
                         value={url}
                         onChange={(e) => setUrl(e.target.value)}
                         placeholder="https://example.com/article"
-                        className="w-full bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+                        className="w-full bg-muted/40 dark:bg-slate-800 border-border dark:border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
                         disabled={isUploading}
                     />
                 </div>
                 <button
                     type="submit"
                     disabled={!url.trim() || isUploading}
-                    className="px-4 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-lg text-sm font-medium hover:bg-slate-800 dark:hover:bg-slate-200 disabled:opacity-50 transition-colors flex items-center justify-center min-w-[80px]"
+                    className="px-4 py-2 bg-slate-900 dark:bg-muted text-white dark:text-foreground rounded-lg text-sm font-medium hover:bg-slate-800 dark:hover:bg-slate-200 disabled:opacity-50 transition-colors flex items-center justify-center min-w-[80px]"
                 >
                     {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add'}
                 </button>

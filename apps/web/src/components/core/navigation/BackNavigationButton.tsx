@@ -47,9 +47,9 @@ const BackNavigationButton: React.FC<BackNavigationButtonProps> = ({
         onClick={handleNavigation}
         className={`
           inline-flex items-center gap-2 px-3 py-2 
-          text-sm font-medium text-gray-600 dark:text-gray-300
-          hover:text-gray-900 dark:hover:text-gray-100
-          hover:bg-gray-100 dark:hover:bg-gray-800
+          text-sm font-medium text-muted-foreground
+          hover:text-foreground dark:hover:text-gray-100
+          hover:bg-muted dark:hover:bg-gray-800
           rounded-lg transition-all duration-200
           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
           ${className}
@@ -77,10 +77,10 @@ const BackNavigationButton: React.FC<BackNavigationButtonProps> = ({
         size="sm"
         className="
           inline-flex items-center gap-2 px-4 py-2
-          text-gray-600 dark:text-gray-300
-          hover:text-gray-900 dark:hover:text-gray-100
-          hover:bg-gray-100 dark:hover:bg-gray-800
-          border border-gray-200 dark:border-gray-700
+          text-muted-foreground
+          hover:text-foreground dark:hover:text-gray-100
+          hover:bg-muted dark:hover:bg-gray-800
+          border border-border
           rounded-lg transition-all duration-200
           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
           shadow-sm hover:shadow-md

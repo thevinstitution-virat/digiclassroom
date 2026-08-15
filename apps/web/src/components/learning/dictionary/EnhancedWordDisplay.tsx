@@ -85,7 +85,7 @@ export default function EnhancedWordDisplay({
       case 'easy': return 'bg-green-100 text-green-800 border-green-300'
       case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-300'
       case 'hard': return 'bg-red-100 text-red-800 border-red-300'
-      default: return 'bg-gray-100 text-gray-800 border-gray-300'
+      default: return 'bg-muted text-foreground border-input'
     }
   }
 
@@ -118,7 +118,7 @@ export default function EnhancedWordDisplay({
                       variant="outline"
                       size="sm"
                       onClick={onAddToFavorites}
-                      className={isFavorite ? 'bg-red-100 border-red-300 text-red-700' : 'border-gray-300'}
+                      className={isFavorite ? 'bg-red-100 border-red-300 text-red-700' : 'border-input'}
                     >
                       <HeartIcon className={`h-4 w-4 mr-1 ${isFavorite ? 'fill-red-500' : ''}`} />
                       {isFavorite ? 'Favorited' : 'Add to Favorites'}
@@ -190,11 +190,11 @@ export default function EnhancedWordDisplay({
                     {meaning.partOfSpeech}
                   </Badge>
                 </div>
-                <p className="text-gray-900 dark:text-gray-100 mb-2">
+                <p className="text-foreground mb-2">
                   {meaning.definition}
                 </p>
                 {meaning.example && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 italic">
+                  <p className="text-sm text-muted-foreground italic">
                     Example: "{meaning.example}"
                   </p>
                 )}
@@ -224,8 +224,8 @@ export default function EnhancedWordDisplay({
             <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">Examples in Indian Context:</h4>
             <div className="space-y-2">
               {wordData.indianContext.examples.map((example, index) => (
-                <div key={index} className="bg-white dark:bg-gray-800 p-3 rounded-lg border border-green-200 dark:border-green-700">
-                  <p className="text-gray-900 dark:text-gray-100">
+                <div key={index} className="bg-card p-3 rounded-lg border border-green-200 dark:border-green-700">
+                  <p className="text-foreground">
                     {index + 1}. {example}
                   </p>
                 </div>
@@ -256,7 +256,7 @@ export default function EnhancedWordDisplay({
             <div className="space-y-3">
               {wordData.synonyms.english.length > 0 && (
                 <div>
-                  <h5 className="font-medium text-gray-900 dark:text-gray-100 mb-2">English:</h5>
+                  <h5 className="font-medium text-foreground mb-2">English:</h5>
                   <div className="flex flex-wrap gap-2">
                     {wordData.synonyms.english.map((synonym, index) => (
                       <Badge key={index} variant="outline" className="text-blue-700 border-blue-300">
@@ -269,7 +269,7 @@ export default function EnhancedWordDisplay({
               
               {wordData.synonyms.hindi.length > 0 && (
                 <div>
-                  <h5 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Hindi:</h5>
+                  <h5 className="font-medium text-foreground mb-2">Hindi:</h5>
                   <div className="flex flex-wrap gap-2">
                     {wordData.synonyms.hindi.map((synonym, index) => (
                       <Badge key={index} variant="outline" className="text-orange-700 border-orange-300">
@@ -295,7 +295,7 @@ export default function EnhancedWordDisplay({
             <div className="space-y-3">
               {wordData.antonyms.english.length > 0 && (
                 <div>
-                  <h5 className="font-medium text-gray-900 dark:text-gray-100 mb-2">English:</h5>
+                  <h5 className="font-medium text-foreground mb-2">English:</h5>
                   <div className="flex flex-wrap gap-2">
                     {wordData.antonyms.english.map((antonym, index) => (
                       <Badge key={index} variant="outline" className="text-red-700 border-red-300">
@@ -308,7 +308,7 @@ export default function EnhancedWordDisplay({
               
               {wordData.antonyms.hindi.length > 0 && (
                 <div>
-                  <h5 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Hindi:</h5>
+                  <h5 className="font-medium text-foreground mb-2">Hindi:</h5>
                   <div className="flex flex-wrap gap-2">
                     {wordData.antonyms.hindi.map((antonym, index) => (
                       <Badge key={index} variant="outline" className="text-red-700 border-red-300">

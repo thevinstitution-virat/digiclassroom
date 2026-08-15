@@ -184,10 +184,10 @@ export default function UploadProgressModal(props: UploadProgressModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" role="dialog" aria-modal="true">
-      <div className="w-full max-w-xl rounded-2xl bg-white dark:bg-gray-900 shadow-xl border border-gray-200 dark:border-gray-800 p-6">
+      <div className="w-full max-w-xl rounded-2xl bg-card shadow-xl border border-border dark:border-gray-800 p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">{stageLabel} Textbook</h2>
-          <button className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200" onClick={onClose} aria-label="Close">✕</button>
+          <button className="text-muted-foreground hover:text-foreground dark:hover:text-gray-200" onClick={onClose} aria-label="Close">✕</button>
         </div>
 
         {/* Circular progress indicator */}
@@ -202,10 +202,10 @@ export default function UploadProgressModal(props: UploadProgressModalProps) {
 
           {/* Details */}
           <div className="flex-1 space-y-2">
-            <div className="text-sm text-gray-600 dark:text-gray-400">Stage: <span className="font-medium text-gray-900 dark:text-gray-100">{stageLabel}</span></div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Page: <span className="font-medium text-gray-900 dark:text-gray-100">{current} / {total || '?'}</span></div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">ETA: <span className="font-medium text-gray-900 dark:text-gray-100">{etaText}</span></div>
-            <div className="w-full h-3 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+            <div className="text-sm text-muted-foreground">Stage: <span className="font-medium text-foreground">{stageLabel}</span></div>
+            <div className="text-sm text-muted-foreground">Page: <span className="font-medium text-foreground">{current} / {total || '?'}</span></div>
+            <div className="text-sm text-muted-foreground">ETA: <span className="font-medium text-foreground">{etaText}</span></div>
+            <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
               <div className={`${colorClass} h-3 rounded-full transition-all`} style={{ width: `${percent}%` }} />
             </div>
           </div>
@@ -230,7 +230,7 @@ export default function UploadProgressModal(props: UploadProgressModalProps) {
         <div className="mt-4">
           <button className="text-sm text-blue-600 hover:underline" onClick={() => setLogsExpanded(!logsExpanded)}>{logsExpanded ? 'Hide details' : 'Show details'}</button>
           {logsExpanded && (
-            <div className="mt-2 max-h-40 overflow-auto rounded border border-gray-200 dark:border-gray-800 p-2 text-xs font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-950">
+            <div className="mt-2 max-h-40 overflow-auto rounded border border-border dark:border-gray-800 p-2 text-xs font-mono text-foreground bg-muted/40 dark:bg-gray-950">
               {logLines.length ? logLines.map((l, i) => <div key={i}>{l}</div>) : <div>No details yet…</div>}
             </div>
           )}
@@ -249,7 +249,7 @@ export default function UploadProgressModal(props: UploadProgressModalProps) {
               <button className="px-3 py-2 rounded bg-yellow-500 text-white hover:bg-yellow-600" onClick={handlePauseResume}>{paused ? 'Resume' : 'Pause'}</button>
             )}
           </div>
-          <button className="px-3 py-2 rounded bg-gray-200 dark:bg-gray-800 text-gray-800 dark:text-gray-200" onClick={onClose}>Close</button>
+          <button className="px-3 py-2 rounded bg-muted text-foreground" onClick={onClose}>Close</button>
         </div>
       </div>
     </div>

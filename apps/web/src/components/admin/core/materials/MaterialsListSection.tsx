@@ -195,7 +195,7 @@ export default function MaterialsListSection({ className }: MaterialsListSection
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading materials...</p>
+          <p className="text-muted-foreground">Loading materials...</p>
         </div>
       </div>
     )
@@ -225,7 +225,7 @@ export default function MaterialsListSection({ className }: MaterialsListSection
         <CardContent className="space-y-4">
           {/* Search */}
           <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search materials..."
               value={searchQuery}
@@ -320,7 +320,7 @@ export default function MaterialsListSection({ className }: MaterialsListSection
             <TableHeader>
               <TableRow>
                 <TableHead 
-                  className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+                  className="cursor-pointer hover:bg-muted/50 dark:hover:bg-gray-800"
                   onClick={() => handleSortChange('title')}
                 >
                   Title
@@ -332,7 +332,7 @@ export default function MaterialsListSection({ className }: MaterialsListSection
                 <TableHead>Size</TableHead>
                 <TableHead>Downloads</TableHead>
                 <TableHead 
-                  className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+                  className="cursor-pointer hover:bg-muted/50 dark:hover:bg-gray-800"
                   onClick={() => handleSortChange('date')}
                 >
                   Created
@@ -347,7 +347,7 @@ export default function MaterialsListSection({ className }: MaterialsListSection
                     <div>
                       <p className="font-medium">{material.title}</p>
                       {material.description && (
-                        <p className="text-sm text-gray-500 truncate max-w-xs">
+                        <p className="text-sm text-muted-foreground truncate max-w-xs">
                           {material.description}
                         </p>
                       )}
@@ -357,7 +357,7 @@ export default function MaterialsListSection({ className }: MaterialsListSection
                   <TableCell>
                     <div className="text-sm">
                       <div>{material.board}</div>
-                      <div className="text-gray-500">Class {material.class}</div>
+                      <div className="text-muted-foreground">Class {material.class}</div>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -416,7 +416,7 @@ export default function MaterialsListSection({ className }: MaterialsListSection
 
           {state.materials.length === 0 && (
             <div className="text-center py-8">
-              <p className="text-gray-500">No materials found</p>
+              <p className="text-muted-foreground">No materials found</p>
             </div>
           )}
         </CardContent>
@@ -425,7 +425,7 @@ export default function MaterialsListSection({ className }: MaterialsListSection
       {/* Pagination */}
       {state.pagination.totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-600 dark:text-gray-400">
+          <p className="text-sm text-muted-foreground">
             Showing {((state.pagination.page - 1) * state.pagination.limit) + 1} to{' '}
             {Math.min(state.pagination.page * state.pagination.limit, state.pagination.total)} of{' '}
             {state.pagination.total} materials

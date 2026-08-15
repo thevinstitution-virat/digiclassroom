@@ -178,40 +178,40 @@ export default function DocumentManagement() {
     <div className="space-y-6">
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+        <div className="bg-card rounded-xl p-6 shadow-lg border border-border">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Books</p>
+              <p className="text-sm text-muted-foreground">Total Books</p>
               <p className="text-3xl font-bold text-blue-600">{stats?.totalBooks || 0}</p>
             </div>
             <BookOpen className="h-12 w-12 text-blue-500 opacity-20" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+        <div className="bg-card rounded-xl p-6 shadow-lg border border-border">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total Chunks</p>
+              <p className="text-sm text-muted-foreground">Total Chunks</p>
               <p className="text-3xl font-bold text-green-600">{stats?.totalPoints || 0}</p>
             </div>
             <FileText className="h-12 w-12 text-green-500 opacity-20" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+        <div className="bg-card rounded-xl p-6 shadow-lg border border-border">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Subjects</p>
+              <p className="text-sm text-muted-foreground">Subjects</p>
               <p className="text-3xl font-bold text-purple-600">{stats?.uniqueSubjects || 0}</p>
             </div>
             <Database className="h-12 w-12 text-purple-500 opacity-20" />
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
+        <div className="bg-card rounded-xl p-6 shadow-lg border border-border">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Class Levels</p>
+              <p className="text-sm text-muted-foreground">Class Levels</p>
               <p className="text-3xl font-bold text-orange-600">{stats?.uniqueClassLevels || 0}</p>
             </div>
             <BookOpen className="h-12 w-12 text-orange-500 opacity-20" />
@@ -236,17 +236,17 @@ export default function DocumentManagement() {
       )}
 
       {/* Actions Bar */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-lg border border-gray-200 dark:border-gray-700">
+      <div className="bg-card rounded-xl p-4 shadow-lg border border-border">
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
           {/* Search */}
           <div className="relative flex-1 w-full md:w-auto">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search books..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              className="w-full pl-10 pr-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white"
             />
           </div>
 
@@ -255,7 +255,7 @@ export default function DocumentManagement() {
             <select
               value={filterClass}
               onChange={(e) => setFilterClass(e.target.value)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              className="px-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white"
             >
               <option value="">All Classes</option>
               {stats?.classLevels?.map(cls => (
@@ -266,7 +266,7 @@ export default function DocumentManagement() {
             <select
               value={filterSubject}
               onChange={(e) => setFilterSubject(e.target.value)}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              className="px-4 py-2 border border-input rounded-lg focus:ring-2 focus:ring-blue-500 dark:text-white"
             >
               <option value="">All Subjects</option>
               {stats?.subjects?.map(subj => (
@@ -311,11 +311,11 @@ export default function DocumentManagement() {
       </div>
 
       {/* Books Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="bg-card rounded-xl shadow-lg border border-border overflow-hidden">
         {booksLoading ? (
           <div className="p-12 text-center">
             <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-500 mb-4" />
-            <p className="text-gray-600 dark:text-gray-400">Loading books...</p>
+            <p className="text-muted-foreground">Loading books...</p>
           </div>
         ) : booksError ? (
           <div className="p-12 text-center">
@@ -324,41 +324,41 @@ export default function DocumentManagement() {
           </div>
         ) : filteredBooks.length === 0 ? (
           <div className="p-12 text-center">
-            <Database className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-gray-600 dark:text-gray-400">No books found</p>
+            <Database className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <p className="text-muted-foreground">No books found</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-700">
+              <thead className="bg-muted/40">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Book Title</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Class</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Subject</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Curriculum</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Chunks</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Pages</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Features</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Book Title</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Class</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Subject</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Curriculum</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Chunks</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Pages</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Features</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="divide-y divide-border">
                 {filteredBooks.map((book) => (
-                  <tr key={book.bookId} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                  <tr key={book.bookId} className="hover:bg-muted/50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <BookOpen className="h-5 w-5 text-blue-500 mr-3" />
                         <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">{book.bookTitle}</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">{book.language}</div>
+                          <div className="text-sm font-medium text-foreground">{book.bookTitle}</div>
+                          <div className="text-xs text-muted-foreground">{book.language}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{book.classLevel}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{book.subject}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{book.curriculum}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{book.totalChunks}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">{book.totalPages}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{book.classLevel}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{book.subject}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{book.curriculum}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{book.totalChunks}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{book.totalPages}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex gap-2">
                         {book.hasFormulas && (
@@ -392,7 +392,7 @@ export default function DocumentManagement() {
       </div>
 
       {/* Footer Info */}
-      <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+      <div className="text-center text-sm text-muted-foreground">
         Showing {filteredBooks.length} of {books.length} books
         {stats && ` • ${stats.totalPoints} total chunks in database`}
       </div>

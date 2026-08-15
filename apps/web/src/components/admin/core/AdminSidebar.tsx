@@ -47,7 +47,7 @@ export default function AdminSidebar({ user, isOwner = false }: AdminSidebarProp
       userRole="admin"
       headerSlot={isOwner ? (
         <div className="px-1 py-1 mb-2">
-          <p className="mb-1.5 px-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          <p className="mb-1.5 px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground dark:text-muted-foreground">
             Working Context
           </p>
           <InstitutionSwitcher />

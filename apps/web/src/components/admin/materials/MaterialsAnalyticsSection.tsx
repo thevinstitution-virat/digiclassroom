@@ -37,11 +37,11 @@ export default function MaterialsAnalyticsSection({ stats }: MaterialsAnalyticsS
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <ChartBarIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+          <ChartBarIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">
             No Analytics Data
           </h3>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-muted-foreground">
             Analytics data will appear here once materials are uploaded
           </p>
         </div>
@@ -100,8 +100,8 @@ export default function MaterialsAnalyticsSection({ stats }: MaterialsAnalyticsS
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Materials</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                <p className="text-sm font-medium text-muted-foreground">Total Materials</p>
+                <p className="text-2xl font-bold text-foreground">
                   {formatNumber(stats.totalMaterials)}
                 </p>
                 <div className="flex items-center mt-1">
@@ -118,8 +118,8 @@ export default function MaterialsAnalyticsSection({ stats }: MaterialsAnalyticsS
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Downloads</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                <p className="text-sm font-medium text-muted-foreground">Total Downloads</p>
+                <p className="text-2xl font-bold text-foreground">
                   {formatNumber(stats.totalDownloads)}
                 </p>
                 <div className="flex items-center mt-1">
@@ -136,8 +136,8 @@ export default function MaterialsAnalyticsSection({ stats }: MaterialsAnalyticsS
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Views</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                <p className="text-sm font-medium text-muted-foreground">Total Views</p>
+                <p className="text-2xl font-bold text-foreground">
                   {formatNumber(stats.totalViews)}
                 </p>
                 <div className="flex items-center mt-1">
@@ -154,8 +154,8 @@ export default function MaterialsAnalyticsSection({ stats }: MaterialsAnalyticsS
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Pending Approvals</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                <p className="text-sm font-medium text-muted-foreground">Pending Approvals</p>
+                <p className="text-2xl font-bold text-foreground">
                   {stats.pendingApprovals}
                 </p>
                 <div className="flex items-center mt-1">
@@ -284,7 +284,7 @@ export default function MaterialsAnalyticsSection({ stats }: MaterialsAnalyticsS
                     <p className="font-medium text-sm">{material.title}</p>
                     <div className="flex items-center space-x-2 mt-1">
                       <Badge variant="outline" className="text-xs">{material.subject}</Badge>
-                      <span className="text-xs text-gray-500">{material.downloads} downloads</span>
+                      <span className="text-xs text-muted-foreground">{material.downloads} downloads</span>
                     </div>
                   </div>
                   <div className="text-right">
@@ -307,7 +307,7 @@ export default function MaterialsAnalyticsSection({ stats }: MaterialsAnalyticsS
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium">Total Storage Used</span>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-muted-foreground">
                     {(stats.storageUsed / 1024 / 1024 / 1024).toFixed(1)} GB / 15 GB
                   </span>
                 </div>
@@ -358,17 +358,17 @@ export default function MaterialsAnalyticsSection({ stats }: MaterialsAnalyticsS
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center">
               <p className="text-2xl font-bold text-blue-600">{stats.recentUploads}</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">New uploads this week</p>
+              <p className="text-sm text-muted-foreground">New uploads this week</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-green-600">{stats.pendingApprovals}</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Pending approvals</p>
+              <p className="text-sm text-muted-foreground">Pending approvals</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-purple-600">
                 {Math.round((stats.totalDownloads / stats.totalMaterials) * 100) / 100}
               </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Avg downloads per material</p>
+              <p className="text-sm text-muted-foreground">Avg downloads per material</p>
             </div>
           </div>
         </CardContent>

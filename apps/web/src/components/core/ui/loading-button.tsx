@@ -26,9 +26,9 @@ export function LoadingButton({
   
   const variantClasses = {
     primary: "bg-gradient-to-r from-orange-500 to-blue-600 text-white hover:from-orange-600 hover:to-blue-700 shadow-md hover:shadow-lg focus:ring-orange-500",
-    secondary: "bg-gray-100 text-gray-900 hover:bg-gray-200 border border-gray-300 focus:ring-gray-500",
-    outline: "border-2 border-gray-300 text-gray-700 hover:border-orange-500 hover:text-orange-500 hover:bg-orange-50 focus:ring-orange-500",
-    ghost: "text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:ring-gray-500",
+    secondary: "bg-muted text-foreground hover:bg-muted border border-input focus:ring-gray-500",
+    outline: "border-2 border-input text-foreground hover:border-orange-500 hover:text-orange-500 hover:bg-orange-50 focus:ring-orange-500",
+    ghost: "text-foreground hover:bg-muted hover:text-foreground focus:ring-gray-500",
     destructive: "bg-red-500 text-white hover:bg-red-600 shadow-md hover:shadow-lg focus:ring-red-500"
   }
 

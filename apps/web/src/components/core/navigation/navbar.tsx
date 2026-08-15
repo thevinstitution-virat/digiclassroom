@@ -25,7 +25,7 @@ export function Navbar({ className = '' }: NavbarProps) {
   ]
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 ${className}`}>
+    <nav className={`fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-border ${className}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -46,7 +46,7 @@ export function Navbar({ className = '' }: NavbarProps) {
               <Link
                 key={item.name}
                 href={item.href}
-                className="text-gray-700 dark:text-gray-300 hover:text-orange-500 dark:hover:text-orange-400 transition-colors duration-200 font-medium"
+                className="text-foreground hover:text-orange-500 dark:hover:text-orange-400 transition-colors duration-200 font-medium"
               >
                 {item.name}
               </Link>
@@ -61,7 +61,7 @@ export function Navbar({ className = '' }: NavbarProps) {
               <Button
                 variant="ghost"
                 onClick={() => router.push('/sign-in')}
-                className="text-gray-700 dark:text-gray-300 hover:text-orange-500 dark:hover:text-orange-400"
+                className="text-foreground hover:text-orange-500 dark:hover:text-orange-400"
               >
                 Sign In
               </Button>
@@ -76,7 +76,7 @@ export function Navbar({ className = '' }: NavbarProps) {
             {/* Mobile menu button */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200"
+              className="md:hidden p-2 rounded-lg text-foreground hover:bg-muted dark:hover:bg-gray-800 transition-colors duration-200"
               aria-label="Toggle menu"
             >
               {isMenuOpen ? (
@@ -90,26 +90,26 @@ export function Navbar({ className = '' }: NavbarProps) {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col space-y-4">
               {navItems.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className="text-gray-700 dark:text-gray-300 hover:text-orange-500 dark:hover:text-orange-400 transition-colors duration-200 font-medium px-2 py-1"
+                  className="text-foreground hover:text-orange-500 dark:hover:text-orange-400 transition-colors duration-200 font-medium px-2 py-1"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {item.name}
                 </Link>
               ))}
-              <div className="flex flex-col space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex flex-col space-y-2 pt-4 border-t border-border">
                 <Button
                   variant="ghost"
                   onClick={() => {
                     router.push('/sign-in')
                     setIsMenuOpen(false)
                   }}
-                  className="justify-start text-gray-700 dark:text-gray-300 hover:text-orange-500 dark:hover:text-orange-400"
+                  className="justify-start text-foreground hover:text-orange-500 dark:hover:text-orange-400"
                 >
                   Sign In
                 </Button>

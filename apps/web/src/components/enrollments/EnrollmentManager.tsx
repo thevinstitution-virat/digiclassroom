@@ -31,7 +31,7 @@ const STATUS_CONFIG: Record<EnrollmentStatus, { label: string; className: string
   },
   completed: {
     label:     'Completed',
-    className: 'bg-slate-100 text-slate-600 border-transparent dark:bg-slate-800 dark:text-slate-400',
+    className: 'bg-muted text-muted-foreground border-transparent dark:bg-slate-800 dark:text-muted-foreground',
   },
 };
 

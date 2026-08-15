@@ -137,7 +137,7 @@ export default function ContentOverview({ isActive = true }: ContentOverviewProp
   return (
     <div className="space-y-6">
       {/* Overview Header */}
-      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 dark:border-gray-700/20">
+      <div className="bg-white/90 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg">
@@ -147,7 +147,7 @@ export default function ContentOverview({ isActive = true }: ContentOverviewProp
               <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Uploaded Content Overview
               </h2>
-              <p className="text-gray-600 dark:text-gray-400">
+              <p className="text-muted-foreground">
                 Manage and monitor all uploaded textbooks
               </p>
             </div>
@@ -164,24 +164,24 @@ export default function ContentOverview({ isActive = true }: ContentOverviewProp
 
         {/* Search Bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search books by title, subject, or class..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+            className="w-full pl-10 pr-4 py-3 bg-muted/40 border border-border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
           />
         </div>
       </div>
 
       {/* Books Table */}
-      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 dark:border-gray-700/20 overflow-hidden">
+      <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-xl border border-white/20 overflow-hidden">
         {booksLoading ? (
           <div className="p-8 text-center">
             <Loader2 className="h-12 w-12 animate-spin mx-auto text-blue-500 mb-4" />
-            <p className="text-gray-600 dark:text-gray-400">Loading uploaded books...</p>
-            <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">Auto-refreshing every 10 seconds...</p>
+            <p className="text-muted-foreground">Loading uploaded books...</p>
+            <p className="text-sm text-muted-foreground dark:text-muted-foreground mt-2">Auto-refreshing every 10 seconds...</p>
           </div>
         ) : booksError ? (
           <div className="p-8 text-center">
@@ -193,9 +193,9 @@ export default function ContentOverview({ isActive = true }: ContentOverviewProp
           </div>
         ) : paginatedBooks.length === 0 ? (
           <div className="p-8 text-center">
-            <Database className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">No Books Found</h3>
-            <p className="text-gray-500 dark:text-gray-500">
+            <Database className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-muted-foreground mb-2">No Books Found</h3>
+            <p className="text-muted-foreground dark:text-muted-foreground">
               {searchTerm ? 'No books match your search criteria.' : 'Upload your first textbook to get started.'}
             </p>
           </div>
@@ -203,22 +203,22 @@ export default function ContentOverview({ isActive = true }: ContentOverviewProp
           <>
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-700">
+                <thead className="bg-muted/40">
                   <tr>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Book Details</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Content Stats</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Chapters</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Upload Date</th>
-                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Book Details</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Content Stats</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Chapters</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Upload Date</th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                <tbody className="divide-y divide-border dark:divide-gray-600">
                   {paginatedBooks.map((book) => (
-                    <tr key={book.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
+                    <tr key={book.id} className="hover:bg-muted/50 transition-colors duration-200">
                       <td className="px-6 py-4">
                         <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{book.book_title}</div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
+                          <div className="text-sm font-medium text-foreground">{book.book_title}</div>
+                          <div className="text-sm text-muted-foreground">
                             {book.subject} • Class {book.class} • {book.board} • {book.medium}
                           </div>
                         </div>
@@ -226,15 +226,15 @@ export default function ContentOverview({ isActive = true }: ContentOverviewProp
                       <td className="px-6 py-4">
                         <div className="space-y-1">
                           <div className="flex items-center justify-between text-xs">
-                            <span className="text-gray-500">Pages:</span>
+                            <span className="text-muted-foreground">Pages:</span>
                             <span className="font-medium">{book.total_pages}</span>
                           </div>
                           <div className="flex items-center justify-between text-xs">
-                            <span className="text-gray-500">Chunks:</span>
+                            <span className="text-muted-foreground">Chunks:</span>
                             <span className="font-medium">{book.total_chunks}</span>
                           </div>
                           <div className="flex items-center justify-between text-xs">
-                            <span className="text-gray-500">Size:</span>
+                            <span className="text-muted-foreground">Size:</span>
                             <span className="font-medium">{book.estimated_size}</span>
                           </div>
                         </div>
@@ -247,7 +247,7 @@ export default function ContentOverview({ isActive = true }: ContentOverviewProp
                           {book.status === 'complete' && <CheckCircle className="h-4 w-4 text-green-500" />}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                      <td className="px-6 py-4 text-sm text-muted-foreground">
                         {new Date(book.upload_date).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4">
@@ -276,26 +276,26 @@ export default function ContentOverview({ isActive = true }: ContentOverviewProp
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
+              <div className="px-6 py-4 bg-muted/40 border-t border-border">
                 <div className="flex items-center justify-between">
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                  <div className="text-sm text-muted-foreground">
                     Showing {startIndex + 1} to {Math.min(startIndex + booksPerPage, filteredBooks.length)} of {filteredBooks.length} books
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                       disabled={currentPage === 1}
-                      className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-2 text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </button>
-                    <span className="px-3 py-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <span className="px-3 py-1 text-sm font-medium text-foreground">
                       {currentPage} of {totalPages}
                     </span>
                     <button
                       onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                       disabled={currentPage === totalPages}
-                      className="p-2 text-gray-500 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-2 text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </button>

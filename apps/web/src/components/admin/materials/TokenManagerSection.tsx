@@ -158,15 +158,15 @@ export function TokenManagerSection() {
 
         {status && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="text-sm font-medium text-gray-600">Service Status</div>
+            <div className="p-4 bg-muted/40 rounded-lg">
+              <div className="text-sm font-medium text-muted-foreground">Service Status</div>
               <div className="text-lg font-semibold">
                 {status.isRunning ? 'Active' : 'Inactive'}
               </div>
             </div>
 
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="text-sm font-medium text-gray-600">Token Status</div>
+            <div className="p-4 bg-muted/40 rounded-lg">
+              <div className="text-sm font-medium text-muted-foreground">Token Status</div>
               <div className="text-lg font-semibold">
                 {status.hasTokens ? (
                   status.isExpired ? 'Expired' : 'Valid'
@@ -174,8 +174,8 @@ export function TokenManagerSection() {
               </div>
             </div>
 
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="text-sm font-medium text-gray-600">Expires In</div>
+            <div className="p-4 bg-muted/40 rounded-lg">
+              <div className="text-sm font-medium text-muted-foreground">Expires In</div>
               <div className="text-lg font-semibold">
                 {status.hasTokens ? formatTimeRemaining(status.expiresIn) : 'N/A'}
               </div>
@@ -233,7 +233,7 @@ export function TokenManagerSection() {
           </Button>
         </div>
 
-        <div className="text-xs text-gray-500 pt-2 border-t">
+        <div className="text-xs text-muted-foreground pt-2 border-t">
           <p>• Service automatically refreshes tokens 10 minutes before expiry</p>
           <p>• Tokens are checked every 50 minutes for proactive refresh</p>
           <p>• Failed refreshes are logged for monitoring and debugging</p>

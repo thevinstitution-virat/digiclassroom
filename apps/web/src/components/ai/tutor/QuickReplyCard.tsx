@@ -103,7 +103,7 @@ export const QuickReplyCard: React.FC<QuickReplyCardProps> = ({
         {/* Title: font-medium, WRAPS naturally — no truncate */}
         <p
           className={cn(
-            "text-sm font-semibold text-gray-800 leading-snug",
+            "text-sm font-semibold text-foreground leading-snug",
             "whitespace-normal break-words"  // ← key: allows wrapping
             // NEVER: truncate, overflow-hidden, whitespace-nowrap, max-w-[Npx]
           )}
@@ -115,7 +115,7 @@ export const QuickReplyCard: React.FC<QuickReplyCardProps> = ({
         {description && (
           <p
             className={cn(
-              "text-xs text-gray-500 mt-0.5 leading-relaxed",
+              "text-xs text-muted-foreground mt-0.5 leading-relaxed",
               "whitespace-normal break-words"  // ← key: allows wrapping
               // NEVER: truncate, overflow-hidden, whitespace-nowrap, max-w-[Npx]
             )}

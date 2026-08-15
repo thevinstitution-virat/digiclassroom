@@ -126,22 +126,22 @@ export default function FormattedContent({
   const renderMarkdownToHTML = (text: string): string => {
     let html = text
       // Headers
-      .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold text-gray-800 mt-4 mb-2">$1</h3>')
-      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold text-gray-900 mt-6 mb-3">$1</h2>')
-      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold text-gray-900 mt-8 mb-4">$1</h1>')
+      .replace(/^### (.*$)/gim, '<h3 class="text-lg font-semibold text-foreground mt-4 mb-2">$1</h3>')
+      .replace(/^## (.*$)/gim, '<h2 class="text-xl font-bold text-foreground mt-6 mb-3">$1</h2>')
+      .replace(/^# (.*$)/gim, '<h1 class="text-2xl font-bold text-foreground mt-8 mb-4">$1</h1>')
 
       // Bold and Italic
       .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em class="font-bold italic">$1</em></strong>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-gray-900">$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em class="italic text-gray-700">$1</em>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-foreground">$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em class="italic text-foreground">$1</em>')
 
       // Lists
       .replace(/^\d+\.\s+(.*$)/gim, '<li class="ml-4 mb-1">$1</li>')
       .replace(/^[-*]\s+(.*$)/gim, '<li class="ml-4 mb-1 list-disc">$1</li>')
 
       // Code blocks
-      .replace(/```(.*?)```/gs, '<pre class="bg-gray-100 p-3 rounded-md text-sm font-mono overflow-x-auto"><code>$1</code></pre>')
-      .replace(/`(.*?)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded text-sm font-mono">$1</code>')
+      .replace(/```(.*?)```/gs, '<pre class="bg-muted p-3 rounded-md text-sm font-mono overflow-x-auto"><code>$1</code></pre>')
+      .replace(/`(.*?)`/g, '<code class="bg-muted px-1 py-0.5 rounded text-sm font-mono">$1</code>')
 
       // Line breaks
       .replace(/\n\n/g, '</p><p class="mb-3">')
@@ -255,7 +255,7 @@ export default function FormattedContent({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="flex items-center space-x-2 text-gray-600">
+        <div className="flex items-center space-x-2 text-muted-foreground">
           <Clock className="h-5 w-5 animate-spin" />
           <span>Formatting content...</span>
         </div>
@@ -335,9 +335,9 @@ export default function FormattedContent({
 
       {/* Original Content (if toggled) - Only in development */}
       {isDevelopment && showOriginal && (
-        <Card className="bg-gray-50 border-gray-200">
+        <Card className="bg-muted/40 border-border">
           <CardContent className="p-4">
-            <h4 className="font-medium mb-2 text-gray-700">Original Content:</h4>
+            <h4 className="font-medium mb-2 text-foreground">Original Content:</h4>
             <div className="bg-white p-3 rounded border text-sm font-mono">
               {content}
             </div>
@@ -383,7 +383,7 @@ export default function FormattedContent({
               {/* Performance Metrics */}
               <div>
                 <h5 className="font-medium mb-2">Performance:</h5>
-                <div className="space-y-1 text-xs text-gray-600">
+                <div className="space-y-1 text-xs text-muted-foreground">
                   <div>Analysis: {performanceMetrics.analysisTime}ms</div>
                   <div>Formatting: {performanceMetrics.formattingTime}ms</div>
                   <div>Total: {performanceMetrics.totalTime}ms</div>
@@ -416,7 +416,7 @@ export default function FormattedContent({
                         </div>
                       ))}
                       {qualityAssurance.warnings.length > 3 && (
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-muted-foreground">
                           ... and {qualityAssurance.warnings.length - 3} more
                         </div>
                       )}
@@ -448,7 +448,7 @@ function ContentTypeBadge({ contentType }: { contentType: string }) {
     mathematical: { icon: Calculator, color: 'bg-blue-100 text-blue-800', label: 'Mathematical' },
     chemical: { icon: Beaker, color: 'bg-green-100 text-green-800', label: 'Chemical' },
     mixed: { icon: Code, color: 'bg-purple-100 text-purple-800', label: 'Mixed Content' },
-    plain: { icon: FileText, color: 'bg-gray-100 text-gray-800', label: 'Plain Text' }
+    plain: { icon: FileText, color: 'bg-muted text-foreground', label: 'Plain Text' }
   }
 
   const config = configs[contentType as keyof typeof configs] || configs.plain
@@ -557,25 +557,25 @@ function FormattedContentRenderer({
         }
       `}</style>
 
-      <div className="formatted-content prose prose-base max-w-none prose-headings:font-bold prose-headings:text-gray-900 prose-h1:text-2xl prose-h1:mb-4 prose-h1:mt-6 prose-h2:text-xl prose-h2:mb-3 prose-h2:mt-5 prose-h3:text-lg prose-h3:mb-2 prose-h3:mt-4 prose-p:mb-4 prose-p:leading-7 prose-p:text-gray-800 prose-li:mb-2 prose-li:leading-7 prose-ul:my-4 prose-ul:space-y-2 prose-ol:my-4 prose-ol:space-y-2 prose-strong:text-gray-900 prose-strong:font-semibold overflow-hidden break-words">
+      <div className="formatted-content prose prose-base max-w-none prose-headings:font-bold prose-headings:text-foreground prose-h1:text-2xl prose-h1:mb-4 prose-h1:mt-6 prose-h2:text-xl prose-h2:mb-3 prose-h2:mt-5 prose-h3:text-lg prose-h3:mb-2 prose-h3:mt-4 prose-p:mb-4 prose-p:leading-7 prose-p:text-foreground prose-li:mb-2 prose-li:leading-7 prose-ul:my-4 prose-ul:space-y-2 prose-ol:my-4 prose-ol:space-y-2 prose-strong:text-foreground prose-strong:font-semibold overflow-hidden break-words">
         <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw]}
         components={{
           // Enhanced heading rendering with better spacing
           h1: ({node, ...props}) => (
-            <h1 className="text-2xl font-bold text-gray-900 mb-4 mt-6 border-b-2 border-gray-200 pb-2" {...props} />
+            <h1 className="text-2xl font-bold text-foreground mb-4 mt-6 border-b-2 border-border pb-2" {...props} />
           ),
           h2: ({node, ...props}) => (
-            <h2 className="text-xl font-bold text-gray-900 mb-3 mt-5 border-b border-gray-200 pb-1" {...props} />
+            <h2 className="text-xl font-bold text-foreground mb-3 mt-5 border-b border-border pb-1" {...props} />
           ),
           h3: ({node, ...props}) => (
-            <h3 className="text-lg font-bold text-gray-800 mb-2 mt-4" {...props} />
+            <h3 className="text-lg font-bold text-foreground mb-2 mt-4" {...props} />
           ),
 
           // Enhanced paragraph rendering
           p: ({node, ...props}) => (
-            <p className="mb-4 leading-7 text-gray-800 text-[15px]" {...props} />
+            <p className="mb-4 leading-7 text-foreground text-[15px]" {...props} />
           ),
 
           // Enhanced list rendering with better spacing
@@ -586,7 +586,7 @@ function FormattedContentRenderer({
             <ol className="my-4 space-y-2 pl-6 list-decimal" {...props} />
           ),
           li: ({node, ...props}) => (
-            <li className="leading-7 text-gray-800 pl-2" {...props} />
+            <li className="leading-7 text-foreground pl-2" {...props} />
           ),
 
           // Prevent tables from causing horizontal overflow
@@ -597,15 +597,15 @@ function FormattedContentRenderer({
           ),
           // Enhanced blockquote formatting
           blockquote: ({node, ...props}) => (
-            <blockquote className="border-l-4 border-blue-400 pl-4 py-2 my-4 bg-blue-50 rounded-r-lg italic text-gray-700" {...props} />
+            <blockquote className="border-l-4 border-blue-400 pl-4 py-2 my-4 bg-blue-50 rounded-r-lg italic text-foreground" {...props} />
           ),
           // Enhanced strong (bold) text
           strong: ({node, ...props}) => (
-            <strong className="font-bold text-gray-900" {...props} />
+            <strong className="font-bold text-foreground" {...props} />
           ),
           // Enhanced emphasis (italic) text
           em: ({node, ...props}) => (
-            <em className="italic text-gray-700" {...props} />
+            <em className="italic text-foreground" {...props} />
           ),
           // Prevent code blocks from causing horizontal overflow
           pre: ({node, ...props}) => (
@@ -628,7 +628,7 @@ function FormattedContentRenderer({
           },
           // Enhanced horizontal rule
           hr: ({node, ...props}) => (
-            <hr className="my-6 border-t-2 border-gray-200" {...props} />
+            <hr className="my-6 border-t-2 border-border" {...props} />
           )
         }}
         >

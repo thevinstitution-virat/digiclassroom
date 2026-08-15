@@ -313,16 +313,16 @@ export default function GoogleDriveSetupSection({
               {/* Quota Information */}
               {state.quota && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Storage</p>
+                  <div className="bg-muted/40 p-4 rounded-lg">
+                    <p className="text-sm font-medium text-muted-foreground">Total Storage</p>
                     <p className="text-lg font-bold">{formatBytes(state.quota.limit)}</p>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Used Storage</p>
+                  <div className="bg-muted/40 p-4 rounded-lg">
+                    <p className="text-sm font-medium text-muted-foreground">Used Storage</p>
                     <p className="text-lg font-bold">{formatBytes(state.quota.usage)}</p>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Available</p>
+                  <div className="bg-muted/40 p-4 rounded-lg">
+                    <p className="text-sm font-medium text-muted-foreground">Available</p>
                     <p className="text-lg font-bold">
                       {formatBytes((parseInt(state.quota.limit) - parseInt(state.quota.usage)).toString())}
                     </p>
@@ -350,11 +350,11 @@ export default function GoogleDriveSetupSection({
             </div>
           ) : (
             <div className="text-center py-8">
-              <CloudIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+              <CloudIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-foreground mb-2">
                 Google Drive Not Connected
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
+              <p className="text-muted-foreground mb-4">
                 Connect your Google Drive account to enable materials management
               </p>
             </div>
@@ -436,7 +436,7 @@ export default function GoogleDriveSetupSection({
                     <LinkIcon className="h-5 w-5 text-blue-500" />
                     <span className="font-medium">Authorization Required</span>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <p className="text-sm text-muted-foreground">
                     Click the link below to authorize VG Kosh to access your Google Drive:
                   </p>
                   <Button
@@ -502,7 +502,7 @@ export default function GoogleDriveSetupSection({
                         <FolderIcon className="h-5 w-5 text-blue-500" />
                         <div>
                           <p className="font-medium">{folder.folderName}</p>
-                          <p className="text-sm text-gray-500">{folder.folderPath}</p>
+                          <p className="text-sm text-muted-foreground">{folder.folderPath}</p>
                         </div>
                       </div>
                       <Badge variant="outline">
@@ -513,11 +513,11 @@ export default function GoogleDriveSetupSection({
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <FolderIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
+                  <FolderIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-foreground mb-2">
                     No Folder Structure Found
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">
+                  <p className="text-muted-foreground mb-4">
                     Create the folder structure to organize your materials
                   </p>
                 </div>
@@ -542,7 +542,7 @@ export default function GoogleDriveSetupSection({
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">Auto-approve uploads</p>
-                    <p className="text-sm text-gray-500">Automatically approve materials from trusted sources</p>
+                    <p className="text-sm text-muted-foreground">Automatically approve materials from trusted sources</p>
                   </div>
                   <Badge variant="secondary">Coming Soon</Badge>
                 </div>
@@ -550,7 +550,7 @@ export default function GoogleDriveSetupSection({
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">Sync frequency</p>
-                    <p className="text-sm text-gray-500">How often to sync with Google Drive</p>
+                    <p className="text-sm text-muted-foreground">How often to sync with Google Drive</p>
                   </div>
                   <Badge variant="secondary">Every 15 minutes</Badge>
                 </div>
@@ -558,7 +558,7 @@ export default function GoogleDriveSetupSection({
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">Storage notifications</p>
-                    <p className="text-sm text-gray-500">Get notified when storage is running low</p>
+                    <p className="text-sm text-muted-foreground">Get notified when storage is running low</p>
                   </div>
                   <Badge variant="default">Enabled</Badge>
                 </div>

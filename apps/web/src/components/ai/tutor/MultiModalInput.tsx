@@ -321,7 +321,7 @@ export function MultiModalInput({
                 onChange={(e) => onChange(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder={placeholder}
-                className="min-h-[44px] max-h-32 resize-none border-0 focus:ring-0 bg-transparent p-2 text-sm whitespace-pre-wrap placeholder:text-gray-400"
+                className="min-h-[44px] max-h-32 resize-none border-0 focus:ring-0 bg-transparent p-2 text-sm whitespace-pre-wrap placeholder:text-muted-foreground"
                 disabled={disabled}
               />
             </div>
@@ -344,7 +344,7 @@ export function MultiModalInput({
                   disabled={disabled || !!uploadedFile}
                   className="h-11 w-11 p-0 rounded-xl border-orange-200/60 hover:border-blue-400 bg-white/90 backdrop-blur-sm shadow-sm hover:shadow-md transition-all duration-200"
                 >
-                  <Paperclip className="h-4 w-4 text-gray-600" />
+                  <Paperclip className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </div>
 

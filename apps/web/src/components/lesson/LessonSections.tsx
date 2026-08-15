@@ -14,10 +14,10 @@ export type LessonSectionProps = {
 
 export function SectionShell({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-gray-200 bg-white/90 p-4 md:p-5 shadow-sm mb-4 break-inside-avoid">
+    <section className="rounded-xl border border-border bg-white/90 p-4 md:p-5 shadow-sm mb-4 break-inside-avoid">
       <div className="flex items-center gap-2 mb-3">
         {icon}
-        <h3 className="text-lg md:text-xl font-semibold text-gray-900">{title}</h3>
+        <h3 className="text-lg md:text-xl font-semibold text-foreground">{title}</h3>
       </div>
       <div className="prose prose-sm md:prose-base max-w-none">
         {children}
@@ -61,13 +61,13 @@ export function AssessmentSection({ markdown }: LessonSectionProps) {
 export function LessonActionBar({ onCopy, onPrint, onExportPdf }: { onCopy: () => void; onPrint: () => void; onExportPdf: () => void }) {
   return (
     <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-4">
-      <button onClick={onCopy} className="inline-flex items-center gap-1 text-sm px-3 py-1.5 rounded-md border bg-white hover:bg-gray-50">
+      <button onClick={onCopy} className="inline-flex items-center gap-1 text-sm px-3 py-1.5 rounded-md border bg-white hover:bg-muted/50">
         <Clipboard className="h-4 w-4" /> Copy
       </button>
-      <button onClick={onPrint} className="inline-flex items-center gap-1 text-sm px-3 py-1.5 rounded-md border bg-white hover:bg-gray-50">
+      <button onClick={onPrint} className="inline-flex items-center gap-1 text-sm px-3 py-1.5 rounded-md border bg-white hover:bg-muted/50">
         <Printer className="h-4 w-4" /> Print
       </button>
-      <button onClick={onExportPdf} className="inline-flex items-center gap-1 text-sm px-3 py-1.5 rounded-md border bg-white hover:bg-gray-50">
+      <button onClick={onExportPdf} className="inline-flex items-center gap-1 text-sm px-3 py-1.5 rounded-md border bg-white hover:bg-muted/50">
         <Download className="h-4 w-4" /> Export PDF
       </button>
     </div>

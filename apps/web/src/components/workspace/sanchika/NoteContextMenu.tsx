@@ -97,47 +97,47 @@ export default function NoteContextMenu({
   }, [onClose]);
 
   const row =
-    'w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/70 transition-colors';
+    'w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-foreground hover:bg-muted/70 transition-colors';
   const subRow =
-    'w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left text-gray-600 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-colors disabled:opacity-50 disabled:cursor-default';
+    'w-full flex items-center gap-2 px-3 py-1.5 text-sm text-left text-muted-foreground hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-md transition-colors disabled:opacity-50 disabled:cursor-default';
 
   return (
     <div
       ref={menuRef}
       role="menu"
-      className="fixed z-[100] min-w-[224px] max-w-[260px] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 py-1.5"
+      className="fixed z-[100] min-w-[224px] max-w-[260px] bg-card rounded-xl shadow-2xl border border-border py-1.5"
       style={{ top: pos.y, left: pos.x }}
       onContextMenu={(e) => e.preventDefault()}
     >
       <button className={row} onClick={() => { onEdit(note.id); onClose(); }}>
-        <Pencil className="h-4 w-4 text-gray-500" /> Open
+        <Pencil className="h-4 w-4 text-muted-foreground" /> Open
       </button>
       <button className={row} onClick={() => { onToggleFavorite(note); onClose(); }}>
-        <Star className={`h-4 w-4 ${note.is_favorite ? 'fill-yellow-400 text-yellow-400' : 'text-gray-500'}`} />
+        <Star className={`h-4 w-4 ${note.is_favorite ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'}`} />
         {note.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
       </button>
       <button className={row} onClick={() => { onTogglePin(note); onClose(); }}>
-        <Pin className={`h-4 w-4 ${note.is_pinned ? 'fill-orange-400 text-orange-500' : 'text-gray-500'}`} />
+        <Pin className={`h-4 w-4 ${note.is_pinned ? 'fill-orange-400 text-orange-500' : 'text-muted-foreground'}`} />
         {note.is_pinned ? 'Unpin' : 'Pin to top'}
       </button>
 
-      <div className="my-1 border-t border-gray-100 dark:border-gray-700/60" />
+      <div className="my-1 border-t border-border/60" />
 
       {/* Move to folder */}
       <button className={row} onClick={() => setExpanded(expanded === 'move' ? null : 'move')} aria-expanded={expanded === 'move'}>
-        <FolderInput className="h-4 w-4 text-gray-500" />
+        <FolderInput className="h-4 w-4 text-muted-foreground" />
         <span className="flex-1">Move to folder</span>
-        <ChevronRight className={`h-4 w-4 text-gray-400 transition-transform ${expanded === 'move' ? 'rotate-90' : ''}`} />
+        <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${expanded === 'move' ? 'rotate-90' : ''}`} />
       </button>
       {expanded === 'move' && (
         <div className="px-1.5 pb-1 max-h-44 overflow-auto">
           {note.folder_id && (
             <button className={subRow} onClick={() => { onMoveToFolder(note.id, null); onClose(); }}>
-              <CornerUpLeft className="h-4 w-4 text-gray-400" /> Remove from folder
+              <CornerUpLeft className="h-4 w-4 text-muted-foreground" /> Remove from folder
             </button>
           )}
           {folders.length === 0 ? (
-            <div className="px-3 py-1.5 text-xs text-gray-400">No folders yet</div>
+            <div className="px-3 py-1.5 text-xs text-muted-foreground">No folders yet</div>
           ) : (
             folders.map((f) => (
               <button
@@ -157,14 +157,14 @@ export default function NoteContextMenu({
 
       {/* Copy to folder */}
       <button className={row} onClick={() => setExpanded(expanded === 'copy' ? null : 'copy')} aria-expanded={expanded === 'copy'}>
-        <Copy className="h-4 w-4 text-gray-500" />
+        <Copy className="h-4 w-4 text-muted-foreground" />
         <span className="flex-1">Copy to folder</span>
-        <ChevronRight className={`h-4 w-4 text-gray-400 transition-transform ${expanded === 'copy' ? 'rotate-90' : ''}`} />
+        <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${expanded === 'copy' ? 'rotate-90' : ''}`} />
       </button>
       {expanded === 'copy' && (
         <div className="px-1.5 pb-1 max-h-44 overflow-auto">
           {folders.length === 0 ? (
-            <div className="px-3 py-1.5 text-xs text-gray-400">No folders yet</div>
+            <div className="px-3 py-1.5 text-xs text-muted-foreground">No folders yet</div>
           ) : (
             folders.map((f) => (
               <button key={f.id} className={subRow} onClick={() => { onCopyToFolder(note.id, f.id); onClose(); }}>
@@ -176,7 +176,7 @@ export default function NoteContextMenu({
         </div>
       )}
 
-      <div className="my-1 border-t border-gray-100 dark:border-gray-700/60" />
+      <div className="my-1 border-t border-border/60" />
 
       <button
         className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
