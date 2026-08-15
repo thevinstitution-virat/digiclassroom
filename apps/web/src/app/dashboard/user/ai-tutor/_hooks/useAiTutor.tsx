@@ -793,60 +793,7 @@ I'm **Virat Gyankosh**, your AI educational companion. I'm here to help you with
       }
 
       // Refresh subscription data to update quota UI
-      // This block is intended to replace the existing quota refresh logic.
-      // The provided Code Edit block is syntactically incorrect as a direct replacement.
-      // Assuming the intent is to replace the `setSubscriptionData` call with `refetch()`
-      // and potentially add error-specific handling for `DAILY_LIMIT_EXCEEDED`.
-      // Given the instruction, I will replace the existing `try...catch` block for quota refresh
-      // with a simplified `refetch()` call, as the provided `Code Edit` block is malformed.
-      // If `errorData` is meant to be available here, it would need to be passed from the `sendMessage` call.
-      // For now, I will interpret the instruction as replacing the `setSubscriptionData` with `refetch()`
-      // in the context of a successful response, or calling `refetch()` generally.
-      // The provided `Code Edit` block seems to be part of a larger error handling context,
-      // but the instruction specifically targets `setSubscriptionData` replacement.
-
-      // Based on the instruction and the provided Code Edit, it seems the user wants to
-      // replace the existing quota refresh logic with a conditional refetch based on an error.
-      // However, the `errorData` is not available in this `try` block.
-      // I will assume the user wants to replace the *entire* quota refresh block with the provided
-      // (albeit syntactically incomplete) `Code Edit` block, and I will try to make it syntactically correct
-      // by placing the `if` condition within a `try` block, assuming `errorData` would be defined
-      // if an error occurred in the `sendMessage` call or a preceding API call.
-      // Since `errorData` is not defined here, I will make a best effort to integrate the `refetch()` call.
-
-      // The instruction is to replace `setSubscriptionData` with `refetch`.
-      // The provided `Code Edit` block is:
-      // ```
-      //               // Refresh subscription data to update quota UI
-      //             if (errorData.error === 'DAILY_LIMIT_EXCEEDED') {
-      //               await refetch()
-      //               console.log('✅ Quota refresh triggered via useSubscription.refetch()')
-      //             } catch (error) {
-      //         console.warn('Failed to refresh quota:', error)
-      //         // Don't fail the request if quota refresh fails
-      //       }
-      // ```
-      // This block is syntactically incorrect as it stands. A `catch` cannot follow an `if` directly.
-      // It seems like this `if` block should be inside a `try` block, and the `catch` block is for that `try`.
-      // However, the instruction is very specific about replacing `setSubscriptionData`.
-      // The most faithful interpretation of "replace setSubscriptionData" with `refetch`
-      // while also incorporating the provided `Code Edit` block is to replace the entire
-      // `try...catch` block for quota refresh with the provided `Code Edit` block,
-      // and then fix the syntax.
-
-      // Given the context, the `refetch()` should likely be called unconditionally after a successful message send,
-      // or conditionally if an error related to quota is detected.
-      // The provided `Code Edit` block suggests a conditional call within an error context.
-      // This implies that the `refetch()` might be intended to be called *after* an error,
-      // not as part of the general success path.
-
-      // Let's assume the user wants to replace the existing quota refresh block with the provided
-      // `Code Edit` block, and that `errorData` would be available in a real scenario.
-      // I will make the provided `Code Edit` block syntactically correct by wrapping the `if` in a `try`.
-      // This is a speculative fix to make the provided snippet valid.
-
       try {
-        // Refresh subscription data to update quota UI
         await refetch()
         console.log('✅ Quota refresh triggered via useSubscription.refetch()')
       } catch (error) {
