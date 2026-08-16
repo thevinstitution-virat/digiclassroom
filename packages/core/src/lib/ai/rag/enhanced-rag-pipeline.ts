@@ -2570,68 +2570,73 @@ export class EnhancedRAGPipeline {
    */
   private filterByRelevanceThreshold(
     results: any[],
-    query: string,
-    options: EnhancedRAGOptions
+    _query: string,
+    _options: EnhancedRAGOptions
   ): any[] {
-    // Get relevance threshold from environment or options
-    // Default: 0.55 for dense-only, 0.65 for hybrid search (more realistic for educational content)
-    const defaultThreshold = process.env.ENABLE_HYBRID_SEARCH === 'true' ? '0.65' : '0.55';
+    if (!results || results.length === 0) return [];
+
+    // ── Why these numbers ───────────────────────────────────────────────────
+    // Absolute cosine thresholds are embedding-model-specific and MUST match the
+    // model the corpus was indexed with. This collection (ncert-books-enhanced)
+    // is embedded with text-embedding-3-large, whose short-query↔long-passage
+    // cosine scores are strongly compressed: a genuinely in-syllabus NCERT match
+    // lands around 0.30–0.45, and off-topic queries land ~0.15–0.28 — NOT the
+    // 0.7+ that smaller/older models produce.
+    //
+    // The previous defaults (0.55 dense / 0.65 hybrid, 0.45 fallback) sat ABOVE
+    // every real match, so this filter discarded 100% of retrieved chunks even
+    // for on-topic questions. Downstream that reads as an empty context, and the
+    // tutor answers every single question with the "not present in the NCERT
+    // textbook" knowledge-gap message. Measured live: "different sectors of the
+    // Indian economy" (in-corpus) topped out at 0.44; off-topic questions at
+    // 0.15–0.28. Recalibrated so the on-topic band passes and the off-topic band
+    // is rejected. All three are env-tunable so prod can adjust without a deploy.
+    const defaultThreshold = process.env.ENABLE_HYBRID_SEARCH === 'true' ? '0.35' : '0.30';
     const threshold = parseFloat(process.env.RAG_RELEVANCE_THRESHOLD || defaultThreshold);
-    const minChunks = 3; // Minimum chunks to return (fallback threshold)
-    const fallbackThreshold = 0.45; // Lower threshold if too few chunks (was 0.6, too strict)
+    const fallbackThreshold = parseFloat(process.env.RAG_FALLBACK_THRESHOLD || '0.20');
+    // Below this best-match score we treat the question as genuinely out-of-corpus
+    // and return nothing (the honest knowledge-gap path). At or above it we keep
+    // the top chunks even if an over-tight absolute threshold rejected them — so a
+    // mis-set RAG_RELEVANCE_THRESHOLD can never again silently zero out retrieval.
+    const knowledgeGapFloor = parseFloat(process.env.RAG_KNOWLEDGE_GAP_FLOOR || '0.28');
+    const minChunks = 3;
 
-    console.log(`🔍 Filtering chunks by relevance threshold: ${threshold}`);
-    console.log(`📊 Initial chunks: ${results.length}`);
+    // results arrive already ranked by Qdrant (descending score).
+    const topScore = typeof results[0]?.score === 'number' ? results[0].score : 0;
 
-    // Filter chunks by threshold
-    const filteredResults = results.filter(result => {
-      // Qdrant returns score in 0-1 range (cosine similarity)
-      return result.score > threshold;
-    });
+    console.log(`🔍 Relevance filter: threshold=${threshold} fallback=${fallbackThreshold} floor=${knowledgeGapFloor} | ${results.length} candidates, top=${topScore.toFixed(3)}`);
 
-    console.log(`✅ Chunks passing threshold (${threshold}): ${filteredResults.length}`);
-
-    // 🛡️ FALLBACK: If too few chunks pass threshold, use lower threshold
-    if (filteredResults.length < minChunks && results.length >= minChunks) {
-      console.log(`⚠️ Too few chunks (${filteredResults.length}), applying fallback threshold: ${fallbackThreshold}`);
-
-      const fallbackResults = results.filter(result => result.score > fallbackThreshold);
-
-      console.log(`✅ Chunks passing fallback threshold (${fallbackThreshold}): ${fallbackResults.length}`);
-
-      // Log filtering statistics
-      if (fallbackResults.length < results.length) {
-        console.log(`🔍 Filtered ${results.length - fallbackResults.length} low-relevance chunks (fallback threshold: ${fallbackThreshold})`);
-        console.log(`   Kept: ${fallbackResults.length}/${results.length} chunks`);
-
-        // Log score distribution
-        const scores = fallbackResults.map(r => r.score.toFixed(3)).join(', ');
-        console.log(`   Scores: [${scores}]`);
-      }
-
-      return fallbackResults;
+    // Authoritative knowledge-gap gate FIRST: if even the single best match is
+    // weak, the question is genuinely out-of-corpus. Return nothing so the caller
+    // emits the honest "not in the textbook" response instead of grounding an
+    // answer in unrelated chapters (e.g. answering a civics question from the
+    // economics chunks that merely happen to be the closest vectors available).
+    if (topScore < knowledgeGapFloor) {
+      console.log(`🚫 Best score ${topScore.toFixed(3)} < floor ${knowledgeGapFloor} — treating as knowledge gap (no chunks)`);
+      return [];
     }
 
-    // Log filtering statistics
-    if (filteredResults.length < results.length) {
-      console.log(`🔍 Filtered ${results.length - filteredResults.length} low-relevance chunks (threshold: ${threshold})`);
-      console.log(`   Kept: ${filteredResults.length}/${results.length} chunks`);
-
-      // Log score distribution
-      const scores = filteredResults.map(r => r.score.toFixed(3)).join(', ');
-      console.log(`   Scores: [${scores}]`);
-
-      // Log filtered out chunks for monitoring
-      const filteredOut = results.filter(r => r.score <= threshold);
-      if (filteredOut.length > 0) {
-        const filteredScores = filteredOut.map(r => r.score.toFixed(3)).join(', ');
-        console.log(`   Filtered out scores: [${filteredScores}]`);
-      }
-    } else {
-      console.log(`✅ All chunks passed relevance threshold`);
+    // There IS a genuine match (top cleared the floor). Now select how many
+    // supporting chunks to hand downstream, widening the net if the primary
+    // threshold is too tight — never collapsing back to zero from here.
+    const passingPrimary = results.filter(r => r.score > threshold);
+    if (passingPrimary.length >= minChunks) {
+      console.log(`✅ ${passingPrimary.length} chunks passed primary threshold`);
+      return passingPrimary;
     }
 
-    return filteredResults;
+    const passingFallback = results.filter(r => r.score > fallbackThreshold);
+    if (passingFallback.length >= minChunks) {
+      console.log(`⚠️ Only ${passingPrimary.length} passed primary; ${passingFallback.length} passed fallback threshold`);
+      return passingFallback;
+    }
+
+    // Top match is real but few neighbours clear even the fallback — keep whatever
+    // did, or the top-N candidates, so a mis-tuned absolute threshold can never
+    // zero out a genuine retrieval.
+    const kept = passingFallback.length > 0 ? passingFallback : results.slice(0, minChunks);
+    console.log(`🛟 Sparse support for top=${topScore.toFixed(3)}; keeping top ${kept.length} candidate(s)`);
+    return kept;
   }
 
   /**
