@@ -316,7 +316,7 @@ export async function resetDatabase() {
     await executeQuery('DELETE FROM assessment_submissions')
     await executeQuery('DELETE FROM assessments')
     await executeQuery('DELETE FROM learning_progress')
-    await executeQuery('DELETE FROM chat_messages')
+    await executeQuery('DELETE FROM chat_messages_history')
     await executeQuery('DELETE FROM chat_sessions')
     await executeQuery('DELETE FROM vector_embeddings')
     await executeQuery('DELETE FROM content')

@@ -1,6 +1,6 @@
 /**
  * Chat History Migration API
- * Runs the database migration to create conversations and chat_messages tables
+ * Runs the database migration to create conversations and chat_messages_history tables
  * 
  * POST /api/ai/chat/history/migrate
  */
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       message: 'Chat history tables created successfully',
       tables: [
         'conversations',
-        'chat_messages',
+        'chat_messages_history',
         'menu_selections',
         'user_preferences',
         'progress_logs',
@@ -60,7 +60,7 @@ export async function GET() {
   return NextResponse.json({
     message: 'Chat History Migration Endpoint',
     usage: 'POST to this endpoint to run the migration',
-    note: 'This will create the conversations and chat_messages tables if they do not exist'
+    note: 'This will create the conversations and chat_messages_history tables if they do not exist'
   });
 }
 

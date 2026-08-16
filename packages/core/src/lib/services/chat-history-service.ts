@@ -49,14 +49,18 @@ export class ChatHistoryService {
         return existingConversations[0].id;
       }
 
-      // Create new conversation
+      // Create new conversation.
+      // NOTE: the column list previously named `user_id` twice (a typo for the
+      // legacy `clerk_user_id`), which Postgres rejects with "column specified
+      // more than once" — so every insert threw and the catch below swallowed it,
+      // silently persisting nothing. clerk_user_id is gone (DCP is on
+      // better-auth), so the column and its duplicate bind are removed.
       const result = await executeQuery(
-        `INSERT INTO conversations 
-         (user_id, user_id, role, intent, topic, subject, class_level, session_id, status, metadata, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, NOW(), NOW())
+        `INSERT INTO conversations
+         (user_id, role, intent, topic, subject, class_level, session_id, status, metadata, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, NOW(), NOW())
          RETURNING id`,
         [
-          params.userId,
           params.userId,
           params.role,
           params.intent,

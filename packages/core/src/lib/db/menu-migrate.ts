@@ -148,7 +148,7 @@ export class MenuMigrationManager {
       'CREATE INDEX IF NOT EXISTS idx_conversations_intent_topic ON conversations(intent, topic)',
       'CREATE INDEX IF NOT EXISTS idx_menu_selections_user_timestamp ON menu_selections(user_id, timestamp)',
       'CREATE INDEX IF NOT EXISTS idx_progress_logs_user_subject ON progress_logs(user_id, subject, date)',
-      'CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_type ON chat_messages(conversation_id, message_type)',
+      'CREATE INDEX IF NOT EXISTS idx_chat_messages_history_conv_type ON chat_messages_history(conversation_id, message_type)',
       'CREATE INDEX IF NOT EXISTS idx_analytics_events_user_type ON analytics_events(user_id, event_type, timestamp)'
     ]
 
@@ -171,9 +171,9 @@ export class MenuMigrationManager {
 
     const requiredTables = [
       'conversations',
-      'menu_selections', 
+      'menu_selections',
       'progress_logs',
-      'chat_messages',
+      'chat_messages_history',
       'user_preferences',
       'analytics_events',
       'performance_metrics'
@@ -237,7 +237,7 @@ export class MenuMigrationManager {
     // Clean up old conversations and related data
     await withTransaction(async () => {
       await executeQuery(
-        'DELETE FROM chat_messages WHERE conversation_id IN (SELECT id FROM conversations WHERE created_at < ?)',
+        'DELETE FROM chat_messages_history WHERE conversation_id IN (SELECT id FROM conversations WHERE created_at < ?)',
         [cutoffDate]
       )
       

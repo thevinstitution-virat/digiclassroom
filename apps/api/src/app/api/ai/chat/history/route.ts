@@ -82,8 +82,8 @@ export async function GET(request: NextRequest) {
     let conversationsQuery = `
       SELECT
         c.*,
-        (SELECT COUNT(*) FROM chat_messages WHERE conversation_id = c.id) as message_count,
-        (SELECT MAX(timestamp) FROM chat_messages WHERE conversation_id = c.id) as last_message_at
+        (SELECT COUNT(*) FROM chat_messages_history WHERE conversation_id = c.id) as message_count,
+        (SELECT MAX(timestamp) FROM chat_messages_history WHERE conversation_id = c.id) as last_message_at
       FROM conversations c
       WHERE c.user_id = ?
     `;
@@ -230,7 +230,7 @@ export async function POST(request: NextRequest) {
         timestamp,
         tokens_used,
         response_time_ms
-      FROM chat_messages
+      FROM chat_messages_history
       WHERE conversation_id = ?
       ORDER BY timestamp ASC`,
       [conversationId]
