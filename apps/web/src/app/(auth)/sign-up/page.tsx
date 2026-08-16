@@ -6,7 +6,7 @@ import { toAppUrl } from '@/utils/auth-redirect'
 import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Sparkles, Info } from 'lucide-react'
+import { Sparkles, Info, User, Mail, Lock, Eye, EyeOff } from 'lucide-react'
 // App-local single-card auth shell (see AuthShell). The redesign drops the
 // two-column brand aside + lotus mandala for a clean, focused auth.
 import { AuthShell } from '@/components/auth/AuthShell'
@@ -24,8 +24,14 @@ function SignUpForm() {
         }
     }, [isLoaded, user, router])
 
+    const [name, setName] = useState('')
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
+    const [showPassword, setShowPassword] = useState(false)
+    const [loading, setLoading] = useState(false)
     const [googleLoading, setGoogleLoading] = useState(false)
     const [vidyaverseLoading, setVidyaverseLoading] = useState(false)
+    const [verifySent, setVerifySent] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     // Mirrors the isReal() gate on the server (packages/core/src/auth/index.ts) —
@@ -37,12 +43,30 @@ function SignUpForm() {
         googleClientId && !googleClientId.startsWith('your_') && !googleClientId.toLowerCase().includes('placeholder')
     )
 
-    // Account creation is federated only. The server sets
-    // `emailAndPassword.disableSignUp: true` (packages/core/src/auth/index.ts),
-    // so /api/auth/sign-up/email answers 400 EMAIL_PASSWORD_SIGN_UP_DISABLED for
-    // every request. This page previously rendered a full name/email/password
-    // form against that endpoint — it could not succeed even once, and told the
-    // user only "Failed to create account".
+    // Local email/password self-signup is open again (server sets
+    // emailAndPassword.disableSignUp: false, 2026-08-16). requireEmailVerification
+    // is still on, so a successful signup creates the account but grants NO
+    // session — the user must click the verification email before they can sign
+    // in. We therefore show a "check your email" confirmation rather than routing
+    // to the dashboard.
+    const handleEmailSignUp = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setLoading(true)
+        setError(null)
+        try {
+            const result = await authClient.signUp.email({ email, password, name })
+            if (result.error) {
+                setError(result.error.message || 'Could not create your account. Please try again.')
+            } else {
+                setVerifySent(true)
+            }
+        } catch (err: any) {
+            setError(err.message || 'Something went wrong. Please try again.')
+        } finally {
+            setLoading(false)
+        }
+    }
+
     const handleVidyaverseSignUp = async () => {
         setVidyaverseLoading(true)
         setError(null)
@@ -70,6 +94,32 @@ function SignUpForm() {
             setError(err.message || 'Google sign-up failed')
             setGoogleLoading(false)
         }
+    }
+
+    // Account created — verification email on its way. Everything below the
+    // heading is replaced by a single confirmation so the user knows the next
+    // step is their inbox, not this page.
+    if (verifySent) {
+        return (
+            <AuthShell title="Almost there" subtitle="Confirm your email to finish">
+                <div className="flex flex-col gap-4">
+                    <div className="flex items-start gap-3 rounded-[14px] border border-border bg-secondary p-4">
+                        <Mail className="mt-0.5 h-5 w-5 flex-none text-[color:var(--accent-strong)]" />
+                        <p className="text-[13.5px] leading-relaxed text-muted-foreground">
+                            We sent a verification link to{' '}
+                            <strong className="text-foreground">{email}</strong>. Click it to activate
+                            your account, then sign in.
+                        </p>
+                    </div>
+                    <Link
+                        href="/sign-in"
+                        className="flex w-full items-center justify-center gap-2 rounded-[14px] bg-[linear-gradient(135deg,var(--kumkum),var(--saffron))] py-3 px-4 font-bold text-white shadow-[0_14px_30px_-14px_rgba(192,57,43,0.65)] transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0"
+                    >
+                        Go to Sign In
+                    </Link>
+                </div>
+            </AuthShell>
+        )
     }
 
     return (
@@ -105,29 +155,116 @@ function SignUpForm() {
                     </button>
                 )}
 
-                {/* Vidyaverse is the primary account-creation path — the server
-                    accepts no other. Rendered as the primary CTA, because it is the
-                    ONLY thing on this page that works. */}
+                {/* Vidyaverse SSO — one login across Campus OS, Library and Tutor. */}
                 <button
                     onClick={handleVidyaverseSignUp}
                     disabled={vidyaverseLoading}
-                    className="flex w-full items-center justify-center gap-3 rounded-[14px] bg-[linear-gradient(135deg,var(--kumkum),var(--saffron))] py-3 px-4 font-bold text-white shadow-[0_14px_30px_-14px_rgba(192,57,43,0.65)] transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
+                    className="flex w-full items-center justify-center gap-3 rounded-[14px] border border-[rgb(var(--kumkum-rgb)/0.35)] bg-[rgb(var(--kumkum-rgb)/0.06)] px-4 py-3 font-bold text-[color:var(--kumkum)] transition-all duration-200 hover:bg-[rgb(var(--kumkum-rgb)/0.11)] disabled:opacity-50"
                 >
                     {vidyaverseLoading ? (
-                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/70 border-t-transparent" />
+                        <div
+                            className="h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
+                            style={{ borderColor: 'var(--kumkum)', borderTopColor: 'transparent' }}
+                        />
                     ) : (
-                        <Sparkles className="h-5 w-5" />
+                        <Sparkles className="h-5 w-5" style={{ color: 'var(--kumkum)' }} />
                     )}
                     Continue with Vidyaverse
                 </button>
 
-                {/* Info card — accounts are federated via Vidyaverse ID */}
+                {/* Divider */}
+                <div className="my-2 flex items-center gap-3 text-[12.5px] text-muted-foreground">
+                    <span className="h-px flex-1 bg-border" />
+                    or sign up with email
+                    <span className="h-px flex-1 bg-border" />
+                </div>
+
+                {/* Email/password registration. Server accepts this again
+                    (disableSignUp: false); the account is created unverified and a
+                    verification email is sent before it can sign in. */}
+                <form onSubmit={handleEmailSignUp} className="flex flex-col gap-3">
+                    <div>
+                        <label className="mb-1.5 block text-[13.5px] font-bold text-foreground">
+                            Full Name
+                        </label>
+                        <div className="relative">
+                            <User className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                            <input
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                placeholder="Your name"
+                                required
+                                className="w-full rounded-[14px] border border-input bg-card py-3 pl-11 pr-4 text-foreground outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-ring/25"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="mb-1.5 block text-[13.5px] font-bold text-foreground">
+                            Email Address
+                        </label>
+                        <div className="relative">
+                            <Mail className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="you@example.com"
+                                required
+                                className="w-full rounded-[14px] border border-input bg-card py-3 pl-11 pr-4 text-foreground outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-ring/25"
+                            />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="mb-1.5 block text-[13.5px] font-bold text-foreground">
+                            Password
+                        </label>
+                        <div className="relative">
+                            <Lock className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                            <input
+                                type={showPassword ? 'text' : 'password'}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="At least 8 characters"
+                                required
+                                minLength={8}
+                                className="w-full rounded-[14px] border border-input bg-card py-3 pl-11 pr-12 text-foreground outline-none transition-all placeholder:text-muted-foreground/70 focus:border-primary focus:ring-2 focus:ring-ring/25"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                            >
+                                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                            </button>
+                        </div>
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="flex w-full items-center justify-center gap-2 rounded-[14px] bg-[linear-gradient(135deg,var(--kumkum),var(--saffron))] py-3 px-4 font-bold text-white shadow-[0_14px_30px_-14px_rgba(192,57,43,0.65)] transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
+                    >
+                        {loading ? (
+                            <>
+                                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                Creating account...
+                            </>
+                        ) : (
+                            'Create Account'
+                        )}
+                    </button>
+                </form>
+
+                {/* Info card — federated option still available and encouraged. */}
                 <div className="flex items-start gap-3 rounded-[14px] border border-border bg-secondary p-4">
                     <Info className="mt-0.5 h-5 w-5 flex-none text-[color:var(--accent-strong)]" />
                     <p className="text-[13px] leading-relaxed text-muted-foreground">
-                        DigiClassroom accounts are created through your{' '}
-                        <strong className="text-foreground">Vidyaverse ID</strong> — one login across
-                        Campus OS, Library and Tutor. No separate password to remember.
+                        Prefer one login across Campus OS, Library and Tutor? Use your{' '}
+                        <strong className="text-foreground">Vidyaverse ID</strong> above — no separate
+                        password to remember.
                     </p>
                 </div>
             </div>

@@ -147,11 +147,14 @@ export const auth = betterAuth({
     },
     emailAndPassword: {
         enabled: true,
-        // OIDC-via-Vidyaverse is now the only account-creation path (2026-08-06
-        // identity reset). Sign-IN stays enabled -- the super-admin's break-glass
-        // recovery path and any future password-reset-issued credential still
-        // need it -- only new local sign-ups are blocked.
-        disableSignUp: true,
+        // Local email/password self-signup is OPEN again (owner decision,
+        // 2026-08-16): DigiClassroom offers every login path, not federation only.
+        // This is contained -- databaseHooks.user.create forces new accounts to
+        // 'student' (no self-assigned role) and requireEmailVerification below
+        // blocks sign-in until the address is confirmed. The super-admin trigger
+        // still bars any escalation. The 2026-08-06 reset that made Vidyaverse the
+        // sole account-creation path is intentionally reversed here.
+        disableSignUp: false,
         // Hard gate (B2B2C): users cannot sign in until they verify their email.
         // The verification email is sent on sign-up (emailVerification.sendOnSignUp)
         // and re-sent on a blocked sign-in attempt. OAuth/federated users arrive
