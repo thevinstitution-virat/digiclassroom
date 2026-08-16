@@ -5,6 +5,22 @@
 
 import { pipeline, Pipeline } from '@xenova/transformers';
 
+/**
+ * Cross-encoder reranking runs an ONNX model through @xenova/transformers.
+ * On this deployment onnxruntime throws a NATIVE `Ort::Exception` mid-inference
+ * that calls std::terminate() — it is NOT catchable by JS try/catch, so it
+ * crashes the entire Node process and drops the in-flight request. To users this
+ * looked like an agent (e.g. Self-Study Buddy) that "stopped answering" /
+ * "connection failed", because its retrieval path invoked the reranker while
+ * Deep Dive's did not. Reranking is therefore OFF unless explicitly turned on
+ * with ENABLE_CROSS_ENCODER_RERANK=true. With only ~94 points in the shared
+ * collection it adds ~nothing over the dense/RRF ordering anyway; identity order
+ * is a safe, crash-free default. Turn it back on only once the native crash is
+ * resolved (e.g. run ONNX in an isolated worker so a terminate() can't take the
+ * request process down).
+ */
+const RERANK_ENABLED = process.env.ENABLE_CROSS_ENCODER_RERANK === 'true';
+
 export interface RerankResult {
   id: string;
   content: string;
@@ -57,6 +73,10 @@ export class CrossEncoderReranker {
    * Load the cross-encoder model
    */
   private async loadModel(): Promise<void> {
+    if (!RERANK_ENABLED) {
+      // Never load / run the ONNX model — see RERANK_ENABLED note above.
+      return;
+    }
     if (this.model) {
       return; // Already loaded
     }
@@ -143,6 +163,20 @@ export class CrossEncoderReranker {
     topK?: number
   ): Promise<RerankResult[]> {
     const startTime = Date.now();
+
+    // Reranking disabled (default) → return the input order untouched. This is
+    // the crash-safe path: the ONNX model is never touched. See RERANK_ENABLED.
+    if (!RERANK_ENABLED) {
+      return (topK ? chunks.slice(0, topK) : chunks).map((chunk, idx) => ({
+        ...chunk,
+        original_score: chunk.score,
+        rerank_score: chunk.score,
+        score_delta: 0,
+        original_rank: idx + 1,
+        rerank_rank: idx + 1,
+        rank_change: 0,
+      }));
+    }
 
     try {
       // Load model if not already loaded

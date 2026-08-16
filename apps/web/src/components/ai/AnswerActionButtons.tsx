@@ -21,7 +21,6 @@ import {
   BookOpenText,
   ImagePlus,
   FolderPlus,
-  ChevronDown,
   Plus,
   BookmarkPlus,
   Loader2,
@@ -60,83 +59,6 @@ function toNoteBoardEnum(board?: string | null): NoteBoard | null {
     ? (normalised as NoteBoard)
     : null;
 }
-
-/**
- * Read a full answer out of the /api/ai/chat SSE stream.
- *
- * The route streams `data: {json}\n\n` frames: a series of `{type:'chunk',content}`
- * events, a final `{type:'complete',answer}` event, then `data: [DONE]`. We prefer
- * the `complete` event's whole answer, and fall back to concatenating the chunk
- * contents in case the stream ends early. Returns '' if nothing usable arrived.
- */
-async function readAnswerFromSSE(response: Response): Promise<string> {
-  const reader = response.body?.getReader();
-  if (!reader) return '';
-
-  const decoder = new TextDecoder();
-  let buffer = '';
-  let assembled = '';
-  let completeAnswer = '';
-
-  const consumeFrame = (frame: string) => {
-    const dataLine = frame.split('\n').find((l) => l.startsWith('data:'));
-    if (!dataLine) return;
-    const payload = dataLine.slice(dataLine.indexOf(':') + 1).trim();
-    if (!payload || payload === '[DONE]') return;
-    try {
-      const evt = JSON.parse(payload);
-      if (evt.type === 'chunk' && typeof evt.content === 'string') {
-        assembled += evt.content;
-      } else if (evt.type === 'complete' && typeof evt.answer === 'string') {
-        completeAnswer = evt.answer;
-      }
-    } catch {
-      // Ignore keep-alive / non-JSON frames.
-    }
-  };
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    let sep: number;
-    while ((sep = buffer.indexOf('\n\n')) !== -1) {
-      consumeFrame(buffer.slice(0, sep));
-      buffer = buffer.slice(sep + 2);
-    }
-  }
-  if (buffer.trim()) consumeFrame(buffer);
-
-  return (completeAnswer || assembled).trim();
-}
-
-/** Angles for "Explain a different way" — each forces a genuinely different framing. */
-const EXPLANATION_ANGLES = [
-  {
-    id: 'analogy',
-    label: 'By analogy',
-    directive:
-      'Re-explain this using a concrete ANALOGY or metaphor drawn from everyday Indian student life. ' +
-      'Lead with the analogy, then map each part of it back to the concept. ' +
-      'Do NOT reuse the phrasing, structure, or examples of the previous explanation.',
-  },
-  {
-    id: 'real_world',
-    label: 'Real-world example',
-    directive:
-      'Re-explain this through a specific, concrete REAL-WORLD EXAMPLE or application the student ' +
-      'could observe themselves. Start from the example and derive the concept from it, rather than ' +
-      'stating the concept first. Do NOT reuse the previous explanation\'s wording or examples.',
-  },
-  {
-    id: 'simpler',
-    label: 'Simpler words',
-    directive:
-      'Re-explain this using SIMPLER VOCABULARY and shorter sentences, as if to a student two grades ' +
-      'below. Replace every piece of technical jargon with plain language on first use (you may give ' +
-      'the technical term in brackets afterwards). Do NOT reuse the previous explanation\'s wording.',
-  },
-] as const;
 
 interface AnswerActionButtonsProps {
   answer: string;
@@ -498,13 +420,15 @@ export default function AnswerActionButtons({
   };
 
   /**
-   * Handle "Explain a different way".
+   * Handle "Explain Differently".
    *
-   * Deliberately NOT a resample of the same prompt — that mostly returns a
-   * paraphrase. Each press advances through EXPLANATION_ANGLES (analogy →
-   * real-world example → simpler vocabulary) and sends that angle's directive as
-   * a system-level instruction, along with the previous answer so the model can
-   * actively avoid repeating it.
+   * Re-explains the SAME answer through a relatable Indian analogy via the
+   * dedicated /api/ai/explain-differently endpoint. That endpoint is a pure
+   * text-transform (single LLM call, no RAG / premise-validation / cache), so it
+   * is fast and reliable — unlike the previous version, which POSTed a synthetic
+   * "Re-explain this…" prompt back through /api/ai/chat and had to parse an SSE
+   * stream. Each press asks for a fresh analogy from a different everyday-Indian
+   * domain (via `attempt`), so "Another Way" genuinely differs.
    *
    * Self-contained by design: this component does not own the tutor message
    * list, so the alternative renders inline here (same pattern as Translate and
@@ -517,30 +441,23 @@ export default function AnswerActionButtons({
       return;
     }
 
-    const angle = EXPLANATION_ANGLES[angleIndex % EXPLANATION_ANGLES.length];
     setIsExplaining(true);
 
     if (onButtonUsage) {
-      onButtonUsage('explain_differently', { subject, classLevel, query, angle: angle.id });
+      onButtonUsage('explain_differently', { subject, classLevel, query, attempt: angleIndex });
     }
 
     try {
-      const response = await fetch('/api/ai/chat', {
+      const response = await fetch('/api/ai/explain-differently', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message:
-            `${angle.directive}\n\n` +
-            `Original question: ${query}\n\n` +
-            `The explanation already given (do NOT repeat its structure, wording, or examples):\n` +
-            `${answer}`,
+          query,
+          answer,
           subject,
           classLevel,
           medium: currentMedium === 'HINDI' ? 'HINDI' : 'ENGLISH',
-          // Force a fresh generation: a cache hit would return the very answer
-          // the student just told us didn't land.
-          bypassCache: true,
-          roleContext: { role: 'student' }
+          attempt: angleIndex,
         })
       });
 
@@ -549,27 +466,22 @@ export default function AnswerActionButtons({
         throw new Error(errorData.error || `Could not generate another explanation (${response.status})`);
       }
 
-      // /api/ai/chat responds as an SSE stream (text/event-stream), not JSON:
-      // per-`chunk` events carry a slice of the answer and a final `complete`
-      // event carries the whole thing. Reading it with response.json() always
-      // threw, so this handler never worked. Consume the stream instead —
-      // prefer the `complete` event's full answer, and fall back to the
-      // concatenated chunks if the stream ends without one.
-      const text = await readAnswerFromSSE(response);
+      const data = await response.json();
+      const text: string = (data.explanation || '').trim();
 
       if (!text) {
         throw new Error('The tutor returned an empty explanation.');
       }
 
       setAltExplanation(text);
-      setAltAngleLabel(angle.label);
+      setAltAngleLabel('Indian analogy');
       setShowAltExplanation(true);
       setAngleIndex((i) => i + 1);
 
       addNotification({
         type: 'success',
-        title: `Explained ${angle.label.toLowerCase()}`,
-        message: 'A different take is shown below. Press again for another angle.'
+        title: 'Explained with an analogy',
+        message: 'A relatable take is shown below. Press again for another analogy.'
       });
     } catch (error) {
       console.error('Explain-differently error:', error);
