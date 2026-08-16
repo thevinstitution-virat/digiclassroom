@@ -52,7 +52,7 @@ export default async function DashboardPage() {
       // did this for a clean 401 and silently defaulted to /dashboard/user
       // for everything else, which is indistinguishable from "authenticated
       // as a student" to anyone reading the network tab.
-      redirect('/sign-in');
+      redirect('/sign-in?session=expired');
     }
   } catch (err) {
     if (isNextRedirectError(err)) throw err; // redirect() throws internally — let it propagate

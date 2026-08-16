@@ -16,7 +16,7 @@
 
 import React, { ReactNode, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useSidebar } from '@/contexts/SidebarContext'
 import { useDashboardShell } from '@/contexts/DashboardShellContext'
 import { authClient } from '@/auth/client'
@@ -71,6 +71,7 @@ export default function BaseSidebar({
   headerSlot,
 }: BaseSidebarProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const { isCollapsed, setSidebarCollapsed } = useSidebar()
   const shell = useDashboardShell()
 
@@ -96,7 +97,12 @@ export default function BaseSidebar({
   }, [navSig, brandName, brandSubtitle])
 
   const handleLogout = async () => {
+    // Navigate afterwards, always. Without this the cookie is cleared but the
+    // dashboard stays on screen, fully rendered — so signing out looked like it
+    // had done nothing until the user happened to reload. The topbar AccountMenu
+    // already did this; the sidebar button did not.
     try { await authClient.signOut() } catch (e) { console.error('Logout failed:', e) }
+    finally { router.replace('/sign-in') }
   }
 
   const closeOnMobile = () => setSidebarCollapsed(true)

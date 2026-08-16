@@ -4,6 +4,8 @@
 // Used by dashboard/page.tsx router — avoids duplicating getOrgContext() logic client-side.
 
 import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
+import { getSafeSession } from '@/auth';
 import { getOrgContextOrNull } from '@/lib/auth/get-org-context';
 import type { Role, OrgRole } from '@/auth/permissions';
 
@@ -45,19 +47,41 @@ function resolveDashboard(
 }
 
 export async function GET(): Promise<NextResponse> {
-  const ctx = await getOrgContextOrNull();
+  // "Who are you" and "which org are you in" are DIFFERENT questions, and this
+  // route only needs the first.
+  //
+  // getOrgContext() throws `Forbidden: no active organization` for any
+  // non-super_admin whose x-org-id header is empty, and getOrgContextOrNull()
+  // flattens that throw to `null`. Reading that null as 401 told a perfectly
+  // authenticated user they were unauthenticated — and every D2C learner is in
+  // that state, because they belong to no institution (the `member` and
+  // `organization` tables are empty in production).
+  //
+  // The 401 then drove an infinite redirect loop: /dashboard fails closed to
+  // /sign-in, middleware sees the still-valid session cookie and bounces back to
+  // /dashboard, forever. Logging in "did nothing" for every non-super-admin.
+  const session = await getSafeSession(await headers());
 
-  if (!ctx) {
+  if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const dashboard = resolveDashboard(ctx.globalRole, ctx.orgRole, ctx.isPlatformBypass);
+  // Org context is a refinement here, not a gate: it upgrades the answer to an
+  // institution dashboard when the user has one. Its absence is a normal state
+  // for a D2C student, so it must not fail the request.
+  const ctx = await getOrgContextOrNull();
+
+  const globalRole = (ctx?.globalRole ?? (session.user as { role?: string }).role ?? 'student') as Role;
+  const orgRole = ctx?.orgRole ?? null;
+  const orgId = ctx && ctx.orgId !== 'system' ? ctx.orgId : null;
+
+  const dashboard = resolveDashboard(globalRole, orgRole, ctx?.isPlatformBypass ?? false);
 
   const body: MeResponse = {
-    userId:     ctx.userId,
-    globalRole: ctx.globalRole,
-    orgRole:    ctx.orgRole,
-    orgId:      ctx.orgId === 'system' ? null : ctx.orgId,
+    userId:     session.user.id,
+    globalRole,
+    orgRole,
+    orgId,
     dashboard,
   };
 

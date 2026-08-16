@@ -18,12 +18,26 @@ function SignInForm() {
     const redirectUrl = searchParams.get('redirect_url') || '/dashboard'
     const { user, isLoaded } = useBetterAuthUser()
 
-    // Redirect authenticated users to dashboard
+    // `?session=expired` means /dashboard already asked the API and was told this
+    // session is unusable. The cookie is still in the browser, so the checks below
+    // would happily send the user back to /dashboard and restart the loop.
+    const sessionExpired = searchParams.get('session') === 'expired'
+
+    // Redirect authenticated users to dashboard — but never while recovering from
+    // a dead session, or we re-enter the /dashboard ↔ /sign-in loop this flag exists
+    // to break.
     useEffect(() => {
-        if (isLoaded && user) {
+        if (isLoaded && user && !sessionExpired) {
             router.replace('/dashboard')
         }
-    }, [isLoaded, user, router])
+    }, [isLoaded, user, router, sessionExpired])
+
+    // Purge the stale cookie once, so the next visit to /sign-in is clean instead of
+    // needing another /dashboard round-trip to re-earn the ?session=expired marker.
+    useEffect(() => {
+        if (!sessionExpired) return
+        authClient.signOut().catch(() => { /* already gone — nothing to clear */ })
+    }, [sessionExpired])
 
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')

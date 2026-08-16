@@ -79,7 +79,16 @@ export async function middleware(req: NextRequest) {
   // Previously this was client-side only, causing a brief sign-in page flash.
   const isAuthRoute = AUTH_ROUTES.some((r) => pathname.startsWith(r));
   if (isAuthRoute) {
-    if (isAuthenticated) {
+    // `isAuthenticated` above is OPTIMISTIC: getSessionCookie() proves a cookie
+    // exists, never that the session behind it is still valid. When the dashboard
+    // has already asked the API and been told the session is unusable, it sends
+    // the user here with ?session=expired. Bouncing them back to /dashboard on
+    // the strength of that same dead cookie is exactly what produced the
+    // /dashboard ↔ /sign-in infinite loop — and it locked users out permanently,
+    // because /sign-in is the one page that could replace the bad cookie.
+    // Honour the marker and let them reach the form.
+    const sessionExpired = req.nextUrl.searchParams.get('session') === 'expired';
+    if (isAuthenticated && !sessionExpired) {
       // Server-side redirect — no flash
       return NextResponse.redirect(new URL('/dashboard', req.url));
     }
