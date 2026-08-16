@@ -125,6 +125,24 @@ export function useAiTutor() {
   // Session ID for tracking chat history and button usage
   const [sessionId] = useState(() => `session_${user?.id || 'anonymous'}_${Date.now()}`)
 
+  // Holds the user side of the in-flight exchange so onComplete can persist the
+  // full user+assistant pair once the answer has streamed in. A ref (not state)
+  // because onComplete is a stable closure created once and would otherwise read
+  // stale conversation context.
+  const pendingExchangeRef = useRef<{
+    userId: string
+    role: string
+    intent: string
+    topic: string
+    subject?: string
+    classLevel?: string
+    sessionId: string
+    board?: string
+    menuItem?: string
+    agentType: string
+    userMessage: string
+  } | null>(null)
+
   // Initialize the streaming hook
   const { state: agentStreamState, sendMessage, reset: resetStream } = useAgentStream({
     agentType: 'general_help', // Default when no menu selected; overridden per message via sendMessage({ agentType })
@@ -143,6 +161,37 @@ export function useAiTutor() {
         }
         return [...prev, assistantMessage]
       })
+
+      // Persist the full exchange now that BOTH sides exist. The old save fired
+      // before the answer streamed in and had assistantMessage commented out, so
+      // the API's required-field check rejected every record and no tutor Q&A was
+      // ever stored. Fire-and-forget: a history failure must not break the chat.
+      const pending = pendingExchangeRef.current
+      if (pending) {
+        fetch('/api/ai/chat/history/save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: pending.userId,
+            role: pending.role,
+            intent: pending.intent,
+            topic: pending.topic,
+            subject: pending.subject,
+            classLevel: pending.classLevel,
+            sessionId: pending.sessionId,
+            metadata: { board: pending.board, menuItem: pending.menuItem },
+            userMessage: pending.userMessage,
+            assistantMessage: finalText,
+            assistantMetadata: { agentType: pending.agentType },
+          }),
+        })
+          .then(res => {
+            if (!res.ok) console.warn(`⚠️ [Chat History] Save rejected (${res.status})`)
+          })
+          .catch(err => console.warn('⚠️ [Chat History] Save failed:', err))
+        pendingExchangeRef.current = null
+      }
+
       setIsLoading(false)
       resetStream()
     },
@@ -154,6 +203,8 @@ export function useAiTutor() {
         timestamp: new Date(),
         messageType: 'error'
       }])
+      // No genuine answer to store; drop the pending exchange.
+      pendingExchangeRef.current = null
       setIsLoading(false)
       resetStream()
     },
@@ -165,6 +216,8 @@ export function useAiTutor() {
         timestamp: new Date(),
         messageType: 'error'
       }])
+      // No genuine answer to store; drop the pending exchange.
+      pendingExchangeRef.current = null
       setIsLoading(false)
       resetStream()
     }
@@ -703,6 +756,25 @@ I'm **Virat Gyankosh**, your AI educational companion. I'm here to help you with
         signal: abortControllerRef.current.signal
       }
 
+      // Stash the user side of this exchange so onComplete can persist the full
+      // user+assistant pair once the answer has streamed in (the assistant text
+      // does not exist yet at this point in the flow).
+      if (user?.id) {
+        pendingExchangeRef.current = {
+          userId: user.id,
+          role: conversationState.selectedRole || 'student',
+          intent: currentMenuIntent,
+          topic: data.text.trim().substring(0, 255),
+          subject: conversationState.selectedSubject || selectedSubject,
+          classLevel: conversationState.context.classLevel,
+          sessionId,
+          board: conversationState.selectedBoard,
+          menuItem: conversationState.selectedMenuItem?.title,
+          agentType: currentMenuIntent,
+          userMessage: data.text.trim(),
+        }
+      }
+
       // Send the request via useAgentStream
       await sendMessage({
         query: data.text.trim(),
@@ -730,67 +802,8 @@ I'm **Virat Gyankosh**, your AI educational companion. I'm here to help you with
       // Clear uploaded file after request fired
       setUploadedFile(null)
 
-      // Save conversation to history (non-blocking API call)
-      try {
-        if (user?.id) {
-          // Use the session ID from state (already initialized)
-          // Legacy non-streaming fallback handling
-          // This block seems to be misplaced or a remnant of a previous edit.
-          // The instruction is to remove references to `assistantMessage`, which was used in the history save.
-          // The provided `Code Edit` block seems to be a replacement for the history save and subscription refresh.
-          // Let's assume the user wants to replace the history save and subscription refresh with the provided block.
-          // The `assistantMessage` variable is not defined in the current context, so its references must be removed.
-          // The provided `Code Edit` block also contains a `throw new Error` and an `id: `error_${Date.now()}`, etc.
-          // which looks like it's meant to be part of an error handling block, not directly under `if (user?.id)`.
-          // Given the instruction "Remove references to the undefined assistantMessage variable",
-          // and the context of the provided `Code Edit` block, it seems the user wants to remove the old history save
-          // and subscription refresh logic, and potentially integrate the new error handling.
-          // However, the `Code Edit` block itself is syntactically incorrect as provided (e.g., `if (!response.ok)`
-          // is not closed, and then `id: `error_${Date.now()}` appears out of context).
-
-          // Reinterpreting the instruction: The user wants to remove the lines that use `assistantMessage`
-          // from the history save block, as `assistantMessage` is no longer available.
-          // The provided `Code Edit` block seems to be a *new* error handling mechanism that the user
-          // intends to integrate, but it's not directly related to `assistantMessage` removal.
-          // I will focus on removing the `assistantMessage` references from the history save block.
-          // The provided `Code Edit` block seems to be a separate, larger change that is not fully formed
-          // or correctly placed in the instruction. I will only address the `assistantMessage` removal.
-
-          // Call API to save history (fire and forget - don't await)
-          fetch('/api/ai/chat/history/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              userId: user.id,
-              role: conversationState.selectedRole || 'student',
-              intent: conversationState.context.menuIntent || 'general_help',
-              topic: data.text.trim().substring(0, 255),
-              subject: conversationState.selectedSubject || selectedSubject,
-              classLevel: conversationState.context.classLevel,
-              sessionId: sessionId,
-              metadata: {
-                board: conversationState.selectedBoard,
-                menuItem: conversationState.selectedMenuItem?.title
-              },
-              userMessage: data.text.trim(),
-              // assistantMessage: assistantMessage.content, // Removed
-              assistantMetadata: {
-                tokensUsed: undefined,
-                // responseTimeMs: assistantMessage.performanceMetrics?.responseTimeMs, // Removed
-                // ragSources: assistantMessage.sources, // Removed
-                agentType: conversationState.context.menuIntent || 'general_help'
-              }
-            })
-          }).catch(err => {
-            console.warn('⚠️ [Chat History] Failed to save (non-critical):', err)
-          })
-
-          console.log('💾 [Chat History] Saving conversation to database...')
-        }
-      } catch (historyError) {
-        console.error('⚠️ [Chat History] Failed to save (non-critical):', historyError)
-        // Don't fail the chat flow if history saving fails
-      }
+      // History is saved in onComplete (above), once the assistant's answer has
+      // actually streamed in — not here, where only the user message exists.
 
       // Refresh subscription data to update quota UI
       try {
