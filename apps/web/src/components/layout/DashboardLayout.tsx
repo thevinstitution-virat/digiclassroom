@@ -21,11 +21,14 @@ import { useTheme } from 'next-themes'
 import { Menu, Search, Bell, Sun, Moon } from 'lucide-react'
 import { SidebarProvider, useSidebar } from '@/contexts/SidebarContext'
 import { DashboardShellProvider, useDashboardShell } from '@/contexts/DashboardShellContext'
+import AccountMenu from '@/components/layout/AccountMenu'
 
 interface DashboardLayoutProps {
   children: ReactNode
   sidebar: ReactNode
   header?: ReactNode
+  /** Where the topbar account menu's "Profile" row links. */
+  profilePath?: string
 }
 
 function activeByPrefix(pathname: string, hrefs: string[]): string | undefined {
@@ -34,7 +37,7 @@ function activeByPrefix(pathname: string, hrefs: string[]): string | undefined {
     .sort((a, b) => b.length - a.length)[0]
 }
 
-function DashboardLayoutInner({ children, sidebar, header }: DashboardLayoutProps) {
+function DashboardLayoutInner({ children, sidebar, header, profilePath }: DashboardLayoutProps) {
   const { isCollapsed, setSidebarCollapsed } = useSidebar()
   const shell = useDashboardShell()
   const pathname = usePathname()
@@ -135,6 +138,7 @@ function DashboardLayoutInner({ children, sidebar, header }: DashboardLayoutProp
               >
                 {mounted && isDark ? <Sun className="h-[21px] w-[21px]" /> : <Moon className="h-[21px] w-[21px]" />}
               </button>
+              <AccountMenu profilePath={profilePath} />
             </div>
           </header>
 
@@ -219,11 +223,11 @@ function DashboardLayoutInner({ children, sidebar, header }: DashboardLayoutProp
   )
 }
 
-export default function DashboardLayout({ children, sidebar, header }: DashboardLayoutProps) {
+export default function DashboardLayout({ children, sidebar, header, profilePath }: DashboardLayoutProps) {
   return (
     <SidebarProvider>
       <DashboardShellProvider>
-        <DashboardLayoutInner sidebar={sidebar} header={header}>
+        <DashboardLayoutInner sidebar={sidebar} header={header} profilePath={profilePath}>
           {children}
         </DashboardLayoutInner>
       </DashboardShellProvider>

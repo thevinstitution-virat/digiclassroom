@@ -127,6 +127,24 @@ export const auth = betterAuth({
             ? { crossSubDomainCookies: { enabled: true, domain: COOKIE_DOMAIN } }
             : {}),
     },
+    // Throttle credential-stuffing and email-bomb abuse on the auth endpoints.
+    // Per-IP, in-memory (per instance); the generous global ceiling keeps normal
+    // app traffic flowing while the custom rules clamp the sensitive paths. The
+    // client IP must arrive via X-Forwarded-For behind the proxy split.
+    rateLimit: {
+        enabled: true,
+        window: 60,
+        max: 120,
+        customRules: {
+            '/sign-in/email': { window: 60, max: 8 },
+            '/sign-up/email': { window: 60, max: 5 },
+            // Renamed in better-auth 1.6.x; '/forget-password' 404s, so a rule
+            // guarding that path would throttle nothing.
+            '/request-password-reset': { window: 900, max: 5 },
+            '/reset-password': { window: 900, max: 8 },
+            '/sign-in/magic-link': { window: 900, max: 5 },
+        },
+    },
     emailAndPassword: {
         enabled: true,
         // OIDC-via-Vidyaverse is now the only account-creation path (2026-08-06
@@ -139,7 +157,14 @@ export const auth = betterAuth({
         // and re-sent on a blocked sign-in attempt. OAuth/federated users arrive
         // pre-verified from the provider, so this only gates email/password signups.
         requireEmailVerification: true,
-        sendResetPassword: async ({ user, url }) => {
+        sendResetPassword: async ({ user, token }) => {
+            // Build the link from APP_URL, NOT better-auth's `url`. The client
+            // passes a relative `redirectTo: '/reset-password'`, which better-auth
+            // resolves against baseURL (= BETTER_AUTH_URL, the API host), yielding
+            // api.<domain>/reset-password?token=… — a 404, because the reset PAGE
+            // lives on the web app (app.<domain>). This is the same rule the
+            // invitation email already follows (${APP_URL}/accept-invitation/…).
+            const resetUrl = `${APP_URL.replace(/\/$/, '')}/reset-password?token=${token}`;
             await sendEmail({
                 to: user.email,
                 subject: 'Reset your DigiClassroom Pro password',
@@ -147,7 +172,7 @@ export const auth = betterAuth({
                     heading: 'Reset your password',
                     body: 'We received a request to reset your password. Click below to choose a new one. This link expires shortly.',
                     ctaLabel: 'Reset Password',
-                    ctaUrl: url,
+                    ctaUrl: resetUrl,
                 }),
             });
         }
