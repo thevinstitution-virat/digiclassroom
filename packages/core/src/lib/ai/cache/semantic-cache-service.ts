@@ -95,9 +95,22 @@ export class SemanticCacheService {
       classLevel?: string
       subject?: string
       board?: string
+      /**
+       * Per-lookup override for the minimum cosine similarity a match must clear.
+       * Defaults to SIMILARITY_THRESHOLD. Callers raise it for complex/full-rag
+       * questions, where a loose semantic match is likelier to be subtly wrong
+       * than on a simple definition. Ignored if not in (0, 1].
+       */
+      minSimilarity?: number
     }
   ): Promise<SemanticCacheResult> {
-    
+    const effectiveThreshold =
+      typeof metadata.minSimilarity === 'number' &&
+      metadata.minSimilarity > 0 &&
+      metadata.minSimilarity <= 1
+        ? metadata.minSimilarity
+        : this.SIMILARITY_THRESHOLD
+
     if (!this.isConnected || !this.redis) {
       return { found: false, isExactMatch: false }
     }
@@ -137,7 +150,7 @@ export class SemanticCacheService {
       const searchTime = Date.now() - startTime
       
       // Step 4: Check if similarity meets threshold
-      if (bestMatch && bestSimilarity >= this.SIMILARITY_THRESHOLD) {
+      if (bestMatch && bestSimilarity >= effectiveThreshold) {
         // Update hit stats
         await this.updateHitStats(bestKey)
         

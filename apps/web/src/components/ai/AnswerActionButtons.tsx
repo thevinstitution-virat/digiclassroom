@@ -61,6 +61,55 @@ function toNoteBoardEnum(board?: string | null): NoteBoard | null {
     : null;
 }
 
+/**
+ * Read a full answer out of the /api/ai/chat SSE stream.
+ *
+ * The route streams `data: {json}\n\n` frames: a series of `{type:'chunk',content}`
+ * events, a final `{type:'complete',answer}` event, then `data: [DONE]`. We prefer
+ * the `complete` event's whole answer, and fall back to concatenating the chunk
+ * contents in case the stream ends early. Returns '' if nothing usable arrived.
+ */
+async function readAnswerFromSSE(response: Response): Promise<string> {
+  const reader = response.body?.getReader();
+  if (!reader) return '';
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+  let assembled = '';
+  let completeAnswer = '';
+
+  const consumeFrame = (frame: string) => {
+    const dataLine = frame.split('\n').find((l) => l.startsWith('data:'));
+    if (!dataLine) return;
+    const payload = dataLine.slice(dataLine.indexOf(':') + 1).trim();
+    if (!payload || payload === '[DONE]') return;
+    try {
+      const evt = JSON.parse(payload);
+      if (evt.type === 'chunk' && typeof evt.content === 'string') {
+        assembled += evt.content;
+      } else if (evt.type === 'complete' && typeof evt.answer === 'string') {
+        completeAnswer = evt.answer;
+      }
+    } catch {
+      // Ignore keep-alive / non-JSON frames.
+    }
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let sep: number;
+    while ((sep = buffer.indexOf('\n\n')) !== -1) {
+      consumeFrame(buffer.slice(0, sep));
+      buffer = buffer.slice(sep + 2);
+    }
+  }
+  if (buffer.trim()) consumeFrame(buffer);
+
+  return (completeAnswer || assembled).trim();
+}
+
 /** Angles for "Explain a different way" — each forces a genuinely different framing. */
 const EXPLANATION_ANGLES = [
   {
@@ -97,11 +146,8 @@ interface AnswerActionButtonsProps {
   classLevel?: string;
   /**
    * Tutor session board. Accepts the lowercase EducationBoard values or the
-   * uppercase DB enum; normalised via toNoteBoardEnum before saving.
-   *
-   * ⚠️ NOT YET SUPPLIED BY THE CALL SITE. src/app/dashboard/user/ai-tutor/page.tsx
-   * (~line 456) must pass board={conversationState.context.educationBoard} for
-   * notes to record it. That file was outside this change's scope.
+   * uppercase DB enum; normalised via toNoteBoardEnum before saving. Supplied by
+   * the ai-tutor page as conversationState.selectedBoard.
    */
   board?: string;
   /** Optional chapter for the current tutor session; persisted to user_notes.chapter. */
@@ -503,8 +549,13 @@ export default function AnswerActionButtons({
         throw new Error(errorData.error || `Could not generate another explanation (${response.status})`);
       }
 
-      const data = await response.json();
-      const text = data.response || data.answer || data.content || '';
+      // /api/ai/chat responds as an SSE stream (text/event-stream), not JSON:
+      // per-`chunk` events carry a slice of the answer and a final `complete`
+      // event carries the whole thing. Reading it with response.json() always
+      // threw, so this handler never worked. Consume the stream instead —
+      // prefer the `complete` event's full answer, and fall back to the
+      // concatenated chunks if the stream ends without one.
+      const text = await readAnswerFromSSE(response);
 
       if (!text) {
         throw new Error('The tutor returned an empty explanation.');

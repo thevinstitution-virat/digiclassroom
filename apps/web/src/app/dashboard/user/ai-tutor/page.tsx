@@ -452,6 +452,10 @@ export default function AITutorPage() {
                                     currentMedium={userMedium || 'ENGLISH'}
                                     subject={conversationState.selectedSubject || selectedSubject || 'general'}
                                     classLevel={conversationState.context.classLevel || `Class ${userClass}` || 'Class 10'}
+                                    // Tutor session board (lowercase EducationBoard); the component
+                                    // normalises it via toNoteBoardEnum before persisting to user_notes.
+                                    // Without this, "Add to Sanchika" saved every note with a null board.
+                                    board={conversationState.selectedBoard}
                                     onVisualizationGenerated={(viz) => {
                                       // Add new visualization to the message
                                       setMessages(prev => prev.map(msg =>

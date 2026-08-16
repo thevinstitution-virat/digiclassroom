@@ -250,10 +250,9 @@ export async function POST(req: NextRequest) {
     //
     // "Needs fresh RAG context" is not the same as "must never reuse an identical
     // prior answer", so full-rag is now checked too — but behind a stricter
-    // similarity threshold, because a loose semantic match on a complex analytical
-    // question is likelier to be subtly wrong than on a simple definition. If
-    // searchCache ignores an unknown option, full-rag simply behaves as before
-    // this change for threshold purposes; it still gains the lookup.
+    // similarity threshold (minSimilarity: 0.95, honoured by searchCache), because
+    // a loose semantic match on a complex analytical question is likelier to be
+    // subtly wrong than on a simple definition. Other routes use the default gate.
     //
     // An explicit client bypassCache always wins — used by "Explain a different
     // way", where returning the cached answer would hand back the very
@@ -272,7 +271,7 @@ export async function POST(req: NextRequest) {
           ...(STRICT_SIMILARITY_ROUTES.includes(routingDecision.route)
             ? { minSimilarity: 0.95 }
             : {})
-        } as any)
+        })
 
         if (semanticCacheResult.found) {
           console.log(`✅ [Semantic Cache] HIT - Similarity: ${(semanticCacheResult.similarity! * 100).toFixed(1)}%`)
