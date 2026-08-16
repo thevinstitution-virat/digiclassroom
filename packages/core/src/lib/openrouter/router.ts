@@ -1,15 +1,30 @@
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
+import { usingOpenRouter } from './client';
 
 /**
  * ModelRouter estimates the complexity of a conversation or query
- * and routes it to the most cost-effective OpenRouter model tier.
+ * and routes it to the most cost-effective model tier.
+ *
+ * The model NAMES must match the active endpoint (see openrouter/client.ts):
+ * OpenRouter uses `vendor/model` slugs; OpenAI-direct uses bare model ids.
+ * Sending an OpenRouter slug like `meta-llama/…` to api.openai.com 404s, so the
+ * tier table follows whichever endpoint the shared client resolved to.
  */
 export class ModelRouter {
-    private static readonly TIERS = {
-        EASY: 'meta-llama/llama-3.3-70b-instruct',
-        MEDIUM: 'meta-llama/llama-3.3-70b-instruct',
-        HARD: 'meta-llama/llama-3.3-70b-instruct',
-    };
+    private static readonly TIERS = usingOpenRouter
+        ? {
+            EASY: 'meta-llama/llama-3.3-70b-instruct',
+            MEDIUM: 'meta-llama/llama-3.3-70b-instruct',
+            HARD: 'meta-llama/llama-3.3-70b-instruct',
+        }
+        : {
+            // OpenAI direct — models that exist on api.openai.com. Mini for the
+            // common case (matches OpenAIService.CHAT_MODEL), gpt-4o for the
+            // genuinely hard, reasoning-heavy queries flagged by the heuristics.
+            EASY: 'gpt-4o-mini',
+            MEDIUM: 'gpt-4o-mini',
+            HARD: 'gpt-4o',
+        };
 
     /**
      * Determine the optimal model based on the conversational context
