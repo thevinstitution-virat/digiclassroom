@@ -72,9 +72,18 @@ export class ChatHistoryService {
         ]
       );
 
-      const conversationId = (result as any).insertId;
+      // executeQuery returns the pg rows array (NOT a mysql2 result object), so
+      // the new id is in row[0].id from the RETURNING clause. Reading `.insertId`
+      // here yielded `undefined`, which then hit chat_messages_history's NOT NULL
+      // conversation_id and lost every message while the conversation row itself
+      // committed. (executeUpdate is the helper that exposes insertId; executeQuery
+      // does not.) Fail loud rather than return undefined again.
+      const conversationId = (result as Array<{ id?: number }>)[0]?.id;
+      if (conversationId == null) {
+        throw new Error('conversations INSERT ... RETURNING id returned no id');
+      }
       logger.info(`✅ [Chat History] Created new conversation: ${conversationId} (Agent: ${params.intent})`);
-      
+
       return conversationId;
 
     } catch (error) {
