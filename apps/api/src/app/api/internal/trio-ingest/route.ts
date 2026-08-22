@@ -172,6 +172,14 @@ export async function POST(request: NextRequest) {
         edition: meta.edition ?? null,
         lang: meta.medium ?? null,
         organizationId,
+        // `force` has to reach the PIPELINE, not just the validation gate above.
+        // ingestPart short-circuits on "byte-identical and already live", which
+        // assumes the only reason to re-ingest is a changed file — wrong
+        // whenever the CHUNKER or embedding model changed and the file did not.
+        // This is the lane PDLMS actually calls (TRIO_INGEST_URL), so without
+        // it a re-embed after a chunker fix re-indexed nothing and reported
+        // success.
+        force,
         part: {
           role: 'enriched_md',
           partIndex,
