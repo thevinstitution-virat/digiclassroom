@@ -108,6 +108,23 @@ export interface SpineIngestInput {
   };
 
   chunks: SpineChunk[];
+
+  /**
+   * Re-index this slot even when the bytes are unchanged and a run is already
+   * live.
+   *
+   * The byte-identical short-circuit below assumes the only reason to re-ingest
+   * is a changed file. That is wrong whenever the PIPELINE changes — a fixed
+   * chunker, a new embedding model, a corrected payload field — because the
+   * file is identical by definition and the work still has to be redone. Until
+   * this existed there was no way to ask for it: the API accepted a `force`
+   * field, but it only relaxed the validation_status gate and never reached
+   * here, so an operator pressing "re-embed" got "already ingested" and an
+   * unchanged index.
+   *
+   * Costs a full re-embed of the slot, so it is opt-in per request.
+   */
+  force?: boolean;
 }
 
 export interface SpineChunk {
@@ -1738,7 +1755,7 @@ export class EnhancedRAGPipeline {
       // failed means nothing is published for this chapter, and reporting
       // "already ingested" there is the one message that stops an operator
       // looking for the chapter that is missing.
-      if (!asset.changed && (await hasActiveRunForAsset(assetId))) {
+      if (!input.force && !asset.changed && (await hasActiveRunForAsset(assetId))) {
         console.log(`♻️ ${label}: byte-identical and already live — skipped, 0 tokens.`);
         return {
           ...base,

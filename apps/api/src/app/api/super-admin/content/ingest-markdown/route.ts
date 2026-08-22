@@ -306,6 +306,12 @@ export async function POST(request: NextRequest) {
           edition: p.meta.edition ?? edition,
           lang: p.meta.medium ?? null,
           organizationId,
+          // `force` reaches the pipeline, not just the validation gate.
+          // Without this it only relaxed the validation_status check, so a
+          // forced re-upload of unchanged bytes still short-circuited on
+          // "byte-identical and already live" and re-indexed nothing — which
+          // made re-embedding after a chunker fix impossible.
+          force,
           part: {
             role: 'enriched_md',
             partIndex: p.partIndex,
