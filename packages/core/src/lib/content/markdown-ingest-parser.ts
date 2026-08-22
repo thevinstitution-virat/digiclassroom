@@ -65,7 +65,30 @@ const PRACTICE_BLOCK_TYPES = new Set(['discussion_prompt', 'suggested_activity']
  * Section titles whose PROSE is practice too. Typed blocks are not the only
  * carrier — a chapter's exercises are usually a numbered list under a heading.
  */
-const PRACTICE_SECTION_RE = /\b(exercise|questions?|let'?s\s+(discuss|explore|reflect)|activit(y|ies)|think\s+about\s+it|assessment)\b/i;
+const PRACTICE_SECTION_RE =
+  /\b(exercise|questions?|let'?s\s+(discuss|explore|reflect)|activit(y|ies)|think\s+about\s+it|assessment)\b/i;
+
+/**
+ * Publisher wording that means "exercises" without using any of the words
+ * above. NCERT's current science series heads its exercise set **"Let us
+ * enhance our learning"**, which matched nothing — so a whole chapter's
+ * questions were classified `reference`, became answerable source text, and
+ * the retrieval-side `must_not practice` filter had nothing to exclude.
+ *
+ * Listed explicitly rather than by loosening the alternative above to a bare
+ * /let\s+us/, which would also swallow ordinary prose ("let us now consider").
+ *
+ * Deliberately EXCLUDES "Learning further" and similar extension headings.
+ * Marking a section practice removes it from answers entirely, so an ambiguous
+ * heading — one that may carry real extension content rather than questions —
+ * is left as reference. Over-matching here loses book content silently, which
+ * is the worse failure of the two.
+ */
+const PRACTICE_SECTION_EXTRA_RE =
+  /\b(enhance\s+our\s+learning|let\s+us\s+(enhance|practise|practice|assess|test)|check\s+your\s+(understanding|progress)|self[-\s]assessment|review\s+questions?|test\s+yourself)\b/i;
+
+const isPracticeSection = (title: string): boolean =>
+  PRACTICE_SECTION_RE.test(title) || PRACTICE_SECTION_EXTRA_RE.test(title);
 
 const CONTENT_SOURCE = 'curated_markdown';
 
@@ -127,6 +150,12 @@ const MARKER_RE = /^<!--\s*(.*?)\s*-->$/;
 const PAGE_RE = /^PAGE\s+(\d+)/i;
 const SECTION_RE = /^SECTION:\s*(.+)$/i;
 const SUBSECTION_RE = /^SUBSECTION:\s*(.+)$/i;
+/**
+ * An ATX heading, `##` or `###` (or deeper — `####` is treated as a subsection
+ * too, since publishers nest inconsistently and a deeper heading is still a
+ * topic shift). `#` is excluded: see the dispatch site.
+ */
+const HEADING_RE = /^(#{2,6})\s+(.+?)\s*#*$/;
 const SKIP_RE = /\bSKIP\b/i;
 const END_SKIP_RE = /^\s*(\/\s*SKIP|END\s+SKIP|SKIP\s+END)\b/i;
 const UNCLEAR_RE = /\[UNCLEAR[^\]]*\]/i;
@@ -381,7 +410,7 @@ export function parseEnrichedMarkdown(input: string): ParsedMarkdown {
     // typed [DISCUSSION_PROMPT] and a bare numbered list under "Exercises" are
     // the same thing to a student and neither should answer a question.
     const isPractice =
-      PRACTICE_BLOCK_TYPES.has(contentType) || PRACTICE_SECTION_RE.test(sectionTitle());
+      PRACTICE_BLOCK_TYPES.has(contentType) || isPracticeSection(sectionTitle());
     chunks.push({
       id: `${bookSlug}_ch${meta.chapter_number || 'x'}_p${page}_${seq}`,
       text: clean,
@@ -487,6 +516,48 @@ export function parseEnrichedMarkdown(input: string): ParsedMarkdown {
       const subM = inner.match(SUBSECTION_RE);
       if (subM) { flushProse(); currentSubsection = subM[1].trim(); continue; }
       // Other markers (DISCUSSION PROMPT | …) are decorative → drop.
+      continue;
+    }
+
+    // ---- Markdown ATX headings as structure ----
+    //
+    // `## 7.1 Hot or Cold?` means exactly what `<!-- SECTION: 7.1 Hot or Cold? -->`
+    // means. Only the comment form was recognised, so every skill-authored file
+    // that used plain headings had NO section boundaries at all: prose flushed
+    // only at PAGE markers, and the chapter chunked at exactly one chunk per
+    // printed page.
+    //
+    // Measured on production — same parser, same collection: files authored with
+    // markers averaged 560 chars per chunk and carried real section titles; files
+    // authored with headings averaged 2,832 chars (max 4,588) and carried the
+    // literal string 'General Section' on every chunk. At that size one sentence
+    // is ~3% of its chunk's embedding, so a fact plainly printed in the book
+    // retrieves as "not found".
+    //
+    // Three things recover together, because all three keyed off the section
+    // title: chunk granularity, `section_title`, and practice classification — a
+    // chapter's exercises are detected partly BY their heading, so with none the
+    // exercises were indexed as answerable reference content and the retrieval
+    // side's `must_not practice` filter had nothing to match.
+    //
+    // `#` is deliberately NOT a boundary: it is the chapter title, appears once
+    // at the top, and would only open a stray empty section.
+    const headingM = line.match(HEADING_RE);
+    if (headingM) {
+      const title = headingM[2].trim();
+      if (title) {
+        flushProse();
+        if (headingM[1].length === 2) {
+          currentSection = title;
+          currentSubsection = '';
+        } else {
+          currentSubsection = title;
+        }
+      }
+      // The heading text stays in the body: it is printed on the page, it is the
+      // best one-line summary of the chunk it opens, and dropping it would lose
+      // a real line of the book.
+      prose.push(raw);
       continue;
     }
 
