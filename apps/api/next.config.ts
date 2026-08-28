@@ -15,6 +15,27 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Security headers on every API response. CSP is omitted on purpose — this is
+  // a headless JSON API with no HTML/inline scripts to constrain. Mirrors the web
+  // app's set (apps/web/next.config.ts); X-Frame-Options is DENY here because API
+  // responses are never framed. Applied unconditionally, safe for all callers.
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'Strict-Transport-Security', value: 'max-age=31536000; includeSubDomains' },
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+          },
+        ],
+      },
+    ]
+  },
   // Native/heavy deps that must stay external to the server bundle.
   serverExternalPackages: ['mysql2', 'pdf-parse', 'tesseract.js', 'pdf2pic'],
   ...(process.env.TURBOPACK !== '1'
