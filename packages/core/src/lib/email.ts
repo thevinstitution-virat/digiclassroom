@@ -4,7 +4,23 @@ if (!process.env.RESEND_API_KEY) {
   console.warn('[email] RESEND_API_KEY not set — email dispatch will be skipped')
 }
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Constructed lazily. `new Resend()` throws when the key is absent, and Next.js
+// imports this module while collecting page data during `next build` -- a stage
+// where the key is deliberately absent. Deferring construction to the first send
+// keeps the build green without promoting RESEND_API_KEY to a build argument
+// (which would bake it into an image layer).
+let _resend: Resend | null = null
+
+function getResend(): Resend {
+  if (!_resend) {
+    const apiKey = process.env.RESEND_API_KEY
+    if (!apiKey) {
+      throw new Error('RESEND_API_KEY is not set -- cannot send email')
+    }
+    _resend = new Resend(apiKey)
+  }
+  return _resend
+}
 
 const FROM_EMAIL =
   process.env.RESEND_FROM_EMAIL ?? 'DigiClassroomPro <no-reply@digiclassroompro.in>'
@@ -103,7 +119,7 @@ export async function sendAnnouncementEmails(
 
   for (let i = 0; i < emails.length; i += CHUNK_SIZE) {
     const chunk = emails.slice(i, i + CHUNK_SIZE)
-    const { error } = await resend.batch.send(chunk)
+    const { error } = await getResend().batch.send(chunk)
     if (error) {
       // Log and continue — a single chunk failure shouldn't abort remaining chunks
       console.error('[email] Resend batch error', { chunkOffset: i, batchId, error })
