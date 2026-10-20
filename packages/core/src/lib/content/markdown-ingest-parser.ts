@@ -435,6 +435,8 @@ export function parseEnrichedMarkdown(input: string): ParsedMarkdown {
    * basis of every citation this file produces; they are checked for order and coverage once the file is read.
    */
   const pageMarkers: Array<{ page: number; line: number }> = [];
+  /** Prose under 40 characters, which is not indexed. Reported once the file is read; never silent. */
+  const droppedFragments: Array<{ page: number; text: string }> = [];
   /** Chunks cut before any PAGE marker, which carry the default page 1 and not a page anyone printed. */
   let chunksBeforeFirstMarker = 0;
   let currentSection = 'General Section';
@@ -457,7 +459,14 @@ export function parseEnrichedMarkdown(input: string): ParsedMarkdown {
     const clean = text.replace(/<!--[\s\S]*?-->/g, '').trim();
     if (!clean) return;
     // Prose must be substantial; typed blocks are always kept.
-    if (contentType === 'text' && clean.length < 40) return;
+    //
+    // This drops the text, which is right for stray one-word lines but WRONG for the last words of a sentence that a
+    // PAGE marker has just cut off ("refrigerator." at the top of a page), and used to do it without a word of warning.
+    // The loss is now reported (see the end of the parse), so a person can see that the file lost words.
+    if (contentType === 'text' && clean.length < 40) {
+      droppedFragments.push({ page: Math.max(1, pageOverride || currentPage), text: clean });
+      return;
+    }
 
     // Typed blocks state their own printed page in the header (`| Page N |` or `| Page N-M |`);
     // prefer it over the section marker for exact citations.
@@ -732,6 +741,18 @@ export function parseEnrichedMarkdown(input: string): ParsedMarkdown {
     }
   }
   flushProse();
+
+  if (droppedFragments.length > 0) {
+    const shown = droppedFragments
+      .slice(0, 5)
+      .map((f) => `p.${f.page} "${f.text.slice(0, 39)}"`)
+      .join('; ');
+    warnings.push(
+      `${droppedFragments.length} piece(s) of text under 40 characters were NOT indexed: ${shown}` +
+        `${droppedFragments.length > 5 ? `; and ${droppedFragments.length - 5} more` : ''}. ` +
+        `If one is the end of a sentence that a PAGE marker cut off, keep it with the rest of its sentence.`,
+    );
+  }
 
   // ---- Are the page markers themselves trustworthy? ----
   //

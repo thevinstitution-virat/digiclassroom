@@ -287,6 +287,20 @@ for (const h of ['Summary', 'Overview', 'Why define democracy?', 'Broader meanin
   check(`ordinary heading: "${h}" stays reference`, classOfHeading(h) === 'reference', `got ${classOfHeading(h)}`);
 }
 
+// ──────────────────────────────────────────────────────
+// 8. Text the parser does not index is reported, never silent.
+// ──────────────────────────────────────────────────────
+// Prose under 40 characters is not indexed. When a PAGE marker cuts off the last words of a sentence they land alone on
+// the next page and used to vanish without a warning.
+const FRAG_HEAD = ['---', 'book_title: T', 'isbn: 978-0-00-000000-2', 'class_level: "9"', 'subject: Political Science', 'chapter_number: 1', 'chapter_title: X', 'chapter_pages: 1-2', 'validation_status: PENDING', '---'].join('\n');
+const longPara = 'This paragraph is comfortably longer than forty characters in total length, so it is kept.';
+const withFragment = parseEnrichedMarkdown(`${FRAG_HEAD}\n<!-- PAGE 1 -->\n\n${longPara} The sentence runs on and ends with just this\n\n<!-- PAGE 2 -->\nend.\n\n## A printed heading\n\n${longPara}\n`);
+check('dropped text: a cut-off tail is reported with its page and its words', withFragment.warnings.some((w) => /1 piece\(s\) of text under 40 characters were NOT indexed: p\.2 "end\."/.test(w)), withFragment.warnings.join(' | ') || '(no warning: the words vanished silently)');
+check('dropped text: the fragment is still not indexed (behaviour unchanged, only reported)', withFragment.chunks.every((c) => !/^end\.$/m.test(c.text)));
+const noFragment = parseEnrichedMarkdown(`${FRAG_HEAD}\n<!-- PAGE 1 -->\n\n${longPara}\n\n<!-- PAGE 2 -->\n\n${longPara}\n`);
+check('dropped text: ordinary chunks produce no such warning', !noFragment.warnings.some((w) => /NOT indexed/.test(w)), noFragment.warnings.join(' | '));
+check('dropped text: the well-formed fixture produces no such warning', !base.warnings.some((w) => /NOT indexed/.test(w)), base.warnings.join(' | '));
+
 function firstDiff(a, b) {
   if (a.length !== b.length) return `chunk count ${a.length} vs ${b.length}`;
   for (let i = 0; i < a.length; i++) {
