@@ -683,3 +683,142 @@ export function parseEnrichedMarkdown(input: string): ParsedMarkdown {
 
   return { meta, chunks, skipped, warnings, errors };
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// Book hierarchy — what the console's upload form says about the book
+// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * Where the book sits in the content taxonomy, exactly as the PDF lane's form
+ * states it (see content-taxonomy.ts and upload/route.ts).
+ *
+ * The frontmatter cannot supply this. Its `board: NCERT` is a publisher, while
+ * the taxonomy's course is the examining body (`CBSE`), and its `subject:
+ * Political Science` is a bare name where the taxonomy's leaf is
+ * `Political Science (Democratic Politics - I)`. Left to the frontmatter, the
+ * curated lane stored `course: NCERT`, no `domain`, and the umbrella subject
+ * where the PDF lane stores the leaf — so the same book was filed differently
+ * depending on which lane it came through, and every filter written against the
+ * PDF lane's values missed it.
+ */
+export interface BookHierarchy {
+  /** Label, e.g. "School Education". */
+  domain: string;
+  /** Label, e.g. "CBSE". Also written as `board` / `curriculum`, as the PDF lane does. */
+  course: string;
+  /** Label, e.g. "Class 9". */
+  level: string;
+  /** Umbrella subject, e.g. "Social Science" — stored as `subjectGroup`. */
+  subjectGroup: string;
+  /** Leaf, e.g. "Political Science (Democratic Politics - I)" — stored as the searchable `subject`. */
+  book: string;
+  medium: string;
+  /** Full title as printed. */
+  bookTitle: string;
+}
+
+const ROMAN_CLASS: Record<string, string> = {
+  I: '1', II: '2', III: '3', IV: '4', V: '5', VI: '6',
+  VII: '7', VIII: '8', IX: '9', X: '10', XI: '11', XII: '12',
+};
+
+/**
+ * The class number inside a label — "Class 9", "9", "Class IX" all give "9".
+ * Null when there is none, which means "cannot compare", never "different".
+ */
+export function classNumber(s?: string | null): string | null {
+  if (!s) return null;
+  const digits = s.match(/\d+/);
+  if (digits) return String(parseInt(digits[0], 10));
+  const roman = s.toUpperCase().match(/\b(XII|XI|X|IX|VIII|VII|VI|V|IV|III|II|I)\b/);
+  return roman ? ROMAN_CLASS[roman[1]] : null;
+}
+
+const looseKey = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+/**
+ * Compare what the operator selected with what the file itself declares.
+ *
+ * Only the class is an ERROR. It is a hard fact on both sides, and a Class 10
+ * label on a Class 9 chapter is invisible once indexed: the text and the
+ * citations are right, and the book answers for the wrong students. Title and
+ * subject are warnings because the same book legitimately carries different
+ * wording ("Democratic Politics-I" vs "NCERT Democratic Politics-I"), and
+ * refusing on wording would block correct uploads.
+ */
+export function checkHierarchyAgainstFrontmatter(
+  meta: EnrichedBookMeta,
+  h: BookHierarchy,
+): { errors: string[]; warnings: string[] } {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  const fileClass = classNumber(meta.class_level);
+  const formClass = classNumber(h.level);
+  if (fileClass && formClass && fileClass !== formClass) {
+    errors.push(
+      `The form says "${h.level}" but this file's frontmatter says class_level "${meta.class_level}". ` +
+        `Refusing — a chapter filed under the wrong class cannot be noticed once it is indexed.`,
+    );
+  }
+
+  if (meta.book_title && h.bookTitle && looseKey(meta.book_title) !== looseKey(h.bookTitle)) {
+    warnings.push(
+      `Book title: the form says "${h.bookTitle}" but the file's frontmatter says "${meta.book_title}". ` +
+        `The form's title is used.`,
+    );
+  }
+
+  const subj = looseKey(meta.subject);
+  const leaf = looseKey(h.book);
+  const group = looseKey(h.subjectGroup);
+  const related = (a: string, b: string) => !!a && !!b && (a.includes(b) || b.includes(a));
+  if (subj && !related(leaf, subj) && !related(group, subj)) {
+    warnings.push(
+      `Subject: the file's frontmatter says "${meta.subject}" but the form files it under ` +
+        `${h.subjectGroup} › ${h.book}. Check the Book selection.`,
+    );
+  }
+
+  return { errors, warnings };
+}
+
+/**
+ * Stamp the form's hierarchy onto parsed chunks, field for field the way the PDF
+ * lane does (upload/route.ts builds `subject = book`, `board = course`;
+ * indexPDF injects domain / course / level / book / subjectGroup).
+ *
+ * Returns new chunks and leaves the input alone. The class stays whatever the
+ * frontmatter said unless that was missing, in which case it comes from the
+ * selected level.
+ */
+export function applyBookHierarchy<T extends { metadata: Record<string, any> }>(
+  chunks: T[],
+  h: BookHierarchy,
+): T[] {
+  return chunks.map((c) => {
+    const known = c.metadata.classLevel && c.metadata.classLevel !== 'Unknown';
+    const cls = known ? c.metadata.classLevel : (classNumber(h.level) ?? h.level);
+    return {
+      ...c,
+      metadata: {
+        ...c.metadata,
+        subject: h.book,
+        subjectGroup: h.subjectGroup,
+        domain: h.domain,
+        course: h.course,
+        level: h.level,
+        book: h.book,
+        bookTitle: h.bookTitle,
+        book_title: h.bookTitle,
+        board: h.course,
+        curriculum: h.course,
+        medium: h.medium,
+        language: h.medium,
+        class: cls,
+        classLevel: cls,
+        source: `${h.bookTitle} Class ${cls}`,
+      },
+    };
+  });
+}

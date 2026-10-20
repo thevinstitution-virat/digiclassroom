@@ -32,6 +32,15 @@ import {
   labelForLevel,
   MEDIUMS,
 } from '@/config/content-taxonomy'
+// Pure TypeScript with no imports, so the browser reads a chapter with the very
+// code the server will ingest it with — the pre-flight below cannot disagree.
+import {
+  parseEnrichedMarkdown,
+  checkHierarchyAgainstFrontmatter,
+  classNumber,
+  type BookHierarchy,
+  type EnrichedBookMeta,
+} from '@/lib/content/markdown-ingest-parser'
 
 function HealthWidget() {
   const fetcher = (url: string) => fetch(url).then(r => r.json())
@@ -79,9 +88,76 @@ function HealthWidget() {
 // Temporarily comment out ContentOverview to isolate the issue
 // import ContentOverview from '@/components/admin/ContentOverview'
 
+/** One chapter file, read in the browser before anything is uploaded. */
+interface MdPreflight {
+  file: File
+  meta: EnrichedBookMeta
+  errors: string[]
+  warnings: string[]
+  chunkCount: number
+  pages: string
+}
+
+const looseKey = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+
+type TaxonomyPick = { domain: string; course: string; level: string; subject: string; book: string }
+
+/**
+ * Fill the level / subject / book the file itself points at, without guessing.
+ *
+ * Domain and course are never inferred: the frontmatter's `board: NCERT` is a
+ * publisher, not the examining body the taxonomy's course means. Once those are
+ * chosen the class and the book follow from the file — but only a UNIQUE match
+ * is taken, and only into fields still empty, so it never overrides a choice.
+ */
+function suggestTaxonomy(form: TaxonomyPick, meta?: EnrichedBookMeta): Partial<TaxonomyPick> {
+  if (!meta || !form.domain || !form.course) return {}
+  const next: Partial<TaxonomyPick> = {}
+
+  let levelId = form.level
+  if (!levelId) {
+    const cls = classNumber(meta.class_level)
+    const hit = cls ? getLevels(form.domain, form.course).find((l) => classNumber(l.label) === cls) : undefined
+    if (hit) { levelId = hit.id; next.level = hit.id }
+  }
+
+  if (levelId && !form.book) {
+    const want = [meta.subject, meta.book_title].map(looseKey).filter(Boolean)
+    const hits: Array<{ subject: string; book: string }> = []
+    for (const subject of getSubjects(form.domain, form.course, levelId)) {
+      if (form.subject && form.subject !== subject) continue
+      for (const book of getBooks(form.domain, form.course, levelId, subject)) {
+        const b = looseKey(book)
+        if (want.some((w) => b === w || b.includes(w))) hits.push({ subject, book })
+      }
+    }
+    if (hits.length === 1) { next.subject = hits[0].subject; next.book = hits[0].book }
+  }
+  return next
+}
+
 interface UploadResult {
   success: boolean
-  message: string
+  message?: string
+  /** The refusal reason. Routes that refuse early send this and no `message`. */
+  error?: string
+  warnings?: string[]
+  skipped?: string[]
+  parts?: Array<{
+    partIndex: number
+    filename: string
+    outcome: 'succeeded' | 'skipped-as-duplicate' | 'failed'
+    detail?: string
+    chunks: number
+    points: number
+    pages?: string
+  }>
+  work?: {
+    title: string
+    isbn: string
+    edition: string | null
+    hierarchy: BookHierarchy | null
+  }
   stats?: {
     totalPages: number
     totalChunks: number
@@ -117,6 +193,9 @@ export default function UploadPage() {
   const [activeTab, setActiveTab] = useState<'upload' | 'overview' | 'manage'>('upload')
   const [ingestMode, setIngestMode] = useState<'pdf' | 'markdown'>('pdf')
   const [mdSkipped, setMdSkipped] = useState<string[]>([])
+  const [mdFiles, setMdFiles] = useState<MdPreflight[]>([])
+  const [forceIndex, setForceIndex] = useState(false)
+  const [forceReason, setForceReason] = useState('')
   // Cascading hierarchy: domain → course → level → subject → book → medium → title.
   // domain/course/level hold taxonomy IDs; subject/book/medium hold display values.
   const [formData, setFormData] = useState({
@@ -130,15 +209,100 @@ export default function UploadPage() {
     bookTitle: ''
   })
 
+  // ── Curated-markdown lane ──────────────────────────────────────────────────
+  // The first file that parses, else the first file: what the book's details are
+  // read from. Every chapter of one book carries the same book-level frontmatter.
+  const mdPrimaryMeta = (mdFiles.find((f) => f.errors.length === 0) ?? mdFiles[0])?.meta
+
+  // The same hierarchy the PDF form collects, resolved to the labels the PDF lane
+  // stores. Null until every field is chosen.
+  const mdHierarchy: BookHierarchy | null =
+    formData.domain && formData.course && formData.level && formData.subject &&
+    formData.book && formData.medium && formData.bookTitle.trim()
+      ? {
+          domain: labelForDomain(formData.domain),
+          course: labelForCourse(formData.domain, formData.course),
+          level: labelForLevel(formData.domain, formData.course, formData.level),
+          subjectGroup: formData.subject,
+          book: formData.book,
+          medium: formData.medium,
+          bookTitle: formData.bookTitle.trim(),
+        }
+      : null
+
+  // What the selection says against what each file says about itself.
+  const mdChecks = mdFiles.map((f) =>
+    mdHierarchy ? checkHierarchyAgainstFrontmatter(f.meta, mdHierarchy) : { errors: [] as string[], warnings: [] as string[] },
+  )
+  const mdUnapproved = mdFiles.filter((f) => f.meta.validation_status !== 'APPROVED')
+  const mdChapterNos = mdFiles.map((f) => f.meta.chapter_number).filter(Boolean)
+  const mdDuplicateChapters = [...new Set(mdChapterNos.filter((n, i) => mdChapterNos.indexOf(n) !== i))]
+  const mdIsbns = [...new Set(mdFiles.map((f) => f.meta.isbn).filter(Boolean))]
+
+  // Anything here stops the upload. The server refuses the same things; saying so
+  // up front means the operator is never left reading a blank "Upload Failed".
+  const mdBlockers: string[] = [
+    ...mdFiles.flatMap((f) => f.errors.map((e) => `${f.file.name}: ${e}`)),
+    ...mdFiles.flatMap((f, i) => mdChecks[i].errors.map((e) => `${f.file.name}: ${e}`)),
+    ...(mdDuplicateChapters.length ? [`Chapter ${mdDuplicateChapters.join(', ')} is selected more than once.`] : []),
+    ...(mdIsbns.length > 1 ? [`The selected files carry different ISBNs (${mdIsbns.join(', ')}), so they are not chapters of one book.`] : []),
+    ...(mdUnapproved.length && !forceIndex
+      ? [`${mdUnapproved.length} of ${mdFiles.length} file(s) are not APPROVED. Approve them in the file, or tick the override below.`]
+      : []),
+    ...(mdUnapproved.length && forceIndex && !forceReason.trim()
+      ? ['Give a reason for indexing files that are not APPROVED.']
+      : []),
+  ]
+
+  const handleMarkdownFiles = async (files: File[]) => {
+    setResult(null)
+    setMdSkipped([])
+    const checked: MdPreflight[] = await Promise.all(
+      files.map(async (file): Promise<MdPreflight> => {
+        try {
+          const { meta, chunks, errors, warnings } = parseEnrichedMarkdown(await file.text())
+          const pageNos = chunks.map((c) => c.metadata.page as number)
+          return {
+            file, meta, errors, warnings,
+            chunkCount: chunks.length,
+            pages: pageNos.length ? `${Math.min(...pageNos)}-${Math.max(...pageNos)}` : '',
+          }
+        } catch (err) {
+          return {
+            file,
+            meta: { validation_status: 'UNKNOWN' } as EnrichedBookMeta,
+            errors: [`Could not read this file: ${err instanceof Error ? err.message : String(err)}`],
+            warnings: [],
+            chunkCount: 0,
+            pages: '',
+          }
+        }
+      }),
+    )
+    setMdFiles(checked)
+
+    // Offer what the file says; never overwrite what the operator has already chosen.
+    const meta = (checked.find((c) => c.errors.length === 0) ?? checked[0])?.meta
+    if (!meta) return
+    const medium = MEDIUMS.find((m) => m.toLowerCase() === (meta.medium || '').toLowerCase())
+    setFormData((prev) => ({
+      ...prev,
+      bookTitle: prev.bookTitle || meta.book_title || '',
+      medium: prev.medium || medium || '',
+      ...suggestTaxonomy(prev, meta),
+    }))
+  }
+
   const handleMarkdownSubmit = async () => {
-    if (!formData.file) {
-      alert('Please choose an enriched Markdown (.md) file')
+    if (mdFiles.length === 0) {
+      alert('Please choose one or more enriched Markdown (.md) chapter files')
       return
     }
-    if (!formData.file.name.toLowerCase().endsWith('.md')) {
-      alert('Curated lane expects a .md file. Switch to PDF mode for PDFs.')
+    if (!mdHierarchy) {
+      alert('Please complete every step: domain, course, level, subject, book, medium and title.')
       return
     }
+    if (mdBlockers.length > 0) return
 
     setIsUploading(true)
     setUploadProgress(10)
@@ -152,8 +316,20 @@ export default function UploadPage() {
       setActiveUploadId(uploadId)
 
       const body = new FormData()
-      body.append('file', formData.file)
+      for (const f of mdFiles) body.append('file', f.file)
       body.append('uploadId', uploadId)
+      // Same fields, same labels as the PDF lane sends.
+      body.append('domain', mdHierarchy.domain)
+      body.append('course', mdHierarchy.course)
+      body.append('level', mdHierarchy.level)
+      body.append('subject', mdHierarchy.subjectGroup)
+      body.append('book', mdHierarchy.book)
+      body.append('medium', mdHierarchy.medium)
+      body.append('bookTitle', mdHierarchy.bookTitle)
+      if (mdUnapproved.length > 0 && forceIndex) {
+        body.append('force', 'true')
+        body.append('forceReason', forceReason.trim())
+      }
 
       setUploadProgress(50)
       setCurrentStep('Embedding + indexing to Qdrant...')
@@ -163,15 +339,25 @@ export default function UploadPage() {
         body,
         headers: { 'X-Upload-Id': uploadId },
       })
-      const json = await response.json()
+      const json = await response.json().catch(() => ({
+        success: false,
+        error: `The server answered HTTP ${response.status} with no readable body.`,
+      }))
 
       setUploadProgress(100)
       setCurrentStep(json.success ? 'Indexed successfully!' : 'Failed')
       setResult(json)
       setMdSkipped(Array.isArray(json.skipped) ? json.skipped : [])
       if (!response.ok || !json.success) console.warn('Markdown ingest returned error:', json)
+
+      // Chapters are now in the library: refresh the Overview and Manage tabs, as
+      // the PDF path does.
+      if (json.totals?.succeeded > 0 || json.success) {
+        mutate('/api/super-admin/qdrant/books')
+        mutate('/api/super-admin/qdrant/stats')
+      }
     } catch (err) {
-      setResult({ success: false, error: err instanceof Error ? err.message : 'Ingest failed' } as unknown as UploadResult)
+      setResult({ success: false, error: err instanceof Error ? err.message : 'Ingest failed' })
     } finally {
       setIsUploading(false)
     }
@@ -447,7 +633,9 @@ export default function UploadPage() {
                     Upload Textbook
                   </h2>
                   <p className="text-muted-foreground">
-                    Select a PDF file and provide metadata for intelligent processing
+                    {ingestMode === 'pdf'
+                      ? 'Select a PDF file and provide metadata for intelligent processing'
+                      : "Choose the book's enriched Markdown chapters and confirm where the book belongs"}
                   </p>
                 </div>
               </div>
@@ -477,12 +665,12 @@ export default function UploadPage() {
               <p className="mt-2 text-xs text-muted-foreground">
                 {ingestMode === 'pdf'
                   ? 'Automated OCR + layout + metadata extraction. Use for bulk / un-curated PDFs.'
-                  : 'Human-validated markdown (from a chapter skill). Skips OCR — metadata & printed page numbers are read from the file frontmatter for exact citations.'}
+                  : 'Human-validated markdown (from a chapter skill). Skips OCR. You say where the book belongs — the same fields as a PDF — and each chapter’s number, title and printed page numbers are read from its frontmatter for exact citations.'}
               </p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              {ingestMode === 'pdf' && (() => {
+              {(() => {
                 const selectCls = "w-full px-4 py-3 bg-muted/40 border border-border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 const labelCls = "block text-sm font-medium text-foreground mb-2"
 
@@ -512,7 +700,10 @@ export default function UploadPage() {
                         <label className={labelCls}><span className="flex items-center gap-2">📚 Course<span className="text-red-500">*</span></span></label>
                         <select
                           value={formData.course}
-                          onChange={(e) => setFormData({ ...formData, course: e.target.value, level: '', subject: '', book: '' })}
+                          onChange={(e) => {
+                            const next = { ...formData, course: e.target.value, level: '', subject: '', book: '' }
+                            setFormData({ ...next, ...(ingestMode === 'markdown' ? suggestTaxonomy(next, mdPrimaryMeta) : {}) })
+                          }}
                           className={selectCls}
                           disabled={!formData.domain}
                           required
@@ -529,7 +720,10 @@ export default function UploadPage() {
                         <label className={labelCls}><span className="flex items-center gap-2">🎓 Level<span className="text-red-500">*</span></span></label>
                         <select
                           value={formData.level}
-                          onChange={(e) => setFormData({ ...formData, level: e.target.value, subject: '', book: '' })}
+                          onChange={(e) => {
+                            const next = { ...formData, level: e.target.value, subject: '', book: '' }
+                            setFormData({ ...next, ...(ingestMode === 'markdown' ? suggestTaxonomy(next, mdPrimaryMeta) : {}) })
+                          }}
                           className={selectCls}
                           disabled={!formData.course}
                           required
@@ -600,29 +794,122 @@ export default function UploadPage() {
 
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  {ingestMode === 'pdf' ? 'PDF File' : 'Enriched Markdown File (.md)'}
+                  {ingestMode === 'pdf' ? 'PDF File' : 'Enriched Markdown Chapter Files (.md)'}
                 </label>
                 {ingestMode === 'markdown' && (
                   <p className="mb-2 text-xs text-muted-foreground">
-                    Metadata (book, subject, class, chapter, page numbers) is read from the file&apos;s
+                    Select one or more chapters of the same book. Chapter number, title and printed page range are
+                    read from each file&apos;s
                     <code className="mx-1 px-1 rounded bg-muted">BOOK_METADATA</code>
                     frontmatter. Only <strong>APPROVED</strong> files are indexed.
                   </p>
                 )}
                 <div className="relative">
                   <input
+                    key={ingestMode}
                     type="file"
+                    multiple={ingestMode === 'markdown'}
                     accept={ingestMode === 'pdf' ? '.pdf' : '.md,text/markdown'}
-                    onChange={(e) => setFormData({ ...formData, file: e.target.files?.[0] || null })}
+                    onChange={(e) => {
+                      const picked = Array.from(e.target.files ?? [])
+                      if (ingestMode === 'markdown') {
+                        void handleMarkdownFiles(picked)
+                      } else {
+                        setFormData({ ...formData, file: picked[0] || null })
+                      }
+                    }}
                     className="w-full px-4 py-3 bg-muted/40 border border-border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
                     required
                   />
                 </div>
+
+                {/* What the files say about themselves, read in the browser before upload */}
+                {ingestMode === 'markdown' && mdFiles.length > 0 && (
+                  <div className="mt-3 rounded-xl border border-border bg-muted/30 p-4 text-xs space-y-3">
+                    <p className="font-semibold text-foreground">Read from the file{mdFiles.length > 1 ? 's' : ''}</p>
+                    {mdPrimaryMeta && (
+                      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+                        {([
+                          ['Book', mdPrimaryMeta.book_title],
+                          ['ISBN', mdPrimaryMeta.isbn],
+                          ['Edition', mdPrimaryMeta.edition],
+                          ['Publisher', mdPrimaryMeta.publisher],
+                          ['Class · subject', [mdPrimaryMeta.class_level && `Class ${mdPrimaryMeta.class_level}`, mdPrimaryMeta.subject].filter(Boolean).join(' · ')],
+                        ] as const).map(([k, v]) => (
+                          <React.Fragment key={k}>
+                            <dt className="text-muted-foreground">{k}</dt>
+                            <dd className="text-foreground">{v || <span className="text-amber-600">not in the file</span>}</dd>
+                          </React.Fragment>
+                        ))}
+                      </dl>
+                    )}
+                    <ul className="space-y-2">
+                      {mdFiles.map((f, i) => (
+                        <li key={f.file.name + i} className="rounded-lg border border-border bg-background/60 p-2">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <span className="font-medium text-foreground">
+                              {f.meta.chapter_number ? `Ch ${f.meta.chapter_number}` : 'Chapter ?'}
+                              {f.meta.chapter_title ? ` · ${f.meta.chapter_title}` : ''}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {f.pages ? `pp ${f.pages} · ` : ''}{f.chunkCount} chunks
+                            </span>
+                            <span className={`ml-auto rounded px-1.5 py-0.5 font-semibold ${
+                              f.meta.validation_status === 'APPROVED'
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                            }`}>
+                              {f.meta.validation_status || 'NO STATUS'}
+                            </span>
+                          </div>
+                          <div className="text-muted-foreground truncate">{f.file.name}</div>
+                          {f.errors.map((e, j) => (
+                            <p key={`e${j}`} className="mt-1 text-red-600 dark:text-red-400">✗ {e}</p>
+                          ))}
+                          {[...f.warnings, ...(mdChecks[i]?.warnings ?? [])].slice(0, 3).map((w, j) => (
+                            <p key={`w${j}`} className="mt-1 text-amber-700 dark:text-amber-300">⚠ {w}</p>
+                          ))}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Override for chapters a human has not yet marked APPROVED */}
+                {ingestMode === 'markdown' && mdUnapproved.length > 0 && (
+                  <div className="mt-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4 text-xs space-y-2">
+                    <label className="flex items-start gap-2 font-medium text-amber-800 dark:text-amber-200">
+                      <input
+                        type="checkbox"
+                        checked={forceIndex}
+                        onChange={(e) => setForceIndex(e.target.checked)}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        Index {mdUnapproved.length} file(s) that are not APPROVED anyway.
+                        <span className="block font-normal text-amber-700 dark:text-amber-300">
+                          A person is meant to confirm each transcription against the printed page before it becomes
+                          citable. This records the override and your reason against the ingest run, and also re-embeds
+                          any chapter that is already indexed unchanged.
+                        </span>
+                      </span>
+                    </label>
+                    {forceIndex && (
+                      <input
+                        type="text"
+                        value={forceReason}
+                        onChange={(e) => setForceReason(e.target.value)}
+                        placeholder="Reason, e.g. checked against the printed book by …"
+                        className="w-full px-3 py-2 bg-background border border-amber-300 dark:border-amber-700 rounded-lg"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
 
               <button
                 type="submit"
-                disabled={isUploading}
+                disabled={isUploading || (ingestMode === 'markdown' && mdBlockers.length > 0)}
                 className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2"
               >
                 {isUploading ? (
@@ -637,6 +924,13 @@ export default function UploadPage() {
                   </>
                 )}
               </button>
+
+              {/* Why the button is disabled — never a silent grey-out */}
+              {ingestMode === 'markdown' && mdBlockers.length > 0 && (
+                <ul className="mt-3 list-disc pl-5 space-y-1 text-xs text-red-600 dark:text-red-400">
+                  {mdBlockers.map((b, i) => <li key={i}>{b}</li>)}
+                </ul>
+              )}
 
               {/* Curated-lane audit trail: what was skipped / flagged */}
               {ingestMode === 'markdown' && mdSkipped.length > 0 && (
@@ -729,11 +1023,69 @@ export default function UploadPage() {
                           ? 'text-green-700 dark:text-green-300'
                           : 'text-red-700 dark:text-red-300'
                       }`}>
-                        {result.message}
+                        {result.message || result.error}
                       </p>
                     </div>
                   </div>
                 </div>
+
+                {/* Where the book was filed — the same hierarchy the PDF lane stores */}
+                {result.work?.hierarchy && (
+                  <div className="p-4 rounded-xl border border-border bg-muted/30 text-sm">
+                    <h4 className="font-semibold text-foreground mb-1">Filed under</h4>
+                    <p className="text-muted-foreground">
+                      {[
+                        result.work.hierarchy.domain,
+                        result.work.hierarchy.course,
+                        result.work.hierarchy.level,
+                        result.work.hierarchy.subjectGroup,
+                        result.work.hierarchy.book,
+                      ].join(' › ')}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {result.work.title}
+                      {result.work.isbn ? ` · ISBN ${result.work.isbn}` : ''}
+                      {result.work.edition ? ` · ${result.work.edition}` : ''}
+                    </p>
+                  </div>
+                )}
+
+                {/* Per-chapter outcome */}
+                {result.parts && result.parts.length > 0 && (
+                  <div className="p-4 rounded-xl border border-border bg-muted/30">
+                    <h4 className="font-semibold text-foreground mb-2">Chapters</h4>
+                    <ul className="space-y-1 text-sm">
+                      {result.parts.map((p) => (
+                        <li key={p.partIndex} className="flex flex-wrap items-baseline gap-x-2">
+                          <span className="font-medium text-foreground">Ch {p.partIndex}</span>
+                          <span className={
+                            p.outcome === 'failed'
+                              ? 'text-red-600 dark:text-red-400'
+                              : p.outcome === 'skipped-as-duplicate'
+                              ? 'text-amber-700 dark:text-amber-300'
+                              : 'text-green-700 dark:text-green-300'
+                          }>
+                            {p.outcome === 'succeeded' ? `indexed · ${p.chunks} chunks` : p.outcome === 'skipped-as-duplicate' ? 'unchanged · skipped' : 'failed'}
+                          </span>
+                          {p.pages && <span className="text-xs text-muted-foreground">pp {p.pages}</span>}
+                          {p.detail && <span className="w-full text-xs text-muted-foreground">{p.detail}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Things the parser guessed or flagged — a moved boundary is a moved citation */}
+                {result.warnings && result.warnings.length > 0 && (
+                  <div className="p-4 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
+                    <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">
+                      Warnings ({result.warnings.length})
+                    </h4>
+                    <ul className="list-disc pl-5 space-y-1 text-xs text-amber-800 dark:text-amber-200 max-h-40 overflow-y-auto">
+                      {result.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                    </ul>
+                  </div>
+                )}
 
                 {/* Extraction Method */}
                 {result.extractionMethod && (

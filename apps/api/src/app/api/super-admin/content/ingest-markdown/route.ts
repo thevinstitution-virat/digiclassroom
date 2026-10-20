@@ -4,7 +4,12 @@ import { headers } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'node:crypto';
 import { enhancedRAG, type SpineIngestResult } from '@/lib/ai/rag/enhanced-rag-pipeline';
-import { parseEnrichedMarkdown } from '@/lib/content/markdown-ingest-parser';
+import {
+  parseEnrichedMarkdown,
+  applyBookHierarchy,
+  checkHierarchyAgainstFrontmatter,
+  type BookHierarchy,
+} from '@/lib/content/markdown-ingest-parser';
 import { resolveOrCreateContentItem, registerAsset } from '@/lib/db/content-identity';
 
 /**
@@ -28,6 +33,15 @@ import { resolveOrCreateContentItem, registerAsset } from '@/lib/db/content-iden
  * `chapter_number` are already in the file, they were validated by a human, and
  * asking an operator to retype them into a form is how a chapter ends up
  * attached to the wrong book. Form fields may override, but nothing is required.
+ *
+ * WHERE THE BOOK SITS IN THE TAXONOMY IS THE EXCEPTION. The frontmatter has no
+ * domain, and its `board` / `subject` are a publisher and a bare name where the
+ * taxonomy wants the examining body and a specific book. The console therefore
+ * sends the same hierarchy the PDF lane's form does (domain, course, level,
+ * subject, book, medium), and it is stamped onto every chunk so both lanes file
+ * a book identically. Those six travel together or not at all — a half-stated
+ * hierarchy is worse than none — and a class that contradicts the file's own
+ * frontmatter is refused outright.
  *
  * A work is a hierarchy: one content_item keyed on (isbn, edition), and slots
  * keyed (role, part_index, variant). Three request shapes are accepted:
@@ -83,6 +97,25 @@ export async function POST(request: NextRequest) {
     const organizationId = (formData.get('organizationId') as string | null)?.trim() || null;
     const force = (formData.get('force') as string) === 'true';
     const forceReason = (formData.get('forceReason') as string | null)?.trim() || null;
+
+    // The book's place in the taxonomy, as the console's form states it.
+    const field = (k: string) => ((formData.get(k) as string | null) ?? '').trim();
+    const hierarchyFields = {
+      domain: field('domain'), course: field('course'), level: field('level'),
+      subject: field('subject'), book: field('book'), medium: field('medium'),
+    };
+    const stated = Object.entries(hierarchyFields).filter(([, v]) => v !== '');
+    if (stated.length > 0 && stated.length < Object.keys(hierarchyFields).length) {
+      const missing = Object.entries(hierarchyFields).filter(([, v]) => v === '').map(([k]) => k);
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Domain, course, level, subject, book and medium must all be given together; missing: ${missing.join(', ')}.`,
+        },
+        { status: 400 },
+      );
+    }
+    const hasHierarchy = stated.length > 0;
 
     const emit = async (step: number, total: number, label: string) => {
       if (!uploadId) return;
@@ -232,6 +265,34 @@ export async function POST(request: NextRequest) {
         },
         { status: 422 },
       );
+    }
+
+    // ── Taxonomy hierarchy: check against each file, then stamp it on ────────
+    // Still before anything is written, so a class that contradicts a chapter
+    // refuses the whole batch rather than half of it.
+    let hierarchy: BookHierarchy | null = null;
+    if (hasHierarchy) {
+      hierarchy = {
+        domain: hierarchyFields.domain,
+        course: hierarchyFields.course,
+        level: hierarchyFields.level,
+        subjectGroup: hierarchyFields.subject,
+        book: hierarchyFields.book,
+        medium: hierarchyFields.medium,
+        bookTitle: title,
+      };
+      for (const p of parsed) {
+        const check = checkHierarchyAgainstFrontmatter(p.meta, hierarchy);
+        if (check.errors.length > 0) {
+          await emitDone();
+          return NextResponse.json(
+            { success: false, error: `"${p.file.name}" does not match the selected book.`, errors: check.errors },
+            { status: 422 },
+          );
+        }
+        p.warnings.push(...check.warnings);
+        p.chunks = applyBookHierarchy(p.chunks, hierarchy);
+      }
     }
 
     const localId = (formData.get('localId') as string | null)?.trim() || `isbn:${isbn}`;
@@ -399,7 +460,7 @@ export async function POST(request: NextRequest) {
         skipped: allSkipped,
         warnings: allWarnings,
         // The spine detail, for anything that wants more than a summary.
-        work: { contentItemId, title, isbn, edition, matchedBy: resolved.matchedBy },
+        work: { contentItemId, title, isbn, edition, matchedBy: resolved.matchedBy, hierarchy },
         renditions,
         parts: results,
         totals: {

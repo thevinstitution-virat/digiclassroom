@@ -211,6 +211,109 @@ function firstDiff(a, b) {
 }
 
 // ───────────────────────────────────────────────────────────────────────────
+// 5. The console's book hierarchy: stamped like the PDF lane, checked against
+//    the file, and never allowed to touch the text or the citations.
+// ───────────────────────────────────────────────────────────────────────────
+const hierarchyApi =
+  typeof mod.applyBookHierarchy === 'function' &&
+  typeof mod.checkHierarchyAgainstFrontmatter === 'function' &&
+  typeof mod.classNumber === 'function';
+check('parser exports the book-hierarchy helpers', hierarchyApi);
+
+if (hierarchyApi) {
+  const { applyBookHierarchy, checkHierarchyAgainstFrontmatter, classNumber } = mod;
+
+  check(
+    'class: "Class 9", "9" and "Class IX" are the same class; a non-class label is null',
+    classNumber('Class 9') === '9' && classNumber('9') === '9' && classNumber('Class IX') === '9' &&
+      classNumber('Prelims') === null && classNumber('') === null,
+  );
+
+  // The fixture is Class 9 Economics, "Synthetic Fixture Reader".
+  const form = {
+    domain: 'School Education', course: 'CBSE', level: 'Class 9',
+    subjectGroup: 'Social Science', book: 'Economics',
+    medium: 'English', bookTitle: 'Synthetic Fixture Reader',
+  };
+
+  const agree = checkHierarchyAgainstFrontmatter(base.meta, form);
+  check(
+    'hierarchy: a form that agrees with the file raises nothing',
+    agree.errors.length === 0 && agree.warnings.length === 0,
+    JSON.stringify(agree),
+  );
+
+  const wrongClass = checkHierarchyAgainstFrontmatter(base.meta, { ...form, level: 'Class 10' });
+  check(
+    'hierarchy: a class that contradicts the file is an ERROR',
+    wrongClass.errors.length === 1 && /class_level/.test(wrongClass.errors[0]),
+    JSON.stringify(wrongClass),
+  );
+
+  const retitled = checkHierarchyAgainstFrontmatter(base.meta, { ...form, bookTitle: 'NCERT Reader' });
+  check(
+    'hierarchy: a different title is a WARNING, not a refusal',
+    retitled.errors.length === 0 && retitled.warnings.some((w) => /Book title/.test(w)),
+    JSON.stringify(retitled),
+  );
+
+  const misfiled = checkHierarchyAgainstFrontmatter(base.meta, { ...form, book: 'History' });
+  check(
+    'hierarchy: a book unrelated to the file subject is a WARNING',
+    misfiled.errors.length === 0 && misfiled.warnings.some((w) => /Subject/.test(w)),
+    JSON.stringify(misfiled),
+  );
+
+  // The real-world case: bare frontmatter subject vs the taxonomy's specific leaf.
+  const leaf = checkHierarchyAgainstFrontmatter(
+    { ...base.meta, subject: 'Political Science', book_title: 'Democratic Politics-I' },
+    { ...form, subjectGroup: 'Social Science', book: 'Political Science (Democratic Politics - I)', bookTitle: 'Democratic Politics-I' },
+  );
+  check(
+    'hierarchy: a bare subject matches the taxonomy leaf that contains it',
+    leaf.errors.length === 0 && leaf.warnings.length === 0,
+    JSON.stringify(leaf),
+  );
+
+  const before = JSON.stringify(base.chunks);
+  const stamped = applyBookHierarchy(base.chunks, form);
+  check('hierarchy: the input chunks are not mutated', JSON.stringify(base.chunks) === before);
+  check('hierarchy: every chunk is kept', stamped.length === base.chunks.length);
+  check(
+    'hierarchy: text, page and retrieval class are untouched',
+    stamped.every((c, i) =>
+      c.text === base.chunks[i].text &&
+      c.metadata.page === base.chunks[i].metadata.page &&
+      c.metadata.pageEndNumber === base.chunks[i].metadata.pageEndNumber &&
+      c.retrieval_class === base.chunks[i].retrieval_class),
+  );
+  check(
+    'hierarchy: stamped the way the PDF lane stores it (subject = leaf, board = course)',
+    stamped.every((c) =>
+      c.metadata.subject === 'Economics' && c.metadata.book === 'Economics' &&
+      c.metadata.subjectGroup === 'Social Science' && c.metadata.domain === 'School Education' &&
+      c.metadata.course === 'CBSE' && c.metadata.board === 'CBSE' && c.metadata.curriculum === 'CBSE' &&
+      c.metadata.level === 'Class 9' && c.metadata.bookTitle === 'Synthetic Fixture Reader' &&
+      c.metadata.book_title === 'Synthetic Fixture Reader' && c.metadata.medium === 'English'),
+    JSON.stringify(stamped[0]?.metadata),
+  );
+  check(
+    'hierarchy: the file\'s own class is kept',
+    stamped.every((c) => c.metadata.classLevel === '9'),
+    String(stamped[0]?.metadata.classLevel),
+  );
+
+  // A file with no class_level takes it from the selected level.
+  const noClass = parseEnrichedMarkdown(clean.replace(/^class_level:.*$/m, ''));
+  const filled = applyBookHierarchy(noClass.chunks, form);
+  check(
+    'hierarchy: a missing class_level is taken from the selected level',
+    noClass.chunks.every((c) => c.metadata.classLevel === 'Unknown') && filled.every((c) => c.metadata.classLevel === '9'),
+    String(filled[0]?.metadata.classLevel),
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────────
 console.log(`\nmarkdown-ingest-parser: ${pass.length} passed, ${failures.length} failed`);
 if (failures.length) {
   console.error('\nFAILED:');
