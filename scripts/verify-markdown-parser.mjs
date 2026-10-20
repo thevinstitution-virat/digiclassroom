@@ -266,6 +266,27 @@ check('pages: markers that stop short of chapter_pages are reported', widerRange
 // The rewrite that exercises the new checks must not change what a CORRECT file produces.
 check('pages: the new checks do not change the chunks of the well-formed fixture', JSON.stringify(textOf(parseEnrichedMarkdown(clean))) === JSON.stringify(textOf(base)));
 
+// ──────────────────────────────────────────────────────
+// 7. A chapter's question set is practice whatever the heading's capitalisation or number.
+// ──────────────────────────────────────────────────────
+// "exercises" (plural, no other word) is how NCERT's Democratic Politics titles every chapter's question set. The rule
+// was /\b(exercise|…)\b/, which does not match the plural word, so those questions became answerable source text.
+const classOfHeading = (heading) => {
+  const doc = [
+    '---', 'book_title: T', 'isbn: 978-0-00-000000-2', 'class_level: "9"', 'subject: Political Science',
+    'chapter_number: 1', 'chapter_title: X', 'chapter_pages: 1-1', 'validation_status: PENDING', '---',
+    '<!-- PAGE 1 -->', '', `## ${heading}`, '',
+    '1. Which of the following is not an instance of an exercise of a democratic right? Parents send their children to school.',
+  ].join('\n');
+  return parseEnrichedMarkdown(doc).chunks[0]?.retrieval_class;
+};
+for (const h of ['exercises', 'Exercises', 'EXERCISES', 'Exercise', 'Exercise 1.1', 'Exercises and Activities', 'Questions', 'Let us enhance our learning']) {
+  check(`practice heading: "${h}" is practice`, classOfHeading(h) === 'practice', `got ${classOfHeading(h)}`);
+}
+for (const h of ['Summary', 'Overview', 'Why define democracy?', 'Broader meanings of democracy']) {
+  check(`ordinary heading: "${h}" stays reference`, classOfHeading(h) === 'reference', `got ${classOfHeading(h)}`);
+}
+
 function firstDiff(a, b) {
   if (a.length !== b.length) return `chunk count ${a.length} vs ${b.length}`;
   for (let i = 0; i < a.length; i++) {

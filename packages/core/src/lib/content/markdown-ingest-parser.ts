@@ -64,9 +64,14 @@ const PRACTICE_BLOCK_TYPES = new Set(['discussion_prompt', 'suggested_activity']
 /**
  * Section titles whose PROSE is practice too. Typed blocks are not the only
  * carrier — a chapter's exercises are usually a numbered list under a heading.
+ *
+ * `exercises?`, not `exercise`: the alternative is followed by `\b`, so the singular alone does NOT match the plural
+ * word, and "exercises" (what NCERT's Democratic Politics, among others, prints at the end of every chapter) was
+ * classified `reference`. Its questions then became answerable source text and escaped the retrieval-side
+ * `must_not practice` filter, the exact failure the practice class exists to prevent.
  */
 const PRACTICE_SECTION_RE =
-  /\b(exercise|questions?|let'?s\s+(discuss|explore|reflect)|activit(y|ies)|think\s+about\s+it|assessment)\b/i;
+  /\b(exercises?|questions?|let'?s\s+(discuss|explore|reflect)|activit(y|ies)|think\s+about\s+it|assessment)\b/i;
 
 /**
  * Publisher wording that means "exercises" without using any of the words
