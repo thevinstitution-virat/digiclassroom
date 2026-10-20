@@ -183,6 +183,51 @@ function canonicalSubject(s: string): string {
 }
 
 /**
+ * What is wrong with an ISBN written in the frontmatter, or null when it is a usable ISBN-10 or ISBN-13.
+ *
+ *   'invalid'   not an ISBN at all: a placeholder ("[not printed … please fill in]", "978-93-5292-XXX-X # TODO"),
+ *               a note, or a typo that changes the length. REFUSED by the parser, because the ISBN is half of the
+ *               work's identity (isbn + edition): a placeholder ingests cleanly, creates a work nothing can ever
+ *               match again, and splits the book. Nothing downstream can see that it happened.
+ *   'checksum'  the right shape but the check digit does not add up: most likely a misprint or a typing slip.
+ *               Only WARNED, because a publisher's own misprint is not the operator's fault and must not block a
+ *               chapter; it is worth a person's look all the same.
+ *
+ * Hyphens and spaces are ignored. ISBN-10 is accepted as printed (many NCERT titles carry one, e.g. 81-7450-518-0).
+ */
+export function isbnProblem(raw: string): { kind: 'invalid' | 'checksum'; message: string } | null {
+  const shown = raw.trim();
+  const compact = shown.replace(/[\s-]/g, '');
+
+  if (/^\d{13}$/.test(compact)) {
+    let sum = 0;
+    for (let i = 0; i < 12; i++) sum += Number(compact[i]) * (i % 2 === 0 ? 1 : 3);
+    const check = (10 - (sum % 10)) % 10;
+    return check === Number(compact[12])
+      ? null
+      : { kind: 'checksum', message: `isbn "${shown}" has the shape of an ISBN-13 but its check digit should be ${check}: check it against the copyright page.` };
+  }
+
+  if (/^\d{9}[\dXx]$/.test(compact)) {
+    let sum = 0;
+    for (let i = 0; i < 9; i++) sum += Number(compact[i]) * (10 - i);
+    const check = (11 - (sum % 11)) % 11;
+    const expected = check === 10 ? 'X' : String(check);
+    return compact[9].toUpperCase() === expected
+      ? null
+      : { kind: 'checksum', message: `isbn "${shown}" has the shape of an ISBN-10 but its check digit should be ${expected}: check it against the copyright page.` };
+  }
+
+  return {
+    kind: 'invalid',
+    message:
+      `isbn "${shown.slice(0, 80)}" is not an ISBN (a 10- or 13-digit number, hyphens allowed). A placeholder or a note here ` +
+      `would create a work that no later chapter can ever match, so the book would split. Put the number printed on the ` +
+      `copyright page, or leave the line out and let the caller supply it.`,
+  };
+}
+
+/**
  * Undo markdown escaping.
  *
  * The skill's output reaches this parser having been through a markdown-escaping
@@ -343,6 +388,12 @@ function parseFrontmatter(md: string): {
 
   if (!meta.isbn) {
     warnings.push('No isbn in frontmatter — this chapter cannot be tied to a work key by ISBN.');
+  } else {
+    // A value that is present is judged, not just counted: a placeholder passes "is there an isbn" and then names a
+    // work nothing else can match. See isbnProblem for what is refused and what is only warned about.
+    const problem = isbnProblem(meta.isbn);
+    if (problem?.kind === 'invalid') errors.push(problem.message);
+    else if (problem) warnings.push(problem.message);
   }
 
   // Exact offset past the closing fence's own terminator. No re-joining.
@@ -374,6 +425,13 @@ export function parseEnrichedMarkdown(input: string): ParsedMarkdown {
   const skipped: string[] = [];
 
   let currentPage = 1;
+  /**
+   * Every PAGE marker, in order, with its line. A chunk's page is whatever marker precedes it, so these are the whole
+   * basis of every citation this file produces; they are checked for order and coverage once the file is read.
+   */
+  const pageMarkers: Array<{ page: number; line: number }> = [];
+  /** Chunks cut before any PAGE marker, which carry the default page 1 and not a page anyone printed. */
+  let chunksBeforeFirstMarker = 0;
   let currentSection = 'General Section';
   let currentSubsection = '';
   let seq = 0;
@@ -400,6 +458,8 @@ export function parseEnrichedMarkdown(input: string): ParsedMarkdown {
     // prefer it over the section marker for exact citations.
     const page = Math.max(1, pageOverride || currentPage);
     const pageEnd = Math.max(page, pageEndOverride || page);
+    // No marker yet and no page of its own: this chunk is cited as page 1 only because 1 is where the counter starts.
+    if (!pageOverride && pageMarkers.length === 0) chunksBeforeFirstMarker += 1;
 
     if (UNCLEAR_RE.test(clean)) {
       skipped.push(`UNCLEAR flag on page ${page} (${contentType}) — indexed but needs human review`);
@@ -510,7 +570,13 @@ export function parseEnrichedMarkdown(input: string): ParsedMarkdown {
         continue;
       }
       const pageM = inner.match(PAGE_RE);
-      if (pageM) { flushProse(); currentPage = parseInt(pageM[1], 10) || currentPage; continue; }
+      if (pageM) {
+        flushProse();
+        const n = parseInt(pageM[1], 10);
+        if (n > 0) pageMarkers.push({ page: n, line: fileLine(i) });
+        currentPage = n || currentPage;
+        continue;
+      }
       const secM = inner.match(SECTION_RE);
       if (secM) { flushProse(); currentSection = secM[1].trim(); currentSubsection = ''; continue; }
       const subM = inner.match(SUBSECTION_RE);
@@ -661,6 +727,50 @@ export function parseEnrichedMarkdown(input: string): ParsedMarkdown {
     }
   }
   flushProse();
+
+  // ---- Are the page markers themselves trustworthy? ----
+  //
+  // A chunk's page is the marker above it, so the markers are the only source of a citation. The range check below proves
+  // every chunk lies INSIDE the chapter; it cannot tell page 130 from page 131, and neither can anything after it. So the
+  // cases that are wrong for certain are refused here, and the ones that are only suspicious are reported.
+  if (chunksBeforeFirstMarker > 0) {
+    errors.push(
+      pageMarkers.length === 0
+        ? `No <!-- PAGE N --> marker anywhere: all ${chunksBeforeFirstMarker} chunk(s) would be cited as page 1.`
+        : `${chunksBeforeFirstMarker} chunk(s) come before the first <!-- PAGE N --> marker (line ${pageMarkers[0].line}) and ` +
+            `would be cited as page 1. The first marker must sit above all body text.`,
+    );
+  }
+  const gaps: string[] = [];
+  for (let k = 1; k < pageMarkers.length; k++) {
+    const a = pageMarkers[k - 1];
+    const b = pageMarkers[k];
+    if (b.page < a.page) {
+      errors.push(
+        `PAGE ${b.page} (line ${b.line}) comes after PAGE ${a.page} (line ${a.line}): page markers must rise. ` +
+          `Everything between them would be cited under the wrong page.`,
+      );
+    } else if (b.page === a.page) {
+      warnings.push(`PAGE ${b.page} is marked twice (lines ${a.line} and ${b.line}).`);
+    } else if (b.page > a.page + 1) {
+      gaps.push(`${a.page} -> ${b.page} (line ${b.line})`);
+    }
+  }
+  if (gaps.length > 0) {
+    warnings.push(
+      `PAGE markers skip pages: ${gaps.slice(0, 5).join(', ')}${gaps.length > 5 ? ` and ${gaps.length - 5} more` : ''}. ` +
+        `Text from a skipped page is cited under the page before it. Every page, even a blank or skipped one, needs a marker.`,
+    );
+  }
+  if (pageMarkers.length > 0 && meta.chapter_page_start && meta.chapter_page_end) {
+    const first = pageMarkers[0].page;
+    const last = pageMarkers[pageMarkers.length - 1].page;
+    if (first !== meta.chapter_page_start || last !== meta.chapter_page_end) {
+      warnings.push(
+        `PAGE markers run ${first}-${last}, but chapter_pages says ${meta.chapter_page_start}-${meta.chapter_page_end}.`,
+      );
+    }
+  }
 
   // Every chunk's printed page must fall inside the chapter's declared range.
   // A chapter-extracted PDF whose file page 1 is the book's page 183 produces
