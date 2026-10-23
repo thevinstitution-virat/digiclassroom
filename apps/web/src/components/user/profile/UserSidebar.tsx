@@ -19,8 +19,10 @@ import {
   Award,
   TrendingUp,
   LineChart,
-  CreditCard
+  CreditCard,
+  PenLine,
 } from 'lucide-react'
+import { useHwStatus } from '@/components/hw/HwShell'
 
 interface UserSidebarProps {
   user?: {
@@ -33,6 +35,7 @@ interface UserSidebarProps {
 
 export default function UserSidebar({ user }: UserSidebarProps) {
   const persona = user?.persona || 'student'
+  const hw = useHwStatus()
 
   // Grouped by use case (mirrors the section pattern already shipped on PDLMS's
   // super-admin sidebar). BaseSidebar renders a header above the first item of
@@ -50,6 +53,14 @@ export default function UserSidebar({ user }: UserSidebarProps) {
       featured: true,
       section: 'Learn',
     }),
+    // Only for students of an institution with Handwritten Assignments switched on.
+    ...(hw.data?.enabled && hw.data.role === 'student'
+      ? [createNavigationItem('Assignments', '/dashboard/student/assignments', PenLine, {
+          description: 'Written answers for your teacher',
+          featured: true,
+          section: 'Learn',
+        })]
+      : []),
     createNavigationItem('Study Materials', '/dashboard/user/materials', BookOpen, {
       description: 'Access course content',
       featured: true,

@@ -4,9 +4,10 @@
 // route /api/hw/submissions/[submissionId]/ink, not here.
 
 import { z } from 'zod';
-import { TRPCError } from '@trpc/server';
+import { TRPCError, type inferRouterOutputs } from '@trpc/server';
 import { createTRPCRouter, protectedProcedure } from '../server';
 import { resolveHwActor } from '@/lib/hw/access/actor';
+import { isHwEnabled } from '@/lib/hw/access/guards';
 import type { HwActor } from '@/lib/hw/access/policy';
 import { isHwError, type HwErrorCode } from '@/lib/hw/errors';
 import { QUESTION_PRESETS } from '@/lib/hw/presets';
@@ -58,7 +59,8 @@ const assignmentInput = z.object({
 
 const questionInput = z.object({
   type: z.enum(['very_short', 'short', 'long', 'essay']),
-  prompt: z.string().trim().min(1).max(10_000),
+  // May be blank while drafting; publishing refuses blank questions.
+  prompt: z.string().trim().max(10_000),
   marks,
   modelAnswer: z.string().max(20_000).nullable().optional(),
   acceptedAnswers: z.array(z.string().trim().min(1).max(500)).max(20).optional(),
@@ -75,6 +77,17 @@ const rubricItem = z.object({
 export const hwRouter = createTRPCRouter({
   presets: protectedProcedure.query(() => QUESTION_PRESETS),
 
+  /** For navigation and page guards: never throws for "not in an institution" or "switched off". */
+  status: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const actor = await resolveHwActor(ctx.req.headers);
+      return { enabled: await isHwEnabled(actor.orgId), role: actor.role, orgId: actor.orgId };
+    } catch (e) {
+      if (isHwError(e) && (e.code === 'FORBIDDEN' || e.code === 'UNAUTHORIZED')) return { enabled: false, role: 'none' as const, orgId: null, reason: e.publicMessage };
+      throw e;
+    }
+  }),
+
   // ── Teacher: build ────────────────────────────────────────────────────────
   assignments: createTRPCRouter({
     list: protectedProcedure
@@ -82,6 +95,7 @@ export const hwRouter = createTRPCRouter({
       .query(({ ctx, input }) => run(ctx, (a) => assignments.listForTeacher(a, input ?? {}))),
     get: protectedProcedure.input(z.object({ assignmentId: id }))
       .query(({ ctx, input }) => run(ctx, (a) => assignments.getForManage(a, input.assignmentId))),
+    targets: protectedProcedure.query(({ ctx }) => run(ctx, (a) => assignments.assignmentTargets(a))),
     create: protectedProcedure.input(assignmentInput)
       .mutation(({ ctx, input }) => run(ctx, (a) => assignments.createAssignment(a, input))),
     update: protectedProcedure.input(z.object({ assignmentId: id, patch: assignmentInput.partial() }))
@@ -116,6 +130,7 @@ export const hwRouter = createTRPCRouter({
 
   classTeachers: createTRPCRouter({
     list: protectedProcedure.query(({ ctx }) => run(ctx, (a) => assignments.listClassTeachers(a))),
+    options: protectedProcedure.query(({ ctx }) => run(ctx, (a) => assignments.classTeacherOptions(a))),
     assign: protectedProcedure
       .input(z.object({ classId: id, sectionId: id.nullable(), teacherId: id, subject: z.string().trim().max(100).nullable() }))
       .mutation(({ ctx, input }) => run(ctx, (a) => assignments.assignClassTeacher(a, input))),
@@ -184,3 +199,6 @@ export const hwRouter = createTRPCRouter({
       .mutation(({ ctx, input }) => run(ctx, (a) => marking.setQuota(a, input.orgId, input))),
   }),
 });
+
+/** Output types for the web app (inferred with core's own @trpc/server copy). */
+export type HwRouterOutputs = inferRouterOutputs<typeof hwRouter>;

@@ -21,24 +21,33 @@ export async function resolveHwActor(headers: Headers): Promise<HwActor> {
   const globalRole = (session.user as { role?: string | null }).role ?? 'student';
   const headerOrg = (headers.get('x-org-id') ?? '').trim();
   const sessionOrg = ((session.session as { activeOrganizationId?: string | null }).activeOrganizationId ?? '').trim();
-  const orgId = headerOrg || sessionOrg;
-
-  if (!orgId) {
-    throw new HwError('FORBIDDEN', 'Handwritten assignments are available inside an institution. Choose your institution first.');
-  }
+  let orgId = headerOrg || sessionOrg;
 
   if (globalRole === 'super_admin') {
+    if (!orgId) throw new HwError('FORBIDDEN', 'Choose an institution first.');
     return { userId, orgId, role: 'admin', isPlatformStaff: true };
   }
 
-  const [row] = await db
-    .select({ role: member.role })
-    .from(member)
-    .where(and(eq(member.userId, userId), eq(member.organizationId, orgId)))
-    .limit(1);
-  if (!row) throw new HwError('FORBIDDEN', 'You are not a member of this institution.');
+  let memberRole: string | null = null;
+  if (orgId) {
+    const [row] = await db
+      .select({ role: member.role })
+      .from(member)
+      .where(and(eq(member.userId, userId), eq(member.organizationId, orgId)))
+      .limit(1);
+    if (!row) throw new HwError('FORBIDDEN', 'You are not a member of this institution.');
+    memberRole = row.role;
+  } else {
+    // Nothing selected: someone in exactly one institution is in that one. Several -> they choose.
+    const rows = await db.select({ orgId: member.organizationId, role: member.role }).from(member).where(eq(member.userId, userId)).limit(2);
+    if (rows.length !== 1) {
+      throw new HwError('FORBIDDEN', 'Handwritten assignments are available inside an institution. Choose your institution first.');
+    }
+    orgId = rows[0].orgId;
+    memberRole = rows[0].role;
+  }
 
-  const role = roleFromMember(row.role);
+  const role = roleFromMember(memberRole);
   if (role === 'none') throw new HwError('FORBIDDEN', 'Your role in this institution has no access to assignments.');
   return { userId, orgId, role, isPlatformStaff: false };
 }

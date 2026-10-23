@@ -78,6 +78,16 @@ export async function answersNeedingSuggestion(x: Exec, q: GradeQuestion): Promi
 export async function gradeRulesThenQueue(x: Exec, orgId: string, questionId: string): Promise<{ byRule: number; queued: number }> {
   const q = await loadGradeQuestion(x, questionId);
   if (!q) return { byRule: 0, queued: 0 };
+  const { byRule, forAi } = await gradeByRules(x, orgId, q);
+  if (forAi > 0 && q.rubric.length > 0) await enqueueGrade(x, orgId, q.id, getHwConfig().HW_GRADE_DEBOUNCE_SECONDS);
+  return { byRule, queued: forAi };
+}
+
+/**
+ * The free part only: blank and exact-match answers get their suggestion now. Used by the
+ * grade job itself, which must not queue another job for the question it is working on.
+ */
+export async function gradeByRules(x: Exec, orgId: string, q: GradeQuestion): Promise<{ byRule: number; forAi: number }> {
   const pending = await answersNeedingSuggestion(x, q);
   const byRule: GradeResult[] = [];
   let forAi = 0;
@@ -87,8 +97,7 @@ export async function gradeRulesThenQueue(x: Exec, orgId: string, questionId: st
     else forAi++;
   }
   await insertAiGrades(x, orgId, null, byRule);
-  if (forAi > 0 && q.rubric.length > 0) await enqueueGrade(x, orgId, q.id, getHwConfig().HW_GRADE_DEBOUNCE_SECONDS);
-  return { byRule: byRule.length, queued: forAi };
+  return { byRule: byRule.length, forAi };
 }
 
 /** When nothing in a submission is still being read, it is ready for the teacher. */

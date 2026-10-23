@@ -1,0 +1,406 @@
+'use client'
+
+// All user-facing text of Handwritten Assignments, in English and Hindi. The repo has no
+// i18n system yet; this one module is shaped so it can move into one later unchanged.
+// Hindi strings should be reviewed by a native speaker before launch.
+
+import { useCallback, useEffect, useState } from 'react'
+
+export type HwLang = 'en' | 'hi'
+
+const en = {
+  'app.title': 'Assignments',
+  'app.subtitle': 'Written answers, in your own handwriting',
+  'app.off': 'Handwritten assignments are not switched on for your institution yet.',
+  'app.noOrg': 'Choose your institution to see assignments.',
+  'app.noAccess': 'This page is not available for your role.',
+  'lang.toggle': 'हिन्दी',
+  'common.loading': 'Loading…',
+  'common.save': 'Save',
+  'common.saving': 'Saving…',
+  'common.saved': 'Saved',
+  'common.cancel': 'Cancel',
+  'common.delete': 'Delete',
+  'common.confirm': 'Confirm',
+  'common.back': 'Back',
+  'common.next': 'Next',
+  'common.previous': 'Previous',
+  'common.marks': '{n} marks',
+  'common.mark': '{n} mark',
+  'common.due': 'Due {date}',
+  'common.noDue': 'No due date',
+  'common.error': 'Something went wrong: {msg}',
+  'common.retry': 'Try again',
+
+  'type.very_short': 'Very short',
+  'type.short': 'Short',
+  'type.long': 'Long',
+  'type.essay': 'Essay',
+
+  // Student
+  'st.list.pending': 'To do',
+  'st.list.submitted': 'Handed in',
+  'st.list.returned': 'Marked',
+  'st.list.empty': 'No assignments yet.',
+  'st.list.open': 'Open',
+  'st.list.late': 'Late',
+  'st.q.of': 'Question {i} of {n}',
+  'st.mode.write': 'Write',
+  'st.mode.type': 'Type',
+  'st.typed.placeholder': 'Write your answer here. With a stylus, you can write straight into this box.',
+  'st.submit': 'Hand in',
+  'st.submit.confirm': 'Hand in your work? You cannot change it afterwards.',
+  'st.submit.unanswered': '{n} question(s) have no answer yet.',
+  'st.offline': 'You are offline. Your work is saved on this device and will be handed in when you are back online.',
+  'st.offlineQueued': 'Waiting to hand in — will be submitted when online.',
+  'st.uploading': 'Uploading your writing…',
+  'st.uploadFailed': 'Your writing could not be uploaded: {msg}',
+  'st.processing': 'Handed in. We are reading your handwriting; this can take a while.',
+  'st.check.title': 'Check what we read',
+  'st.check.help': 'Tap any word we read wrongly. Your teacher will see your taps and look at your handwriting.',
+  'st.check.flagged': '{n} word(s) marked as misread',
+  'st.check.saveFlags': 'Send to teacher',
+  'st.check.notRead': 'Not read yet.',
+  'st.check.review': 'Hard to read — your teacher will check your handwriting.',
+  'st.result.title': 'Your marks',
+  'st.result.total': 'Total: {got} / {of}',
+  'st.result.teacherComment': 'Teacher’s comment',
+  'st.result.waiting': 'Your teacher has not returned this work yet.',
+  'st.closed': 'This assignment is closed.',
+
+  // Ink pad
+  'ink.pen': 'Pen',
+  'ink.eraser': 'Eraser',
+  'ink.undo': 'Undo',
+  'ink.redo': 'Redo',
+  'ink.clear': 'Clear',
+  'ink.clearConfirm': 'Clear everything you wrote for this question?',
+  'ink.penOnly': 'Stylus only',
+  'ink.moreLines': 'More lines',
+  'ink.hint': 'Write with your stylus. Use two fingers to scroll.',
+
+  // Teacher
+  'tc.list.new': 'New assignment',
+  'tc.list.empty': 'You have not set any assignments yet.',
+  'tc.status.draft': 'Draft',
+  'tc.status.published': 'Published',
+  'tc.status.closed': 'Closed',
+  'tc.new.class': 'Class',
+  'tc.new.section': 'Section',
+  'tc.new.allSections': 'All sections',
+  'tc.new.subject': 'Subject',
+  'tc.new.title': 'Title',
+  'tc.new.instructions': 'Instructions',
+  'tc.new.due': 'Due date',
+  'tc.new.modes': 'Students may answer by',
+  'tc.new.create': 'Create',
+  'tc.new.noClasses': 'You are not linked to any class yet. Ask your institution admin.',
+  'tc.b.addQuestion': 'Add question',
+  'tc.b.prompt': 'Question',
+  'tc.b.marks': 'Marks',
+  'tc.b.modelAnswer': 'Model answer',
+  'tc.b.language': 'Answer language',
+  'tc.b.lines': 'Lines on the writing pad',
+  'tc.b.accepted': 'Accepted answers (one per line; exact matches get full marks without AI)',
+  'tc.b.rubric': 'Key points',
+  'tc.b.rubricHelp': 'What an answer must contain to earn each mark.',
+  'tc.b.draftAi': 'Draft key points with AI',
+  'tc.b.drafting': 'Drafting…',
+  'tc.b.draftReplace': 'Replace the current key points with an AI draft?',
+  'tc.b.addPoint': 'Add key point',
+  'tc.b.pointsTotal': 'Key points add up to {got} of {of} marks',
+  'tc.b.aiDraft': 'AI draft — please check',
+  'tc.b.saveRubric': 'Save key points',
+  'tc.b.publish': 'Publish',
+  'tc.b.publishConfirm': 'Publish to students? Questions and marks cannot change after this.',
+  'tc.b.total': 'Total: {n} marks',
+  'tc.b.deleteQuestion': 'Delete question',
+  'tc.ov.title': 'Class overview',
+  'tc.ov.student': 'Student',
+  'tc.ov.status': 'Status',
+  'tc.ov.notStarted': 'Not started',
+  'tc.ov.mark': 'Mark answers',
+  'tc.ov.close': 'Close assignment',
+  'tc.ov.reopen': 'Reopen',
+  'tc.ov.return': 'Return marked work to students',
+  'tc.ov.returned': 'Returned {n}; {m} still being marked.',
+  'tc.ov.failedJobs': 'Problems',
+  'tc.sub.draft': 'Writing',
+  'tc.sub.submitted': 'Handed in',
+  'tc.sub.processing': 'Reading',
+  'tc.sub.ready_for_review': 'Ready to mark',
+  'tc.sub.graded': 'Marked',
+  'tc.sub.returned': 'Returned',
+
+  // Marking
+  'mk.title': 'Marking',
+  'mk.question': 'Question {i}',
+  'mk.filter.all': 'All',
+  'mk.filter.needs_review': 'Needs review',
+  'mk.filter.low_confidence': 'Low confidence',
+  'mk.filter.flagged': 'Flagged by student',
+  'mk.filter.ungraded': 'Not yet marked',
+  'mk.view.original': 'Original',
+  'mk.view.typed': 'Typed text',
+  'mk.noImage': 'Typed answer — no handwriting.',
+  'mk.transcript': 'Transcript',
+  'mk.flagsHint': 'Words the student says were misread are underlined.',
+  'mk.unclearHint': '[?] = word the reader could not read',
+  'mk.suggestion': 'AI suggestion',
+  'mk.noSuggestion': 'No AI suggestion yet.',
+  'mk.confidence': 'Confidence {n}%',
+  'mk.verdict.met': 'Met',
+  'mk.verdict.partial': 'Partly',
+  'mk.verdict.missing': 'Missing',
+  'mk.accept': 'Accept',
+  'mk.editAccept': 'Accept with my changes',
+  'mk.manual': 'Mark by hand',
+  'mk.manualMarks': 'Marks',
+  'mk.comment': 'Comment for the student',
+  'mk.saveComment': 'Save comment',
+  'mk.fixTranscript': 'Fix transcript',
+  'mk.confirmTranscript': 'Transcript is right',
+  'mk.saveTranscript': 'Save transcript and mark again',
+  'mk.graded': 'Marked: {n} / {of} ({source})',
+  'mk.source.accepted_ai': 'accepted AI',
+  'mk.source.edited_ai': 'edited AI',
+  'mk.source.manual': 'by hand',
+  'mk.bulk': 'Accept all high-confidence suggestions',
+  'mk.bulkConfirm': 'Accept {n} AI suggestions as final marks? You can still change any of them before returning the work.',
+  'mk.bulkNone': 'No high-confidence suggestions to accept.',
+  'mk.bulkDone': 'Accepted {n}.',
+  'mk.empty': 'No answers in this view.',
+  'mk.keys': 'Keys: J / K next and previous student · A accept',
+  'mk.notes': 'Checks on the AI’s work',
+  'mk.failure': 'Note',
+
+  // Institution admin
+  'ad.title': 'Assignments: teachers and classes',
+  'ad.link': 'Link teacher to class',
+  'ad.teacher': 'Teacher',
+  'ad.anySubject': 'Any subject',
+  'ad.usage': 'AI use this month',
+  'ad.usageLine': '{pages} pages read · {graded} answers marked · ₹{cost}',
+  'ad.quota': 'Monthly AI quota: {n} answers',
+  'ad.quotaOff': 'AI is switched off; teachers mark by hand.',
+} as const
+
+export type HwKey = keyof typeof en
+
+const hi: Record<HwKey, string> = {
+  'app.title': 'असाइनमेंट',
+  'app.subtitle': 'अपनी लिखावट में लिखे उत्तर',
+  'app.off': 'आपके संस्थान के लिए हस्तलिखित असाइनमेंट अभी चालू नहीं हैं।',
+  'app.noOrg': 'असाइनमेंट देखने के लिए अपना संस्थान चुनें।',
+  'app.noAccess': 'यह पृष्ठ आपकी भूमिका के लिए उपलब्ध नहीं है।',
+  'lang.toggle': 'English',
+  'common.loading': 'लोड हो रहा है…',
+  'common.save': 'सहेजें',
+  'common.saving': 'सहेजा जा रहा है…',
+  'common.saved': 'सहेजा गया',
+  'common.cancel': 'रद्द करें',
+  'common.delete': 'हटाएँ',
+  'common.confirm': 'पुष्टि करें',
+  'common.back': 'वापस',
+  'common.next': 'अगला',
+  'common.previous': 'पिछला',
+  'common.marks': '{n} अंक',
+  'common.mark': '{n} अंक',
+  'common.due': 'अंतिम तिथि {date}',
+  'common.noDue': 'कोई अंतिम तिथि नहीं',
+  'common.error': 'कुछ गलत हो गया: {msg}',
+  'common.retry': 'फिर से कोशिश करें',
+
+  'type.very_short': 'अति लघु',
+  'type.short': 'लघु',
+  'type.long': 'दीर्घ',
+  'type.essay': 'निबंध',
+
+  'st.list.pending': 'करना है',
+  'st.list.submitted': 'जमा किया',
+  'st.list.returned': 'जाँचा गया',
+  'st.list.empty': 'अभी कोई असाइनमेंट नहीं है।',
+  'st.list.open': 'खोलें',
+  'st.list.late': 'देर से',
+  'st.q.of': 'प्रश्न {i} / {n}',
+  'st.mode.write': 'लिखें',
+  'st.mode.type': 'टाइप करें',
+  'st.typed.placeholder': 'अपना उत्तर यहाँ लिखें। स्टायलस से आप सीधे इस बॉक्स में लिख सकते हैं।',
+  'st.submit': 'जमा करें',
+  'st.submit.confirm': 'अपना काम जमा करें? इसके बाद आप इसे बदल नहीं सकेंगे।',
+  'st.submit.unanswered': '{n} प्रश्नों का उत्तर अभी नहीं दिया गया है।',
+  'st.offline': 'आप ऑफ़लाइन हैं। आपका काम इस डिवाइस पर सहेजा गया है और ऑनलाइन होने पर जमा हो जाएगा।',
+  'st.offlineQueued': 'जमा होने की प्रतीक्षा — ऑनलाइन होने पर जमा होगा।',
+  'st.uploading': 'आपकी लिखावट अपलोड हो रही है…',
+  'st.uploadFailed': 'आपकी लिखावट अपलोड नहीं हो सकी: {msg}',
+  'st.processing': 'जमा हो गया। हम आपकी लिखावट पढ़ रहे हैं; इसमें कुछ समय लग सकता है।',
+  'st.check.title': 'जाँचें कि हमने क्या पढ़ा',
+  'st.check.help': 'जो शब्द हमने गलत पढ़ा हो, उस पर टैप करें। आपके शिक्षक इसे देखेंगे और आपकी लिखावट जाँचेंगे।',
+  'st.check.flagged': '{n} शब्द गलत पढ़े गए के रूप में चिह्नित',
+  'st.check.saveFlags': 'शिक्षक को भेजें',
+  'st.check.notRead': 'अभी पढ़ा नहीं गया।',
+  'st.check.review': 'पढ़ना कठिन है — आपके शिक्षक आपकी लिखावट जाँचेंगे।',
+  'st.result.title': 'आपके अंक',
+  'st.result.total': 'कुल: {got} / {of}',
+  'st.result.teacherComment': 'शिक्षक की टिप्पणी',
+  'st.result.waiting': 'आपके शिक्षक ने अभी यह काम वापस नहीं किया है।',
+  'st.closed': 'यह असाइनमेंट बंद है।',
+
+  'ink.pen': 'पेन',
+  'ink.eraser': 'रबर',
+  'ink.undo': 'पूर्ववत',
+  'ink.redo': 'फिर से करें',
+  'ink.clear': 'साफ़ करें',
+  'ink.clearConfirm': 'इस प्रश्न के लिए आपने जो कुछ लिखा है, क्या सब साफ़ कर दें?',
+  'ink.penOnly': 'केवल स्टायलस',
+  'ink.moreLines': 'और पंक्तियाँ',
+  'ink.hint': 'स्टायलस से लिखें। स्क्रॉल करने के लिए दो उँगलियों का उपयोग करें।',
+
+  'tc.list.new': 'नया असाइनमेंट',
+  'tc.list.empty': 'आपने अभी तक कोई असाइनमेंट नहीं दिया है।',
+  'tc.status.draft': 'ड्राफ़्ट',
+  'tc.status.published': 'प्रकाशित',
+  'tc.status.closed': 'बंद',
+  'tc.new.class': 'कक्षा',
+  'tc.new.section': 'सेक्शन',
+  'tc.new.allSections': 'सभी सेक्शन',
+  'tc.new.subject': 'विषय',
+  'tc.new.title': 'शीर्षक',
+  'tc.new.instructions': 'निर्देश',
+  'tc.new.due': 'अंतिम तिथि',
+  'tc.new.modes': 'विद्यार्थी उत्तर दे सकते हैं',
+  'tc.new.create': 'बनाएँ',
+  'tc.new.noClasses': 'आप अभी किसी कक्षा से जुड़े नहीं हैं। अपने संस्थान के एडमिन से पूछें।',
+  'tc.b.addQuestion': 'प्रश्न जोड़ें',
+  'tc.b.prompt': 'प्रश्न',
+  'tc.b.marks': 'अंक',
+  'tc.b.modelAnswer': 'आदर्श उत्तर',
+  'tc.b.language': 'उत्तर की भाषा',
+  'tc.b.lines': 'लेखन पैड पर पंक्तियाँ',
+  'tc.b.accepted': 'स्वीकार्य उत्तर (हर पंक्ति में एक; सटीक मिलान पर AI के बिना पूरे अंक)',
+  'tc.b.rubric': 'मुख्य बिंदु',
+  'tc.b.rubricHelp': 'हर अंक पाने के लिए उत्तर में क्या होना चाहिए।',
+  'tc.b.draftAi': 'AI से मुख्य बिंदु बनवाएँ',
+  'tc.b.drafting': 'बनाया जा रहा है…',
+  'tc.b.draftReplace': 'मौजूदा मुख्य बिंदुओं की जगह AI का ड्राफ़्ट रखें?',
+  'tc.b.addPoint': 'मुख्य बिंदु जोड़ें',
+  'tc.b.pointsTotal': 'मुख्य बिंदुओं का योग {of} में से {got} अंक है',
+  'tc.b.aiDraft': 'AI ड्राफ़्ट — कृपया जाँचें',
+  'tc.b.saveRubric': 'मुख्य बिंदु सहेजें',
+  'tc.b.publish': 'प्रकाशित करें',
+  'tc.b.publishConfirm': 'विद्यार्थियों के लिए प्रकाशित करें? इसके बाद प्रश्न और अंक नहीं बदले जा सकेंगे।',
+  'tc.b.total': 'कुल: {n} अंक',
+  'tc.b.deleteQuestion': 'प्रश्न हटाएँ',
+  'tc.ov.title': 'कक्षा का सारांश',
+  'tc.ov.student': 'विद्यार्थी',
+  'tc.ov.status': 'स्थिति',
+  'tc.ov.notStarted': 'शुरू नहीं किया',
+  'tc.ov.mark': 'उत्तर जाँचें',
+  'tc.ov.close': 'असाइनमेंट बंद करें',
+  'tc.ov.reopen': 'फिर से खोलें',
+  'tc.ov.return': 'जाँचा गया काम विद्यार्थियों को लौटाएँ',
+  'tc.ov.returned': '{n} लौटाए गए; {m} की जाँच अभी जारी है।',
+  'tc.ov.failedJobs': 'समस्याएँ',
+  'tc.sub.draft': 'लिख रहे हैं',
+  'tc.sub.submitted': 'जमा किया',
+  'tc.sub.processing': 'पढ़ा जा रहा है',
+  'tc.sub.ready_for_review': 'जाँच के लिए तैयार',
+  'tc.sub.graded': 'जाँचा गया',
+  'tc.sub.returned': 'लौटाया गया',
+
+  'mk.title': 'जाँच',
+  'mk.question': 'प्रश्न {i}',
+  'mk.filter.all': 'सभी',
+  'mk.filter.needs_review': 'जाँच ज़रूरी',
+  'mk.filter.low_confidence': 'कम भरोसा',
+  'mk.filter.flagged': 'विद्यार्थी द्वारा चिह्नित',
+  'mk.filter.ungraded': 'अभी नहीं जाँचे',
+  'mk.view.original': 'मूल',
+  'mk.view.typed': 'टाइप किया पाठ',
+  'mk.noImage': 'टाइप किया उत्तर — कोई लिखावट नहीं।',
+  'mk.transcript': 'प्रतिलिपि',
+  'mk.flagsHint': 'जिन शब्दों को विद्यार्थी ने गलत पढ़ा बताया, वे रेखांकित हैं।',
+  'mk.unclearHint': '[?] = वह शब्द जो पढ़ा नहीं जा सका',
+  'mk.suggestion': 'AI का सुझाव',
+  'mk.noSuggestion': 'अभी AI का कोई सुझाव नहीं।',
+  'mk.confidence': 'भरोसा {n}%',
+  'mk.verdict.met': 'पूरा',
+  'mk.verdict.partial': 'आंशिक',
+  'mk.verdict.missing': 'नहीं',
+  'mk.accept': 'स्वीकार करें',
+  'mk.editAccept': 'मेरे बदलावों के साथ स्वीकार करें',
+  'mk.manual': 'स्वयं अंक दें',
+  'mk.manualMarks': 'अंक',
+  'mk.comment': 'विद्यार्थी के लिए टिप्पणी',
+  'mk.saveComment': 'टिप्पणी सहेजें',
+  'mk.fixTranscript': 'प्रतिलिपि सुधारें',
+  'mk.confirmTranscript': 'प्रतिलिपि सही है',
+  'mk.saveTranscript': 'प्रतिलिपि सहेजें और फिर से जाँचें',
+  'mk.graded': 'जाँचा गया: {n} / {of} ({source})',
+  'mk.source.accepted_ai': 'AI स्वीकार',
+  'mk.source.edited_ai': 'AI में बदलाव',
+  'mk.source.manual': 'स्वयं',
+  'mk.bulk': 'सभी उच्च-भरोसे वाले सुझाव स्वीकार करें',
+  'mk.bulkConfirm': '{n} AI सुझावों को अंतिम अंक के रूप में स्वीकार करें? काम लौटाने से पहले आप इनमें से कोई भी बदल सकते हैं।',
+  'mk.bulkNone': 'स्वीकार करने के लिए कोई उच्च-भरोसे वाला सुझाव नहीं।',
+  'mk.bulkDone': '{n} स्वीकार किए गए।',
+  'mk.empty': 'इस दृश्य में कोई उत्तर नहीं।',
+  'mk.keys': 'कुंजियाँ: J / K अगला और पिछला विद्यार्थी · A स्वीकार',
+  'mk.notes': 'AI के काम की जाँच',
+  'mk.failure': 'सूचना',
+
+  'ad.title': 'असाइनमेंट: शिक्षक और कक्षाएँ',
+  'ad.link': 'शिक्षक को कक्षा से जोड़ें',
+  'ad.teacher': 'शिक्षक',
+  'ad.anySubject': 'कोई भी विषय',
+  'ad.usage': 'इस महीने AI का उपयोग',
+  'ad.usageLine': '{pages} पृष्ठ पढ़े · {graded} उत्तर जाँचे · ₹{cost}',
+  'ad.quota': 'मासिक AI सीमा: {n} उत्तर',
+  'ad.quotaOff': 'AI बंद है; शिक्षक स्वयं जाँचते हैं।',
+}
+
+const TABLES: Record<HwLang, Record<HwKey, string>> = { en, hi }
+const STORAGE_KEY = 'hw-lang'
+const EVENT = 'hw-lang-change'
+
+function readLang(): HwLang {
+  try {
+    const v = window.localStorage.getItem(STORAGE_KEY)
+    if (v === 'en' || v === 'hi') return v
+  } catch {
+    // storage blocked: fall through to the browser language
+  }
+  return typeof navigator !== 'undefined' && navigator.language?.startsWith('hi') ? 'hi' : 'en'
+}
+
+export function translate(lang: HwLang, key: HwKey, vars?: Record<string, string | number>): string {
+  let s: string = TABLES[lang][key] ?? en[key]
+  if (vars) for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v))
+  return s
+}
+
+/** `t('common.marks', { n: 5 })`. The language is shared by every hw screen and remembered per device. */
+export function useHwT() {
+  const [lang, setLangState] = useState<HwLang>('en')
+  useEffect(() => {
+    setLangState(readLang())
+    const on = () => setLangState(readLang())
+    window.addEventListener(EVENT, on)
+    return () => window.removeEventListener(EVENT, on)
+  }, [])
+  const setLang = useCallback((l: HwLang) => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, l)
+    } catch {
+      // not remembered; still switch for this page
+    }
+    setLangState(l)
+    window.dispatchEvent(new Event(EVENT))
+  }, [])
+  const t = useCallback((key: HwKey, vars?: Record<string, string | number>) => translate(lang, key, vars), [lang])
+  return { t, lang, setLang }
+}
+
+export function marksLabel(t: ReturnType<typeof useHwT>['t'], n: number): string {
+  return t(n === 1 ? 'common.mark' : 'common.marks', { n })
+}

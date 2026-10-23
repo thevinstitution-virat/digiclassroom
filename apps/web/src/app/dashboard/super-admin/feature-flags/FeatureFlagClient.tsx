@@ -64,16 +64,6 @@ export default function FeatureFlagClient() {
               </div>
               <div className="flex items-center justify-between space-x-2">
                 <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Homework
-                </label>
-                <Switch 
-                  checked={tenant.enable_homework} 
-                  onCheckedChange={() => handleToggle(tenant.tenant_id, 'enable_homework', tenant.enable_homework)}
-                  disabled={updateFeatures.isPending}
-                />
-              </div>
-              <div className="flex items-center justify-between space-x-2">
-                <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
                   Notices
                 </label>
                 <Switch 

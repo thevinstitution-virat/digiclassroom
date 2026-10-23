@@ -12,7 +12,7 @@ import { recordUsage } from '../cost/usage';
 import { createBatch, generate, parseResponse, pollBatch, usageFromError } from '../gemini/client';
 import { gradeCall, gradeResultsFrom } from '../grader/ai-grader';
 import type { GradeInput, GradeQuestion } from '../grader/types';
-import { answersNeedingSuggestion, gradeRulesThenQueue, insertAiGrades, loadGradeQuestion } from '../pipeline';
+import { answersNeedingSuggestion, gradeByRules, insertAiGrades, loadGradeQuestion } from '../pipeline';
 import { claim, claimBatchPending, complete, enqueueGrade, fail, markBatchPending, payloadOf, type GradePayload, type JobRow } from './queue';
 
 function chunk<T>(xs: T[], size: number): T[][] {
@@ -47,7 +47,7 @@ async function plan(job: JobRow): Promise<{ q: GradeQuestion; chunks: string[][]
     await complete(db, job.id, undefined, 'no marking scheme: answers wait for the teacher');
     return null;
   }
-  await db.transaction((tx) => gradeRulesThenQueue(tx, job.organizationId, q.id).then(() => undefined));
+  await db.transaction((tx) => gradeByRules(tx, job.organizationId, q).then(() => undefined));
   const pending = await answersNeedingSuggestion(db, q);
   if (!pending.length) {
     await complete(db, job.id, undefined, 'nothing left to mark');

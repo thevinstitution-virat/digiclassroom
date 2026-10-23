@@ -249,7 +249,7 @@ export async function myResult(actor: HwActor, submissionId: string) {
       return {
         ...studentQuestion(q),
         transcript: row?.a.transcript ?? '',
-        marks: g ? num(g.marks) : null,
+        awarded: g ? num(g.marks) : null,
         comment: g?.comment ?? null,
         keyPoints: (g?.itemMarks ?? []).map((m) => {
           const it = items.find((i) => i.id === m.rubric_item_id);

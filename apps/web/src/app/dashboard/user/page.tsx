@@ -18,7 +18,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
-import { StudentNoticesWidget, StudentHomeworkWidget } from './ClassroomWidgets'
+import { StudentNoticesWidget } from './ClassroomWidgets'
 import { GP, GC, GW, GT, GV } from '@/components/dashboard/gradients'
 
 export default function UserDashboard() {
@@ -202,9 +202,8 @@ export default function UserDashboard() {
             </button>
           </div>
 
-          {/* Live classroom widgets — real notices & homework */}
+          {/* Live classroom widget — real notices */}
           <StudentNoticesWidget />
-          <StudentHomeworkWidget />
         </div>
       </section>
     </div>

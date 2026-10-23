@@ -11,7 +11,6 @@ import { sarvagyaRouter } from './sarvagya'
 import { tenantFeaturesRouter } from './tenantFeatures'
 import { taxonomyRouter } from './taxonomy'
 import { noticesRouter } from './notices'
-import { homeworkRouter } from './homework'
 import { attendanceRouter } from './attendance'
 import { videoAssetsRouter } from './videoAssets'
 import { zoomCredentialsRouter } from './zoomCredentials'
@@ -40,7 +39,6 @@ export const appRouter = createTRPCRouter({
   zoomCredentials: zoomCredentialsRouter,
   liveClasses: liveClassesRouter,
   notices: noticesRouter,
-  homework: homeworkRouter,
   attendance: attendanceRouter,
   videoAssets: videoAssetsRouter,
   batches: batchesRouter,

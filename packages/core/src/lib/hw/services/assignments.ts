@@ -2,7 +2,7 @@
 // actor and checks access through access/guards.ts.
 
 import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
-import { institutionClasses, institutionSections, member } from '@/db/schema';
+import { institutionClasses, institutionSections, member, user } from '@/db/schema';
 import { hwAiJob, hwAssignment, hwClassTeacher, hwQuestion, hwRubricItem, type HwAnswerMode, type HwLanguage, type HwQuestionType, type HwRubricKind } from '@/db/hw-schema';
 import { assignmentForManage, requireHwEnabled, requireRole, teacherLinks } from '../access/guards';
 import { canCreateFor, linkCovers, roleFromMember, type HwActor } from '../access/policy';
@@ -141,6 +141,8 @@ export async function publishAssignment(actor: HwActor, assignmentId: string) {
   const a = await assignmentForManage(actor, assignmentId);
   if (a.status === 'published') return { totalMarks: num(a.totalMarks), warnings: [] as string[] };
   const { questions } = await getForManage(actor, assignmentId);
+  const blank = questions.filter((q) => !q.prompt.trim()).map((q) => q.position + 1);
+  if (blank.length) throw new HwError('BAD_REQUEST', `Write the question text for question ${blank.join(', ')} before publishing.`);
   const warnings: string[] = [];
   for (const q of questions) {
     if (!q.rubric.length) warnings.push(`Question ${q.position + 1} has no marking scheme, so AI cannot suggest marks for it; you will mark it by hand.`);
@@ -372,4 +374,35 @@ export async function removeClassTeacher(actor: HwActor, linkId: string) {
     .where(and(eq(hwClassTeacher.id, linkId), eq(hwClassTeacher.organizationId, actor.orgId)))
     .returning({ id: hwClassTeacher.id });
   if (!res.length) throw new HwError('NOT_FOUND', 'Link not found.');
+}
+
+// ── Pickers for the UI ───────────────────────────────────────────────────────
+
+/** Classes, sections and teachers of the institution, for the admin's linking screen. */
+export async function classTeacherOptions(actor: HwActor) {
+  requireRole(actor, 'admin');
+  const classes = await db.select({ id: institutionClasses.id, name: institutionClasses.name, level: institutionClasses.level })
+    .from(institutionClasses).where(eq(institutionClasses.organizationId, actor.orgId)).orderBy(asc(institutionClasses.level), asc(institutionClasses.name));
+  const sections = await db.select({ id: institutionSections.id, classId: institutionSections.classId, name: institutionSections.name })
+    .from(institutionSections).where(eq(institutionSections.organizationId, actor.orgId)).orderBy(asc(institutionSections.name));
+  const teachers = await db.select({ id: user.id, name: user.name, email: user.email, role: member.role })
+    .from(member).innerJoin(user, eq(user.id, member.userId))
+    .where(eq(member.organizationId, actor.orgId));
+  return { classes, sections, teachers: teachers.filter((t) => roleFromMember(t.role) === 'teacher').map(({ role: _r, ...t }) => t) };
+}
+
+/** What this teacher may set work for: their linked classes (admins: every class). */
+export async function assignmentTargets(actor: HwActor) {
+  requireRole(actor, 'admin', 'teacher');
+  await requireHwEnabled(actor);
+  const classes = await db.select({ id: institutionClasses.id, name: institutionClasses.name, level: institutionClasses.level })
+    .from(institutionClasses).where(eq(institutionClasses.organizationId, actor.orgId)).orderBy(asc(institutionClasses.level), asc(institutionClasses.name));
+  const sections = await db.select({ id: institutionSections.id, classId: institutionSections.classId, name: institutionSections.name })
+    .from(institutionSections).where(eq(institutionSections.organizationId, actor.orgId)).orderBy(asc(institutionSections.name));
+  if (actor.role === 'admin') {
+    return { classes, sections, links: classes.map((c) => ({ classId: c.id, sectionId: null, subject: null })) };
+  }
+  const links = await teacherLinks(actor);
+  const allowed = new Set(links.map((l) => l.classId));
+  return { classes: classes.filter((c) => allowed.has(c.id)), sections: sections.filter((s) => allowed.has(s.classId)), links };
 }
