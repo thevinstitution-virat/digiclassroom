@@ -11,6 +11,7 @@
     "@bull-board/express": "^6.20.3",
     "@elevenlabs/client": "^0.15.0",
     "@elevenlabs/elevenlabs-js": "^2.38.1",
+    "@google/genai": "2.28.0",
     "@google/generative-ai": "^0.24.1",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^3.10.0",
