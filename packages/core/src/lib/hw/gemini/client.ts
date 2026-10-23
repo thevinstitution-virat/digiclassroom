@@ -57,10 +57,10 @@ export function textPart(text: string): Part {
   return { text };
 }
 
-export function imagePart(png: Uint8Array): Part {
+export function imagePart(image: Uint8Array, mimeType: 'image/png' | 'image/jpeg' | 'image/webp' = 'image/png'): Part {
   const level = PartMediaResolutionLevel[`MEDIA_RESOLUTION_${getHwConfig().HW_READ_MEDIA_RESOLUTION}` as keyof typeof PartMediaResolutionLevel];
   return {
-    inlineData: { mimeType: 'image/png', data: Buffer.from(png).toString('base64') },
+    inlineData: { mimeType, data: Buffer.from(image).toString('base64') },
     mediaResolution: { level },
   };
 }
@@ -137,9 +137,10 @@ export function usageFromError(e: unknown): { usage: TokenUsage; model: string }
 }
 
 export async function generate(call: GeminiCall): Promise<GeminiResult> {
+  const client = ai(); // configuration errors surface as NOT_CONFIGURED, not as a provider failure
   let res: GenerateContentResponse;
   try {
-    res = await ai().models.generateContent(requestFor(call));
+    res = await client.models.generateContent(requestFor(call));
   } catch (e) {
     throw new HwError('PROVIDER_ERROR', 'The AI service failed.', `generateContent(${call.model}): ${(e as Error).message}`);
   }
@@ -162,8 +163,9 @@ export async function createBatch(items: BatchItem[], displayName: string): Prom
     const r = requestFor(i.call);
     return { contents: r.contents, config: r.config, metadata: { key: i.key } };
   });
+  const client = ai();
   try {
-    const job = await ai().batches.create({ model, src, config: { displayName } });
+    const job = await client.batches.create({ model, src, config: { displayName } });
     if (!job.name) throw new Error('batch created without a name');
     return job.name;
   } catch (e) {
@@ -179,9 +181,10 @@ export type BatchOutcome =
 const PENDING = new Set<string>([JobState.JOB_STATE_QUEUED, JobState.JOB_STATE_PENDING, JobState.JOB_STATE_RUNNING, JobState.JOB_STATE_UNSPECIFIED]);
 
 export async function pollBatch(name: string): Promise<BatchOutcome> {
+  const client = ai();
   let job;
   try {
-    job = await ai().batches.get({ name });
+    job = await client.batches.get({ name });
   } catch (e) {
     throw new HwError('PROVIDER_ERROR', 'The AI batch service failed.', `batches.get(${name}): ${(e as Error).message}`);
   }

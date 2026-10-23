@@ -109,7 +109,7 @@ export async function complete(x: Exec, jobId: string, model?: string, note?: st
   }).where(eq(hwAiJob.id, jobId));
 }
 
-/** Output we could not use is not retried: the same input would very likely fail again. */
+/** Only provider failures are retried: unusable output or missing configuration would fail the same way again. */
 export function isRetryable(e: unknown): boolean {
   if (isHwError(e)) return e.code === 'PROVIDER_ERROR';
   return true;

@@ -8,6 +8,8 @@ export interface ReadInputAnswer {
   answerId: string;
   languageHint: HwLanguage;
   png: Uint8Array;
+  /** Default image/png (ink renders). Photos may be JPEG or WebP. */
+  mimeType?: 'image/png' | 'image/jpeg' | 'image/webp';
 }
 
 export interface ReadInput {

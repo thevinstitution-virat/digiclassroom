@@ -13,7 +13,7 @@ export function readCall(model: string, input: ReadInput): GeminiCall {
     model,
     systemInstruction: READ_SYSTEM_PROMPT,
     schema: READ_RESPONSE_SCHEMA,
-    parts: input.answers.flatMap((a) => [textPart(readAnswerLabel(a.answerId, a.languageHint)), imagePart(a.png)]),
+    parts: input.answers.flatMap((a) => [textPart(readAnswerLabel(a.answerId, a.languageHint)), imagePart(a.png, a.mimeType)]),
   };
 }
 

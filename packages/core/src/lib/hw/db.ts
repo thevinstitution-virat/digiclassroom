@@ -1,5 +1,6 @@
 // Shared database handle types for the feature.
 
+import { randomUUID } from 'node:crypto';
 import { db } from '@/db';
 
 export type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -8,7 +9,7 @@ export type Exec = typeof db | Tx;
 
 export { db };
 
-export const newId = (): string => crypto.randomUUID();
+export const newId = (): string => randomUUID();
 
 /** numeric columns come back as strings. */
 export const num = (v: string | number | null | undefined): number => (v === null || v === undefined ? 0 : Number(v));

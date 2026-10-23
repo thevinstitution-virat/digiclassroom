@@ -323,3 +323,35 @@ describe('job retries', () => {
     expect([1, 2, 3].map(backoffSeconds)).toEqual([30, 60, 120]);
   });
 });
+
+// ── Evaluation metrics ───────────────────────────────────────────────────────
+
+import { editDistance, median, normaliseForCer, scoreSample } from '@/lib/hw/eval/metrics'
+
+describe('evaluation metrics', () => {
+  it('counts edits over code points', () => {
+    expect(editDistance('kitten', 'sitting')).toBe(3)
+    expect(editDistance('', 'abc')).toBe(3)
+    expect(editDistance('नमस्ते', 'नमस्ते')).toBe(0)
+  })
+  it('scores a perfect read as CER 0, after NFC and spacing', () => {
+    expect(scoreSample('Plants  make\r\nfood', 'Plants make\nfood').cer).toBe(0)
+    expect(scoreSample('ज़मीन', 'ज़मीन').cer).toBe(0)
+    expect(normaliseForCer(' a \n b ')).toBe('a\nb')
+  })
+  it('keeps spelling: a "corrected" word costs characters', () => {
+    expect(scoreSample('their', 'there').cer).toBeGreaterThan(0)
+  })
+  it('flags catastrophic outputs', () => {
+    expect(scoreSample('completely different text here', 'abc').catastrophic).toBe(true)
+    expect(scoreSample('the cat sat on the mat the cat sat on the mat', 'the cat sat on the mat').catastrophic).toBe(true)
+    expect(scoreSample('the cat sat on the mat', 'the cat sat on the mat').catastrophic).toBe(false)
+  })
+  it('measures the [?] rate per reference word', () => {
+    expect(scoreSample('the [?] sat on [?] mat', 'the cat sat on the mat').unclearRate).toBeCloseTo(2 / 6)
+  })
+  it('takes medians', () => {
+    expect(median([3, 1, 2])).toBe(2)
+    expect(median([1, 2, 3, 4])).toBe(2.5)
+  })
+})
