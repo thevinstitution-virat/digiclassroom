@@ -1,0 +1,42 @@
+[
+  {
+    "questionText": "From the passage, give two reasons why plant B grew less than plant A, and name the gas that plants take in to make their food.",
+    "questionType": "case_based",
+    "marks": 3,
+    "classLevel": "Class 9",
+    "subject": "Science",
+    "medium": "English",
+    "board": "CBSE",
+    "passageText": "Ravi's class grew two bean plants for three weeks. Plant A was kept near the window, where it got sunlight for most of the day, and it was watered every morning. Plant B was kept in a cupboard with the door closed and was watered only once a week. At the end, plant A was tall with large green leaves, while plant B was short, with pale yellow leaves. The teacher explained that green plants make their own food in their leaves using sunlight, water and carbon dioxide taken from the air, and that they give out oxygen while doing so."
+  },
+  {
+    "questionText": "How did the dairy cooperative help the small farmers of Ramgarh? Give two ways mentioned in the source.",
+    "questionType": "source_based",
+    "marks": 2,
+    "classLevel": "Class 10",
+    "subject": "Social Science",
+    "medium": "English",
+    "board": "CBSE",
+    "passageText": "Before 2015, the small farmers of Ramgarh sold their milk to a trader who paid a low price and often paid late. In 2015, forty families formed a dairy cooperative. The cooperative collects milk from every member twice a day, tests it, and sells it directly to a dairy in the town, so members now get a fair price paid every ten days. It also gives members cattle feed at a lower cost and runs a free animal health camp every month."
+  },
+  {
+    "questionText": "Using the information in the passage, find the average speed of the bus for the whole journey. Show the formula, the substitution and the unit.",
+    "questionType": "numerical",
+    "marks": 3,
+    "classLevel": "Class 9",
+    "subject": "Science",
+    "medium": "English",
+    "board": "CBSE",
+    "passageText": "A school bus left the school at 8:00 in the morning and reached the science museum at 10:00 in the morning. The road distance from the school to the museum is 90 km. The bus did not stop on the way."
+  },
+  {
+    "questionText": "स्रोत के अनुसार, गाँव में वर्षा जल संचयन से कौन-से दो लाभ हुए?",
+    "questionType": "source_based",
+    "marks": 2,
+    "classLevel": "Class 9",
+    "subject": "Social Science",
+    "medium": "Hindi",
+    "board": "CBSE",
+    "passageText": "राजपुर गाँव में गर्मियों में कुएँ सूख जाते थे और महिलाओं को पानी लाने के लिए दो किलोमीटर दूर जाना पड़ता था। 2019 में गाँव वालों ने मिलकर घरों की छतों से वर्षा का पानी इकट्ठा करने के लिए टांके बनाए और गाँव के तालाब को गहरा किया। अगली गर्मियों में कुओं में पानी बना रहा, जिससे पीने के पानी की कमी दूर हो गई। तालाब में पानी रहने से किसान गेहूँ की फसल की सिंचाई भी कर सके।"
+  }
+]

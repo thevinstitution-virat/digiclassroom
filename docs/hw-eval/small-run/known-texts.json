@@ -1,0 +1,22 @@
+[
+  { "language": "en", "subject": "Science", "text": "Photosynthesis happens in the leaves.\nThe green colour is due to chlorophyll." },
+  { "language": "en", "subject": "Science", "text": "Water boils at 100 degree celsius\nat sea level." },
+  { "language": "en", "subject": "Social Science", "text": "The Indian constitution came into effect\non 26 january 1950." },
+  { "language": "en", "subject": "Science", "text": "Friction is a force that opposes motion.\nIt produces heat." },
+  { "language": "en", "subject": "Social Science", "text": "Black soil is good for growing cotton\nbecause it holds moisture." },
+  { "language": "en", "subject": "Science", "text": "The heart pumps blood to all parts\nof the body through arteries." },
+  { "language": "en", "subject": "Social Science", "text": "Mahatma Gandhi started the salt march\nfrom Sabarmati in 1930." },
+  { "language": "en", "subject": "Science", "text": "Speed = distance / time\n= 90 km / 2 h = 45 km/h" },
+  { "language": "hi", "subject": "Science", "text": "पौधे सूर्य के प्रकाश में अपना भोजन बनाते हैं।\nइसे प्रकाश संश्लेषण कहते हैं।" },
+  { "language": "hi", "subject": "Social Science", "text": "भारत में कुल अट्ठाईस राज्य हैं।\nदिल्ली देश की राजधानी है।" },
+  { "language": "hi", "subject": "Science", "text": "पानी 100 डिग्री सेल्सियस पर उबलता है।" },
+  { "language": "hi", "subject": "Social Science", "text": "गंगा नदी गंगोत्री हिमनद से निकलती है।" },
+  { "language": "hi", "subject": "Science", "text": "हमारे शरीर में खून का संचार\nहृदय द्वारा होता है।" },
+  { "language": "hi", "subject": "Social Science", "text": "पंचायती राज में ग्राम सभा\nसबसे निचली इकाई है।" },
+  { "language": "hi", "subject": "Science", "text": "चुंबक लोहे को अपनी ओर खींचता है।" },
+  { "language": "hi", "subject": "Social Science", "text": "हमें पानी बचाना चाहिए क्योंकि\nपानी सीमित है।" },
+  { "language": "mixed", "subject": "Science", "text": "Photosynthesis में पौधे carbon dioxide\nलेते हैं और oxygen छोड़ते हैं।" },
+  { "language": "mixed", "subject": "Social Science", "text": "Democracy में लोग अपने\nrepresentatives चुनते हैं।" },
+  { "language": "mixed", "subject": "Science", "text": "Force = mass × acceleration\nइसे Newton का दूसरा नियम कहते हैं।" },
+  { "language": "mixed", "subject": "Social Science", "text": "Monsoon की हवाएँ जून में\nKerala पहुँचती हैं।" }
+]

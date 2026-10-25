@@ -5,7 +5,9 @@
 // Code does every mutation it can do exactly (removing, reordering, padding, injection,
 // Hindi spelling variants), and splices the model's rewrites into the untouched segments.
 
-export const MUTATE_PROMPT_VERSION = 'mutate.v1';
+// v2: the rewrite is shown the marking-key point(s) it acts on, and a wrong fact must break
+// what the point gives marks for (v1 changed side details, which kept the point's marks).
+export const MUTATE_PROMPT_VERSION = 'mutate.v2';
 
 export const SEGMENT_SYSTEM_PROMPT = `You write model answers for testing an exam-marking system. The answer must earn full marks under the marking key you are given, and nothing else.
 
@@ -52,6 +54,8 @@ export interface RewriteInput {
   segments: { pointId: string; text: string }[];
   rewriteIds: string[];
   instruction: string;
+  /** The marking-key points the rewritten segments cover, so a change can target what earns marks. */
+  points?: { id: string; text: string; marks: number }[];
 }
 
 export function rewriteUserText(x: RewriteInput): string {
@@ -60,6 +64,7 @@ export function rewriteUserText(x: RewriteInput): string {
     'Answer segments:',
     ...x.segments.map((s) => `<segment point="${s.pointId}">${fence(s.text, 'segment')}</segment>`),
     '',
+    ...(x.points?.length ? ['Marking key for those segments:', ...x.points.map((p) => `<point id="${p.id}" marks="${p.marks}">${fence(p.text, 'point')}</point>`), ''] : []),
     `Rewrite only these segments: ${x.rewriteIds.join(', ')}.`,
     `Instruction: ${x.instruction}`,
   ].join('\n');
@@ -84,7 +89,7 @@ export const SEGMENTS_SCHEMA = {
 
 /** Instruction per model-written rule. {target} is the point (or step) id. */
 export const REWRITE_INSTRUCTIONS = {
-  wrong_fact: 'Replace the fact in this segment with a plausible but wrong one (a wrong name, number, date, cause or term) that a confused student might write. Keep the sentence shape. The segment must no longer earn its point.',
+  wrong_fact: 'Make the segment state the marking-key point wrongly: replace the fact that point gives marks for with a plausible but wrong one (a wrong name, number, date, cause or term) that a confused student might write. If the point has several parts (joined by "and" or "or"), make every part wrong, or drop the parts you do not change, so that a marker following the key would give this point no marks. Changing only a side detail is not enough. Keep the sentence shape and the student\'s voice.',
   numeric_arithmetic: 'Make one arithmetic slip in the first listed step (for example a wrong product or sum), and carry the wrong value forward consistently into the later listed steps, so only the first listed step is wrong in method.',
   numeric_unit: 'Remove the unit from this segment, or replace it with a wrong unit, leaving the number unchanged.',
   numeric_formula: 'Use a wrong formula in the formula step (a plausible confusion, such as an inverted ratio), and redo the later listed steps consistently with that wrong formula.',

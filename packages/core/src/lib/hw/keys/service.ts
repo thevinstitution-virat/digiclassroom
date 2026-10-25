@@ -27,7 +27,8 @@ export const KEY_RETRIEVAL_VERSION = 'dense-cosine-strict.v1';
 export interface KeySettings {
   writer: { provider: AiProvider; model: string };
   verifier: { provider: AiProvider; model: string };
-  rMin: number;
+  /** Calibrated threshold; needed only for textbook keys (official and given-passage keys do not retrieve). */
+  rMin: number | undefined;
   theta: number;
   topK: number;
   maxPassages: number;
@@ -56,7 +57,6 @@ export function keySettingsFromEnv(): KeySettings {
   const c = getHwConfig();
   if (!c.HW_KEY_WRITER_MODEL) throw NC('HW_KEY_WRITER_MODEL is not set');
   if (!c.HW_KEY_VERIFIER_MODEL) throw NC('HW_KEY_VERIFIER_MODEL is not set');
-  if (c.HW_KEY_R_MIN === undefined) throw NC('HW_KEY_R_MIN is not set: calibrate it with scripts/hw-key-calibrate.ts');
   const s: KeySettings = {
     writer: { provider: c.HW_KEY_WRITER_PROVIDER ?? c.HW_AI_PROVIDER, model: c.HW_KEY_WRITER_MODEL },
     verifier: { provider: c.HW_KEY_VERIFIER_PROVIDER, model: c.HW_KEY_VERIFIER_MODEL },
@@ -123,7 +123,9 @@ export async function buildKey(req: KeyRequest, deps: KeyDeps, settings: KeySett
     return writeAndVerify(req, deps, settings, 'passage', passages, [], meta, calls, notes);
   }
 
-  // 3. Textbook.
+  // 3. Textbook. Retrieval needs the calibrated threshold; there is no default to fall back on.
+  if (settings.rMin === undefined) throw NC('HW_KEY_R_MIN is not set: calibrate it with scripts/hw-key-calibrate.ts before building textbook keys');
+  const rMin = settings.rMin;
   let scope: KeyScope;
   try {
     scope = scopeOf(req);
@@ -155,10 +157,10 @@ export async function buildKey(req: KeyRequest, deps: KeyDeps, settings: KeySett
   }
 
   const top = hits[0].score;
-  if (top < settings.rMin) {
-    return { ...meta(), status: 'no_grounding', reason: 'below_threshold', detail: `best passage ${top.toFixed(3)} < R_min ${settings.rMin}` };
+  if (top < rMin) {
+    return { ...meta(), status: 'no_grounding', reason: 'below_threshold', detail: `best passage ${top.toFixed(3)} < R_min ${rMin}` };
   }
-  const kept: VectorHit[] = hits.filter((h) => h.score >= settings.rMin).slice(0, settings.maxPassages);
+  const kept: VectorHit[] = hits.filter((h) => h.score >= rMin).slice(0, settings.maxPassages);
 
   // Text and page numbers come from the content tables, not the vector payload.
   const rows = new Map((await deps.trio.chunks(kept.map((h) => h.id))).map((r) => [r.id, r]));

@@ -163,7 +163,10 @@ export function codeVariants(q: MutationQuestion, segs: readonly Segment[], s: P
   variants.push({ type: 'padding', target: null, rule: 'no change', text: join([...segs.slice(0, at), { pointId: '', text: pad }, ...segs.slice(at)]), language: lang, ...orig, by: 'code' });
 
   const limit = s.wordLimits[q.subject.trim().toLowerCase()]?.[q.marks];
-  if (limit) {
+  if (limit && wordCount(join(segs)) > limit) {
+    // The original is already over the limit, so a padded copy would test nothing new.
+    skipped.push({ type: 'over_word_limit', target: null, reason: `the correct answer is already over the ${limit}-word limit` });
+  } else if (limit) {
     const extra: Segment[] = [];
     let i = 0;
     while (wordCount(join([...segs, ...extra])) <= limit) extra.push({ pointId: '', text: PADDING[q.medium][i++ % PADDING[q.medium].length] });
@@ -265,7 +268,8 @@ export async function generateMutations(q: MutationQuestion, s: MutationSettings
   skipped.push(...skipped2);
 
   for (const p of plans) {
-    const r = await call(REWRITE_SYSTEM_PROMPT, rewriteUserText({ questionText: q.questionText, segments: segs, rewriteIds: p.ids, instruction: REWRITE_INSTRUCTIONS[p.type] }));
+    const points = q.key.valuePoints.filter((v) => p.ids.includes(v.id)).map((v) => ({ id: v.id, text: v.text, marks: v.marks }));
+    const r = await call(REWRITE_SYSTEM_PROMPT, rewriteUserText({ questionText: q.questionText, segments: segs, rewriteIds: p.ids, instruction: REWRITE_INSTRUCTIONS[p.type], points }));
     const rewrites = parseSegments(r.json);
     if (!rewrites) { skipped.push({ type: p.type, target: p.target, reason: 'rewrite output unusable' }); continue; }
     const out = splice(segs, rewrites, p.ids);

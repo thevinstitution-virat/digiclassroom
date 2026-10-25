@@ -257,6 +257,13 @@ describe('buildKey', () => {
     expect(third.fakes.ai).toHaveLength(2)
   })
 
+  it('R_min is needed only for textbook keys: passage keys build without it, textbook keys refuse', async () => {
+    const noRmin = { ...settings, rMin: undefined }
+    const d = deps({ writer: { ...goodKey, value_points: goodKey.value_points.map((p) => ({ ...p, cites: ['given'] })) }, verifier: allSupported })
+    expect(await buildKey(req({ questionType: 'case_based', passageText: 'Passage.' }), d, noRmin)).toMatchObject({ status: 'grounded', source: 'passage' })
+    await expect(buildKey(req(), deps({ hits: hitsOk }), noRmin)).rejects.toThrow(/HW_KEY_R_MIN is not set/)
+  })
+
   it('refuses one model family for writer and verifier, and bad marks', async () => {
     const same = { ...settings, verifier: { provider: 'openrouter' as const, model: 'google/gemini-3.8-flash' } }
     await expect(buildKey(req(), deps({}), same)).rejects.toThrow(/another model family/)
