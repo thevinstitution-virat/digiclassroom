@@ -31,6 +31,7 @@ export class GeminiReader implements HandwritingReader {
       usage: res.usage,
       rawUsage: res.rawUsage,
       model: res.model,
+      costUsd: res.costUsd,
     };
   }
 }

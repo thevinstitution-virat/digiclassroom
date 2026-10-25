@@ -32,6 +32,8 @@ export interface ReadResult {
   usage: TokenUsage;
   rawUsage: Record<string, unknown>;
   model: string;
+  /** What the provider reports it charged (USD), when it does. */
+  costUsd?: number;
 }
 
 export interface HandwritingReader {

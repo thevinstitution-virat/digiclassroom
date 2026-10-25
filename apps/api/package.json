@@ -8,7 +8,9 @@
     "start": "next start -p 3002",
     "typecheck": "tsc --noEmit",
     "worker:audio": "npx tsx --env-file=.env ../../packages/core/src/lib/workers/audioWorker.ts",
-    "hw:worker": "npx tsx --tsconfig tsconfig.json --env-file=.env ../../packages/core/src/lib/hw/jobs/worker-cli.ts"
+    "hw:worker": "npx tsx --tsconfig tsconfig.json --env-file=.env ../../packages/core/src/lib/hw/jobs/worker-cli.ts",
+    "hw:eval": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-eval-run.ts",
+    "hw:eval:mutate": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-eval-mutate.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

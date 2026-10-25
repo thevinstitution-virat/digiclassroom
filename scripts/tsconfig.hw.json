@@ -1,5 +1,5 @@
 {
   "extends": "../apps/api/tsconfig.json",
   "compilerOptions": { "noEmit": true },
-  "include": ["hw-eval.ts", "hw-smoke.ts", "hw-key-calibrate.ts", "../apps/api/next-env.d.ts"]
+  "include": ["hw-eval.ts", "hw-smoke.ts", "hw-key-calibrate.ts", "hw-eval-run.ts", "hw-eval-mutate.ts", "../apps/api/next-env.d.ts"]
 }
