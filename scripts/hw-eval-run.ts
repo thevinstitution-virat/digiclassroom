@@ -129,7 +129,7 @@ async function main() {
   console.log(`rows: ${Object.entries(record.counts).map(([k, v]) => `${k} ${v}`).join(', ')}`);
   console.log(`tokens in ${record.tokens.input} (cached ${record.tokens.cached}) out ${record.tokens.output}; cost ₹${(record.costPaise / 100).toFixed(2)} of ₹${budgetInr}`);
   if (record.meta.unpricedCalls) console.log(`WARNING: ${record.meta.unpricedCalls} calls could not be priced (${(record.meta.unpricedModels as string[]).join(', ')})`);
-  if (summary.reading) console.log(`reading: CER ${summary.reading.cerCp.toFixed(4)} (graphemes ${summary.reading.cerG.toFixed(4)}), WER ${summary.reading.wer.toFixed(4)}, invented ${summary.reading.inventedRate.toFixed(4)}, catastrophic ${summary.reading.catastrophicRate.toFixed(3)}, n=${summary.reading.n}${summary.reading.insufficient ? ' (insufficient data)' : ''}`);
+  if (summary.reading) console.log(`reading: CER ${summary.reading.cerCp.toFixed(4)} (graphemes ${summary.reading.cerG.toFixed(4)}; line breaks as spaces ${summary.reading.cerFlat.toFixed(4)}), WER ${summary.reading.wer.toFixed(4)}, invented ${summary.reading.inventedRate.toFixed(4)}, catastrophic ${summary.reading.catastrophicRate.toFixed(3)}, n=${summary.reading.n}${summary.reading.insufficient ? ' (insufficient data)' : ''}`);
   if (summary.marking) {
     for (const g of summary.marking.qwkByMax) console.log(`marking M=${g.maxMarks}: QWK ${g.qwk.toFixed(3)} [${g.ci.lower.toFixed(3)}, ${g.ci.upper.toFixed(3)}], n=${g.n}`);
     console.log(`marking: normalised MAE ${summary.marking.normalisedMae.toFixed(3)}, exact ${summary.marking.exact.toFixed(3)}, bias ${summary.marking.bias.toFixed(3)}, large errors ${summary.marking.largeErrorRate.toFixed(3)}${summary.marking.insufficient ? ' (insufficient data)' : ''}`);

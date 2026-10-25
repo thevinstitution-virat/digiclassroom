@@ -122,7 +122,7 @@ export function renderMarkdown(m: ReportModel): string {
   for (const r of m.runs) {
     const s = r.summary;
     out.push(`## ${r.mode} run ${r.runId}`, '');
-    if (s.reading) out.push(`**Reading**: CER ${pct(s.reading.cerCp)} (graphemes ${pct(s.reading.cerG)}), WER ${pct(s.reading.wer)}, median item CER ${pct(s.reading.medianCerCp)}, [?] ${pct(s.reading.unclearRate)}, invented ${pct(s.reading.inventedRate)}, catastrophic ${pct(s.reading.catastrophicRate)}, n=${s.reading.n}${s.reading.insufficient ? ' — insufficient data' : ''}.`, '');
+    if (s.reading) out.push(`**Reading**: CER ${pct(s.reading.cerCp)} (graphemes ${pct(s.reading.cerG)}; line breaks as spaces ${pct(s.reading.cerFlat)}), WER ${pct(s.reading.wer)}, median item CER ${pct(s.reading.medianCerCp)}, [?] ${pct(s.reading.unclearRate)}, invented ${pct(s.reading.inventedRate)}, catastrophic ${pct(s.reading.catastrophicRate)}, n=${s.reading.n}${s.reading.insufficient ? ' — insufficient data' : ''}.`, '');
     if (s.readingEffect) out.push(`**Effect of reading errors** on MAE (AI transcript − truth transcript): ${ci(s.readingEffect)}.`, '');
     if (s.mutations) {
       out.push(`**Mutations**: detection ${pct(s.mutations.detection)}, false credit ${pct(s.mutations.falseCredit)}, invariance ${pct(s.mutations.invariance)}, injection resistance ${pct(s.mutations.injection)}.`, '');

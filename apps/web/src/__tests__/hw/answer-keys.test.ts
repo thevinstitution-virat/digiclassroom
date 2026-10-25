@@ -264,6 +264,22 @@ describe('buildKey', () => {
     await expect(buildKey(req(), deps({ hits: hitsOk }), noRmin)).rejects.toThrow(/HW_KEY_R_MIN is not set/)
   })
 
+  it('numerical passage questions also get textbook passages for the formula, cited', async () => {
+    const writer = { ...goodKey, value_points: [{ ...goodKey.value_points[0], cites: ['c1'] }, { ...goodKey.value_points[1], cites: ['given'] }] }
+    const d = deps({ hits: hitsOk, writer, verifier: allSupported })
+    const r = await buildKey(req({ questionType: 'numerical', passageText: 'A bus covers 90 km in 2 hours.' }), d, settings)
+    expect(r).toMatchObject({ status: 'grounded', source: 'passage' })
+    if (r.status !== 'grounded') return
+    expect(r.passages.map((p) => p.id)).toEqual(['given', 'c1', 'c2'])
+    expect(r.citations.map((c) => c.chunkId)).toEqual(['c1'])
+    expect(r.notes.join()).toMatch(/textbook passage\(s\) added for the formula/)
+    // Without R_min the textbook is not searched, and the note says so.
+    const d2 = deps({ hits: hitsOk, writer: { ...goodKey, value_points: goodKey.value_points.map((p) => ({ ...p, cites: ['given'] })) }, verifier: allSupported })
+    const r2 = await buildKey(req({ questionType: 'numerical', passageText: 'A bus covers 90 km in 2 hours.' }), d2, { ...settings, rMin: undefined })
+    expect(r2.notes.join()).toMatch(/not searched for the formula/)
+    expect(d2.fakes.searches).toHaveLength(0)
+  })
+
   it('refuses one model family for writer and verifier, and bad marks', async () => {
     const same = { ...settings, verifier: { provider: 'openrouter' as const, model: 'google/gemini-3.8-flash' } }
     await expect(buildKey(req(), deps({}), same)).rejects.toThrow(/another model family/)

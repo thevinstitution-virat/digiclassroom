@@ -81,6 +81,8 @@ export function alignWords(out: readonly string[], truth: readonly string[]): Al
 export interface ReadingItemScore {
   /** Edit distance and reference length, so callers can micro-average. */
   cpEdits: number;
+  /** Code point edits with every line break read as a space (layout ignored), same reference length. */
+  cpEditsFlat: number;
   cpRef: number;
   gEdits: number;
   gRef: number;
@@ -106,6 +108,8 @@ export function scoreReading(output: string, truth: string): ReadingItemScore {
   const ow = words(o);
   const tw = words(t);
   const cpEdits = levenshtein(oc, tc);
+  const flat = (s: string) => codePoints(s.replace(/\n/g, ' '));
+  const cpEditsFlat = levenshtein(flat(o), flat(t));
   const gEdits = levenshtein(og, tg);
   const ops = alignWords(ow, tw);
   const wordEdits = ops.filter((x) => x.op !== 'match').length;
@@ -113,7 +117,7 @@ export function scoreReading(output: string, truth: string): ReadingItemScore {
   const rate = (e: number, r: number, outLen: number) => (r ? e / r : outLen ? 1 : 0);
   const cerCp = rate(cpEdits, tc.length, oc.length);
   return {
-    cpEdits, cpRef: tc.length, gEdits, gRef: tg.length, wordEdits, wordRef: tw.length,
+    cpEdits, cpEditsFlat, cpRef: tc.length, gEdits, gRef: tg.length, wordEdits, wordRef: tw.length,
     outWords: ow.length, unclear: countUnclear(o), invented,
     cerCp, cerG: rate(gEdits, tg.length, og.length), wer: rate(wordEdits, tw.length, ow.length),
     catastrophic: cerCp > 0.5 || oc.length > 2 * Math.max(tc.length, 1),
@@ -123,6 +127,8 @@ export function scoreReading(output: string, truth: string): ReadingItemScore {
 export interface ReadingSummary {
   n: number;
   cerCp: number;
+  /** CER with line breaks read as spaces: the same reading without layout. NaN for runs scored before it existed. */
+  cerFlat: number;
   cerG: number;
   wer: number;
   medianCerCp: number;
@@ -138,6 +144,7 @@ export function summariseReading(items: readonly ReadingItemScore[]): ReadingSum
   return {
     n: items.length,
     cerCp: div(sum((x) => x.cpEdits), sum((x) => x.cpRef)),
+    cerFlat: div(sum((x) => x.cpEditsFlat ?? NaN), sum((x) => x.cpRef)),
     cerG: div(sum((x) => x.gEdits), sum((x) => x.gRef)),
     wer: div(sum((x) => x.wordEdits), sum((x) => x.wordRef)),
     medianCerCp: median(items.map((x) => x.cerCp)),

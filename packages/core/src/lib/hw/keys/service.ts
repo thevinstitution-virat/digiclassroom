@@ -120,12 +120,36 @@ export async function buildKey(req: KeyRequest, deps: KeyDeps, settings: KeySett
       return { ...meta(), status: 'no_grounding', reason: 'missing_passage', detail: `${req.questionType} question without its passage` };
     }
     const passages: KeyPassage[] = [{ id: 'given', text: req.passageText.trim() }];
-    return writeAndVerify(req, deps, settings, 'passage', passages, [], meta, calls, notes);
+    let citations: HwKeyCitation[] = [];
+    // A numerical question's passage gives the data, rarely the formula or the unit: those come
+    // from the textbook. Without it the verifier rejects those points, and the key is no_grounding.
+    if (req.questionType === 'numerical') {
+      if (settings.rMin === undefined) notes.push('numerical: textbook not searched for the formula (HW_KEY_R_MIN not set)');
+      else {
+        const tb = await retrieveTextbook(req, deps, settings, settings.rMin, notes, calls);
+        if (tb.ok) {
+          passages.push(...tb.passages);
+          citations = tb.citations;
+          notes.push(`numerical: ${tb.passages.length} textbook passage(s) added for the formula and unit`);
+        } else notes.push(`numerical: no textbook passage for the formula (${tb.reason}: ${tb.detail})`);
+      }
+    }
+    return writeAndVerify(req, deps, settings, 'passage', passages, citations, meta, calls, notes);
   }
 
   // 3. Textbook. Retrieval needs the calibrated threshold; there is no default to fall back on.
   if (settings.rMin === undefined) throw NC('HW_KEY_R_MIN is not set: calibrate it with scripts/hw-key-calibrate.ts before building textbook keys');
-  const rMin = settings.rMin;
+  const tb = await retrieveTextbook(req, deps, settings, settings.rMin, notes, calls);
+  if (!tb.ok) return { ...meta(), status: 'no_grounding', reason: tb.reason, detail: tb.detail };
+  return writeAndVerify(req, deps, settings, 'textbook', tb.passages, tb.citations, meta, calls, notes);
+}
+
+type Retrieved =
+  | { ok: true; passages: KeyPassage[]; citations: HwKeyCitation[] }
+  | { ok: false; reason: 'no_book' | 'below_threshold' | 'passages_missing'; detail: string };
+
+/** Strict textbook retrieval for a question: scope, exercise anchor, R_min gate, content-table text. */
+async function retrieveTextbook(req: KeyRequest, deps: KeyDeps, settings: KeySettings, rMin: number, notes: string[], calls: KeyCallUsage[]): Promise<Retrieved> {
   let scope: KeyScope;
   try {
     scope = scopeOf(req);
@@ -138,7 +162,7 @@ export async function buildKey(req: KeyRequest, deps: KeyDeps, settings: KeySett
 
   let hits = await deps.retriever.search(vector, qdrantFilter(scope), settings.topK);
   if (hits.length === 0) {
-    return { ...meta(), status: 'no_grounding', reason: 'no_book', detail: `no ${scope.medium}-medium book for ${scope.classLevel} ${req.subject}` };
+    return { ok: false, reason: 'no_book', detail: `no ${scope.medium}-medium book for ${scope.classLevel} ${req.subject}` };
   }
 
   // Exercise match: anchor to the chapter of the book's own matching exercise question.
@@ -158,7 +182,7 @@ export async function buildKey(req: KeyRequest, deps: KeyDeps, settings: KeySett
 
   const top = hits[0].score;
   if (top < rMin) {
-    return { ...meta(), status: 'no_grounding', reason: 'below_threshold', detail: `best passage ${top.toFixed(3)} < R_min ${rMin}` };
+    return { ok: false, reason: 'below_threshold', detail: `best passage ${top.toFixed(3)} < R_min ${rMin}` };
   }
   const kept: VectorHit[] = hits.filter((h) => h.score >= rMin).slice(0, settings.maxPassages);
 
@@ -178,9 +202,9 @@ export async function buildKey(req: KeyRequest, deps: KeyDeps, settings: KeySett
     citations.push(buildCitation(row, p, { classLevel: scope.classLevel, subject: req.subject, medium: scope.medium, pagesVerified: settings.pagesVerified }, citations.length));
   }
   if (!passages.length) {
-    return { ...meta(), status: 'no_grounding', reason: 'passages_missing', detail: 'no retrieved passage could be loaded from the content tables' };
+    return { ok: false, reason: 'passages_missing', detail: 'no retrieved passage could be loaded from the content tables' };
   }
-  return writeAndVerify(req, deps, settings, 'textbook', passages, citations, meta, calls, notes);
+  return { ok: true, passages, citations };
 }
 
 async function writeAndVerify(

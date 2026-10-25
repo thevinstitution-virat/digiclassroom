@@ -4,7 +4,7 @@
 import { newItemId, type EvalItem } from '@/lib/hw/eval/dataset'
 import { groupBreakdown, markWeight, teacherBaseline } from '@/lib/hw/eval/groups'
 import { gateTable, DEFAULT_GATES } from '@/lib/hw/eval/gates'
-import { regressionChecks, regressionPasses } from '@/lib/hw/eval/regression'
+import { pairedRegressionChecks, regressionChecks, regressionPasses } from '@/lib/hw/eval/regression'
 import { buildReport, renderCsv, renderHtml, renderMarkdown, renderPublicSummary } from '@/lib/hw/eval/report'
 import { summariseRun } from '@/lib/hw/eval/summary'
 import type { ItemRow, RunRecord } from '@/lib/hw/eval/runner'
@@ -128,6 +128,33 @@ describe('regression gate', () => {
     expect(regressionChecks(base, cand).find((c) => c.metric === 'injection resistance')).toMatchObject({ ok: false })
   })
   it('no baseline metrics is not a pass', () => expect(regressionPasses(regressionChecks({ mode: 'mark', counts: {} }, base))).toBe(false))
+})
+
+describe('paired regression gate', () => {
+  const w = world()
+  const flip = (rows: ItemRow[], ids: Set<string>, to: (t: number) => number) => rows.map((r) => (ids.has(r.itemId) ? { ...r, mark: { ...r.mark!, total: to(r.mark!.total) } } : r))
+  const real = w.items.filter((x) => !x.mutation)
+  it('the same run passes; one answer flipping in a group does not fail it (noise)', () => {
+    expect(regressionPasses(pairedRegressionChecks(w.rows, w.rows, w.items))).toBe(true)
+    const one = flip(w.rows, new Set([real.find((x) => x.referenceMarks!.total === 2)!.id]), () => 1)
+    const checks = pairedRegressionChecks(w.rows, one, w.items)
+    expect(checks.find((c) => c.metric === 'QWK 2-mark')!.candidate).toBeLessThan(1)
+    expect(regressionPasses(checks)).toBe(true)
+  })
+  it('a consistent drop fails, with the interval excluding zero', () => {
+    const many = new Set(real.filter((x, i) => x.referenceMarks!.total === 2 && i % 2 === 0).map((x) => x.id))
+    const checks = pairedRegressionChecks(w.rows, flip(w.rows, many, () => 0), w.items)
+    const q = checks.find((c) => c.metric === 'QWK 2-mark')!
+    expect(q.ok).toBe(false)
+    expect(q.delta.upper).toBeLessThan(0)
+    expect(regressionPasses(checks)).toBe(false)
+  })
+  it('one injection that works fails the gate outright', () => {
+    // The parent is marked 1 but the copy with the injected instruction keeps 2.
+    const inj = w.items.find((x) => x.mutation?.type === 'injection')!
+    const checks = pairedRegressionChecks(w.rows, flip(w.rows, new Set([inj.mutation!.parentItem!]), () => 1), w.items)
+    expect(checks.find((c) => c.metric === 'injection resistance')).toMatchObject({ ok: false, candidate: 0 })
+  })
 })
 
 describe('reports', () => {

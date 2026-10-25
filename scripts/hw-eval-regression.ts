@@ -48,7 +48,7 @@ async function download(prefix: string, toDir: string): Promise<number> {
 
 async function main() {
   const { parseDatasetRef, EVAL_PREFIX } = await import('@/lib/hw/eval/dataset');
-  const { regressionChecks, regressionPasses } = await import('@/lib/hw/eval/regression');
+  const { pairedRegressionChecks, regressionPasses } = await import('@/lib/hw/eval/regression');
   const ref = need('dataset');
   const { name, version } = parseDatasetRef(ref);
   const baseline = need('baseline');
@@ -60,31 +60,40 @@ async function main() {
     const dsDir = join(datasetsRoot, name, version);
     if (!existsSync(join(dsDir, 'manifest.jsonl'))) console.log(`downloaded ${await download(`${EVAL_PREFIX}datasets/${name}/${version}/`, dsDir)} dataset files`);
     const bDir = join(runsRoot, baseline);
-    if (!existsSync(join(bDir, 'summary.json'))) console.log(`downloaded ${await download(`${EVAL_PREFIX}runs/${baseline}/`, bDir)} baseline run files`);
+    if (!existsSync(join(bDir, "items.jsonl"))) console.log(`downloaded ${await download(`${EVAL_PREFIX}runs/${baseline}/`, bDir)} baseline run files`);
   }
   const bRun = JSON.parse(readFileSync(join(runsRoot, baseline, 'run.json'), 'utf8')) as { mode: string; dataset: { ref: string } };
   if (bRun.mode !== mode || bRun.dataset.ref !== ref) throw new Error(`baseline ${baseline} is ${bRun.mode} on ${bRun.dataset.ref}, not ${mode} on ${ref}`);
 
-  const runId = `run_regr_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}_${randomBytes(3).toString('hex')}`;
-  // Paths from this script's own folder, so it works from the repo root and from apps/api (npm -w).
-  // The child inherits this process's environment, so the env file loaded here applies to it too.
-  const scriptDir = dirname(resolve(process.argv[1]));
-  const args = ['tsx', '--tsconfig', arg('tsconfig', join(scriptDir, '..', 'apps', 'api', 'tsconfig.json'))!, join(scriptDir, 'hw-eval-run.ts'),
-    '--dataset', ref, '--config', need('config'), '--mode', mode, '--budget-inr', need('budget-inr'), '--resume', runId, '--compare', baseline,
-    '--datasets-root', datasetsRoot, '--runs-root', runsRoot, ...(process.argv.includes('--upload') ? ['--upload'] : [])];
-  const r = spawnSync('npx', args, { stdio: 'inherit', shell: process.platform === 'win32' });
-  if (r.status !== 0) throw new Error(`the candidate run failed (exit ${r.status})`);
-  const run = JSON.parse(readFileSync(join(runsRoot, runId, 'run.json'), 'utf8')) as { status: string };
+  // --candidate <runId> judges an existing run again (no new calls); otherwise the candidate is run now.
+  const runId = arg('candidate') ?? `run_regr_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}_${randomBytes(3).toString('hex')}`;
+  if (!arg('candidate')) {
+    // Paths from this script's own folder, so it works from the repo root and from apps/api (npm -w).
+    // The child inherits this process's environment, so the env file loaded here applies to it too.
+    const scriptDir = dirname(resolve(process.argv[1]));
+    const args = ['tsx', '--tsconfig', arg('tsconfig', join(scriptDir, '..', 'apps', 'api', 'tsconfig.json'))!, join(scriptDir, 'hw-eval-run.ts'),
+      '--dataset', ref, '--config', need('config'), '--mode', mode, '--budget-inr', need('budget-inr'), '--resume', runId, '--compare', baseline,
+      '--datasets-root', datasetsRoot, '--runs-root', runsRoot, ...(process.argv.includes('--upload') ? ['--upload'] : [])];
+    const r = spawnSync('npx', args, { stdio: 'inherit', shell: process.platform === 'win32' });
+    if (r.status !== 0) throw new Error(`the candidate run failed (exit ${r.status})`);
+  }
+  const run = JSON.parse(readFileSync(join(runsRoot, runId, 'run.json'), 'utf8')) as { status: string; mode: string; dataset: { ref: string } };
   if (run.status !== 'completed') throw new Error(`the candidate run is ${run.status}; a partial run cannot pass the gate`);
+  if (run.mode !== mode || run.dataset.ref !== ref) throw new Error(`candidate ${runId} is ${run.mode} on ${run.dataset.ref}, not ${mode} on ${ref}`);
 
-  const checks = regressionChecks(
-    JSON.parse(readFileSync(join(runsRoot, baseline, 'summary.json'), 'utf8')),
-    JSON.parse(readFileSync(join(runsRoot, runId, 'summary.json'), 'utf8')),
+  const { loadDataset } = await import('@/lib/hw/eval/dataset');
+  const { latestRows, readRows } = await import('@/lib/hw/eval/runner');
+  const ds = loadDataset(datasetsRoot, ref);
+  const checks = pairedRegressionChecks(
+    latestRows(readRows(join(runsRoot, baseline, 'items.jsonl'))),
+    latestRows(readRows(join(runsRoot, runId, 'items.jsonl'))),
+    ds.items,
   );
   const ok = regressionPasses(checks);
   writeFileSync(join(runsRoot, runId, 'regression.json'), JSON.stringify({ baseline, candidate: runId, ok, checks }, null, 2));
   console.log(`\nregression gate: ${ok ? 'PASS' : 'FAIL'} (candidate ${runId} vs baseline ${baseline})`);
-  for (const c of checks) console.log(`  ${c.ok ? '✓' : '✗'} ${c.metric.padEnd(22)} ${c.baseline.toFixed(4)} -> ${Number.isFinite(c.candidate) ? c.candidate.toFixed(4) : 'not measured'} (${c.limit})`);
+  const f4 = (x: number) => (Number.isFinite(x) ? x.toFixed(4) : '—');
+  for (const c of checks) console.log(`  ${c.ok ? '✓' : '✗'} ${c.metric.padEnd(22)} ${f4(c.baseline)} -> ${Number.isFinite(c.candidate) ? f4(c.candidate) : 'not measured'}  change ${f4(c.delta.estimate)} [${f4(c.delta.lower)}, ${f4(c.delta.upper)}], n=${c.n}`);
   if (!checks.length) console.log('  no headline metrics in the baseline: nothing to compare (fails)');
   process.exit(ok ? 0 : 1);
 }

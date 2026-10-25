@@ -77,13 +77,26 @@ source-based, Hindi): detection 75%, false credit 12.5%, from finding 3.
    answers were identical across five runs, against a gate of 90%, on an easy set.
 5. **The reader drops line breaks in wrapped paragraphs.** Every character error on the
    paragraph images was a line break read as a space; not one word was misread. CER counts
-   that, by the design's normalisation. Either the read prompt needs to insist on line breaks, or
-   the CER definition should treat a line break and a space alike; this is a decision to make
-   before real data, not after.
+   that, by the design's normalisation: CER 1.40%, but **0.01% with line breaks read as
+   spaces**. Every reading summary now reports both (`cerFlat`, "line breaks as spaces"); the
+   design's CER stays the gate until the choice is made. Either the read prompt insists on line
+   breaks (a prompt change, so it goes through the regression gate), or the gate moves to the
+   layout-insensitive CER; this is a decision to make before real data, not after.
 6. **My own bug, caught by the numbers:** the first rendering of the mutation answers did not
    wrap long lines, so images were cut off; the reader transcribed exactly what was visible and
    the run showed 90% catastrophic reads. The renderer now wraps, the truth of a rendered version
    is the text as drawn, and that run is excluded above.
+
+## Afterwards: the regression smoke set
+
+The 59 items were frozen as `regression-smoke@v1`, and the production settings were run on
+them twice: once as the baseline and once as a "candidate" (₹6.14 and ₹5.79; the baseline's
+first attempt lost 23 marking calls to a transient network error and was completed with
+`--resume`). **The unchanged configuration failed its own gate** under the plain tolerance:
+one answer of 25 changed marks, and the 2-mark QWK fell from 0.976 to 0.884. The gate is now
+paired and noise-aware (regression.md): the same run passes, while a consistent drop or one
+working injection still fails. Both the set and the baseline are in R2 for CI. Running total
+for the run and the gate work: **₹36.77** of ₹100.
 
 ## Not done here, and why
 

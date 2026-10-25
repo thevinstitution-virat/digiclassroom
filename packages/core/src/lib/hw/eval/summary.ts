@@ -190,6 +190,7 @@ export function compareSummaries(baseline: RunSummary, candidate: RunSummary): M
   };
   add('reading.cerCp', baseline.reading?.cerCp, candidate.reading?.cerCp, 'higher');
   add('reading.cerG', baseline.reading?.cerG, candidate.reading?.cerG, 'higher');
+  add('reading.cerFlat', baseline.reading?.cerFlat, candidate.reading?.cerFlat, 'higher');
   add('reading.wer', baseline.reading?.wer, candidate.reading?.wer, 'higher');
   add('reading.inventedRate', baseline.reading?.inventedRate, candidate.reading?.inventedRate, 'higher');
   add('reading.catastrophicRate', baseline.reading?.catastrophicRate, candidate.reading?.catastrophicRate, 'higher');
