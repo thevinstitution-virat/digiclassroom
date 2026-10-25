@@ -1,0 +1,7 @@
+{
+  "provider": "openrouter",
+  "thinkingLevel": "MINIMAL",
+  "mediaResolution": "LOW",
+  "reader": { "model": "google/gemini-3.5-flash-lite", "escalateModel": "google/gemini-3.6-flash", "escalateBelow": 0.7, "unclearAbove": 3 },
+  "grader": { "model": "google/gemini-3.5-flash-lite", "chunkSize": 10 }
+}

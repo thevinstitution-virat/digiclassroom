@@ -1,0 +1,65 @@
+name: Virat Evaluator regression gate
+
+# Runs the candidate reader/grader configuration on the frozen regression set and fails if a
+# headline metric is worse than the baseline run beyond tolerance (docs/hw-eval/regression.md).
+# It calls paid AI APIs, so it never runs by itself: start it by hand, or add the label
+# `run-eval` to a pull request into main.
+#
+# Needs:
+#   secret   HW_EVAL_ENV       the env file for the run (AI keys, HW_PRICE_TABLE_JSON,
+#                              R2 credentials for hw-assignments/evals/, model settings)
+#   variable HW_EVAL_DATASET   e.g. regression@v1
+#   variable HW_EVAL_BASELINE  the baseline run id (uploaded to R2 with --upload)
+#   variable HW_EVAL_BUDGET_INR  default budget cap
+
+on:
+  workflow_dispatch:
+    inputs:
+      dataset: { description: 'Dataset (name@vN)', required: false }
+      baseline: { description: 'Baseline run id', required: false }
+      config: { description: 'Candidate config file in the repo', required: true, default: 'docs/hw-eval/configs/production.json' }
+      budget_inr: { description: 'Budget cap in rupees', required: false }
+  pull_request:
+    branches: [main]
+    types: [labeled, synchronize]
+
+jobs:
+  regression:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'run-eval')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Write the run environment
+        env:
+          HW_EVAL_ENV: ${{ secrets.HW_EVAL_ENV }}
+        run: |
+          if [ -z "$HW_EVAL_ENV" ]; then echo "::error::secret HW_EVAL_ENV is not set"; exit 1; fi
+          printf '%s\n' "$HW_EVAL_ENV" > apps/api/.env.eval
+      - name: Regression gate
+        working-directory: apps/api
+        env:
+          DATASET: ${{ inputs.dataset || vars.HW_EVAL_DATASET }}
+          BASELINE: ${{ inputs.baseline || vars.HW_EVAL_BASELINE }}
+          CONFIG: ${{ inputs.config || 'docs/hw-eval/configs/production.json' }}
+          BUDGET: ${{ inputs.budget_inr || vars.HW_EVAL_BUDGET_INR || '300' }}
+        run: |
+          if [ -z "$DATASET" ] || [ -z "$BASELINE" ]; then echo "::error::set HW_EVAL_DATASET and HW_EVAL_BASELINE (or pass inputs)"; exit 1; fi
+          npx tsx --tsconfig tsconfig.json --env-file=.env.eval ../../scripts/hw-eval-regression.ts \
+            --dataset "$DATASET" --baseline "$BASELINE" --config "../../$CONFIG" --budget-inr "$BUDGET" \
+            --from-r2 --datasets-root ../../hw-evals/datasets --runs-root ../../hw-evals/runs
+      - name: Keep the run record
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hw-eval-regression
+          path: hw-evals/runs/run_regr_*/
+          if-no-files-found: ignore
+      - name: Remove the run environment
+        if: always()
+        run: rm -f apps/api/.env.eval
