@@ -11,7 +11,6 @@ import { sarvagyaRouter } from './sarvagya'
 import { tenantFeaturesRouter } from './tenantFeatures'
 import { taxonomyRouter } from './taxonomy'
 import { noticesRouter } from './notices'
-import { homeworkRouter } from './homework'
 import { attendanceRouter } from './attendance'
 import { videoAssetsRouter } from './videoAssets'
 import { zoomCredentialsRouter } from './zoomCredentials'
@@ -26,6 +25,8 @@ import { institutionAdminRouter } from './institutionAdmin'
 import { batchTemplatesRouter } from './batchTemplates'
 import { superAdminAnalyticsRouter } from './superAdminAnalytics'
 import { superAdminRouter } from './superAdmin'
+import { hwRouter } from './hw'
+import { hwEvalRouter } from './hw-eval'
 
 /**
  * This is the primary router for your server.
@@ -39,7 +40,6 @@ export const appRouter = createTRPCRouter({
   zoomCredentials: zoomCredentialsRouter,
   liveClasses: liveClassesRouter,
   notices: noticesRouter,
-  homework: homeworkRouter,
   attendance: attendanceRouter,
   videoAssets: videoAssetsRouter,
   batches: batchesRouter,
@@ -53,6 +53,8 @@ export const appRouter = createTRPCRouter({
   batchTemplates: batchTemplatesRouter,
   superAdminAnalytics: superAdminAnalyticsRouter,
   superAdmin: superAdminRouter,
+  hw: hwRouter,
+  hwEval: hwEvalRouter,
 })
 
 // Export type definition of API

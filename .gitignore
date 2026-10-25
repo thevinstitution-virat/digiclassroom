@@ -42,3 +42,6 @@ services/**/models/
 db-dump*
 TEST_ACCOUNTS.md
 update-password*.ts
+
+# Virat Evaluator local datasets, drafts, runs and key cache (may hold student work; never committed)
+hw-evals/

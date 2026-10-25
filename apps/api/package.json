@@ -7,7 +7,11 @@
     "build": "next build",
     "start": "next start -p 3002",
     "typecheck": "tsc --noEmit",
-    "worker:audio": "npx tsx --env-file=.env ../../packages/core/src/lib/workers/audioWorker.ts"
+    "worker:audio": "npx tsx --env-file=.env ../../packages/core/src/lib/workers/audioWorker.ts",
+    "hw:worker": "npx tsx --tsconfig tsconfig.json --env-file=.env ../../packages/core/src/lib/hw/jobs/worker-cli.ts",
+    "hw:eval": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-eval-run.ts",
+    "hw:eval:mutate": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-eval-mutate.ts",
+    "hw:eval:reference": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-eval-reference.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
@@ -17,6 +21,7 @@
     "@bull-board/express": "^6.20.3",
     "@elevenlabs/client": "^0.15.0",
     "@elevenlabs/elevenlabs-js": "^2.38.1",
+    "@google/genai": "2.28.0",
     "@google/generative-ai": "^0.24.1",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^3.10.0",

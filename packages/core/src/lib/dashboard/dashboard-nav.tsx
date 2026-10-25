@@ -76,6 +76,7 @@ export const PLATFORM_NAV: DashboardNavItem[] = [
   // Insights
   { section: 'Insights', name: 'Revenue', href: '/dashboard/super-admin/revenue', icon: TrendingUp, description: 'Platform earnings & transactions', gradient: 'from-indigo-500 to-purple-600' },
   { section: 'Insights', name: 'Analytics', href: '/dashboard/super-admin/quality-metrics', icon: BarChart3, description: 'Usage & RAG quality' },
+  { section: 'Insights', name: 'Evaluation', href: '/dashboard/super-admin/evaluation', icon: ClipboardCheck, description: 'Raters and reference data for the AI reader and marker' },
 
   // Platform Control
   { section: 'Platform Control', name: 'Curriculum Taxonomy', href: '/dashboard/super-admin/taxonomy', icon: FolderTree, description: 'Manage taxonomy domains, courses, levels & subjects' },
@@ -102,6 +103,7 @@ export const INSTITUTION_NAV: DashboardNavItem[] = [
   { section: 'Academics', name: 'Batches', href: '/dashboard/institution/batches', icon: GraduationCap, description: 'Course batches & enrollments' },
   { section: 'Academics', name: 'Classes', href: '/dashboard/institution/classes', icon: BookOpen, description: 'Classes & sections' },
   { section: 'Academics', name: 'Content', href: '/dashboard/institution/content', icon: FileText, description: "Your institution's materials" },
+  { section: 'Academics', name: 'Assignments', href: '/dashboard/institution/assignments', icon: FileText, description: 'Teachers, classes and AI use for written assignments' },
   { section: 'Academics', name: 'Features', href: '/dashboard/institution/features', icon: SlidersHorizontal, description: 'Enable modules for your students', gradient: 'from-sky-500 to-blue-600' },
   { section: 'Academics', name: 'Video Library', href: '/dashboard/institution/videos', icon: Video, description: 'Manage class videos' },
   { section: 'Academics', name: 'Live Classes', href: '/dashboard/admin/live-classes', icon: Video, description: 'Manage class schedules' },
@@ -122,7 +124,7 @@ export const TEACHER_NAV: DashboardNavItem[] = [
   { name: 'Dashboard', href: '/dashboard/teacher', icon: Home, description: 'Teaching overview' },
   { name: 'My Classes', href: '/dashboard/teacher/classes', icon: BookOpen, description: 'Classes you teach', featured: true },
   { name: 'Students', href: '/dashboard/teacher/students', icon: Users, description: 'Your students' },
-  { name: 'Homework', href: '/dashboard/teacher/homework', icon: FileText, description: 'Assign & grade homework' },
+  { name: 'Assignments', href: '/dashboard/teacher/assignments', icon: FileText, description: 'Set and mark written answers' },
   { name: 'Attendance', href: '/dashboard/teacher/attendance', icon: CalendarCheck, description: 'Mark attendance' },
   { name: 'Notices', href: '/dashboard/teacher/notices', icon: MessageSquare, description: 'Classroom announcements' },
   { name: 'Live Classes', href: '/dashboard/teacher/live-classes', icon: Video, description: 'Schedule live sessions' },
@@ -138,6 +140,7 @@ export const STUDENT_NAV: DashboardNavItem[] = [
   { name: 'AI Tutor', href: '/dashboard/user/ai-tutor', icon: Brain, description: 'Chat with your AI teacher', featured: true, gradient: 'from-purple-500 to-indigo-600' },
   { name: 'Sarvagya', href: '/dashboard/sarvagya', icon: Search, description: 'AI research assistant', featured: true, gradient: 'from-amber-500 to-orange-500' },
   { name: 'Study Materials', href: '/dashboard/user/materials', icon: BookOpen, description: 'Course content', featured: true, gradient: 'from-green-500 to-emerald-500' },
+  { name: 'Assignments', href: '/dashboard/student/assignments', icon: FileText, description: 'Written answers for your teacher', featured: true, gradient: 'from-emerald-500 to-teal-600' },
   { name: 'Practest', href: '/dashboard/user/practest', icon: FileText, description: 'AI assessment engine', featured: true, gradient: 'from-blue-500 to-cyan-500' },
   { name: 'Sanchika', href: '/dashboard/user/sanchika', icon: FolderTree, description: 'Smart notes workspace', featured: true, gradient: 'from-cyan-500 to-blue-600' },
   { name: 'Dictionary', href: '/dashboard/user/dictionary', icon: Bookmark, description: 'English-Hindi dictionary', featured: true, gradient: 'from-pink-500 to-rose-500' },
