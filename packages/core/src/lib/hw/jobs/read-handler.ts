@@ -19,6 +19,7 @@ import type { ReadAnswerResult, ReadInput } from '../reader/types';
 import { getHwObject } from '../storage/r2';
 import { failAnswers, finishSubmissionIfRead, setTranscript } from '../pipeline';
 import { claim, claimBatchPending, complete, enqueueRead, fail, markBatchPending, payloadOf, type JobRow, type ReadPayload } from './queue';
+import { shadowAfterRead } from '../shadow/shadow';
 
 interface PreparedRead {
   job: JobRow;
@@ -89,6 +90,7 @@ type ReadJobRef = Pick<PreparedRead, 'job' | 'tier'>;
 /** Save one read's results and decide what happens to each answer. */
 async function applyRead(p: ReadJobRef, results: ReadAnswerResult[], billing: Pick<AiResult, 'model' | 'usage' | 'costUsd'>, batch: boolean): Promise<void> {
   const escalate: string[] = [];
+  const settled: string[] = [];
   const { model } = billing;
   await db.transaction(async (tx) => {
     const note = await recordUsage(tx, { jobId: p.job.id, orgId: p.job.organizationId, model, usage: billing.usage, costUsd: billing.costUsd, batch, pagesRead: results.length });
@@ -103,6 +105,7 @@ async function applyRead(p: ReadJobRef, results: ReadAnswerResult[], billing: Pi
         escalate.push(r.answerId);
         continue;
       }
+      settled.push(r.answerId);
       await setTranscript(tx, answer, {
         text: r.text,
         status: d.action === 'accept' ? 'done' : 'needs_review',
@@ -118,6 +121,8 @@ async function applyRead(p: ReadJobRef, results: ReadAnswerResult[], billing: Pi
     await complete(tx, p.job.id, model, note);
     if (!escalate.length) await finishSubmissionIfRead(tx, p.job.submissionId!);
   });
+  // Production is committed; the candidate configuration may now read the same answers.
+  await shadowAfterRead(p.job.organizationId, settled);
 }
 
 /** A read job that will not be retried: its answers go to the teacher, visibly. */

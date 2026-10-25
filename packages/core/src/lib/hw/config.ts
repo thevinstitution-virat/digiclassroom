@@ -79,6 +79,10 @@ const EnvSchema = z.object({
   HW_EVAL_LOCAL_ROOT: str(),
   /** Datasets open for writing-pad copy tasks (comma-separated name@vN). */
   HW_EVAL_COPY_DATASETS: str(),
+  /** Share of answers (0–1) also run with the candidate configuration in shadow mode. 0 = off. */
+  HW_SHADOW_RATE: num(0, 0, 1),
+  /** Candidate for shadow mode: {"reader":{"model","escalateModel"?},"grader":{"model"}} (either part may be absent). */
+  HW_SHADOW_CONFIG_JSON: str(),
   OPENAI_API_KEY: str(),
   QDRANT_URL: str(),
   QDRANT_API_KEY: str(),

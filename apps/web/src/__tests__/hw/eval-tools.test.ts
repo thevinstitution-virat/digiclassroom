@@ -117,10 +117,29 @@ describe('isolation', () => {
     }
   })
 
-  it('product code never reads shadow results', () => {
-    const allowed = [/db[\\/]hw-eval-schema\.ts$/, /lib[\\/]db[\\/]migrations[\\/]/]
+  it('product code never reads shadow results: only the shadow writer touches the table', () => {
+    const allowed = [/db[\\/]hw-eval-schema\.ts$/, /lib[\\/]db[\\/]migrations[\\/]/, /lib[\\/]hw[\\/]shadow[\\/]shadow\.ts$/]
     const hits = walk(core).filter((f) => !allowed.some((a) => a.test(f)) && /hwEvalShadowResult|hw_eval_shadow_result/.test(readFileSync(f, 'utf8')))
     expect(hits).toEqual([])
+  })
+
+  it('the shadow writer only inserts, de-duplicates and fills final marks: it never returns shadow results', () => {
+    const src = readFileSync(join(core, 'lib/hw/shadow/shadow.ts'), 'utf8')
+    // The one read is the de-duplication check, which selects answer ids only.
+    expect(src.match(/\.from\(hwEvalShadowResult\)/g)).toHaveLength(1)
+    expect(src).toMatch(/select\(\{ id: hwEvalShadowResult\.answerId \}\)\.from\(hwEvalShadowResult\)/)
+    // Nothing exported returns shadow rows.
+    expect(src).not.toMatch(/export async function \w+\([^)]*\): Promise<.*Shadow(Result|Row)/)
+  })
+
+  it('shadow hooks run only after production has committed', () => {
+    const read = readFileSync(join(core, 'lib/hw/jobs/read-handler.ts'), 'utf8')
+    const grade = readFileSync(join(core, 'lib/hw/jobs/grade-handler.ts'), 'utf8')
+    // In applyRead, the hook comes after the transaction closes.
+    const applyRead = read.slice(read.indexOf('async function applyRead'), read.indexOf('async function settleFailure'))
+    expect(applyRead.lastIndexOf('});')).toBeLessThan(applyRead.indexOf('shadowAfterRead('))
+    // In grading, after applyChunk (which commits its own transaction) and never inside db.transaction.
+    for (const m of grade.matchAll(/shadowAfterGrade\(/g)) expect(grade.slice(Math.max(0, m.index! - 300), m.index!)).toContain('applyChunk(')
   })
 })
 

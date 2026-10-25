@@ -6,6 +6,7 @@ import { describeError } from '../errors';
 import { pollGradeBatches, runGradeJobs } from './grade-handler';
 import { recoverStale } from './queue';
 import { pollReadBatches, runReadJobs } from './read-handler';
+import { monitorTick } from '../shadow/monitor';
 
 export interface DrainSummary {
   recovered: number;
@@ -13,6 +14,8 @@ export interface DrainSummary {
   gradePolled: number;
   readTaken: number;
   gradeTaken: number;
+  /** Monitoring rows written (at most every 15 minutes). */
+  monitored: number;
   errors: string[];
   ms: number;
 }
@@ -20,7 +23,7 @@ export interface DrainSummary {
 export async function drain(workerId: string, budgetMs: number): Promise<DrainSummary> {
   const started = Date.now();
   const deadline = started + budgetMs;
-  const s: DrainSummary = { recovered: 0, readPolled: 0, gradePolled: 0, readTaken: 0, gradeTaken: 0, errors: [], ms: 0 };
+  const s: DrainSummary = { recovered: 0, readPolled: 0, gradePolled: 0, readTaken: 0, gradeTaken: 0, monitored: 0, errors: [], ms: 0 };
 
   // Each step is isolated: one failing step must not stop the others, and is reported.
   const step = async (name: string, fn: () => Promise<number>, into: keyof Omit<DrainSummary, 'errors' | 'ms'>) => {
@@ -39,6 +42,8 @@ export async function drain(workerId: string, budgetMs: number): Promise<DrainSu
   // Reading first: grading needs transcripts.
   await step('read', () => runReadJobs(workerId, deadline), 'readTaken');
   await step('grade', () => runGradeJobs(workerId, deadline), 'gradeTaken');
+  // Last, and only with time left: monitoring never delays reading or marking.
+  await step('monitor', () => monitorTick(), 'monitored');
 
   s.ms = Date.now() - started;
   return s;

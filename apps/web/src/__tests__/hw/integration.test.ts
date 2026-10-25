@@ -411,4 +411,78 @@ suite('handwritten assignments — integration', () => {
     await expect(svc.marking.bulkAccept(w.teacher, a.q2, 5)).rejects.toMatchObject({ code: 'CONFLICT' })
     await expect(svc.marking.bulkAccept(w.teacher, a.q2, 1)).resolves.toEqual({ accepted: 1 })
   })
+
+  describe('shadow mode and monitoring', () => {
+    const CANDIDATE = 'gemini-3.6-flash'
+    beforeEach(() => {
+      process.env.HW_SHADOW_RATE = '1'
+      process.env.HW_SHADOW_CONFIG_JSON = JSON.stringify({ reader: { model: CANDIDATE }, grader: { model: CANDIDATE } })
+      svc.config._resetHwConfig()
+    })
+    afterEach(() => {
+      process.env.HW_SHADOW_RATE = '0'
+      delete process.env.HW_SHADOW_CONFIG_JSON
+      svc.config._resetHwConfig()
+    })
+
+    it('the candidate reads and marks live answers into shadow results only; teachers’ changes are monitored', async () => {
+      const w = await makeWorld()
+      const a = await publishedAssignment(w)
+      const h = await studentHandsIn(w, a)
+      gem.read.set(h.a2, { text: 'plants make food from sun lite', confidence: 'high' })
+      gem.readByModel.set(CANDIDATE, new Map([[h.a2, { text: 'plants make food from sun light', confidence: 'high' }]]))
+      await drainAll()
+
+      // Production is exactly what it is without shadow mode.
+      const ans = (await raw.query(`SELECT transcript, reader_engine FROM hw_answer WHERE id = $1`, [h.a2])).rows[0]
+      expect(ans).toMatchObject({ transcript: 'plants make food from sun lite' })
+      expect(ans.reader_engine).toContain('gemini-3.5-flash-lite')
+      expect((await raw.query(`SELECT count(*)::int AS n FROM hw_ai_grade WHERE answer_id = $1`, [h.a2])).rows[0].n).toBe(1)
+
+      // The candidate's results are only in hw_eval_shadow_result.
+      const sh = (await raw.query(`SELECT kind, status, predicted_transcript, production_transcript, predicted_marks::float AS pm, production_marks::float AS prod, tokens_in, cost_paise::float AS paise
+        FROM hw_eval_shadow_result WHERE organization_id = $1 ORDER BY kind`, [w.org])).rows
+      expect(sh).toEqual([
+        expect.objectContaining({ kind: 'mark', status: 'ok', pm: 2, prod: 2 }),
+        expect.objectContaining({ kind: 'read', status: 'ok', predicted_transcript: 'plants make food from sun light', production_transcript: 'plants make food from sun lite' }),
+      ])
+      expect(sh.every((r) => r.tokens_in > 0 && r.paise > 0)).toBe(true)
+      // Q1 was marked by exact match on both sides: no shadow marking call for it.
+      expect(gem.calls.filter((c) => c.model === CANDIDATE).map((c) => c.kind).sort()).toEqual(['grade', 'read'])
+      // Shadow calls count in the month's usage, as any AI call does.
+      expect((await raw.query(`SELECT pages_read, answers_graded FROM hw_ai_usage_monthly WHERE organization_id = $1`, [w.org])).rows[0]).toMatchObject({ pages_read: 2, answers_graded: 2 })
+
+      // Draining again does not run the candidate twice.
+      const before = gem.calls.length
+      await svc.runner.drain('itest', 5_000)
+      expect(gem.calls.length).toBe(before)
+
+      // The teacher accepts Q1 and lowers Q2 by one mark; monitoring and the shadow comparison see it.
+      const q1 = await svc.marking.questionQueue(w.teacher, a.q1, 'all')
+      const q2 = await svc.marking.questionQueue(w.teacher, a.q2, 'all')
+      await svc.marking.acceptAiGrade(w.teacher, h.a1, q1.answers[0].suggestion!.id)
+      const rubric = (await raw.query(`SELECT id FROM hw_rubric_item WHERE question_id = $1 AND retired_at IS NULL ORDER BY position`, [a.q2])).rows
+      await svc.marking.editAiGrade(w.teacher, h.a2, q2.answers[0].suggestion!.id, [{ rubric_item_id: rubric[0].id, marks: 1 }, { rubric_item_id: rubric[1].id, marks: 0 }])
+      const monitor = await import('@/lib/hw/shadow/monitor')
+      monitor._resetMonitorTick()
+      await monitor.monitorTick()
+      const day = (await raw.query(`SELECT answers_marked, ai_suggested, overrides, override_abs_sum::float AS abs, question_type FROM hw_eval_monitor_daily WHERE organization_id = $1 ORDER BY question_type`, [w.org])).rows
+      expect(day).toEqual([
+        { answers_marked: 1, ai_suggested: 1, overrides: 1, abs: 1, question_type: 'short' },
+        { answers_marked: 1, ai_suggested: 0, overrides: 0, abs: 0, question_type: 'very_short' },
+      ])
+      expect((await raw.query(`SELECT final_marks::float AS f FROM hw_eval_shadow_result WHERE answer_id = $1 AND kind = 'mark'`, [h.a2])).rows[0].f).toBe(1)
+    })
+
+    it('over quota: the candidate is not run, and says so', async () => {
+      const w = await makeWorld(1)
+      const a = await publishedAssignment(w)
+      const h = await studentHandsIn(w, a)
+      gem.read.set(h.a2, { text: 'plants make food', confidence: 'high' })
+      await drainAll()
+      expect(gem.calls.filter((c) => c.model === CANDIDATE)).toHaveLength(0)
+      const sh = (await raw.query(`SELECT kind, status, failure_reason FROM hw_eval_shadow_result WHERE organization_id = $1 AND kind = 'read'`, [w.org])).rows
+      expect(sh).toEqual([{ kind: 'read', status: 'failed', failure_reason: 'AI quota reached: not run' }])
+    })
+  })
 })

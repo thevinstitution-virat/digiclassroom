@@ -14,6 +14,9 @@ import { gradeCall, gradeResultsFrom } from '../grader/ai-grader';
 import type { GradeInput, GradeQuestion } from '../grader/types';
 import { answersNeedingSuggestion, gradeByRules, insertAiGrades, loadGradeQuestion } from '../pipeline';
 import { claim, claimBatchPending, complete, enqueueGrade, fail, markBatchPending, payloadOf, type GradePayload, type JobRow } from './queue';
+import { shadowAfterGrade } from '../shadow/shadow';
+
+const RUBRIC_CHANGED = 'rubric changed while marking; suggestions discarded and re-queued';
 
 function chunk<T>(xs: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -75,7 +78,7 @@ async function applyChunk(job: JobRow, requestedVersion: number, input: GradeInp
     const note = await recordUsage(tx, { jobId: job.id, orgId: job.organizationId, model: res.model, usage: res.usage, costUsd: res.costUsd, batch, answersGraded: input.answers.length });
     if (!current || current.rubricVersion !== requestedVersion) {
       if (current) await enqueueGrade(tx, job.organizationId, current.id, 0);
-      return 'rubric changed while marking; suggestions discarded and re-queued';
+      return RUBRIC_CHANGED;
     }
     const results = gradeResultsFrom(res, input);
     await insertAiGrades(tx, job.organizationId, job.id, results);
@@ -94,6 +97,8 @@ async function runSync(job: JobRow, q: GradeQuestion, chunks: string[][]): Promi
       const res = await generate(gradeCall(model, input));
       const note = await applyChunk(job, q.rubricVersion, input, res, false);
       if (note) notes.push(note);
+      // Production is committed; the candidate configuration may now mark the same answers.
+      if (note !== RUBRIC_CHANGED) await shadowAfterGrade(job.organizationId, q, input.answers);
     } catch (e) {
       const billed = usageFromError(e);
       if (billed) await recordUsage(db, { jobId: job.id, orgId: job.organizationId, model: billed.model, usage: billed.usage, costUsd: billed.costUsd, batch: false });
@@ -173,6 +178,7 @@ export async function pollGradeBatches(workerId: string): Promise<number> {
         const input = await inputsFor({ ...q, rubricVersion: payload.rubricVersion }, payload.chunks[i]);
         const note = await applyChunk(job, payload.rubricVersion, input, entry.result, true);
         if (note) notes.push(note);
+        if (note !== RUBRIC_CHANGED) await shadowAfterGrade(job.organizationId, input.question, input.answers);
       } catch (e) {
         const billed = usageFromError(e);
         if (billed) await recordUsage(db, { jobId: job.id, orgId: job.organizationId, model: billed.model, usage: billed.usage, costUsd: billed.costUsd, batch: true });
