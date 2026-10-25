@@ -2,7 +2,7 @@
 // key service, called as libraries. No database: the runner never writes a product table.
 
 import { readFileSync } from 'node:fs';
-import { extname, join, resolve, sep } from 'node:path';
+import { extname, join } from 'node:path';
 import { estimateCost, parsePriceTable } from '../cost/pricing';
 import { AiGrader } from '../grader/ai-grader';
 import { gradeWithoutAi } from '../grader/exact-match';
@@ -11,18 +11,10 @@ import { GeminiReader } from '../reader/gemini-reader';
 import { decideAfterRead, type EscalationPolicy } from '../reader/escalation';
 import { buildKey, defaultKeyDeps, fileKeyCache, type KeySettings } from '../keys';
 import type { HwLanguage } from '@/db/hw-schema';
-import type { Dataset, EvalItem } from './dataset';
+import { mediaPath, type Dataset, type EvalItem } from './dataset';
 import type { CallCost, RunnerDeps } from './runner';
 
 const MIME: Record<string, 'image/png' | 'image/jpeg' | 'image/webp'> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' };
-
-/** Media paths are relative to the dataset version's folder and may not leave it. */
-export function mediaPath(ds: Pick<Dataset, 'dir'>, rel: string): string {
-  const root = resolve(ds.dir);
-  const p = resolve(root, rel);
-  if (!p.startsWith(root + sep)) throw new Error(`media path ${rel} leaves the dataset folder`);
-  return p;
-}
 
 export interface LiveSettings {
   /** Tier 1 model, and the tier 2 model with the policy that escalates to it (production route). */

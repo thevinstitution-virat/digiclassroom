@@ -76,6 +76,7 @@ export const PLATFORM_NAV: DashboardNavItem[] = [
   // Insights
   { section: 'Insights', name: 'Revenue', href: '/dashboard/super-admin/revenue', icon: TrendingUp, description: 'Platform earnings & transactions', gradient: 'from-indigo-500 to-purple-600' },
   { section: 'Insights', name: 'Analytics', href: '/dashboard/super-admin/quality-metrics', icon: BarChart3, description: 'Usage & RAG quality' },
+  { section: 'Insights', name: 'Evaluation', href: '/dashboard/super-admin/evaluation', icon: ClipboardCheck, description: 'Raters and reference data for the AI reader and marker' },
 
   // Platform Control
   { section: 'Platform Control', name: 'Curriculum Taxonomy', href: '/dashboard/super-admin/taxonomy', icon: FolderTree, description: 'Manage taxonomy domains, courses, levels & subjects' },

@@ -8,7 +8,7 @@
 
 import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import { z } from 'zod';
 
 export const EVAL_PREFIX = 'hw-assignments/evals/';
@@ -211,6 +211,14 @@ export function newItemId(): string {
     }
   }
   return `evitem_${out.slice(0, 20)}`;
+}
+
+/** Media paths are relative to the dataset version's folder and may not leave it. */
+export function mediaPath(ds: Pick<Dataset, 'dir'>, rel: string): string {
+  const root = resolve(ds.dir);
+  const p = resolve(root, rel);
+  if (!p.startsWith(root + sep)) throw new Error(`media path ${rel} leaves the dataset folder`);
+  return p;
 }
 
 /** R2 key for a dataset file; everything stays under hw-assignments/evals/. */

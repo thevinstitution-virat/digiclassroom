@@ -26,6 +26,7 @@ import { batchTemplatesRouter } from './batchTemplates'
 import { superAdminAnalyticsRouter } from './superAdminAnalytics'
 import { superAdminRouter } from './superAdmin'
 import { hwRouter } from './hw'
+import { hwEvalRouter } from './hw-eval'
 
 /**
  * This is the primary router for your server.
@@ -53,6 +54,7 @@ export const appRouter = createTRPCRouter({
   superAdminAnalytics: superAdminAnalyticsRouter,
   superAdmin: superAdminRouter,
   hw: hwRouter,
+  hwEval: hwEvalRouter,
 })
 
 // Export type definition of API

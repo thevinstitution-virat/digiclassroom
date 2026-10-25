@@ -73,6 +73,12 @@ const EnvSchema = z.object({
   HW_KEY_EMBED_MODEL: z.string().optional().transform((v) => (v ? v.trim() : 'text-embedding-3-large')),
   /** content_item ids whose printed-page mapping a person has checked (comma-separated). */
   HW_KEY_PAGES_VERIFIED: z.string().optional().transform((v) => new Set((v ?? '').split(',').map((x) => x.trim()).filter(Boolean))),
+  /** Evaluator tools (raters' queue, task screens, super-admin page). Off unless set. */
+  HW_EVAL_TOOLS_ENABLED: bool(false),
+  /** Local folder holding datasets/ and key-cache/ (development); unset = read them from R2 under hw-assignments/evals/. */
+  HW_EVAL_LOCAL_ROOT: str(),
+  /** Datasets open for writing-pad copy tasks (comma-separated name@vN). */
+  HW_EVAL_COPY_DATASETS: str(),
   OPENAI_API_KEY: str(),
   QDRANT_URL: str(),
   QDRANT_API_KEY: str(),
