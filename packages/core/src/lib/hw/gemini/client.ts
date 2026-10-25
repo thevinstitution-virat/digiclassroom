@@ -40,6 +40,8 @@ export interface GeminiResult {
   /** The provider's usage object as returned, kept for audit. */
   rawUsage: Record<string, unknown>;
   model: string;
+  /** What the provider says it charged (USD), when it reports it; otherwise cost is estimated. */
+  costUsd?: number;
 }
 
 let client: GoogleGenAI | null = null;
@@ -131,9 +133,9 @@ export function parseResponse(res: GenerateContentResponse, model: string): Gemi
 }
 
 /** Usage attached to an error thrown after the provider already billed for the call. */
-export function usageFromError(e: unknown): { usage: TokenUsage; model: string } | null {
-  const x = e as { usage?: TokenUsage; model?: string };
-  return x && x.usage && x.model ? { usage: x.usage, model: x.model } : null;
+export function usageFromError(e: unknown): { usage: TokenUsage; model: string; costUsd?: number } | null {
+  const x = e as { usage?: TokenUsage; model?: string; costUsd?: number };
+  return x && x.usage && x.model ? { usage: x.usage, model: x.model, costUsd: x.costUsd } : null;
 }
 
 export async function generate(call: GeminiCall): Promise<GeminiResult> {
@@ -173,14 +175,17 @@ export async function createBatch(items: BatchItem[], displayName: string): Prom
   }
 }
 
+/** One request's outcome in a finished batch, already parsed (an error carries usage if billed). */
+export type BatchEntry = { ok: true; result: GeminiResult } | { ok: false; error: unknown };
+
 export type BatchOutcome =
   | { state: 'pending' }
   | { state: 'failed'; reason: string }
-  | { state: 'succeeded'; results: Map<string, GenerateContentResponse | { error: string }> };
+  | { state: 'succeeded'; results: Map<string, BatchEntry> };
 
 const PENDING = new Set<string>([JobState.JOB_STATE_QUEUED, JobState.JOB_STATE_PENDING, JobState.JOB_STATE_RUNNING, JobState.JOB_STATE_UNSPECIFIED]);
 
-export async function pollBatch(name: string): Promise<BatchOutcome> {
+export async function pollBatch(name: string, model: string): Promise<BatchOutcome> {
   const client = ai();
   let job;
   try {
@@ -195,12 +200,19 @@ export async function pollBatch(name: string): Promise<BatchOutcome> {
   }
   const responses = job.dest?.inlinedResponses;
   if (!responses) return { state: 'failed', reason: 'batch succeeded but returned no inline responses' };
-  const results = new Map<string, GenerateContentResponse | { error: string }>();
+  const results = new Map<string, BatchEntry>();
   for (const r of responses) {
     const key = r.metadata?.key;
     if (!key) continue;
-    if (r.error || !r.response) results.set(key, { error: r.error?.message ?? 'no response for this request' });
-    else results.set(key, r.response);
+    if (r.error || !r.response) {
+      results.set(key, { ok: false, error: new HwError('PROVIDER_ERROR', 'The AI could not complete this request.', r.error?.message ?? 'no response for this request') });
+      continue;
+    }
+    try {
+      results.set(key, { ok: true, result: parseResponse(r.response, model) });
+    } catch (e) {
+      results.set(key, { ok: false, error: e });
+    }
   }
   return { state: 'succeeded', results };
 }

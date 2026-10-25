@@ -26,7 +26,10 @@ const choice = <T extends readonly [string, ...string[]]>(values: T, fallback: T
 
 const EnvSchema = z.object({
   HW_FEATURE_DEFAULT_ENABLED: bool(false),
+  HW_AI_PROVIDER: z.preprocess((v) => (v === '' || v === undefined ? undefined : String(v).trim().toLowerCase()), z.enum(['gemini', 'openrouter']).optional())
+    .transform((v) => v ?? 'gemini'),
   GEMINI_API_KEY: str(),
+  OPENROUTER_API_KEY: str(),
   HW_READ_MODEL: str(),
   HW_ESCALATE_MODEL: str(),
   HW_GRADE_MODEL: str(),

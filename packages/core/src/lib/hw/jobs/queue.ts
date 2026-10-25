@@ -10,6 +10,7 @@ import { and, eq, inArray, lte, sql } from 'drizzle-orm';
 import { hwAiJob, type HwJobKind } from '@/db/hw-schema';
 import { describeError, isHwError } from '../errors';
 import { db, newId, type Exec } from '../db';
+import { currentProvider } from '../ai';
 
 export type JobRow = typeof hwAiJob.$inferSelect;
 
@@ -37,7 +38,7 @@ export function payloadOf<T>(job: JobRow): T | null {
 export async function enqueueRead(x: Exec, orgId: string, submissionId: string, payload: ReadPayload): Promise<string> {
   const id = newId();
   await x.insert(hwAiJob).values({
-    id, organizationId: orgId, kind: 'read', submissionId, payloadRef: JSON.stringify(payload), provider: 'gemini',
+    id, organizationId: orgId, kind: 'read', submissionId, payloadRef: JSON.stringify(payload), provider: currentProvider(),
   });
   return id;
 }
@@ -54,7 +55,7 @@ export async function enqueueGrade(x: Exec, orgId: string, questionId: string, d
     .limit(1);
   if (existing) return;
   await x.insert(hwAiJob).values({
-    id: newId(), organizationId: orgId, kind: 'grade', questionId, provider: 'gemini',
+    id: newId(), organizationId: orgId, kind: 'grade', questionId, provider: currentProvider(),
     runAfter: sql`now() + make_interval(secs => ${delaySeconds})`,
   });
 }
@@ -95,7 +96,7 @@ export async function claimBatchPending(kind: HwJobKind, limit: number, workerId
 
 export async function markBatchPending(x: Exec, jobId: string, batchRef: string, model: string, payload?: unknown, pollSeconds = 60): Promise<void> {
   await x.update(hwAiJob).set({
-    status: 'batch_pending', batchRef, model, lockedAt: null, lockedBy: null,
+    status: 'batch_pending', batchRef, model, provider: currentProvider(), lockedAt: null, lockedBy: null,
     runAfter: sql`now() + make_interval(secs => ${pollSeconds})`,
     ...(payload !== undefined ? { payloadRef: JSON.stringify(payload) } : {}),
   }).where(eq(hwAiJob.id, jobId));

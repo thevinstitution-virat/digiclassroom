@@ -2,7 +2,7 @@
 // same for every chunk, so it goes first (cacheable prefix); answers go last.
 
 import { requireModel } from '../config';
-import { generate, textPart, type GeminiCall, type GeminiResult } from '../gemini/client';
+import { generate, textPart, type AiCall as GeminiCall, type AiResult as GeminiResult } from '../ai';
 import {
   GRADE_PROMPT_VERSION,
   GRADE_RESPONSE_SCHEMA,

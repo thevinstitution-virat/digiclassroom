@@ -11,7 +11,7 @@ import { describeError, HwError } from '../errors';
 import { db, type Exec } from '../db';
 import { quotaAllows, quotaRefusal, quotaState } from '../cost/quota';
 import { recordUsage } from '../cost/usage';
-import { createBatch, parseResponse, pollBatch, usageFromError, type BatchItem } from '../gemini/client';
+import { createBatch, pollBatch, readBatchSupported, usageFromError, type AiResult, type BatchItem } from '../ai';
 import { decideAfterRead, type EscalationPolicy } from '../reader/escalation';
 import { readCall, readerForTier } from '../reader/gemini-reader';
 import { parseReadOutput } from '../reader/parse';
@@ -87,11 +87,12 @@ async function prepare(job: JobRow): Promise<PreparedRead | null> {
 type ReadJobRef = Pick<PreparedRead, 'job' | 'tier'>;
 
 /** Save one read's results and decide what happens to each answer. */
-async function applyRead(p: ReadJobRef, results: ReadAnswerResult[], model: string, usage: Parameters<typeof recordUsage>[1]['usage'], batch: boolean): Promise<void> {
+async function applyRead(p: ReadJobRef, results: ReadAnswerResult[], billing: Pick<AiResult, 'model' | 'usage' | 'costUsd'>, batch: boolean): Promise<void> {
   const escalate: string[] = [];
+  const { model } = billing;
   await db.transaction(async (tx) => {
-    const note = await recordUsage(tx, { jobId: p.job.id, orgId: p.job.organizationId, model, usage, batch, pagesRead: results.length });
-    const engine = `gemini:${model}`;
+    const note = await recordUsage(tx, { jobId: p.job.id, orgId: p.job.organizationId, model, usage: billing.usage, costUsd: billing.costUsd, batch, pagesRead: results.length });
+    const engine = `${p.job.provider ?? 'gemini'}:${model}`;
     for (const r of results) {
       const d = decideAfterRead(r, p.tier, policy());
       const answer = { id: r.answerId, organizationId: p.job.organizationId };
@@ -123,7 +124,7 @@ async function applyRead(p: ReadJobRef, results: ReadAnswerResult[], model: stri
 async function settleFailure(job: JobRow, e: unknown): Promise<void> {
   const billed = usageFromError(e);
   await db.transaction(async (tx) => {
-    if (billed) await recordUsage(tx, { jobId: job.id, orgId: job.organizationId, model: billed.model, usage: billed.usage, batch: false });
+    if (billed) await recordUsage(tx, { jobId: job.id, orgId: job.organizationId, model: billed.model, usage: billed.usage, costUsd: billed.costUsd, batch: false });
     const final = await fail(tx, job, e);
     if (!final) return;
     const payload = payloadOf<ReadPayload>(job);
@@ -139,7 +140,7 @@ async function settleFailure(job: JobRow, e: unknown): Promise<void> {
 async function runSync(p: PreparedRead): Promise<void> {
   try {
     const res = await readerForTier(p.tier).read(p.input);
-    await applyRead(p, res.answers, res.model, res.usage, false);
+    await applyRead(p, res.answers, res, false);
   } catch (e) {
     await settleFailure(p.job, e);
   }
@@ -165,7 +166,7 @@ export async function runReadJobs(workerId: string, deadline: number): Promise<n
     }
     if (!p) continue;
 
-    if (p.tier === 2 || !cfg.HW_BATCH_ENABLED) {
+    if (p.tier === 2 || !cfg.HW_BATCH_ENABLED || !readBatchSupported()) {
       await runSync(p);
       continue;
     }
@@ -210,7 +211,7 @@ export async function pollReadBatches(workerId: string): Promise<number> {
   for (const [name, group] of byBatch) {
     let outcome;
     try {
-      outcome = await pollBatch(name);
+      outcome = await pollBatch(group[0].provider, name, group[0].model ?? 'unknown');
     } catch (e) {
       console.error(`[hw] polling ${name} failed: ${describeError(e)}`);
       continue; // run_after was pushed forward; try again next poll
@@ -221,17 +222,17 @@ export async function pollReadBatches(workerId: string): Promise<number> {
       continue;
     }
     for (const j of group) {
-      const res = outcome.results.get(j.id);
-      if (!res || 'error' in res) {
-        await settleFailure(j, new HwError('PROVIDER_ERROR', 'The AI could not read this submission.', res ? res.error : 'no result in batch'));
+      const entry = outcome.results.get(j.id);
+      if (!entry) {
+        await settleFailure(j, new HwError('PROVIDER_ERROR', 'The AI could not read this submission.', 'no result in batch'));
         continue;
       }
       try {
+        if (!entry.ok) throw entry.error;
         const sent = payloadOf<ReadPayload>(j)?.answerIds;
         if (!sent?.length) throw new HwError('PROVIDER_ERROR', 'Batch job lost track of its answers.', 'batch_pending read job without answerIds');
-        const parsed = parseResponse(res, j.model ?? 'unknown');
-        const results = parseReadOutput(parsed.json, sent);
-        await applyRead({ job: j, tier: 1 }, results, parsed.model, parsed.usage, true);
+        const results = parseReadOutput(entry.result.json, sent);
+        await applyRead({ job: j, tier: 1 }, results, entry.result, true);
       } catch (e) {
         await settleFailure(j, e);
       }

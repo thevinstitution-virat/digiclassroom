@@ -9,7 +9,7 @@ import { describeError, HwError } from '../errors';
 import { db } from '../db';
 import { quotaAllows, quotaRefusal, quotaState } from '../cost/quota';
 import { recordUsage } from '../cost/usage';
-import { createBatch, generate, parseResponse, pollBatch, usageFromError } from '../gemini/client';
+import { createBatch, generate, pollBatch, usageFromError, type AiResult } from '../ai';
 import { gradeCall, gradeResultsFrom } from '../grader/ai-grader';
 import type { GradeInput, GradeQuestion } from '../grader/types';
 import { answersNeedingSuggestion, gradeByRules, insertAiGrades, loadGradeQuestion } from '../pipeline';
@@ -31,7 +31,7 @@ async function inputsFor(q: GradeQuestion, answerIds: string[]): Promise<GradeIn
 async function settleFailure(job: JobRow, e: unknown): Promise<void> {
   const billed = usageFromError(e);
   await db.transaction(async (tx) => {
-    if (billed) await recordUsage(tx, { jobId: job.id, orgId: job.organizationId, model: billed.model, usage: billed.usage, batch: false });
+    if (billed) await recordUsage(tx, { jobId: job.id, orgId: job.organizationId, model: billed.model, usage: billed.usage, costUsd: billed.costUsd, batch: false });
     await fail(tx, job, e);
   });
 }
@@ -69,15 +69,15 @@ async function plan(job: JobRow): Promise<{ q: GradeQuestion; chunks: string[][]
  * Save one chunk's suggestions. If the rubric changed after the request was made, the
  * suggestions are discarded and the answers are marked again against the new rubric.
  */
-async function applyChunk(job: JobRow, requestedVersion: number, input: GradeInput, json: unknown, model: string, usage: Parameters<typeof recordUsage>[1]['usage'], batch: boolean): Promise<string | undefined> {
+async function applyChunk(job: JobRow, requestedVersion: number, input: GradeInput, res: AiResult, batch: boolean): Promise<string | undefined> {
   const current = await loadGradeQuestion(db, input.question.id);
   return db.transaction(async (tx) => {
-    const note = await recordUsage(tx, { jobId: job.id, orgId: job.organizationId, model, usage, batch, answersGraded: input.answers.length });
+    const note = await recordUsage(tx, { jobId: job.id, orgId: job.organizationId, model: res.model, usage: res.usage, costUsd: res.costUsd, batch, answersGraded: input.answers.length });
     if (!current || current.rubricVersion !== requestedVersion) {
       if (current) await enqueueGrade(tx, job.organizationId, current.id, 0);
       return 'rubric changed while marking; suggestions discarded and re-queued';
     }
-    const results = gradeResultsFrom({ json, model, usage, rawUsage: {} }, input);
+    const results = gradeResultsFrom(res, input);
     await insertAiGrades(tx, job.organizationId, job.id, results);
     return note;
   });
@@ -92,11 +92,11 @@ async function runSync(job: JobRow, q: GradeQuestion, chunks: string[][]): Promi
     if (!input.answers.length) continue;
     try {
       const res = await generate(gradeCall(model, input));
-      const note = await applyChunk(job, q.rubricVersion, input, res.json, res.model, res.usage, false);
+      const note = await applyChunk(job, q.rubricVersion, input, res, false);
       if (note) notes.push(note);
     } catch (e) {
       const billed = usageFromError(e);
-      if (billed) await recordUsage(db, { jobId: job.id, orgId: job.organizationId, model: billed.model, usage: billed.usage, batch: false });
+      if (billed) await recordUsage(db, { jobId: job.id, orgId: job.organizationId, model: billed.model, usage: billed.usage, costUsd: billed.costUsd, batch: false });
       // Other chunks still count; this chunk's answers stay unmarked and are picked up again.
       failedChunks++;
       notes.push(`a chunk of ${ids.length} failed: ${describeError(e)}`);
@@ -146,7 +146,7 @@ export async function pollGradeBatches(workerId: string): Promise<number> {
     }
     let outcome;
     try {
-      outcome = await pollBatch(job.batchRef);
+      outcome = await pollBatch(job.provider, job.batchRef, job.model ?? 'unknown');
     } catch (e) {
       console.error(`[hw] polling ${job.batchRef} failed: ${describeError(e)}`);
       continue;
@@ -161,21 +161,21 @@ export async function pollGradeBatches(workerId: string): Promise<number> {
     const notes: string[] = [];
     let failedChunks = 0;
     for (let i = 0; i < payload.chunks.length; i++) {
-      const res = outcome.results.get(`${job.id}:${i}`);
+      const entry = outcome.results.get(`${job.id}:${i}`);
       if (!q) break;
-      if (!res || 'error' in res) {
+      if (!entry) {
         failedChunks++;
-        notes.push(`chunk ${i} failed: ${res ? res.error : 'no result'}`);
+        notes.push(`chunk ${i} failed: no result`);
         continue;
       }
       try {
-        const parsed = parseResponse(res, job.model ?? 'unknown');
+        if (!entry.ok) throw entry.error;
         const input = await inputsFor({ ...q, rubricVersion: payload.rubricVersion }, payload.chunks[i]);
-        const note = await applyChunk(job, payload.rubricVersion, input, parsed.json, parsed.model, parsed.usage, true);
+        const note = await applyChunk(job, payload.rubricVersion, input, entry.result, true);
         if (note) notes.push(note);
       } catch (e) {
         const billed = usageFromError(e);
-        if (billed) await recordUsage(db, { jobId: job.id, orgId: job.organizationId, model: billed.model, usage: billed.usage, batch: true });
+        if (billed) await recordUsage(db, { jobId: job.id, orgId: job.organizationId, model: billed.model, usage: billed.usage, costUsd: billed.costUsd, batch: true });
         failedChunks++;
         notes.push(`chunk ${i} failed: ${describeError(e)}`);
       }

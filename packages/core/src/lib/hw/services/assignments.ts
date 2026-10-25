@@ -11,7 +11,7 @@ import { HwError } from '../errors';
 import { db, newId, num, type Exec } from '../db';
 import { quotaAllows, quotaRefusal, quotaState } from '../cost/quota';
 import { recordUsage } from '../cost/usage';
-import { generate, textPart, usageFromError } from '../gemini/client';
+import { currentProvider, generate, textPart, usageFromError } from '../ai';
 import { complete, fail } from '../jobs/queue';
 import { RUBRIC_PROMPT_VERSION, RUBRIC_RESPONSE_SCHEMA, RUBRIC_SYSTEM_PROMPT, rubricDraftInput } from '../prompts/rubric-draft.v1';
 import { z } from 'zod';
@@ -310,7 +310,7 @@ export async function draftRubric(actor: HwActor, questionId: string, opts: { re
   const jobId = newId();
   await db.insert(hwAiJob).values({
     id: jobId, organizationId: actor.orgId, kind: 'rubric_draft', status: 'running', questionId: q.id,
-    provider: 'gemini', model, attempts: 1, startedAt: new Date(),
+    provider: currentProvider(), model, attempts: 1, startedAt: new Date(),
     payloadRef: JSON.stringify({ promptVersion: RUBRIC_PROMPT_VERSION }),
   });
   const job = (await db.select().from(hwAiJob).where(eq(hwAiJob.id, jobId)))[0];
@@ -327,7 +327,7 @@ export async function draftRubric(actor: HwActor, questionId: string, opts: { re
     const marks = num(q.marks);
     const items = parsed.data.items.map((it) => ({ ...it, marks: Math.min(marks, Math.max(0.5, Math.round(it.marks * 2) / 2)) }));
     return await db.transaction(async (tx) => {
-      const note = await recordUsage(tx, { jobId, orgId: actor.orgId, model: res.model, usage: res.usage, batch: false });
+      const note = await recordUsage(tx, { jobId, orgId: actor.orgId, model: res.model, usage: res.usage, costUsd: res.costUsd, batch: false });
       const result = await setRubric(actor, q.id, items, 'ai_draft', tx);
       await complete(tx, jobId, res.model, note);
       return { ...result, items };
@@ -335,7 +335,7 @@ export async function draftRubric(actor: HwActor, questionId: string, opts: { re
   } catch (e) {
     const billed = usageFromError(e);
     await db.transaction(async (tx) => {
-      if (billed) await recordUsage(tx, { jobId, orgId: actor.orgId, model: billed.model, usage: billed.usage, batch: false });
+      if (billed) await recordUsage(tx, { jobId, orgId: actor.orgId, model: billed.model, usage: billed.usage, costUsd: billed.costUsd, batch: false });
       await fail(tx, { ...job, attempts: job.maxAttempts }, e);
     });
     throw e;

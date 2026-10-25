@@ -2,7 +2,7 @@
 // models (HW_READ_MODEL / HW_ESCALATE_MODEL).
 
 import { requireModel } from '../config';
-import { generate, imagePart, textPart, type GeminiCall } from '../gemini/client';
+import { generate, imagePart, textPart, type AiCall as GeminiCall } from '../ai';
 import { READ_PROMPT_VERSION, READ_RESPONSE_SCHEMA, READ_SYSTEM_PROMPT, readAnswerLabel } from '../prompts/read.v1';
 import { parseReadOutput } from './parse';
 import type { HandwritingReader, ReadInput, ReadResult } from './types';

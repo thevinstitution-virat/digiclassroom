@@ -15,11 +15,16 @@ export interface UsageRecord {
   batch: boolean;
   pagesRead?: number;
   answersGraded?: number;
+  /** What the provider reports it charged (USD). Used instead of the estimate when present. */
+  costUsd?: number;
 }
 
 /** Returns the cost problem, if any, so the caller can surface it on the job. */
 export async function recordUsage(x: Exec, r: UsageRecord): Promise<string | undefined> {
-  const cost = estimateCost(parsePriceTable(getHwConfig().HW_PRICE_TABLE_JSON), r.model, r.usage, { batch: r.batch });
+  const table = parsePriceTable(getHwConfig().HW_PRICE_TABLE_JSON);
+  const cost = r.costUsd !== undefined && !('problem' in table)
+    ? { paise: Math.round(r.costUsd * table.inr_per_usd * 100 * 10_000) / 10_000, problem: undefined as string | undefined }
+    : estimateCost(table, r.model, r.usage, { batch: r.batch });
   if (cost.problem) console.error(`[hw] cost not estimated for job ${r.jobId}: ${cost.problem}`);
 
   await x.update(hwAiJob).set({
