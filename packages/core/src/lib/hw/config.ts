@@ -24,10 +24,11 @@ const choice = <T extends readonly [string, ...string[]]>(values: T, fallback: T
   z.preprocess((v) => (v === '' ? undefined : typeof v === 'string' ? v.trim().toUpperCase() : v), z.enum(values).optional())
     .transform((v) => v ?? fallback);
 
+const provider = () => z.preprocess((v) => (v === '' || v === undefined ? undefined : String(v).trim().toLowerCase()), z.enum(['gemini', 'openrouter']).optional());
+
 const EnvSchema = z.object({
   HW_FEATURE_DEFAULT_ENABLED: bool(false),
-  HW_AI_PROVIDER: z.preprocess((v) => (v === '' || v === undefined ? undefined : String(v).trim().toLowerCase()), z.enum(['gemini', 'openrouter']).optional())
-    .transform((v) => v ?? 'gemini'),
+  HW_AI_PROVIDER: provider().transform((v) => v ?? 'gemini'),
   GEMINI_API_KEY: str(),
   OPENROUTER_API_KEY: str(),
   HW_READ_MODEL: str(),
@@ -51,6 +52,31 @@ const EnvSchema = z.object({
   HW_PRICE_TABLE_JSON: str(),
   HW_CRON_SECRET: str(),
   SARVAM_API_KEY: str(),
+  // Answer keys (lib/hw/keys). The verifier must be a different model family from the writer.
+  HW_KEY_WRITER_MODEL: str(),
+  HW_KEY_WRITER_PROVIDER: provider().optional(),
+  HW_KEY_VERIFIER_MODEL: str(),
+  HW_KEY_VERIFIER_PROVIDER: provider().optional().transform((v) => v ?? 'openrouter'),
+  /** Minimum dense cosine score of the top passage. No default: it is calibrated (scripts/hw-key-calibrate.ts). */
+  HW_KEY_R_MIN: z.string().optional().transform((v, ctx) => {
+    if (v === undefined || v === '') return undefined;
+    const n = Number(v);
+    if (!Number.isFinite(n) || n <= 0 || n >= 1) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'must be a number between 0 and 1 (exclusive)' });
+      return z.NEVER;
+    }
+    return n;
+  }),
+  HW_KEY_EXERCISE_THETA: num(0.35, 0, 1),
+  HW_KEY_TOP_K: num(30, 1, 100),
+  HW_KEY_MAX_PASSAGES: num(6, 1, 20),
+  HW_KEY_EMBED_MODEL: z.string().optional().transform((v) => (v ? v.trim() : 'text-embedding-3-large')),
+  /** content_item ids whose printed-page mapping a person has checked (comma-separated). */
+  HW_KEY_PAGES_VERIFIED: z.string().optional().transform((v) => new Set((v ?? '').split(',').map((x) => x.trim()).filter(Boolean))),
+  OPENAI_API_KEY: str(),
+  QDRANT_URL: str(),
+  QDRANT_API_KEY: str(),
+  QDRANT_COLLECTION_NAME: str(),
 });
 
 export type HwConfig = z.infer<typeof EnvSchema>;

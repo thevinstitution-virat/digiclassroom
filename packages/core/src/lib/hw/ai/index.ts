@@ -24,6 +24,11 @@ export function generate(call: GeminiCall): Promise<GeminiResult> {
   return impl(currentProvider()).generate(call);
 }
 
+/** One call at a named provider, whatever HW_AI_PROVIDER says (answer keys choose writer and verifier separately). */
+export function generateWith(provider: AiProvider, call: GeminiCall): Promise<GeminiResult> {
+  return impl(provider).generate(call);
+}
+
 export function createBatch(items: BatchItem[], displayName: string): Promise<string> {
   return impl(currentProvider()).createBatch(items, displayName);
 }
