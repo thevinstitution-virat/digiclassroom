@@ -1,10 +1,56 @@
 import { z } from 'zod'
-import { createTRPCRouter, protectedProcedure, publicProcedure } from '../server'
+import { TRPCError } from '@trpc/server'
+import { createTRPCRouter, protectedProcedure, publicProcedure, superAdminProcedure } from '../server'
 import { db } from '@/db'
 import { taxonomyDomains, taxonomyCourses, taxonomyLevels, taxonomySubjects } from '@/db/schema'
 import { eq, asc } from 'drizzle-orm'
+import {
+  CurriculumServiceError,
+  getCurriculumChildren,
+  getCurriculumCombinations,
+  getCurriculumNode,
+  isCurriculumV2Enabled,
+  searchCurriculum,
+} from '@/lib/taxonomy/curriculum'
+
+/** Curriculum v2 reads, for the super-admin taxonomy page. Off (FORBIDDEN) unless TAXONOMY_V2_ENABLED=true. */
+async function curriculumRead<T>(read: () => Promise<T>): Promise<T> {
+  if (!isCurriculumV2Enabled()) {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Curriculum v2 is not enabled on this deployment' })
+  }
+  try {
+    return await read()
+  } catch (err) {
+    if (err instanceof CurriculumServiceError) {
+      throw new TRPCError({ code: err.status === 404 ? 'NOT_FOUND' : 'BAD_GATEWAY', message: err.message })
+    }
+    throw err
+  }
+}
+
+/**
+ * Book Buddy's education taxonomy as Vidyaverse serves it (lib/taxonomy/curriculum.ts). Read-only: it changes by a
+ * new taxonomy release, never from this screen.
+ */
+const curriculumRouter = createTRPCRouter({
+  status: superAdminProcedure.query(() => ({ enabled: isCurriculumV2Enabled() })),
+  children: superAdminProcedure
+    .input(z.object({ parentId: z.string().uuid().nullable() }))
+    .query(({ input }) => curriculumRead(() => getCurriculumChildren(input.parentId))),
+  node: superAdminProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(({ input }) => curriculumRead(() => getCurriculumNode(input.id))),
+  combinations: superAdminProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(({ input }) => curriculumRead(() => getCurriculumCombinations(input.id))),
+  search: superAdminProcedure
+    .input(z.object({ q: z.string().max(100), domain: z.string().max(20).optional() }))
+    .query(({ input }) => curriculumRead(() => searchCurriculum(input.q, { domain: input.domain, limit: 30 }))),
+})
 
 export const taxonomyRouter = createTRPCRouter({
+  curriculum: curriculumRouter,
+
   domains: createTRPCRouter({
     list: publicProcedure.query(async () => {
       return await db.select().from(taxonomyDomains).orderBy(asc(taxonomyDomains.sortOrder))

@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Check, ChevronRight, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CurriculumBrowser } from './CurriculumBrowser';
 
 // ── TaxonomyRow ──────────────────────────────────────────────────────────────
 
@@ -268,7 +269,37 @@ function TaxonomySection({
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
+/**
+ * With TAXONOMY_V2_ENABLED the page shows the shared curriculum (Book Buddy's taxonomy, served by Vidyaverse) instead
+ * of DigiClassroom's own domain / course / level / subject lists, which stay editable below until it is switched on.
+ */
 export default function TaxonomyPage() {
+  const v2 = api.taxonomy.curriculum.status.useQuery(undefined, { retry: false });
+
+  if (v2.isLoading) {
+    return (
+      <div className="max-w-2xl mx-auto p-6 flex justify-center">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (!v2.data?.enabled) return <LegacyTaxonomyEditor />;
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-4 p-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight">Curriculum Taxonomy</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          The education taxonomy shared by DigiClassroom, PDLMS, Book Buddy and Vidyaverse: boards, classes,
+          programmes, exams and subjects. It changes by a new taxonomy release, not from here.
+        </p>
+      </div>
+      <CurriculumBrowser />
+    </div>
+  );
+}
+
+function LegacyTaxonomyEditor() {
   const [selectedDomainId, setSelectedDomainId] = useState<string | null>(null);
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [selectedLevelId, setSelectedLevelId] = useState<string | null>(null);
