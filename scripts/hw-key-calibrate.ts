@@ -13,7 +13,9 @@
 //   answerable=false items have no relevant passage in the book: any passage above R_min is wrong.
 // --proxy: labels taken from the books themselves, until the hand labels exist. Each exercise
 //   question in the book's practice rows is labelled with its own chapter (positive); each is
-//   also searched against every OTHER book's scope (negative: nothing there should pass).
+//   also searched against every book of an UNRELATED subject (negative: nothing there should
+//   pass). Books of related subjects (Social Science / Geography) share content and are not
+//   used as negatives; the report lists those pairs.
 //   Proxy labels are an approximation and the report says so; the value goes in the config
 //   hash either way.
 //
@@ -27,7 +29,7 @@ import { getContentPool } from '@/lib/db/content-connection';
 import { gyankoshRetriever } from '@/lib/hw/keys/retriever';
 import { trioReader } from '@/lib/hw/keys/trio';
 import { exerciseQuestions } from '@/lib/hw/keys/exercise-match';
-import { normaliseMedium, qdrantFilter, scopeOf } from '@/lib/hw/keys/scope';
+import { normaliseMedium, qdrantFilter, relatedSubjects, scopeOf } from '@/lib/hw/keys/scope';
 import type { Medium } from '@/lib/hw/keys/types';
 
 function arg(name: string, fallback?: string): string | undefined {
@@ -89,6 +91,9 @@ async function booksInIndex(): Promise<{ contentItemId: string; title: string; c
   }));
 }
 
+/** Book pairs left out of the negatives because their subjects are related (listed in the report). */
+const relatedSkipped = new Set<string>();
+
 async function proxyItems(): Promise<Item[]> {
   const books = await booksInIndex();
   const trio = trioReader();
@@ -100,9 +105,13 @@ async function proxyItems(): Promise<Item[]> {
     for (const q of exerciseQuestions(r.text)) {
       if (q.split(/\s+/).length < 4) continue;
       items.push({ question: q, classLevel: book.classLevel, subject: book.subject, medium: book.medium, relevantChapter: r.chapter, answerable: true, origin: `${book.title} / ${r.chapter}` });
-      // Negatives: the same question against every other book's scope.
+      // Negatives: the same question against books of UNRELATED subjects only. A related book
+      // (Class 9 Social Science vs Class 11 Geography) really does contain relevant passages, so
+      // labelling it "nothing should pass" was wrong; production never searches across them anyway,
+      // because retrieval is scoped to the question's own class, subject and medium.
       for (const other of books) {
-        if (other.contentItemId === book.contentItemId || (other.classLevel === book.classLevel && other.subject === book.subject && other.medium === book.medium)) continue;
+        if (other.contentItemId === book.contentItemId) continue;
+        if (relatedSubjects(book.subject, other.subject)) { relatedSkipped.add(`${book.title} ~ ${other.title}`); continue; }
         items.push({ question: q, classLevel: other.classLevel, subject: other.subject, medium: other.medium, answerable: false, origin: `${book.title} question vs ${other.title}` });
       }
     }
@@ -158,7 +167,8 @@ async function main() {
   const chosen = rows.find((r) => r.passed >= minSupport && r.precision >= target) ?? null;
 
   const report = {
-    method: labelsPath ? `hand labels (${labelsPath})` : 'proxy labels: exercise question -> own chapter (positive); question vs other books (negative)',
+    method: labelsPath ? `hand labels (${labelsPath})` : 'proxy labels: exercise question -> own chapter (positive); question vs books of unrelated subjects (negative)',
+    relatedPairsNotUsedAsNegatives: [...relatedSkipped].sort(),
     collection: cfg.QDRANT_COLLECTION_NAME, embedModel: cfg.HW_KEY_EMBED_MODEL, target, minSupport,
     items: scored.length, positives, negatives: scored.length - positives, skipped: skipped.length,
     embedTokens, distinctQuestions: vectors.size,

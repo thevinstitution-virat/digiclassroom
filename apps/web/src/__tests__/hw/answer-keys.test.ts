@@ -2,7 +2,7 @@
 // outcomes and cache — with a fake retriever, fake trio reader and fake AI. No network.
 
 import { buildKey, keyConfigHash, memoryKeyCache, type KeyDeps, type KeySettings } from '@/lib/hw/keys'
-import { normaliseClass, normaliseMedium, qdrantFilter, scopeOf, subjectValues } from '@/lib/hw/keys/scope'
+import { normaliseClass, normaliseMedium, qdrantFilter, relatedSubjects, scopeOf, subjectValues } from '@/lib/hw/keys/scope'
 import { bestExerciseMatch, exerciseQuestions, jaccard, shingles } from '@/lib/hw/keys/exercise-match'
 import { checkKey, modelFamily, parseVerifierOutput, parseWriterOutput } from '@/lib/hw/keys/checks'
 import { canonicalJson } from '@/lib/hw/keys/cache'
@@ -97,6 +97,14 @@ describe('scope', () => {
   it('a whole-book subject covers its parts; a part does not widen', () => {
     expect(subjectValues('social science')).toEqual(expect.arrayContaining(['Social Science', 'History', 'Geography', 'Economics']))
     expect(subjectValues('History')).toEqual(['History'])
+  })
+  it('related subjects: a whole-book subject and its parts, or the same subject; not unrelated ones', () => {
+    expect(relatedSubjects('Social Science', 'Geography')).toBe(true)
+    expect(relatedSubjects('Geography', 'social science')).toBe(true)
+    expect(relatedSubjects('Science', 'Physics')).toBe(true)
+    expect(relatedSubjects('History', 'Geography')).toBe(false)
+    expect(relatedSubjects('Social Science', 'Anatomy')).toBe(false)
+    expect(relatedSubjects('Anatomy', 'Anatomy')).toBe(true)
   })
   it('the filter is strict: global content only, reference text, class, subject and medium all required', () => {
     const f = qdrantFilter(scopeOf(req({ medium: 'Hindi' })))

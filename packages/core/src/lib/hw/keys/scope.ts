@@ -47,6 +47,16 @@ export function subjectValues(subject: string): string[] {
   return SUBJECT_PARTS[k] ?? [titleCase(k)];
 }
 
+/**
+ * Two subjects are related when either covers the other ("Social Science" and "Geography",
+ * "Science" and "Physics", or the same subject). Related books share content, so a question
+ * from one is not an irrelevant query for the other.
+ */
+export function relatedSubjects(a: string, b: string): boolean {
+  const sa = new Set(subjectValues(a));
+  return subjectValues(b).some((x) => sa.has(x));
+}
+
 export interface KeyScope {
   classLevel: string;
   subjects: string[];
