@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import OnboardingModal from '@/components/onboarding/OnboardingModal'
 import { OnboardingFormData } from '@/types/user-management'
 import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
+import { dcpBoard } from '@/lib/learning-path/legacy'
 
 export default function OnboardingWrapper({ children }: { children: React.ReactNode }) {
     const { user, isLoaded } = useBetterAuthUser()
@@ -41,10 +42,16 @@ export default function OnboardingWrapper({ children }: { children: React.ReactN
     const handleOnboardingComplete = async (data: OnboardingFormData) => {
         try {
             setLoading(true)
+            // With a learning path (curriculum v2), board, class, stream and medium were derived and saved with it:
+            // only the name and role are sent, so nothing overwrites them with the form's defaults.
             const res = await fetch('/api/user/profile', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
+                body: JSON.stringify(data.learningPath ? {
+                    firstName: data.firstName,
+                    lastName: data.lastName,
+                    role: data.role,
+                } : {
                     firstName: data.firstName,
                     lastName: data.lastName,
                     role: data.role,
@@ -65,8 +72,8 @@ export default function OnboardingWrapper({ children }: { children: React.ReactN
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 institutionId: data.institutionId,
-                                requestedClass: data.class,
-                                requestedBoard: data.board,
+                                requestedClass: data.learningPath ? data.learningPath.legacy.gradeLevel : data.class,
+                                requestedBoard: data.learningPath ? dcpBoard(data.learningPath.legacy.board) : data.board,
                             }),
                         })
                     } catch (joinErr) {

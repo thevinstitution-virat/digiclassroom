@@ -69,6 +69,8 @@ export interface OnboardingFormData {
   subjects?: string[]
   /** B2B2C: chosen institution to request to join, or null for an independent (B2C) student. */
   institutionId?: string | null
+  /** Curriculum v2 on: the learning path already saved by the studies step; board/class/medium come from it. */
+  learningPath?: import('../lib/learning-path/client').LearningPath
 }
 
 // Material Item

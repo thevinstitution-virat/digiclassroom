@@ -14,6 +14,8 @@ import {
     decimal,
     date,
     foreignKey,
+    uuid,
+    primaryKey,
 } from 'drizzle-orm/pg-core';
 
 // ============================================================================
@@ -73,6 +75,8 @@ export const enhancedUserProfiles = pgTable('enhanced_user_profiles', {
     performanceMetrics: json('performance_metrics'),
     difficultyPreferences: json('difficulty_preferences'),
     isOnboardingComplete: boolean('is_onboarding_complete').default(false),
+    /** "I'm just exploring" instead of saying what they study (016_learning_path.sql): do not ask again. */
+    learningPathSkippedAt: timestamp('learning_path_skipped_at', { withTimezone: true }),
 
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()),
@@ -1608,3 +1612,23 @@ export const appConfig = pgTable('app_config', {
   sessionTimeoutMinutes: integer('session_timeout_minutes').default(60).notNull(),
   updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()),
 });
+
+// What a learner is studying (curriculum v2 goals; 016_learning_path.sql, docs/learning-path.md). A snapshot of each
+// node, since there are no taxonomy tables here; for a learner signed in with Vidyaverse, a copy of Vidyaverse's.
+export const userLearningGoal = pgTable('user_learning_goal', {
+  userId: varchar('user_id', { length: 255 }).notNull().references(() => user.id, { onDelete: 'cascade' }),
+  nodeId: uuid('node_id').notNull(),
+  isPrimary: boolean('is_primary').notNull().default(false),
+  nodeCode: text('node_code').notNull(),
+  nodeName: text('node_name').notNull(),
+  nodeType: text('node_type').notNull(),
+  nodePath: text('node_path').notNull(),
+  verification: text('verification').notNull().default('verify'),
+  gradeLevel: integer('grade_level'),
+  combinationCode: text('combination_code'),
+  combinationName: text('combination_name'),
+  source: text('source', { enum: ['self', 'institution'] }).notNull().default('self'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  pk: primaryKey({ columns: [t.userId, t.nodeId] }),
+}));

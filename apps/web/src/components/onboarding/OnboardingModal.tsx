@@ -21,6 +21,8 @@ import {
   Search,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { LearningPathEditor } from '@/components/curriculum/LearningPathEditor'
+import { getLearningPathStatus, setLearningPath, type GoalInput } from '@/lib/learning-path/client'
 import {
   OnboardingFormData,
   UserRole,
@@ -41,7 +43,7 @@ interface ValidationErrors {
 
 interface Institution { id: string; name: string; type?: string | null }
 
-type StepKey = 'identity' | 'role' | 'institution' | 'board' | 'medium' | 'class' | 'stream'
+type StepKey = 'identity' | 'role' | 'institution' | 'board' | 'medium' | 'class' | 'stream' | 'studies'
 
 const fadeVariants = {
   hidden: { opacity: 0, y: 15, scale: 0.98 },
@@ -94,8 +96,13 @@ export default function OnboardingModal({ isOpen, onComplete, onSkip }: Onboardi
   const [memberOrg, setMemberOrg] = useState<{ organizationId: string; name: string } | null>(null)
   const [instSearch, setInstSearch] = useState('')
 
+  // Curriculum v2 on: one "What are you studying?" step (the shared learning path, docs/learning-path.md) replaces
+  // board, medium, class and stream, which are then derived from it.
+  const [studiesEnabled, setStudiesEnabled] = useState(false)
+
   useEffect(() => {
     if (!isOpen) return
+    void getLearningPathStatus().then(setStudiesEnabled)
     fetch('/api/institutions/membership').then((r) => r.json()).then((d) => {
       if (d?.success && d.member) setMemberOrg(d.member)
     }).catch(() => {})
@@ -111,10 +118,14 @@ export default function OnboardingModal({ isOpen, onComplete, onSkip }: Onboardi
   const steps = useMemo<StepKey[]>(() => {
     const s: StepKey[] = ['identity', 'role']
     if (!membershipLocked) s.push('institution')
+    if (studiesEnabled) {
+      s.push('studies')
+      return s
+    }
     s.push('board', 'medium', 'class')
     if (needsStream) s.push('stream')
     return s
-  }, [membershipLocked, needsStream])
+  }, [membershipLocked, needsStream, studiesEnabled])
 
   const totalSteps = steps.length
   const currentKey = steps[Math.min(currentStep, totalSteps) - 1]
@@ -155,6 +166,22 @@ export default function OnboardingModal({ isOpen, onComplete, onSkip }: Onboardi
       setIsSubmitting(false)
     }
   }
+
+  /** The studies step saves the learning path itself, then completes onboarding with it. */
+  const finishWithStudies = async (input: { goals?: GoalInput[]; skip?: boolean; medium?: string }): Promise<string | null> => {
+    const res = await setLearningPath(input)
+    if (!res.success) return res.error
+    setIsSubmitting(true)
+    try {
+      await onComplete({ ...formData, learningPath: res.data })
+    } finally {
+      setIsSubmitting(false)
+    }
+    return null
+  }
+
+  const studiesQuestion =
+    formData.role === 'teacher' ? 'What do you teach?' : formData.role === 'parent' ? 'What is your child studying?' : 'What are you studying?'
 
   const updateFormData = (updates: Partial<OnboardingFormData>) => {
     setFormData(prev => ({ ...prev, ...updates }))
@@ -400,6 +427,24 @@ export default function OnboardingModal({ isOpen, onComplete, onSkip }: Onboardi
           </motion.div>
         )
 
+      // ===== Studies (curriculum v2) =====
+      case 'studies':
+        return (
+          <motion.div variants={fadeVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
+            <div className="text-center mb-2">
+              <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-orange-600 to-blue-600">{studiesQuestion}</h3>
+              <p className="text-muted-foreground mt-2">
+                A board&apos;s class, a degree, an exam you are preparing for. We match your materials, tutor and practice to it.
+              </p>
+            </div>
+            <LearningPathEditor
+              submitLabel={isSubmitting ? 'Finishing…' : 'Complete Setup'}
+              onSubmit={(goals, medium) => finishWithStudies({ goals, medium })}
+              onSkip={(medium) => finishWithStudies({ skip: true, medium })}
+            />
+          </motion.div>
+        )
+
       default:
         return null
     }
@@ -449,14 +494,14 @@ export default function OnboardingModal({ isOpen, onComplete, onSkip }: Onboardi
               </Button>
               <div className="flex items-center space-x-3">
                 {onSkip && currentStep === 1 && <Button variant="ghost" onClick={onSkip} className="text-muted-foreground hover:text-foreground">Skip for now</Button>}
-                <Button onClick={isLastStep ? handleSubmit : handleNext} disabled={isSubmitting}
+                {currentKey !== 'studies' && <Button onClick={isLastStep ? handleSubmit : handleNext} disabled={isSubmitting}
                   className="flex items-center gap-2 font-semibold shadow-lg rounded-xl px-6 bg-gradient-to-r from-orange-500 to-blue-600 hover:from-orange-600 hover:to-blue-700 text-white border-0" size="lg">
                   {isLastStep ? (
                     isSubmitting ? <><Sparkles className="h-4 w-4 animate-spin" /> Finalizing...</> : <>Complete Setup <CheckCircle2 className="h-4 w-4" /></>
                   ) : (
                     <>Continue <ChevronRight className="h-4 w-4" /></>
                   )}
-                </Button>
+                </Button>}
               </div>
             </div>
           </div>

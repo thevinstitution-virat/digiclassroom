@@ -7,6 +7,7 @@ import { db } from '@/db'
 import { user } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { subscriptionValidationService } from '@/lib/services/subscription-validation-service'
+import { hasLearningPath, learningPathEnabled } from '@/lib/learning-path/service'
 
 // Validation schema for user profile from frontend
 const UserProfileSchema = z.object({
@@ -79,12 +80,13 @@ export async function GET(request: NextRequest) {
     const name = session?.user?.name || ''
     const hasName = name.trim().length > 0
 
-    // An onboarding is fully complete ONLY if all required fields are present
+    // An onboarding is fully complete ONLY if all required fields are present. With curriculum v2 a saved learning
+    // path (or "just exploring") stands in for board and class: a JEE aspirant or a degree student has no school
+    // grade, and asking again would loop them back into onboarding for ever.
     const isComplete = Boolean(
       hasName &&
-      profile.board_type &&
-      profile.grade_level &&
-      profile.language_preference
+      profile.language_preference &&
+      ((profile.board_type && profile.grade_level) || (learningPathEnabled() && (await hasLearningPath(userId))))
     )
 
     return NextResponse.json({
@@ -114,6 +116,21 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     console.log('[PROFILE POST] body:', JSON.stringify(body))
+    // With curriculum v2 the learning path (PUT /api/user/learning-path, saved first) has already written board,
+    // class, stream and medium: onboarding then sends only the name and role.
+    if (learningPathEnabled() && body && body.board === undefined && body.class === undefined) {
+      const basics = UserProfileSchema.pick({ firstName: true, lastName: true, role: true }).parse(body)
+      if (!(await hasLearningPath(userId))) {
+        return NextResponse.json({ error: 'Say what you are studying first' }, { status: 400 })
+      }
+      // Keys are column names here; is_onboarding_complete was already set by the learning path.
+      await profileService.updateUserProfile(userId, {
+        role: (basics.role === 'parent' || basics.role === 'guardian') ? 'parent_guardian' : basics.role as any,
+      })
+      await db.update(user).set({ name: `${basics.firstName} ${basics.lastName}`.trim() }).where(eq(user.id, userId))
+      return NextResponse.json({ success: true, data: mapToFrontendProfile(await profileService.getUserProfile(userId)), message: 'Profile updated successfully' })
+    }
+
     const validatedData = UserProfileSchema.parse(body)
     console.log('[PROFILE POST] validated:', JSON.stringify(validatedData))
 
