@@ -21,6 +21,7 @@ import useSWR, { mutate } from 'swr'
 import UploadProgressModal from '@/components/admin/UploadProgressModal'
 import ContentOverview from '@/components/admin/ContentOverview'
 import DocumentManagement from '@/components/admin/DocumentManagement'
+import MarkdownChapterUploader from '@/components/admin/MarkdownChapterUploader'
 import {
   getDomains,
   getCourses,
@@ -116,7 +117,6 @@ export default function UploadPage() {
   const lastFormRef = useRef<FormData | null>(null)
   const [activeTab, setActiveTab] = useState<'upload' | 'overview' | 'manage'>('upload')
   const [ingestMode, setIngestMode] = useState<'pdf' | 'markdown'>('pdf')
-  const [mdSkipped, setMdSkipped] = useState<string[]>([])
   // Cascading hierarchy: domain → course → level → subject → book → medium → title.
   // domain/course/level hold taxonomy IDs; subject/book/medium hold display values.
   const [formData, setFormData] = useState({
@@ -130,60 +130,10 @@ export default function UploadPage() {
     bookTitle: ''
   })
 
-  const handleMarkdownSubmit = async () => {
-    if (!formData.file) {
-      alert('Please choose an enriched Markdown (.md) file')
-      return
-    }
-    if (!formData.file.name.toLowerCase().endsWith('.md')) {
-      alert('Curated lane expects a .md file. Switch to PDF mode for PDFs.')
-      return
-    }
-
-    setIsUploading(true)
-    setUploadProgress(10)
-    setResult(null)
-    setMdSkipped([])
-    setCurrentStep('Parsing enriched markdown...')
-    setShowProgressModal(true)
-
-    try {
-      const uploadId = Math.random().toString(36).slice(2)
-      setActiveUploadId(uploadId)
-
-      const body = new FormData()
-      body.append('file', formData.file)
-      body.append('uploadId', uploadId)
-
-      setUploadProgress(50)
-      setCurrentStep('Embedding + indexing to Qdrant...')
-
-      const response = await fetch('/api/super-admin/content/ingest-markdown', {
-        method: 'POST',
-        body,
-        headers: { 'X-Upload-Id': uploadId },
-      })
-      const json = await response.json()
-
-      setUploadProgress(100)
-      setCurrentStep(json.success ? 'Indexed successfully!' : 'Failed')
-      setResult(json)
-      setMdSkipped(Array.isArray(json.skipped) ? json.skipped : [])
-      if (!response.ok || !json.success) console.warn('Markdown ingest returned error:', json)
-    } catch (err) {
-      setResult({ success: false, error: err instanceof Error ? err.message : 'Ingest failed' } as unknown as UploadResult)
-    } finally {
-      setIsUploading(false)
-    }
-  }
-
+  // The Markdown lane is not handled here: it has its own component (MarkdownChapterUploader), which chooses the book first
+  // and sends the chapters one at a time. This form is the PDF lane only.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (ingestMode === 'markdown') {
-      await handleMarkdownSubmit()
-      return
-    }
 
     if (!formData.file || !formData.domain || !formData.course || !formData.level || !formData.subject || !formData.book || !formData.medium || !formData.bookTitle) {
       alert('Please complete every step: domain, course, level, subject, book, medium, title and file.')
@@ -477,10 +427,13 @@ export default function UploadPage() {
               <p className="mt-2 text-xs text-muted-foreground">
                 {ingestMode === 'pdf'
                   ? 'Automated OCR + layout + metadata extraction. Use for bulk / un-curated PDFs.'
-                  : 'Human-validated markdown (from a chapter skill). Skips OCR — metadata & printed page numbers are read from the file frontmatter for exact citations.'}
+                  : 'Human-validated markdown, one file per chapter. Choose the book, then upload its chapters one by one. Skips OCR — printed page numbers are read from each file for exact citations.'}
               </p>
             </div>
 
+            {ingestMode === 'markdown' ? (
+              <MarkdownChapterUploader />
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
               {ingestMode === 'pdf' && (() => {
                 const selectCls = "w-full px-4 py-3 bg-muted/40 border border-border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -600,19 +553,12 @@ export default function UploadPage() {
 
               <div>
                 <label className="block text-sm font-medium text-foreground mb-2">
-                  {ingestMode === 'pdf' ? 'PDF File' : 'Enriched Markdown File (.md)'}
+                  PDF File
                 </label>
-                {ingestMode === 'markdown' && (
-                  <p className="mb-2 text-xs text-muted-foreground">
-                    Metadata (book, subject, class, chapter, page numbers) is read from the file&apos;s
-                    <code className="mx-1 px-1 rounded bg-muted">BOOK_METADATA</code>
-                    frontmatter. Only <strong>APPROVED</strong> files are indexed.
-                  </p>
-                )}
                 <div className="relative">
                   <input
                     type="file"
-                    accept={ingestMode === 'pdf' ? '.pdf' : '.md,text/markdown'}
+                    accept=".pdf"
                     onChange={(e) => setFormData({ ...formData, file: e.target.files?.[0] || null })}
                     className="w-full px-4 py-3 bg-muted/40 border border-border rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100"
                     required
@@ -633,23 +579,12 @@ export default function UploadPage() {
                 ) : (
                   <>
                     <Upload className="h-5 w-5" />
-                    <span>{ingestMode === 'pdf' ? 'Upload & Process' : 'Ingest Curated Markdown'}</span>
+                    <span>Upload & Process</span>
                   </>
                 )}
               </button>
-
-              {/* Curated-lane audit trail: what was skipped / flagged */}
-              {ingestMode === 'markdown' && mdSkipped.length > 0 && (
-                <div className="mt-4 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
-                  <p className="text-sm font-semibold text-amber-700 dark:text-amber-300 mb-2">
-                    Reviewer audit — {mdSkipped.length} item(s) skipped or flagged
-                  </p>
-                  <ul className="list-disc pl-5 space-y-1 text-xs text-amber-800 dark:text-amber-200 max-h-40 overflow-y-auto">
-                    {mdSkipped.map((s, i) => <li key={i}>{s}</li>)}
-                  </ul>
-                </div>
-              )}
             </form>
+            )}
 
             {/* Advanced Progress Modal */}
             <UploadProgressModal

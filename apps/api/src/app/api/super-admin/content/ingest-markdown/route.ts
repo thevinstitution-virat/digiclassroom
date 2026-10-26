@@ -5,7 +5,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'node:crypto';
 import { enhancedRAG, type SpineIngestResult } from '@/lib/ai/rag/enhanced-rag-pipeline';
 import { parseEnrichedMarkdown } from '@/lib/content/markdown-ingest-parser';
-import { resolveOrCreateContentItem, registerAsset } from '@/lib/db/content-identity';
+import { identityMismatch, normaliseEdition } from '@/lib/content/chapter-batch';
+import { resolveOrCreateContentItem, registerAsset, type SourceApp } from '@/lib/db/content-identity';
+import { getContentPool } from '@/lib/db/content-connection';
+import { getBook, ensureWorkSourceRef, listBooksWithIsbn } from '@/lib/db/content-works';
 
 /**
  * POST /api/super-admin/content/ingest-markdown
@@ -35,6 +38,16 @@ import { resolveOrCreateContentItem, registerAsset } from '@/lib/db/content-iden
  *   chapter:<n>                       explicit part index, repeatable
  *   asset:<role>[:<part>][:<variant>] any other rendition — pdf, epub, cover, audio
  * Only chapters produce vectors.
+ *
+ * WHICH BOOK, chosen by a person. The upload page lets the super-admin pick the book and then sends its chapters one at
+ * a time. Two optional fields carry that choice and are ENFORCED here, never trusted from the browser:
+ *   contentItemId   the chosen book. Every chapter's frontmatter must belong to it (same ISBN, ISBN-10 and ISBN-13 forms
+ *                   of one number count as the same; if both editions are written they must agree), or the request is
+ *                   refused with 422 before anything is stored. The chapter is attached to THAT work, through its own
+ *                   existing source reference, so it cannot become a second copy of the book.
+ *   newBook=true    a new book is meant. If a book with that ISBN and edition already exists the request is refused with
+ *                   409 and the person is told to select it, instead of the chapter silently joining it.
+ * Without either, behaviour is unchanged (identity from the frontmatter), so existing callers keep working.
  */
 
 /** Roles the shared schema allows (trio migration 005's CHECK constraint). */
@@ -83,6 +96,8 @@ export async function POST(request: NextRequest) {
     const organizationId = (formData.get('organizationId') as string | null)?.trim() || null;
     const force = (formData.get('force') as string) === 'true';
     const forceReason = (formData.get('forceReason') as string | null)?.trim() || null;
+    const selectedWorkId = (formData.get('contentItemId') as string | null)?.trim() || null;
+    const newBook = (formData.get('newBook') as string) === 'true';
 
     const emit = async (step: number, total: number, label: string) => {
       if (!uploadId) return;
@@ -204,11 +219,59 @@ export async function POST(request: NextRequest) {
     }
     parsed.sort((a, b) => a.partIndex - b.partIndex);
 
-    // ── Work identity: frontmatter first, form fields may override ───────────
+    // ── The chosen book, when the page names one ─────────────────────────────
+    // The person picked a book; the files must belong to it. Checked here, with the same rules the page used, because
+    // a browser can be wrong or out of date and a chapter attached to the wrong book is invisible once it is indexed.
+    let selected: { id: string; title: string; isbn: string | null; edition: string | null; sourceApp: SourceApp; localId: string } | null = null;
+    if (selectedWorkId) {
+      const pool = getContentPool();
+      const work = await getBook(pool, selectedWorkId);
+      if (!work) {
+        await emitDone();
+        return NextResponse.json({ success: false, error: 'The selected book no longer exists. Reload the page and choose it again.' }, { status: 404 });
+      }
+      for (const p of parsed) {
+        const why = identityMismatch({ isbn: p.meta.isbn ?? null, edition: p.meta.edition ?? null }, { isbn: work.isbn, edition: work.edition }, `"${work.title}"`);
+        if (why) {
+          await emitDone();
+          return NextResponse.json(
+            { success: false, error: `"${p.file.name}" does not belong to "${work.title}". ${why} Nothing was stored.` },
+            { status: 422 },
+          );
+        }
+      }
+      // Attach through the work's OWN source reference, so the chapter resolves to this exact work and can never become
+      // a second copy of the book. Prefer this app's reference, else the oldest one.
+      const ref = await ensureWorkSourceRef(pool, work.id);
+      selected = { ...work, sourceApp: ref.app, localId: ref.localId };
+    } else if (newBook) {
+      // A NEW book was meant. If that ISBN and edition already exist, joining it silently is exactly the mistake this
+      // upload exists to prevent: say so and let the person select the book.
+      const f0 = parsed[0].meta;
+      const existing = await listBooksWithIsbn(getContentPool());
+      const clash = existing.find(
+        (b) => identityMismatch({ isbn: f0.isbn ?? null, edition: f0.edition ?? null }, b) === null
+          && normaliseEdition(b.edition) === normaliseEdition(f0.edition),
+      );
+      if (clash) {
+        await emitDone();
+        return NextResponse.json(
+          {
+            success: false,
+            error: `A book with ISBN ${clash.isbn}${clash.edition ? ` (${clash.edition})` : ''} already exists: "${clash.title}". ` +
+              `Select it from the list instead of creating a new one. Nothing was stored.`,
+            existingBookId: clash.id,
+          },
+          { status: 409 },
+        );
+      }
+    }
+
+    // ── Work identity: the chosen book, else the frontmatter; form fields may override ──
     const first = parsed[0].meta;
-    const isbn = ((formData.get('isbn') as string | null)?.trim() || first.isbn || '').trim();
-    const title = ((formData.get('bookTitle') as string | null)?.trim() || first.book_title || '').trim();
-    const edition = ((formData.get('edition') as string | null)?.trim() || first.edition || null);
+    const isbn = selected?.isbn ?? ((formData.get('isbn') as string | null)?.trim() || first.isbn || '').trim();
+    const title = selected?.title ?? ((formData.get('bookTitle') as string | null)?.trim() || first.book_title || '').trim();
+    const edition = selected ? (selected.edition ?? first.edition ?? null) : ((formData.get('edition') as string | null)?.trim() || first.edition || null);
 
     if (!isbn || !title) {
       await emitDone();
@@ -221,7 +284,9 @@ export async function POST(request: NextRequest) {
         { status: 422 },
       );
     }
-    const mismatch = parsed.find((p) => p.meta.isbn && p.meta.isbn !== isbn);
+    // With a chosen book the normalised check above already ran (ISBN-10 and -13 forms of one number agree), so an exact
+    // string comparison here would wrongly refuse "81-7450-518-0" against a book recorded as "8174505180".
+    const mismatch = selected ? undefined : parsed.find((p) => p.meta.isbn && p.meta.isbn !== isbn);
     if (mismatch) {
       await emitDone();
       return NextResponse.json(
@@ -234,10 +299,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const localId = (formData.get('localId') as string | null)?.trim() || `isbn:${isbn}`;
+    const localId = selected?.localId ?? ((formData.get('localId') as string | null)?.trim() || `isbn:${isbn}`);
+    const workSourceApp: SourceApp = selected?.sourceApp ?? 'digiclassroom';
     const resolved = await resolveOrCreateContentItem({
-      sourceApp: 'digiclassroom', sourceLocalId: localId, title, isbn, edition,
+      sourceApp: workSourceApp, sourceLocalId: localId, title, isbn, edition,
     });
+    if (selected && resolved.contentItemId !== selected.id) {
+      // Cannot happen while the reference points at the chosen work; if it ever does, storing the chapter under another
+      // work would be the very mistake this lane is built to prevent, so stop.
+      await emitDone();
+      return NextResponse.json(
+        { success: false, error: `Internal check failed: the chapter resolved to a different book than "${selected.title}". Nothing was stored.` },
+        { status: 500 },
+      );
+    }
     const contentItemId = resolved.contentItemId;
 
     const { uploadContentAssetToR2 } = await import('@/lib/services/r2');
@@ -299,11 +374,13 @@ export async function POST(request: NextRequest) {
       let result: SpineIngestResult;
       try {
         result = await enhancedRAG.ingestPart({
-          sourceApp: 'digiclassroom',
+          sourceApp: workSourceApp,
           sourceLocalId: localId,
           contentTitle: title,
-          isbn: p.meta.isbn ?? isbn,
-          edition: p.meta.edition ?? edition,
+          // The chosen book's own ISBN and edition, exactly as recorded: the pipeline compares them as plain strings,
+          // and a file that writes the same ISBN with different hyphens must not be refused as a different book.
+          isbn: selected ? isbn : p.meta.isbn ?? isbn,
+          edition: selected ? edition : p.meta.edition ?? edition,
           lang: p.meta.medium ?? null,
           organizationId,
           // `force` reaches the pipeline, not just the validation gate.
@@ -399,7 +476,7 @@ export async function POST(request: NextRequest) {
         skipped: allSkipped,
         warnings: allWarnings,
         // The spine detail, for anything that wants more than a summary.
-        work: { contentItemId, title, isbn, edition, matchedBy: resolved.matchedBy },
+        work: { contentItemId, title, isbn, edition, matchedBy: resolved.matchedBy, chosen: selected !== null },
         renditions,
         parts: results,
         totals: {
