@@ -37,7 +37,11 @@ const nextConfig: NextConfig = {
     ]
   },
   // Native/heavy deps that must stay external to the server bundle.
-  serverExternalPackages: ['mysql2', 'pdf-parse', 'tesseract.js', 'pdf2pic'],
+  // bullmq is listed because v5.81 imports the OPTIONAL '@valkey/valkey-glide'
+  // driver, which is not installed. Bundling bullmq makes webpack try to resolve
+  // that import and fail the build with "Module not found"; keeping it external
+  // defers the require to runtime, where bullmq falls back to ioredis.
+  serverExternalPackages: ['mysql2', 'pdf-parse', 'tesseract.js', 'pdf2pic', 'bullmq'],
   ...(process.env.TURBOPACK !== '1'
     ? {
         webpack(config, { isServer }: { isServer: boolean }) {
