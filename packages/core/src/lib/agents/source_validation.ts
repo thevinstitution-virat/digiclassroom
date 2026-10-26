@@ -14,6 +14,9 @@ export interface SourceChunk {
   page?: number;
   section?: string;
   confidence_score: number;
+  /** Library hub sources: the stable id a citation stores (survives a re-index of the book). */
+  passage_id?: string;
+  pdf_page?: number;
 }
 
 export interface VerificationResult {

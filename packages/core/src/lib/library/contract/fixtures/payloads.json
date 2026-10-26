@@ -1,0 +1,153 @@
+{
+  "valid": [
+    {
+      "name": "prose passage",
+      "payload": {
+        "payload_version": 2,
+        "work_id": "0b6f3c1e-5d2a-4f7e-9a41-3c2d1e0f9a87",
+        "passage_id": "sci9-en:07:sec:7.2:3",
+        "chapter_no": 7,
+        "section_no": "7.2",
+        "kind": "prose",
+        "block_type": null,
+        "label": null,
+        "page_start": 75,
+        "page_end": 76,
+        "pdf_page": 87,
+        "retrieval_class": "reference",
+        "medium": "en",
+        "canonical_subject": "science",
+        "status": "live",
+        "visibility": "public",
+        "grant_org_ids": [],
+        "revision_id": "5f1c2b3a-4d5e-4f60-8a71-b2c3d4e5f607",
+        "chunk_order": 12,
+        "text": "The speed of an object is the distance travelled per unit time."
+      }
+    },
+    {
+      "name": "intro prose has no section",
+      "payload": {
+        "payload_version": 2,
+        "work_id": "0b6f3c1e-5d2a-4f7e-9a41-3c2d1e0f9a87",
+        "passage_id": "sci9-en:07:sec:intro:1",
+        "chapter_no": 7,
+        "section_no": null,
+        "kind": "prose",
+        "block_type": null,
+        "label": null,
+        "page_start": 72,
+        "page_end": 72,
+        "pdf_page": null,
+        "retrieval_class": "reference",
+        "medium": "en",
+        "canonical_subject": null,
+        "status": "preview",
+        "visibility": "public",
+        "grant_org_ids": [],
+        "revision_id": "5f1c2b3a-4d5e-4f60-8a71-b2c3d4e5f607",
+        "chunk_order": 0,
+        "text": "In everyday life, we see some objects at rest and others in motion."
+      }
+    },
+    {
+      "name": "split example block, org-only",
+      "payload": {
+        "payload_version": 2,
+        "work_id": "0b6f3c1e-5d2a-4f7e-9a41-3c2d1e0f9a87",
+        "passage_id": "sci9-en:07:example:7.2#1",
+        "chapter_no": 7,
+        "section_no": "7.2",
+        "kind": "block",
+        "block_type": "EXAMPLE",
+        "label": "Example 7.2",
+        "page_start": 76,
+        "page_end": 76,
+        "pdf_page": 88,
+        "retrieval_class": "reference",
+        "medium": "en",
+        "canonical_subject": "science",
+        "status": "live",
+        "visibility": "org",
+        "grant_org_ids": ["org_a", "org_b"],
+        "revision_id": "5f1c2b3a-4d5e-4f60-8a71-b2c3d4e5f607",
+        "chunk_order": 14,
+        "text": "A car travels 150 km in 3 h. Find its average speed."
+      }
+    },
+    {
+      "name": "exercise (practice, no section)",
+      "payload": {
+        "payload_version": 2,
+        "work_id": "0b6f3c1e-5d2a-4f7e-9a41-3c2d1e0f9a87",
+        "passage_id": "sci9-en:07:exercise:10",
+        "chapter_no": 7,
+        "section_no": null,
+        "kind": "block",
+        "block_type": "DISCUSSION_PROMPT",
+        "label": "Question 10",
+        "page_start": 85,
+        "page_end": 85,
+        "pdf_page": 97,
+        "retrieval_class": "practice",
+        "medium": "en",
+        "canonical_subject": "science",
+        "status": "live",
+        "visibility": "public",
+        "grant_org_ids": [],
+        "revision_id": "5f1c2b3a-4d5e-4f60-8a71-b2c3d4e5f607",
+        "chunk_order": 40,
+        "text": "An artificial satellite is moving in a circular orbit of radius 42250 km."
+      }
+    },
+    {
+      "name": "summary bullet",
+      "payload": {
+        "payload_version": 2,
+        "work_id": "0b6f3c1e-5d2a-4f7e-9a41-3c2d1e0f9a87",
+        "passage_id": "sci9-en:07:summary:4",
+        "chapter_no": 7,
+        "section_no": null,
+        "kind": "summary",
+        "block_type": null,
+        "label": null,
+        "page_start": 84,
+        "page_end": 84,
+        "pdf_page": 96,
+        "retrieval_class": "reference",
+        "medium": "en",
+        "canonical_subject": "science",
+        "status": "live",
+        "visibility": "private",
+        "grant_org_ids": [],
+        "revision_id": "5f1c2b3a-4d5e-4f60-8a71-b2c3d4e5f607",
+        "chunk_order": 38,
+        "text": "The rate of change of velocity per unit time is acceleration."
+      }
+    }
+  ],
+  "invalid_schema": [
+    { "name": "board is not a payload field", "base": 0, "set": { "board": "CBSE" } },
+    { "name": "classLevel is not a payload field", "base": 0, "set": { "classLevel": "9" } },
+    { "name": "domain is not a payload field", "base": 0, "set": { "domain": "school" } },
+    { "name": "wrong payload_version", "base": 0, "set": { "payload_version": 1 } },
+    { "name": "malformed passage id", "base": 0, "set": { "passage_id": "sci9-en:7:sec:7.2:3" } },
+    { "name": "uppercase uuid", "base": 0, "set": { "work_id": "0B6F3C1E-5D2A-4F7E-9A41-3C2D1E0F9A87" } },
+    { "name": "unknown status", "base": 0, "set": { "status": "draft" } },
+    { "name": "unknown retrieval class", "base": 0, "set": { "retrieval_class": "answer" } },
+    { "name": "fractional page", "base": 0, "set": { "page_start": 75.5 } },
+    { "name": "empty text", "base": 0, "set": { "text": "" } },
+    { "name": "missing revision_id", "base": 0, "unset": ["revision_id"] },
+    { "name": "kind prose with a block id", "base": 0, "set": { "passage_id": "sci9-en:07:example:7.2" } },
+    { "name": "block without block_type", "base": 2, "set": { "block_type": null } },
+    { "name": "lowercase block_type", "base": 2, "set": { "block_type": "example" } },
+    { "name": "medium spelled out", "base": 0, "set": { "medium": "English" } }
+  ],
+  "invalid_rules": [
+    { "name": "chapter_no differs from the id", "base": 0, "set": { "chapter_no": 6 } },
+    { "name": "section_no differs from the prose id", "base": 0, "set": { "section_no": "7.1" } },
+    { "name": "page_end before page_start", "base": 0, "set": { "page_end": 74 } },
+    { "name": "org passage without orgs", "base": 2, "set": { "grant_org_ids": [] } },
+    { "name": "public passage with orgs", "base": 0, "set": { "grant_org_ids": ["org_a"] } }
+  ]
+}

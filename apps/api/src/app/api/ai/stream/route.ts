@@ -18,6 +18,8 @@ import { SourceChunk } from '@/lib/agents/source_validation';
 import { VectorStoreService } from '@/lib/services/vector_store_service';
 import { subscriptionValidationService } from '@/lib/services/subscription-validation-service';
 import { getCurriculumScopeForUser } from '@/lib/curriculum-scope/client';
+import { libraryHubEnabled } from '@/lib/library/search';
+import { libraryScopeForUser } from '@/lib/library/user-scope';
 
 interface StreamingChatRequest {
   message: string;
@@ -174,6 +176,12 @@ export async function POST(request: NextRequest) {
     // unscoped behavior rather than breaking the AI Tutor.
     const taxonomyScopeNodeIds = await getCurriculumScopeForUser(userId);
 
+    // Library hub: search the learner's own goals and medium (their learning path), else the class code of their
+    // board and grade. Off by default (LIBRARY_HUB_ENABLED); the old collection is read as before.
+    const hubScope = libraryHubEnabled()
+      ? (await libraryScopeForUser(userId, { board: body.context.board_type, grade: body.context.grade_level })) ?? undefined
+      : undefined;
+
     // Retrieve relevant textbook content
     const searchResponse = await vectorStoreService.search_relevant_content({
       query: body.message,
@@ -184,6 +192,7 @@ export async function POST(request: NextRequest) {
       content_types: ['text', 'examples', 'definitions'],
       cognitive_level: body.context.bloom_level || 'understand',
       taxonomyScopeNodeIds,
+      hubScope,
     });
 
     // Convert to SourceChunk format
@@ -193,7 +202,9 @@ export async function POST(request: NextRequest) {
       chapter: result.metadata.chapter,
       page: result.metadata.page,
       section: result.metadata.content_type,
-      confidence_score: result.score
+      confidence_score: result.score,
+      passage_id: result.metadata.passage_id,
+      pdf_page: result.metadata.pdf_page ?? undefined
     }));
 
     // Build streaming context

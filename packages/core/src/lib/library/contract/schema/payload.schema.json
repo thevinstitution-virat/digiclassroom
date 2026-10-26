@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pdlms.in/contracts/library-v2/payload.schema.json",
+  "title": "Library v2 passage payload",
+  "description": "The Qdrant payload of one passage in a library v2 collection (library_v2_te3l_3072). No board, class or domain: placements answer those. Cross-field rules the JSON Schema cannot state (chapter_no and section_no equal the passage id's, page_end >= page_start, grant_org_ids only for org) are enforced by the zod schema in src/payload.ts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "payload_version", "work_id", "passage_id", "chapter_no", "section_no", "kind", "block_type", "label",
+    "page_start", "page_end", "pdf_page", "retrieval_class", "medium", "canonical_subject", "status",
+    "visibility", "grant_org_ids", "revision_id", "chunk_order", "text"
+  ],
+  "properties": {
+    "payload_version": { "const": 2 },
+    "work_id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+    "passage_id": {
+      "type": "string",
+      "pattern": "^(?:[a-z0-9]+(?:-[a-z0-9]+)*:[0-9]{2,3}:(?:(?:example|activity|figure|table|exercise|group-activity):A?[0-9]+(?:\\.[0-9]+)*[a-z]?|(?:qbox|box|prompt):p[0-9]+(?:-[1-9][0-9]*)?:[1-9][0-9]*|footnote:p[0-9]+:(?:[*]{1,4}|[0-9]{1,2}|[a-z]|†|‡|§)(?:\\+(?:[*]{1,4}|[0-9]{1,2}|[a-z]|†|‡|§))*)(?:#[1-9][0-9]*)?|[a-z0-9]+(?:-[a-z0-9]+)*:[0-9]{2,3}:sec:(?:[0-9]+(?:\\.[0-9]+)*|[a-z0-9]+(?:-[a-z0-9]+)*):[1-9][0-9]*|[a-z0-9]+(?:-[a-z0-9]+)*:[0-9]{2,3}:summary:[1-9][0-9]*)$"
+    },
+    "chapter_no": { "type": "integer", "minimum": 0 },
+    "section_no": { "type": ["string", "null"], "pattern": "^[0-9]+(?:\\.[0-9]+)*$" },
+    "kind": { "enum": ["prose", "block", "summary"] },
+    "block_type": { "type": ["string", "null"], "pattern": "^[A-Z][A-Z0-9_]*$" },
+    "label": { "type": ["string", "null"], "minLength": 1 },
+    "page_start": { "type": "integer", "minimum": 0 },
+    "page_end": { "type": "integer", "minimum": 0 },
+    "pdf_page": { "type": ["integer", "null"], "minimum": 1 },
+    "retrieval_class": { "enum": ["reference", "practice"] },
+    "medium": { "type": "string", "pattern": "^[a-z]{2,3}$" },
+    "canonical_subject": { "type": ["string", "null"], "pattern": "^[a-z][a-z0-9-]*$" },
+    "status": { "enum": ["preview", "live"] },
+    "visibility": { "enum": ["public", "org", "private"] },
+    "grant_org_ids": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "revision_id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+    "chunk_order": { "type": "integer", "minimum": 0 },
+    "text": { "type": "string", "minLength": 1 }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "kind": { "const": "prose" } } },
+      "then": {
+        "properties": {
+          "passage_id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*:[0-9]{2,3}:sec:(?:[0-9]+(?:\\.[0-9]+)*|[a-z0-9]+(?:-[a-z0-9]+)*):[1-9][0-9]*$" },
+          "block_type": { "type": "null" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "block" } } },
+      "then": {
+        "properties": {
+          "passage_id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*:[0-9]{2,3}:(?:(?:example|activity|figure|table|exercise|group-activity):A?[0-9]+(?:\\.[0-9]+)*[a-z]?|(?:qbox|box|prompt):p[0-9]+(?:-[1-9][0-9]*)?:[1-9][0-9]*|footnote:p[0-9]+:(?:[*]{1,4}|[0-9]{1,2}|[a-z]|†|‡|§)(?:\\+(?:[*]{1,4}|[0-9]{1,2}|[a-z]|†|‡|§))*)(?:#[1-9][0-9]*)?$" },
+          "block_type": { "type": "string" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "kind": { "const": "summary" } } },
+      "then": {
+        "properties": {
+          "passage_id": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*:[0-9]{2,3}:summary:[1-9][0-9]*$" },
+          "block_type": { "type": "null" }
+        }
+      }
+    }
+  ]
+}

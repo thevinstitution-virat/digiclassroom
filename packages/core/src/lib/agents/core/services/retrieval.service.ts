@@ -4,6 +4,7 @@ import { logger } from '@/lib/logger';
 
 import { VectorStoreService, EducationalContext, SearchResponse, ContentResult } from '@/lib/services/vector_store_service';
 import { getCachedRAGResult, setCachedRAGResult } from './cache.service';
+import { scopeOfContext, scopeToken } from '../../../library/scope';
 import { ScopedWebSearchService } from '@/lib/services/ScopedWebSearchService';
 
 /**
@@ -27,6 +28,7 @@ export class RetrievalService {
             subject: context.subject,
             grade: context.grade_level,
             organizationId: context.organizationId,
+            hubScope: scopeToken(scopeOfContext(context)),
         });
         if (cached) {
             logger.info(`\u26a1 [RetrievalService] Cache hit for: ${context.query.substring(0, 40)}...`);
@@ -50,7 +52,7 @@ export class RetrievalService {
 
         // Phase 4 pre-flight: shorter cache for web-enriched responses (current affairs)
         const cacheTtl = webResults && webResults.length > 0 ? 3600 : 604800; // 1hr vs 7 days
-        await setCachedRAGResult({ query: context.query, subject: context.subject, grade: context.grade_level, organizationId: context.organizationId }, finalResponse, cacheTtl);
+        await setCachedRAGResult({ query: context.query, subject: context.subject, grade: context.grade_level, organizationId: context.organizationId, hubScope: scopeToken(scopeOfContext(context)) }, finalResponse, cacheTtl);
         return finalResponse;
     }
 
@@ -60,6 +62,7 @@ export class RetrievalService {
             subject: context.subject,
             grade: context.grade_level,
             organizationId: context.organizationId,
+            hubScope: scopeToken(scopeOfContext(context)),
         });
         if (cached)
   return { ...cached, search_strategy: cached.search_strategy + '_cached' };
@@ -79,7 +82,7 @@ export class RetrievalService {
             webContext: webResults || undefined
         };
 
-        await setCachedRAGResult({ query: context.query, subject: context.subject, grade: context.grade_level, organizationId: context.organizationId }, finalResponse);
+        await setCachedRAGResult({ query: context.query, subject: context.subject, grade: context.grade_level, organizationId: context.organizationId, hubScope: scopeToken(scopeOfContext(context)) }, finalResponse);
         return finalResponse;
     }
 
@@ -89,13 +92,14 @@ export class RetrievalService {
             subject: context.subject,
             grade: context.grade_level,
             organizationId: context.organizationId,
+            hubScope: scopeToken(scopeOfContext(context)),
         });
         if (cached)
   return { ...cached, search_strategy: cached.search_strategy + '_cached' };
 
         const response = await this.vectorService.search_homework_content(context);
         const reranked = await this.applyReranking(context.query, response, context.limit);
-        await setCachedRAGResult({ query: context.query, subject: context.subject, grade: context.grade_level, organizationId: context.organizationId }, reranked);
+        await setCachedRAGResult({ query: context.query, subject: context.subject, grade: context.grade_level, organizationId: context.organizationId, hubScope: scopeToken(scopeOfContext(context)) }, reranked);
         return reranked;
     }
 

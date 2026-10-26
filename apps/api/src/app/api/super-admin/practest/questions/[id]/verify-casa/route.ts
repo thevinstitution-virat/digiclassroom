@@ -12,6 +12,8 @@ import { db } from '@/db'
 import { practestQuestionBank as Q } from '@/db/schema'
 import { eq } from 'drizzle-orm'
 import { qdrantSearch } from '@/lib/ai/rag/qdrant-search'
+import { libraryHubEnabled } from '@/lib/library/search'
+import { casaTopMatch } from '@/lib/library/casa'
 
 const THRESHOLD = Number(process.env.CASA_VERIFY_THRESHOLD ?? '0.45')
 
@@ -34,14 +36,20 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     // Search the SAME corpus the AI tutor cites. super_admin → whole corpus (global NCERT + all orgs).
     let top: { id: string | number; content: string; score: number; metadata?: { page?: number; chapter?: string } } | null = null
     try {
-      const resp = await qdrantSearch.search(claim, {
-        subject: q.subject ?? undefined,
-        classLevel: q.classLevel != null ? String(q.classLevel) : undefined,
-        board: q.board ?? undefined,
-        organizationId: null,
-        topK: 5,
-      })
-      top = resp.results?.[0] ?? null
+      if (libraryHubEnabled()) {
+        // Library hub: scoped by the question's board, class and subject; the anchor becomes the passage id.
+        const m = await casaTopMatch(claim, { board: q.board, classLevel: q.classLevel, subject: q.subject })
+        top = m ? { id: m.id, content: m.content, score: m.score, metadata: { page: m.page ?? undefined, chapter: m.chapter ?? undefined } } : null
+      } else {
+        const resp = await qdrantSearch.search(claim, {
+          subject: q.subject ?? undefined,
+          classLevel: q.classLevel != null ? String(q.classLevel) : undefined,
+          board: q.board ?? undefined,
+          organizationId: null,
+          topK: 5,
+        })
+        top = resp.results?.[0] ?? null
+      }
     } catch (e) {
       console.error('[verify-casa] corpus search failed:', e)
       return NextResponse.json(
@@ -58,6 +66,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
         casaVerified: verified,
         // Capture the matched chunk as the anchor if one isn't set yet (edition-resilient locator).
         ...(verified && top && !q.casaAnchor ? { casaAnchor: String(top.id) } : {}),
+        ...(verified && top && libraryHubEnabled() && !q.casaPage && top.metadata?.page ? { casaPage: top.metadata.page } : {}),
       })
       .where(eq(Q.id, params.id))
 

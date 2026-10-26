@@ -1,0 +1,24 @@
+{
+  "name": "library-v2",
+  "version": "2.1.0",
+  "released": "2026-10-26",
+  "point_id_namespace": "8fa6d651-f95a-49d8-a753-f3f06fc98958",
+  "collection": "library_v2_te3l_3072",
+  "bundle_sha256": "a934e9dff51eaae4817a7ba5773c166ee230ce1fd6437c46d5b7f0a7db90dc13",
+  "files": {
+    "README.md": "bfa86e5176212d94f8ab7df0fddaae36c56f074138f2f6114e36096b2bc7cb98",
+    "fixtures/passage-ids.json": "e13b9296a6564fea11d3e9ac9706a57864a674400bbff5c9668e2d26b7e4b56f",
+    "fixtures/payloads.json": "5533b578e0a192de5dd7a4c3bbfad0193ad3e36cf1cda22f5bfb3486eed006bd",
+    "fixtures/point-ids.json": "8ec8549dfe0d7f14e763ae0ec9af3363a756e2a3eaaaaa0aac1d9b60f064319f",
+    "fixtures/skill-ch01-ids.json": "1224fd018383cae49eeba5c37dfd80829ee10e3f98e00c36441bddc179e69569",
+    "schema/payload.schema.json": "69aec56b3381591841d072ffe0bac15ade10fcd2ed8e647d090d5b8fb8d07ef1",
+    "scripts/vendor.mjs": "96ab39fbdcf1d57ead1348e2512f27d3f56fcb723c80e16e38630f18859e23de",
+    "src/collection.ts": "4e61fca10a8caa6121816fbe9b79cce5d93777864b0853c876d1e3a811e848ba",
+    "src/content-sha.ts": "0d42ed2f4ed03bb766611409e1f8413b623055a27b00cae74afe9d0894f9cc3f",
+    "src/index.ts": "c7d7c9d419a74c590ae6c0a1566d6e912b4c3b478a5df4fdcf908bc3e9fe0855",
+    "src/passage-id.ts": "6fdfd3230e75c3b1109fa8e0413f5ce7966fe90adf8cac4ad37b13fd954b122a",
+    "src/payload.ts": "91264a149118b52a93cb2738f9aab5643edb81fef6ca67884aa46ff933b676f8",
+    "src/point-id.ts": "4e8b26ea324dd21fe3198608953453f88b59ed0f246fed255b133333e7bc0adb",
+    "test/contract.spec.ts": "d86509fdeae4e3b39af89116d0f18e709ed6e65372935b7866277d9585dfba02"
+  }
+}

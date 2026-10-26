@@ -69,6 +69,9 @@ export interface NCERTCitation {
 
     /** Extraction method used (e.g. "pdf-extract-kit", "docling") */
     extractionMethod?: string;
+
+    /** Library hub passages: the stable passage id this citation points at (survives a re-index of the book). */
+    passageId?: string;
 }
 
 // =============================================================================

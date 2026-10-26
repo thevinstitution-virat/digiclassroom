@@ -14,6 +14,7 @@ import { cacheKeyOf, canonicalJson, sha256, type CachedKey, type KeyCache } from
 import { checkKey, modelFamily, parseVerifierOutput, parseWriterOutput } from './checks';
 import { buildCitation } from './citations';
 import { bestExerciseMatch } from './exercise-match';
+import { retrieveTextbookFromHub, type HubKeySource } from './hub-retrieval';
 import type { Retriever, VectorHit } from './retriever';
 import { qdrantFilter, scopeOf, type KeyScope } from './scope';
 import type { TrioReader } from './trio';
@@ -43,6 +44,8 @@ export interface OfficialScheme {
 
 export interface KeyDeps {
   retriever: Retriever;
+  /** Library hub (LIBRARY_HUB_ENABLED): textbook retrieval goes here instead of `retriever` and `trio`. */
+  hub?: HubKeySource;
   trio: TrioReader;
   generate: (provider: AiProvider, call: AiCall) => Promise<AiResult>;
   cache?: KeyCache;
@@ -95,7 +98,7 @@ const callOf = (role: 'writer' | 'verifier', provider: AiProvider, r: AiResult):
 export async function buildKey(req: KeyRequest, deps: KeyDeps, settings: KeySettings): Promise<KeyResult> {
   validateRequest(req);
   assertDifferentFamilies(settings);
-  const configHash = keyConfigHash(settings, deps.retriever.indexId);
+  const configHash = keyConfigHash(settings, deps.hub ? deps.hub.indexId : deps.retriever.indexId);
   const notes: string[] = [];
   const calls: KeyCallUsage[] = [];
   const meta = () => ({ notes, calls, configHash, fromCache: false });
@@ -150,6 +153,15 @@ type Retrieved =
 
 /** Strict textbook retrieval for a question: scope, exercise anchor, R_min gate, content-table text. */
 async function retrieveTextbook(req: KeyRequest, deps: KeyDeps, settings: KeySettings, rMin: number, notes: string[], calls: KeyCallUsage[]): Promise<Retrieved> {
+  if (deps.hub) {
+    try {
+      return await retrieveTextbookFromHub(req, deps.hub, { rMin, theta: settings.theta, topK: settings.topK, maxPassages: settings.maxPassages, pagesVerified: settings.pagesVerified }, notes);
+    } catch (e) {
+      if (e instanceof HwError) throw e;
+      // Hub down, wrong credentials, search off: a mechanism failure is an error, never "no book".
+      throw new HwError('PROVIDER_ERROR', 'Textbook search failed.', `library hub: ${(e as Error).message}`);
+    }
+  }
   let scope: KeyScope;
   try {
     scope = scopeOf(req);

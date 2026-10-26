@@ -88,7 +88,14 @@ export async function setCachedEmbedding(text: string, vector: number[]): Promis
 
 // ─── RAG Result Cache ─────────────────────────────────────────────────────────
 
-interface RagCacheKey { query: string; subject: string; grade: number; organizationId?: string | null }
+interface RagCacheKey { query: string; subject: string; grade: number; organizationId?: string | null; /** scopeToken of the library scope; part of the key only while the library hub is on. */ hubScope?: string }
+
+// While the library hub is on the learner's scope (goals + medium) is part of the key too: the hub answers per scope,
+// so one learner's cached passages must not be served to another with other goals.
+function ragKeyOf(params: RagCacheKey): string {
+    const hub = process.env.LIBRARY_HUB_ENABLED === 'true' ? `|hub:${params.hubScope ?? 'noscope'}` : '';
+    return `rag:${hashKey(`${orgCacheToken(params.organizationId)}|${params.query}|${params.subject}|${params.grade}${hub}`)}`;
+}
 
 // 🛡️ Batch 2b: org scope must be part of the RAG cache key so one org's cached
 // retrieval can never be served to another. null (platform-all) and undefined
@@ -104,7 +111,7 @@ export async function getCachedRAGResult<T>(params: RagCacheKey): Promise<T | nu
     if (!client)
   return null;
     try {
-        const key = `rag:${hashKey(`${orgCacheToken(params.organizationId)}|${params.query}|${params.subject}|${params.grade}`)}`;
+        const key = ragKeyOf(params);
         const raw = await client.get(key);
         return raw ? (JSON.parse(raw) as T) : null;
     } catch { return null; }
@@ -114,7 +121,7 @@ export async function setCachedRAGResult<T>(params: RagCacheKey, result: T, ttl?
     const client = await getClient();
     if (!client) return;
     try {
-        const key = `rag:${hashKey(`${orgCacheToken(params.organizationId)}|${params.query}|${params.subject}|${params.grade}`)}`;
+        const key = ragKeyOf(params);
         await client.setex(key, ttl ?? TTL.rag, JSON.stringify(result));
     } catch { /* non-blocking */ }
 }

@@ -55,6 +55,7 @@ export async function retrievalNode(state: TutorState): Promise<Partial<TutorSta
             contentExcerpt: r.text.slice(0, 100),
             citationFormat: `NCERT Class ${r.metadata.class_level} ${r.metadata.subject}, Chapter ${r.metadata.chapter}, Page ${r.metadata.page}`,
             confidence: r.score,
+            ...(r.metadata.passage_id ? { passageId: r.metadata.passage_id } : {}),
         }));
 
     // Combine NCERT + web citations into AnyCitation[]

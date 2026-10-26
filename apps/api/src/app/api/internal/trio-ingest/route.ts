@@ -1,3 +1,5 @@
+import { legacyIngestionDisabled } from '@/lib/library/search';
+import { LEGACY_INGESTION_GONE } from '@/lib/library/legacy-lanes';
 import { NextRequest, NextResponse } from 'next/server'
 import { createHash } from 'node:crypto'
 import { enhancedRAG, type SpineIngestResult } from '@/lib/ai/rag/enhanced-rag-pipeline'
@@ -29,6 +31,8 @@ const MAX_BYTES = 5 * 1024 * 1024
 const sha256 = (buf: Buffer) => createHash('sha256').update(buf).digest('hex')
 
 export async function POST(request: NextRequest) {
+  // Phase 7: the library hub is the only writer once LEGACY_INGESTION_DISABLED is on.
+  if (legacyIngestionDisabled()) return NextResponse.json(LEGACY_INGESTION_GONE, { status: 410 });
   const providedSecret = request.headers.get('x-trio-service-secret')
   const expectedSecret = process.env.TRIO_SERVICE_SECRET
   if (!expectedSecret) {

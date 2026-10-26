@@ -3,6 +3,8 @@
 import { generateWith } from '../ai';
 import { getHwConfig } from '../config';
 import type { KeyCache } from './cache';
+import { EMBED_MODEL, LIBRARY_V2_COLLECTION } from '../../library/contract/src';
+import { libraryHubEnabled, searchLibrary } from '../../library/search';
 import { gyankoshRetriever, type Retriever } from './retriever';
 import type { KeyDeps } from './service';
 import { trioReader, type TrioReader } from './trio';
@@ -20,6 +22,11 @@ export function defaultKeyDeps(opts: { cache?: KeyCache; official?: KeyDeps['off
   const r = () => (retriever ??= gyankoshRetriever());
   const t = () => (trio ??= trioReader());
   return {
+    // Hub mode: textbook retrieval is the library hub's. No direct-read fallback (it cannot apply the scope), so an
+    // outage is an error, not a key built from whatever was reachable.
+    hub: libraryHubEnabled()
+      ? { indexId: `hub|${LIBRARY_V2_COLLECTION}|${EMBED_MODEL}`, search: (req) => searchLibrary(req, { direct: null }) }
+      : undefined,
     retriever: {
       // Same value gyankoshRetriever() reports, from settings alone (it goes into the config hash).
       get indexId() { const c = getHwConfig(); return `${c.QDRANT_COLLECTION_NAME ?? 'unset'}|${c.HW_KEY_EMBED_MODEL}`; },

@@ -26,6 +26,11 @@ export interface KeyRequest {
   officialRef?: { kind: 'sqp' | 'past_paper'; session: string; subjectCode: string; questionNo: string };
   competency?: string;
   passageText?: string;
+  /**
+   * Library hub scope (curriculum v2 node ids or codes, or work ids), used while LIBRARY_HUB_ENABLED is on. Absent, the
+   * scope is the CBSE class and subject above. In hub mode `bookHint.contentItemId` is a hub work id.
+   */
+  library?: { nodeIds?: string[]; nodeCodes?: string[]; workIds?: string[] };
 }
 
 export type ValuePointKind = 'key_point' | 'step' | 'unit' | 'format' | 'competency';

@@ -1,3 +1,5 @@
+import { legacyIngestionDisabled } from '@/lib/library/search';
+import { LEGACY_INGESTION_GONE } from '@/lib/library/legacy-lanes';
 import { auth } from '@/auth';
 import { isPlatformStaff, type Role } from '@/auth/permissions';
 import { headers } from 'next/headers';
@@ -68,6 +70,8 @@ const sha256 = (buf: Buffer) => createHash('sha256').update(buf).digest('hex');
 const extOf = (name: string) => (name.split('.').pop() || '').toLowerCase();
 
 export async function POST(request: NextRequest) {
+  // Phase 7: the library hub is the only writer once LEGACY_INGESTION_DISABLED is on.
+  if (legacyIngestionDisabled()) return NextResponse.json(LEGACY_INGESTION_GONE, { status: 410 });
   const startedAt = Date.now();
   try {
     const session = await auth.api.getSession({ headers: await headers() });

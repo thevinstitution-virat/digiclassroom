@@ -5,6 +5,8 @@
 
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { qdrantSearch } from '../ai/rag/qdrant-search';
+import { libraryHubEnabled } from '../library/search';
+import { scopeOfContext, scopeToken, type HubScope } from '../library/scope';
 import type { ICacheService } from './interfaces';
 import { RedisCacheService } from './implementations/redis-cache.service';
 
@@ -33,6 +35,11 @@ export interface EducationalContext {
    * taxonomyScopeNodeIds for the actual filter semantics.
    */
   taxonomyScopeNodeIds?: string[];
+  /**
+   * Library hub scope: the learner's goals and medium (lib/library/user-scope.ts). Used while LIBRARY_HUB_ENABLED is
+   * on; absent, the scope is the class code of `board_type` and `grade_level`.
+   */
+  hubScope?: HubScope;
 }
 
 export interface ContentResult {
@@ -45,6 +52,11 @@ export interface ContentResult {
     content_type: string;
     source: string;
     relevance_score: number;
+    /** Library hub results: the stable id a citation or a quiz item stores, and where the passage is. */
+    passage_id?: string;
+    work_id?: string;
+    pdf_page?: number | null;
+    label?: string | null;
   };
   score: number;
 }
@@ -103,7 +115,9 @@ export class VectorStoreService {
       const scopeKeyPart = context.taxonomyScopeNodeIds?.length
         ? [...context.taxonomyScopeNodeIds].sort().join(',')
         : 'unscoped';
-      const cacheKey = `vector_search:${orgKeyPart}:${scopeKeyPart}:${context.query}:${context.grade_level}:${context.subject}:${context.board_type}`;
+      // The hub answers per learner scope (goals + medium), so that is part of the key while it is on.
+      const hubKeyPart = libraryHubEnabled() ? `:hub=${scopeToken(scopeOfContext(context))}` : '';
+      const cacheKey = `vector_search:${orgKeyPart}:${scopeKeyPart}:${context.query}:${context.grade_level}:${context.subject}:${context.board_type}${hubKeyPart}`;
       const cachedResult = await this.cacheService.get<SearchResponse>(cacheKey);
 
       if (cachedResult) {
@@ -132,6 +146,7 @@ export class VectorStoreService {
         organizationId: context.organizationId,
         // Shared cross-repo curriculum taxonomy scope.
         taxonomyScopeNodeIds: context.taxonomyScopeNodeIds,
+        hubScope: scopeOfContext(context) ?? undefined,
       };
 
       const qdrantResponse = await qdrantSearch.search(context.query, searchOptions);
@@ -150,7 +165,11 @@ export class VectorStoreService {
           content_type: result.metadata.content_type || 'text',
         // @ts-ignore
           source: result.metadata.source || 'textbook',
-          relevance_score: result.score
+          relevance_score: result.score,
+          passage_id: result.metadata.passage_id,
+          work_id: result.metadata.work_id,
+          pdf_page: result.metadata.pdf_page,
+          label: result.metadata.label
         },
         score: result.score
       }));

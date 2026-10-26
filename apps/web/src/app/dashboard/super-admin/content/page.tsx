@@ -313,6 +313,11 @@ export default function UploadPage() {
       })
       clearTimeout(timeoutId)
 
+      if (response.status === 410) {
+        // Phase 7: books are uploaded in the PDLMS library hub (LEGACY_INGESTION_DISABLED).
+        const gone = await response.json().catch(() => null)
+        throw new Error(gone?.error ?? 'Book ingestion moved to the PDLMS library hub.')
+      }
       if (!response.ok) {
         throw new Error(`Upload failed: ${response.statusText}`)
       }

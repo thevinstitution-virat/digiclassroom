@@ -1,0 +1,21 @@
+{
+  "comment": "Expected point ids, computed with the npm `uuid` package's v5 (an implementation independent of src/point-id.ts). Name = `<work_id>/<passage_id>`, preview name = `<work_id>/<passage_id>@<revision_id>`.",
+  "namespace": "8fa6d651-f95a-49d8-a753-f3f06fc98958",
+  "live": [
+    { "work_id": "0b6f3c1e-5d2a-4f7e-9a41-3c2d1e0f9a87", "passage_id": "sci9-en:07:example:7.2", "point_id": "c6567dff-409d-5b4a-9db8-cdbceaf40bd5" },
+    { "work_id": "0b6f3c1e-5d2a-4f7e-9a41-3c2d1e0f9a87", "passage_id": "sci9-en:07:figure:7.3#2", "point_id": "79c6a4b9-69dc-5c09-8a63-bb9ef620d4e2" },
+    { "work_id": "0b6f3c1e-5d2a-4f7e-9a41-3c2d1e0f9a87", "passage_id": "sci9-en:07:sec:7.2:3", "point_id": "7d3e37a5-0948-5c1a-886e-77707072bcb4" },
+    { "work_id": "0b6f3c1e-5d2a-4f7e-9a41-3c2d1e0f9a87", "passage_id": "sci9-en:07:sec:intro:1", "point_id": "b4f08920-e12c-5030-99d4-906854747895" },
+    { "work_id": "0b6f3c1e-5d2a-4f7e-9a41-3c2d1e0f9a87", "passage_id": "sci9-en:07:summary:4", "point_id": "c1a55914-4071-5b78-bab2-2dbf471540f6" },
+    { "work_id": "0b6f3c1e-5d2a-4f7e-9a41-3c2d1e0f9a87", "passage_id": "sci9-en:07:footnote:p75:*", "point_id": "72a91db1-f7ed-5183-bbe0-527504aaab14" },
+    { "work_id": "0b6f3c1e-5d2a-4f7e-9a41-3c2d1e0f9a87", "passage_id": "sci9-en:07:qbox:p74:2", "point_id": "07b7707a-2e79-54d5-b985-05faf1164cf4" }
+  ],
+  "preview": [
+    {
+      "work_id": "0b6f3c1e-5d2a-4f7e-9a41-3c2d1e0f9a87",
+      "passage_id": "sci9-en:07:example:7.2",
+      "revision_id": "5f1c2b3a-4d5e-4f60-8a71-b2c3d4e5f607",
+      "point_id": "2af018b5-1e27-5ea8-85b9-c9d87f65b515"
+    }
+  ]
+}

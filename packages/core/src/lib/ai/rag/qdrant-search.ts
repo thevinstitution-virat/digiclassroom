@@ -9,6 +9,9 @@ import { OpenAIService } from '../../services/openai_service';
 import { cacheQdrantSchema, getCachedQdrantSchema } from '../../services/service-lifecycle-manager';
 import { buildSparseVector } from './sparse-tokenizer';
 import { getAgentRetrievalProfile, getAgentSearchOptions, type AgentRetrievalProfile } from './agent-retrieval-profiles';
+import { libraryHubEnabled } from '../../library/search';
+import type { HubScope } from '../../library/scope';
+import { searchViaLibraryHub } from '../../library/tutor-adapter';
 
 export interface QdrantSearchOptions {
   subject?: string;
@@ -41,6 +44,12 @@ export interface QdrantSearchOptions {
    * day this ships, mirroring the `organization_id is_empty` convention above.
    */
   taxonomyScopeNodeIds?: string[];
+  /**
+   * Library hub scope (the learner's goals and medium). Used only while LIBRARY_HUB_ENABLED is on, when the search
+   * goes to the PDLMS library hub instead of this collection (lib/library/tutor-adapter.ts); without it the scope
+   * is the class code of `board` and `classLevel`.
+   */
+  hubScope?: HubScope;
 }
 
 export interface QdrantSearchResult {
@@ -59,6 +68,13 @@ export interface QdrantSearchResult {
     contains_figure: boolean;
     section_level: number;
     word_count: number;
+    /** Library hub results only: the stable id a citation stores, the work, its title, the PDF page, the printed label. */
+    passage_id?: string;
+    work_id?: string;
+    source?: string;
+    pdf_page?: number | null;
+    label?: string | null;
+    page_end?: number;
   };
 }
 
@@ -123,6 +139,9 @@ export class QdrantRAGSearch {
     options: QdrantSearchOptions = {}
   ): Promise<QdrantSearchResponse> {
     const startTime = Date.now();
+
+    // The library hub is the only reader path once it is on: no scope relaxation, no keyword fallback here.
+    if (libraryHubEnabled()) return searchViaLibraryHub(query, options);
 
     try {
       console.log(`ðŸ” Qdrant search: "${query.substring(0, 50)}..."`);
