@@ -6,6 +6,7 @@ import { getRedisClient } from '../graph'
 import { generateCacheKey } from '../../cache/cache-key-generator'
 import { evaluateRAGASBackground } from '../../../ragas/evaluator'
 import { questionPremiseValidator } from '../../validation/question-premise-validator'
+import { formatConceptBlock, graphExpand, libraryGraphEnabled, mainWork } from '../../../library/graph-client'
 
 const MAX_CONTEXTS_FOR_PROMPT = 5  // Reduced from 8 for faster generation
 
@@ -230,11 +231,21 @@ export async function generationNode(state: TutorGraphState): Promise<TutorGraph
   // ============================================
 
   // Build context text with minimal metadata
-  const contextText = contexts
+  const excerptText = contexts
     .map((chunk, index) => {
       return `[${index + 1}] ${chunk.text}`
     })
     .join('\n\n')
+
+  // Virat Gyankosh: with the library graph on, the excerpts are followed by the concepts they teach, what to know
+  // first and how the concepts connect, each with the book's words and a citation. Never blocks the answer.
+  let conceptBlock = ''
+  if (libraryGraphEnabled()) {
+    const passageIds = contexts.map((c) => (typeof c.metadata?.passage_id === 'string' ? (c.metadata.passage_id as string) : ''))
+    const workId = mainWork(contexts.map((c) => c.metadata))
+    if (workId) conceptBlock = formatConceptBlock(await graphExpand(workId, passageIds.filter(Boolean)), passageIds)
+  }
+  const contextText = conceptBlock ? `${excerptText}\n\n${conceptBlock}` : excerptText
 
   // Generate optimized prompts for OpenAI automatic caching
   // System prompt is static (cacheable), user prompt has dynamic content last

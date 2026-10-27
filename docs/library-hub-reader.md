@@ -73,3 +73,18 @@ In hub mode `bookHint.contentItemId` is a hub work id.
 - Hindi books: scope carries `medium`; the answer-key scope assumes the CBSE board and English subject names.
 - Stored passage ids in hw keys/Practest are written by the new paths; rows from before the wipe keep old chunk ids
   until Phase 8 removes them.
+
+## Knowledge graph: Virat Gyankosh and the Virat Evaluator (LIBRARY_GRAPH_ENABLED)
+
+With `LIBRARY_HUB_ENABLED` and `LIBRARY_GRAPH_ENABLED`, and the hub's `LIBRARY_GRAPH_READ_ENABLED` on in PDLMS:
+
+- **Tutor** (`ai/langgraph/nodes/generation.ts`): after the numbered excerpts, a "concept map from the textbook" block from
+  `POST /api/hub/graph/expand` (`lib/library/graph-client.ts`) for the work most excerpts come from: the concepts they teach,
+  what to know first (prerequisites with their chapter) and up to six relations, each with the book's words and a citation:
+  `[n]` when the passage is one of the excerpts, "(textbook, chapter c)" otherwise. A 2.5 s timeout of its own; any failure
+  means no block and the answer exactly as before.
+- **Evaluator** (`lib/hw/concept-feedback.ts`, `GET /api/hw/submissions/:id/concept-feedback`): each marked question is matched
+  to the passages that teach it (the tutor's scoped search, the student's learning path) and those to their concepts; marks
+  lost are added up per concept, weakest first, with what to revise before it. For the student once the work is returned, and
+  for a teacher who may view the submission. A question the graph cannot place is left out. Arithmetic in
+  `concept-feedback-core.ts`; tests in `apps/web/src/__tests__/library/graph-concepts.test.ts`.
