@@ -3,6 +3,7 @@ import type { GraphExpansion } from '../library/graph-client';
 
 export interface GradedQuestion {
   id: string;
+  /** As stored: counts from 0. */
   position: number;
   prompt: string;
   marks: number;
@@ -15,6 +16,7 @@ export interface ConceptFeedback {
   /** Marks lost on the questions that test this concept (a question testing two concepts counts for both). */
   lost: number;
   outOf: number;
+  /** Question numbers as the student sees them (1-based). */
   questions: number[];
   revisitFirst: { label: string; chapter: number }[];
   message: string;
@@ -36,7 +38,7 @@ export function conceptFeedback(questions: GradedQuestion[], graphOf: Map<string
       const e = byConcept.get(c.label) ?? { lost: 0, outOf: 0, questions: new Set<number>(), pre: new Map<string, number>() };
       e.lost += lost;
       e.outOf += q.marks;
-      e.questions.add(q.position);
+      e.questions.add(q.position + 1); // positions count from 0; students see question 1, 2, …
       for (const p of g.prerequisites.filter((x) => x.for_concept === c.label)) e.pre.set(p.label, p.first_chapter);
       byConcept.set(c.label, e);
     }

@@ -59,6 +59,42 @@ function CheckAnswer({ submissionId, questionId, answer }: { submissionId: strin
   )
 }
 
+// Marks read concept by concept from the textbook's concept map: weakest first, with what to revise before each.
+// Hidden while the concept map is off, and quietly empty when it cannot answer: the marks above are the result.
+function ConceptPanel({ submissionId }: { submissionId: string }) {
+  const { t } = useHwT()
+  const f = api.hw.student.conceptFeedback.useQuery({ submissionId }, { staleTime: 600_000, retry: false })
+  if (f.isLoading || f.error || !f.data?.enabled) return null
+  const { weak, strong } = f.data
+  return (
+    <Card>
+      <CardHeader className="space-y-1">
+        <CardTitle>{t('st.concepts.title')}</CardTitle>
+        <p className="text-sm text-muted-foreground">{t('st.concepts.help')}</p>
+      </CardHeader>
+      <CardContent className="space-y-3 text-sm">
+        {weak.length === 0 && strong.length === 0 && <p className="text-muted-foreground">{t('st.concepts.unplaced')}</p>}
+        {weak.length === 0 && strong.length > 0 && <p>{t('st.concepts.none')}</p>}
+        {weak.length > 0 && (
+          <ul className="space-y-3">
+            {weak.map((w) => (
+              <li key={w.concept} className="space-y-1 border-l-2 border-amber-500 pl-3">
+                <p>{t(w.questions.length > 1 ? 'st.concepts.lostMany' : 'st.concepts.lost', { lost: w.lost, of: w.outOf, concept: w.concept, qs: w.questions.join(', ') })}</p>
+                {w.revisitFirst.length > 0 && (
+                  <p className="text-muted-foreground">
+                    {t('st.concepts.first', { list: w.revisitFirst.map((p) => t('st.concepts.chapter', { label: p.label, n: p.chapter })).join(t('st.concepts.and')) })}
+                  </p>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        {strong.length > 0 && weak.length > 0 && <p className="text-muted-foreground">{t('st.concepts.strong', { list: strong.join(', ') })}</p>}
+      </CardContent>
+    </Card>
+  )
+}
+
 function Result({ submissionId }: { submissionId: string }) {
   const { t } = useHwT()
   const r = api.hw.student.result.useQuery({ submissionId })
@@ -71,6 +107,7 @@ function Result({ submissionId }: { submissionId: string }) {
         <CardHeader><CardTitle>{t('st.result.title')}</CardTitle></CardHeader>
         <CardContent className="text-2xl font-semibold">{t('st.result.total', { got: d.total, of: d.assignment.totalMarks })}</CardContent>
       </Card>
+      <ConceptPanel submissionId={submissionId} />
       {d.questions.map((q) => (
         <Card key={q.id}>
           <CardHeader className="space-y-1">

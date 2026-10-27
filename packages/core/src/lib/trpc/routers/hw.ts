@@ -14,6 +14,8 @@ import { QUESTION_PRESETS } from '@/lib/hw/presets';
 import * as assignments from '@/lib/hw/services/assignments';
 import * as submissions from '@/lib/hw/services/submissions';
 import * as marking from '@/lib/hw/services/marking';
+import { conceptFeedbackForSubmission } from '@/lib/hw/concept-feedback';
+import { libraryGraphEnabled } from '@/lib/library/graph-client';
 
 const TRPC_CODE: Record<HwErrorCode, TRPCError['code']> = {
   UNAUTHORIZED: 'UNAUTHORIZED',
@@ -160,6 +162,11 @@ export const hwRouter = createTRPCRouter({
       .mutation(({ ctx, input }) => run(ctx, (a) => submissions.flagWords(a, input.submissionId, input.questionId, input.flags))),
     result: protectedProcedure.input(z.object({ submissionId: id }))
       .query(({ ctx, input }) => run(ctx, (a) => submissions.myResult(a, input.submissionId))),
+    // Marks read concept by concept from the library's knowledge graph; { enabled: false } while the graph is off,
+    // so the screen shows nothing rather than an error.
+    conceptFeedback: protectedProcedure.input(z.object({ submissionId: id }))
+      .query(({ ctx, input }) => run(ctx, async (a) =>
+        libraryGraphEnabled() ? { enabled: true as const, ...(await conceptFeedbackForSubmission(a, input.submissionId)) } : { enabled: false as const })),
   }),
 
   // ── Teacher: mark ─────────────────────────────────────────────────────────

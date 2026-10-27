@@ -69,7 +69,8 @@ describe('evaluator feedback per concept', () => {
       ['q2', { concepts: [g.concepts[0]], prerequisites: g.prerequisites, relations: [] }],
       ['q3', { concepts: [{ id: 'c3', label: 'sublimation', type: 'process', description: null, first_chapter: 1 }], prerequisites: [], relations: [] }],
     ])
-    const out = conceptFeedback([q('q1', 1, 3, 1), q('q2', 2, 2, 0), q('q3', 3, 2, 2), q('q4', 4, 5, null)], graphs)
+    // Positions count from 0, as stored; the feedback numbers questions as the student sees them.
+    const out = conceptFeedback([q('q1', 0, 3, 1), q('q2', 1, 2, 0), q('q3', 2, 2, 2), q('q4', 3, 5, null)], graphs)
     expect(out.weak.map((w) => w.concept)).toEqual(['evaporation', 'latent heat'])
     expect(out.weak[0]).toMatchObject({ lost: 4, outOf: 5, questions: [1, 2], revisitFirst: [{ label: 'kinetic energy of particles', chapter: 1 }] })
     expect(out.weak[0].message).toBe('You lost 4 of 5 marks on evaporation (questions 1, 2). It builds on kinetic energy of particles (chapter 1): revise that first.')
