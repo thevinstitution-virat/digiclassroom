@@ -73,6 +73,7 @@ import { ChatHistoryPanel } from '@/components/ai/tutor/ChatHistoryPanel'
 import { History } from 'lucide-react'
 import { useAgentStream } from '@/hooks/useAgentStream'
 import type { AnswerLength } from '@/lib/ai/answer-length'
+import type { TutorTier, TutorUsage } from '@/components/ai/tutor/TierToggle'
 import { StreamingChatMessage } from '@/components/ai/chat/StreamingChatMessage'
 import { ChatErrorBoundary } from '@/components/core/common/ChatErrorBoundary' // Phase 8
 
@@ -121,6 +122,22 @@ export function useAiTutor() {
   const [voiceCommand, setVoiceCommand] = useState<any>(null)
   // CBSE answer-length tier for Deep Dive (undefined = agent auto-sizes the answer)
   const [answerLength, setAnswerLength] = useState<AnswerLength | undefined>(undefined)
+  // Basic / Prime: how deep the next answer goes; Prime is a share of the daily limit (TUTOR_TIERS_ENABLED)
+  const [tier, setTier] = useState<TutorTier>('basic')
+  const [tutorUsage, setTutorUsage] = useState<TutorUsage | null>(null)
+  // Today's questions per tier for the toggle; refreshed after every answer. A failure hides the toggle rather than
+  // showing a wrong count.
+  const refreshTutorUsage = () => {
+    fetch('/api/ai/chat/usage', { credentials: 'include', cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((u) => setTutorUsage(u && typeof u.tiersEnabled === 'boolean' ? u : null))
+      .catch(() => setTutorUsage(null))
+  }
+  useEffect(() => { refreshTutorUsage() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Prime used up for today: back to Basic rather than a choice the server will not honour.
+  useEffect(() => {
+    if (tier === 'prime' && tutorUsage && (!tutorUsage.tiersEnabled || (tutorUsage.prime?.left ?? 0) === 0)) setTier('basic')
+  }, [tier, tutorUsage])
 
   // Session ID for tracking chat history and button usage
   const [sessionId] = useState(() => `session_${user?.id || 'anonymous'}_${Date.now()}`)
@@ -148,6 +165,7 @@ export function useAiTutor() {
     agentType: 'general_help', // Default when no menu selected; overridden per message via sendMessage({ agentType })
     onComplete: (finalText, citations) => {
       console.log('🏁 [useAiTutor] onComplete called! finalText length:', finalText.length);
+      refreshTutorUsage()
       // Stream is done, finalize the message in history
       setMessages(prev => {
         console.log('🏁 [useAiTutor] adding message to state. Prev length:', prev.length);
@@ -797,6 +815,8 @@ I'm **Virat Gyankosh**, your AI educational companion. I'm here to help you with
         medium: userMedium,
         // CBSE answer-length tier — only meaningful for Deep Dive, so only sent then.
         answerLength: currentMenuIntent === 'explain_topic' ? answerLength : undefined,
+        // Basic / Prime (only sent while tiers are on, so the request is unchanged otherwise)
+        tier: tutorUsage?.tiersEnabled ? tier : undefined,
       })
 
       // Clear uploaded file after request fired
@@ -1943,6 +1963,7 @@ Feel free to ask me any questions related to your studies. I'll provide detailed
     isProcessingFile, setIsProcessingFile,
     voiceCommand, setVoiceCommand,
     answerLength, setAnswerLength,
+    tier, setTier, tutorUsage,
     sessionId,
     agentStreamState, sendMessage, resetStream,
     conversationState, setConversationState,

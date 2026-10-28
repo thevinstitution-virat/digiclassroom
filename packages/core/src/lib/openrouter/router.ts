@@ -1,5 +1,6 @@
 import { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { usingOpenRouter } from './client';
+import { tutorModelOverride } from '../ai/tutor-tiers';
 
 /**
  * ModelRouter estimates the complexity of a conversation or query
@@ -30,6 +31,11 @@ export class ModelRouter {
      * Determine the optimal model based on the conversational context
      */
     static routeCurrentQuery(messages: ChatCompletionMessageParam[]): string {
+        // 0. A Basic/Prime tier chosen for this request decides the model (OpenAI direct only: the tier models are
+        //    OpenAI names, which OpenRouter would not recognise).
+        const tierModel = tutorModelOverride();
+        if (tierModel && !usingOpenRouter) return tierModel;
+
         // 1. Extract the latest user prompt
         const latestUserMessage = [...messages].reverse().find(m => m.role === 'user');
         const query = latestUserMessage?.content?.toString() || '';

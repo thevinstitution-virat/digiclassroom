@@ -14,6 +14,14 @@
 import { db } from '@/db'
 import { userSubscriptions, freeTrials, aiTutorUsage, quotaAlerts } from '@/db/schema'
 import { eq, and, gt, sql, inArray } from 'drizzle-orm'
+import {
+  decideTutorTier,
+  tutorTierLimits,
+  tutorTiersEnabled,
+  type TutorTier,
+  type TutorTierLimits,
+  type TutorTierUsage,
+} from '@/lib/ai/tutor-tiers'
 import type {
   UserSubscription,
   FreeTrial,
@@ -191,6 +199,44 @@ export class SubscriptionValidationService {
   }
 
   // ============================================================================
+  // BASIC / PRIME TIERS
+  // ============================================================================
+
+  /**
+   * Today's questions per tier against the plan's daily limit split Basic/Prime (tutor-tiers.ts). Prime is a share of
+   * the same limit; questions_asked counts both, prime_asked the Prime ones.
+   */
+  async tutorTierUsage(userId: string): Promise<{ enabled: boolean; used: TutorTierUsage; limits: TutorTierLimits }> {
+    const today = new Date().toISOString().split('T')[0]
+    const subscription = await this.getUserSubscription(userId)
+    const limits = tutorTierLimits(subscription?.daily_question_limit || 30)
+    const [usage] = await db
+      .select({ questionsAsked: aiTutorUsage.questionsAsked, primeAsked: aiTutorUsage.primeAsked })
+      .from(aiTutorUsage)
+      .where(and(eq(aiTutorUsage.userId, userId), sql`DATE(${aiTutorUsage.date}) = ${today}`))
+      .limit(1)
+    const total = usage?.questionsAsked || 0
+    const prime = tutorTiersEnabled() ? usage?.primeAsked || 0 : 0
+    return { enabled: tutorTiersEnabled(), used: { basic: Math.max(0, total - prime), prime }, limits }
+  }
+
+  /**
+   * The daily quota with tiers: the tier that answers (Prime when asked for and some is left, else Basic, downgraded),
+   * or not allowed when that tier is used up. With tiers off it is the old single limit.
+   */
+  async checkTutorTier(userId: string, requested: TutorTier): Promise<
+    | { allowed: true; tier: TutorTier; downgraded: boolean; limit: number; remaining: number }
+    | { allowed: false; limit: number; message: string }
+  > {
+    const { used, limits } = await this.tutorTierUsage(userId)
+    const d = decideTutorTier(requested, used, limits)
+    if (!d.allowed) {
+      return { allowed: false, limit: limits.total, message: `Daily limit of ${limits.total} questions reached. Upgrade your plan for more questions!` }
+    }
+    return { allowed: true, tier: d.tier, downgraded: d.downgraded, limit: limits.total, remaining: Math.max(0, limits.total - used.basic - used.prime - 1) }
+  }
+
+  // ============================================================================
   // INCREMENT QUESTION COUNT
   // ============================================================================
 
@@ -199,7 +245,10 @@ export class SubscriptionValidationService {
    * NOTE: This still uses raw SQL via the shared pool for the complex
    * JSON operations (questions_log append). Will be fully migrated in Phase 5.
    */
-  async incrementQuestionCount(userId: string, clerkId: string, metadata: QuestionLogEntry): Promise<void> {
+  async incrementQuestionCount(userId: string, clerkId: string, metadata: QuestionLogEntry, tier: TutorTier = 'basic'): Promise<void> {
+    // A Prime answer also counts in prime_asked. Only Prime touches that column, so with tiers off this runs exactly
+    // as before, migration 017 or not.
+    const primeSet = tier === 'prime' ? ', prime_asked = COALESCE(prime_asked, 0) + 1' : ''
     try {
       const today = new Date().toISOString().split('T')[0]
       const { executeQuery, executeQuerySingle } = await import('@/lib/db/connection')
@@ -214,7 +263,7 @@ export class SubscriptionValidationService {
         // Update existing record
         await executeQuery(
           `UPDATE ai_tutor_usage
-           SET questions_asked = questions_asked + 1,
+           SET questions_asked = questions_asked + 1${primeSet},
                updated_at = CURRENT_TIMESTAMP
            WHERE id = ?`,
           [existing.id]
@@ -228,7 +277,9 @@ export class SubscriptionValidationService {
         const dailyLimit = subscription?.daily_question_limit || 30
 
         await executeQuery(
-          `INSERT INTO ai_tutor_usage (user_id, date, questions_asked)
+          tier === 'prime'
+            ? `INSERT INTO ai_tutor_usage (user_id, date, questions_asked, prime_asked) VALUES (?, ?, 1, 1)`
+            : `INSERT INTO ai_tutor_usage (user_id, date, questions_asked)
            VALUES (?, ?, 1)`,
           [userId, today]
         )

@@ -12,6 +12,7 @@ import { MultiModalInput } from '@/components/ai/tutor/MultiModalInput'
 import { AgentSelector } from '@/components/ai/tutor/AgentSelector'
 import { SubjectSelector } from '@/components/ai/tutor/SubjectSelector'
 import { LengthSelector } from '@/components/ai/tutor/LengthSelector'
+import { TierToggle } from '@/components/ai/tutor/TierToggle'
 import { ChatHistoryPanel } from '@/components/ai/tutor/ChatHistoryPanel'
 import { StreamingChatMessage } from '@/components/ai/chat/StreamingChatMessage'
 import { ChatErrorBoundary } from '@/components/core/common/ChatErrorBoundary'
@@ -33,6 +34,7 @@ export default function AITutorPage() {
     isProcessingFile, setIsProcessingFile,
     voiceCommand, setVoiceCommand,
     answerLength, setAnswerLength,
+    tier, setTier, tutorUsage,
     sessionId,
     agentStreamState, sendMessage, resetStream,
     conversationState, setConversationState,
@@ -619,6 +621,8 @@ export default function AITutorPage() {
                           disabled={isLoading}
                         />
                       )}
+                      {/* Basic / Prime: how deep the next answer goes (hidden while tiers are off). */}
+                      <TierToggle value={tier} onChange={setTier} usage={tutorUsage} disabled={isLoading} />
                     </div>
                   ) : undefined
                 }

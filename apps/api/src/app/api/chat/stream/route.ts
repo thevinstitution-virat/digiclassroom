@@ -14,10 +14,17 @@ import { getFeatureFlags } from '@/lib/config/feature-flags';
 import { GRAPH_FEATURE_FLAGS } from '@/lib/agents/graph/registry';
 import { studentRateLimiter } from '@/lib/services/student-rate-limiter';
 import { StudentCostMonitor } from '@/lib/services/cost-monitor';
+import { subscriptionValidationService } from '@/lib/services/subscription-validation-service';
+import { isTutorTier, tutorTierModel, tutorTiersEnabled, useTutorModelForRequest, withTutorScope, type TutorTier } from '@/lib/ai/tutor-tiers';
 
 export const runtime = 'nodejs'; // Required for streaming + BullMQ
 
-export async function POST(req: NextRequest) {
+// Each request runs in its own tier scope, so the Basic/Prime model it sets reaches its own agents only.
+export function POST(req: NextRequest) {
+    return withTutorScope(() => handlePost(req));
+}
+
+async function handlePost(req: NextRequest) {
     const body = await req.json() as Record<string, unknown>;
 
     // Determine which agents currently support streaming (= on graph path)
@@ -86,6 +93,24 @@ export async function POST(req: NextRequest) {
                 { status: 429 } // 429 Too Many Requests
             );
         }
+    }
+
+    // Basic or Prime (TUTOR_TIERS_ENABLED): the same daily split as the /api/ai/chat path, counted in ai_tutor_usage
+    // (the Redis limit above still applies). Off: nothing here runs and the agents use their own model as before.
+    const inputForTier = (body.input as any) || {};
+    const requestedTier: TutorTier = isTutorTier(inputForTier.tier ?? body.tier) ? (inputForTier.tier ?? body.tier) : 'basic';
+    let tier: TutorTier = 'basic';
+    let downgraded = false;
+    if (tutorTiersEnabled()) {
+        const check = await subscriptionValidationService.checkTutorTier(userId, requestedTier);
+        if (!check.allowed) {
+            return Response.json({ error: 'DAILY_LIMIT_EXCEEDED', message: check.message, limit: check.limit }, { status: 429 });
+        }
+        tier = check.tier;
+        downgraded = check.downgraded;
+        // Set before the stream is built: its start() runs inside this request's context, so every agent model
+        // created for this answer uses the tier's model.
+        useTutorModelForRequest(tutorTierModel(tier));
     }
 
     const encoder = new TextEncoder();
@@ -160,8 +185,19 @@ export async function POST(req: NextRequest) {
                     }
                 }
                 
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`));
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done', tier, downgraded })}\n\n`));
                 controller.close();
+                if (tutorTiersEnabled()) {
+                    subscriptionValidationService
+                        .incrementQuestionCount(userId, userId, {
+                            subject: String(inputForTier.subject || 'general'),
+                            board: 'CBSE',
+                            class: String(inputForTier.grade || ''),
+                            menu_type: String(menuIntent),
+                            timestamp: new Date().toISOString(),
+                        } as any, tier)
+                        .catch((e) => console.error('[tutor] failed to count the question:', e));
+                }
             } catch (err) {
                 controller.enqueue(
                     encoder.encode(

@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import { headers } from 'next/headers'
 import { runTutorGraph } from '@/lib/ai/langgraph/graph'
 import { subscriptionValidationService } from '@/lib/services/subscription-validation-service'
+import { isTutorTier, tutorTierModel, tutorTiersEnabled, useTutorModelForRequest, withTutorScope, type TutorTier } from '@/lib/ai/tutor-tiers'
 import { findPreGeneratedAnswer, recordPreGeneratedAnswerHit, generateQuestionHash } from '@/lib/services/pre-generated-answers-service'
 import { routeQuery } from '@/lib/ai/routing/query-router'
 import { getSemanticCache } from '@/lib/ai/cache/semantic-cache-service'
@@ -24,7 +25,12 @@ interface StudentProfile {
   medium?: string
 }
 
-export async function POST(req: NextRequest) {
+// Each request runs in its own tier scope, so the Basic/Prime model it sets reaches its own model calls only.
+export function POST(req: NextRequest) {
+  return withTutorScope(() => handlePost(req))
+}
+
+async function handlePost(req: NextRequest) {
   // ============================================================================
   // STEP 0: INITIALIZE ENTERPRISE SERVICES (Non-blocking, fails gracefully)
   // ============================================================================
@@ -116,7 +122,20 @@ export async function POST(req: NextRequest) {
     // ============================================================================
     // STEP 2: CHECK DAILY QUESTION QUOTA
     // ============================================================================
-    const quotaCheck = await subscriptionValidationService.canAskQuestion(userId)
+    // Basic or Prime (TUTOR_TIERS_ENABLED): Prime when asked for and some is left today, else Basic (downgraded).
+    // With tiers off this is the old single daily limit, and the tier is always Basic.
+    const requestedTier: TutorTier = isTutorTier(body?.tier) ? body.tier : 'basic'
+    let tier: TutorTier = 'basic'
+    let downgraded = false
+    const quotaCheck = tutorTiersEnabled()
+      ? await subscriptionValidationService.checkTutorTier(userId, requestedTier)
+      : await subscriptionValidationService.canAskQuestion(userId)
+    if (quotaCheck.allowed && 'tier' in quotaCheck) {
+      tier = quotaCheck.tier
+      downgraded = quotaCheck.downgraded
+      // Every model call this request makes from here on uses the tier's model (ModelRouter reads it).
+      useTutorModelForRequest(tutorTierModel(tier))
+    }
 
     if (!quotaCheck.allowed) {
       console.log(`❌ Quota exceeded for user ${userId}: ${quotaCheck.message}`)
@@ -132,7 +151,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    console.log(`✅ Quota check passed: ${quotaCheck.remaining}/${quotaCheck.limit} remaining`)
+    console.log(`✅ Quota check passed: ${'remaining' in quotaCheck ? quotaCheck.remaining : '?'}/${quotaCheck.limit} remaining (${tier}${downgraded ? ', Prime used up' : ''})`)
 
     // ============================================================================
     // STEP 3: VALIDATE BOARD ACCESS
@@ -257,7 +276,8 @@ export async function POST(req: NextRequest) {
     // An explicit client bypassCache always wins — used by "Explain a different
     // way", where returning the cached answer would hand back the very
     // explanation the student just said didn't help.
-    const bypassCache = body?.bypassCache === true
+    // A Prime question is answered fresh on the Prime model: a cached answer was written by the Basic one.
+    const bypassCache = body?.bypassCache === true || tier === 'prime'
     const CACHE_ELIGIBLE_ROUTES = ['cached-template', 'semantic-cache', 'hybrid', 'full-rag'] as const
     const routeIsCacheEligible = (CACHE_ELIGIBLE_ROUTES as readonly string[]).includes(routingDecision.route)
     const STRICT_SIMILARITY_ROUTES = ['full-rag']
@@ -498,7 +518,8 @@ export async function POST(req: NextRequest) {
       }
 
       // Store in semantic cache for future queries (async, don't wait)
-      if (answer !== KNOWLEDGE_GAP_RESPONSE && rankedContexts.length > 0) {
+      // Prime answers are not cached, so the shared cache keeps serving the Basic model's answers to Basic questions.
+      if (answer !== KNOWLEDGE_GAP_RESPONSE && rankedContexts.length > 0 && tier !== 'prime') {
         semanticCache.storeAnswer(
           message,
           answer,
@@ -526,7 +547,7 @@ export async function POST(req: NextRequest) {
         class: classNumber.toString(),
         menu_type: 'ai_chat',
         timestamp: new Date().toISOString()
-      })
+      }, tier)
       console.log(`✅ Question count incremented for user ${userId}`)
     } catch (error) {
       console.error('❌ Failed to increment question count:', error)
@@ -574,7 +595,9 @@ export async function POST(req: NextRequest) {
         menuIntent: menuIntent || 'general_help',
         agentUsed: menuSpecificMetadata.agentUsed,
         menuSpecific: menuSpecificMetadata.menuSpecific
-      } : null
+      } : null,
+      tier,
+      downgraded
     })
   } catch (error) {
     console.error('AI Chat API error:', error)
@@ -738,7 +761,9 @@ function streamResult({
   routingDecision,
   ragasScores = null,
   experimentMetadata = null,
-  menuMetadata = null
+  menuMetadata = null,
+  tier = 'basic',
+  downgraded = false
 }: {
   answer: string;
   sourcesPayload: any;
@@ -749,6 +774,9 @@ function streamResult({
   ragasScores?: any;
   experimentMetadata?: { experimentId: string | null; experimentVariant: 'A' | 'B' | null } | null;
   menuMetadata?: { menuIntent: string; agentUsed: string; menuSpecific: boolean } | null;
+  /** The tier that answered, and whether Prime was asked for but used up today. */
+  tier?: TutorTier;
+  downgraded?: boolean;
 }) {
   const encoder = new TextEncoder()
   const chunks = chunkAnswerForStreaming(answer)
@@ -798,6 +826,8 @@ function streamResult({
         const completeData = {
           type: 'complete',
           answer: answer,
+          tier,
+          downgraded,
           sources: sourcesPayload,
           cached: isCached,
           preGenerated: isPreGenerated,

@@ -20,6 +20,9 @@ export interface StreamState {
     errorMessage: string | null;
     isRecoverableError: boolean;
     agentName: string | null;
+    /** The tier that answered (Basic / Prime), and whether Prime was asked for but used up today. */
+    tier: 'basic' | 'prime' | null;
+    downgraded: boolean;
 }
 
 interface UseAgentStreamOptions {
@@ -39,6 +42,8 @@ const INITIAL_STATE: StreamState = {
     errorMessage: null,
     isRecoverableError: false,
     agentName: null,
+    tier: null,
+    downgraded: false,
 };
 
 export function useAgentStream({
@@ -68,6 +73,8 @@ export function useAgentStream({
         medium?: string;
         // CBSE answer-length tier (Deep Dive only): vsa | sa | la | essay
         answerLength?: string;
+        // Basic / Prime: how deep the answer goes (a share of the daily limit is Prime)
+        tier?: 'basic' | 'prime';
     }) => {
         // The agent persona selected for THIS message — falls back to the hook default
         const effectiveAgentType = input.agentType || agentType;
@@ -104,6 +111,7 @@ export function useAgentStream({
                     subject: input.subject || 'general',
                     medium: input.medium,  // student's subscribed medium → default response language
                     answerLength: input.answerLength,  // CBSE answer-length tier (Deep Dive only)
+                    tier: input.tier,
                     conversationHistory: input.conversationHistory,
                     roleContext: {
                         menuIntent: effectiveAgentType
@@ -256,6 +264,10 @@ export function useAgentStream({
                                 confidenceScore: chunk.sources?.sources?.[0]?.confidence || prev.confidenceScore,
         // @ts-ignore
                                 agentName: chunk.menu?.agentUsed || prev.agentName,
+        // @ts-ignore
+                                tier: chunk.tier ?? prev.tier,
+        // @ts-ignore
+                                downgraded: !!chunk.downgraded,
                             }));
                             
                             if (!isCompleteRef.current) {
@@ -270,7 +282,14 @@ export function useAgentStream({
                         }
 
                         case 'done': {
-                            setState(prev => ({ ...prev, status: 'complete' as const }));
+                            setState(prev => ({
+                                ...prev,
+                                status: 'complete' as const,
+        // @ts-ignore
+                                tier: chunk.tier ?? prev.tier,
+        // @ts-ignore
+                                downgraded: !!chunk.downgraded,
+                            }));
                             
                             if (!isCompleteRef.current) {
                                 isCompleteRef.current = true;

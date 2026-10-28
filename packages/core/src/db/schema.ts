@@ -154,6 +154,8 @@ export const aiTutorUsage = pgTable('ai_tutor_usage', {
     userId: varchar('user_id', { length: 255 }).notNull(),
     date: timestamp('date').defaultNow(),
     questionsAsked: integer('questions_asked').default(0),
+    /** Of questions_asked, how many were answered on Prime (tutor Basic/Prime tiers, migration 017). */
+    primeAsked: integer('prime_asked').default(0),
     totalTokensUsed: integer('total_tokens_used').default(0),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()),

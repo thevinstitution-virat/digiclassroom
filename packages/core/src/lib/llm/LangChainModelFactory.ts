@@ -13,6 +13,7 @@
  */
 
 import type { BaseChatModel } from '@langchain/core/language_models/chat_models';
+import { tutorModelOverride } from '../ai/tutor-tiers';
 
 export interface LangChainModelConfig {
     temperature?: number;
@@ -27,7 +28,10 @@ const modelCache = new Map<string, BaseChatModel>();
 
 export function getLangChainModel(config: LangChainModelConfig = {}): BaseChatModel {
     const provider = config.providerOverride || getActiveProviderName();
-    const cacheKey = `${provider}:${config.temperature ?? 0.3}:${config.streaming ?? false}`;
+    // A Basic/Prime tier chosen for this request picks the OpenAI model; it is part of the cache key, so each tier
+    // keeps its own model object.
+    const tierModel = provider === 'openai' ? tutorModelOverride() : undefined;
+    const cacheKey = `${provider}:${config.temperature ?? 0.3}:${config.streaming ?? false}${tierModel ? `:${tierModel}` : ''}`;
 
     if (modelCache.has(cacheKey)) {
         return modelCache.get(cacheKey)!;
@@ -91,7 +95,7 @@ function createLangChainModel(
         default: {
             const { ChatOpenAI } = require('@langchain/openai');
             return new ChatOpenAI({
-                model: process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
+                model: tutorModelOverride() ?? process.env.OPENAI_MODEL ?? 'gpt-4o-mini',
                 apiKey: process.env.OPENAI_API_KEY,
                 ...baseConfig,
             });
