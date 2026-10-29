@@ -3,7 +3,7 @@ import { auth } from '@/auth'
 import { headers } from 'next/headers'
 import { runTutorGraph } from '@/lib/ai/langgraph/graph'
 import { subscriptionValidationService } from '@/lib/services/subscription-validation-service'
-import { isTutorTier, tutorTierModel, tutorTiersEnabled, useTutorModelForRequest, withTutorScope, type TutorTier } from '@/lib/ai/tutor-tiers'
+import { isTutorTier, tutorRequestTokens, tutorTierModel, tutorTiersEnabled, tutorTokenQuotaEnabled, useTutorModelForRequest, withTutorScope, type TutorTier } from '@/lib/ai/tutor-tiers'
 import { findPreGeneratedAnswer, recordPreGeneratedAnswerHit, generateQuestionHash } from '@/lib/services/pre-generated-answers-service'
 import { routeQuery } from '@/lib/ai/routing/query-router'
 import { getSemanticCache } from '@/lib/ai/cache/semantic-cache-service'
@@ -127,7 +127,7 @@ async function handlePost(req: NextRequest) {
     const requestedTier: TutorTier = isTutorTier(body?.tier) ? body.tier : 'basic'
     let tier: TutorTier = 'basic'
     let downgraded = false
-    const quotaCheck = tutorTiersEnabled()
+    const quotaCheck = tutorTiersEnabled() || tutorTokenQuotaEnabled()
       ? await subscriptionValidationService.checkTutorTier(userId, requestedTier)
       : await subscriptionValidationService.canAskQuestion(userId)
     if (quotaCheck.allowed && 'tier' in quotaCheck) {
@@ -549,6 +549,8 @@ async function handlePost(req: NextRequest) {
         timestamp: new Date().toISOString()
       }, tier)
       console.log(`✅ Question count incremented for user ${userId}`)
+      // What every OpenAI call of this answer cost, for the token window.
+      await subscriptionValidationService.recordTutorTokens(userId, tier, tutorRequestTokens())
     } catch (error) {
       console.error('❌ Failed to increment question count:', error)
       // Don't fail the request if quota increment fails

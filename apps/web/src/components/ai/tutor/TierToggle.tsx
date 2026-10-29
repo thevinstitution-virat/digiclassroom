@@ -8,8 +8,12 @@ export type TutorTier = 'basic' | 'prime'
 
 export interface TutorUsage {
   tiersEnabled: boolean
-  basic?: { used: number; limit: number; left: number }
-  prime?: { used: number; limit: number; left: number }
+  basic?: { used: number; limit: number; left: number; leftPct?: number }
+  prime?: { used: number; limit: number; left: number; leftPct?: number }
+  /** 'tokens': the limits are tokens per window of windowHours, whole again at resetsAt (null: no window open). */
+  quota?: 'tokens'
+  windowHours?: number
+  resetsAt?: string | null
 }
 
 /**
@@ -30,6 +34,18 @@ export function TierToggle({
 }) {
   if (!usage?.tiersEnabled || !usage.prime || usage.prime.limit === 0) return null
   const primeOut = usage.prime.left === 0
+  // Token windows: what is left of Prime in this window, and when the window resets (shown once something is used).
+  const tokens = usage.quota === 'tokens'
+  const resets = usage.resetsAt
+    ? new Date(usage.resetsAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
+    : null
+  const status = tokens
+    ? primeOut
+      ? `Prime used up${resets ? ` · resets ${resets}` : ''}`
+      : `Prime: ${usage.prime.leftPct ?? 100}% left${resets ? ` · resets ${resets}` : ''}`
+    : primeOut
+      ? 'Prime used up today'
+      : `Prime: ${usage.prime.left} left today`
 
   const option = (tier: TutorTier, label: string, Icon: typeof Zap, title: string, off = false) => (
     <button
@@ -54,11 +70,15 @@ export function TierToggle({
       <div role="radiogroup" aria-label="Answer depth" className="chip !gap-0.5 !p-0.5">
         {option('basic', 'Basic', Zap, 'Basic: a quick answer from the textbook')}
         {option('prime', 'Prime', Sparkles,
-          primeOut ? 'Prime is used up for today; answers are Basic until tomorrow' : 'Prime: a detailed explanation with examples, from the textbook',
+          primeOut
+            ? tokens
+              ? `Prime is used up for this ${usage.windowHours ?? 4}-hour window; answers are Basic until it resets`
+              : 'Prime is used up for today; answers are Basic until tomorrow'
+            : 'Prime: a detailed explanation with examples, from the textbook',
           primeOut)}
       </div>
       <span className="text-xs tabular-nums" style={{ color: 'var(--muted)' }} aria-live="polite">
-        {primeOut ? 'Prime used up today' : `Prime: ${usage.prime.left} left today`}
+        {status}
       </span>
     </div>
   )

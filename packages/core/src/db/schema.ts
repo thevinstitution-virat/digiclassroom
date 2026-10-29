@@ -162,6 +162,19 @@ export const aiTutorUsage = pgTable('ai_tutor_usage', {
 });
 
 /**
+ * What each tutor answer cost in tokens (every OpenAI call of the question), for the 4-hour token windows
+ * (TUTOR_TOKEN_QUOTA_ENABLED, migration 018). Written only while that flag is on.
+ */
+export const tutorTokenUsage = pgTable('tutor_token_usage', {
+    id: varchar('id', { length: 36 }).primaryKey().default(sql`gen_random_uuid()::text`),
+    userId: varchar('user_id', { length: 255 }).notNull(),
+    tier: varchar('tier', { length: 10 }).notNull().default('basic'),
+    tokensIn: integer('tokens_in').notNull().default(0),
+    tokensOut: integer('tokens_out').notNull().default(0),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+/**
  * Append-only log of tutor interactions carrying a topic dimension.
  *
  * Exists because nothing previously persisted per-student topic signal for the

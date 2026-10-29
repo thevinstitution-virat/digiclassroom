@@ -65,11 +65,13 @@ export function decideTutorTier(requested: TutorTier, used: TutorTierUsage, limi
 
 // One scope per request, holding that request's tier model. A scope is entered with run(), never enterWith(): the
 // latter changes the caller's context too, so a request started right after another could inherit its model.
-const modelStore = new AsyncLocalStorage<{ model?: string }>();
+// It also adds up the tokens of every OpenAI call the request makes (agents, RAG graph, plain completions), for the
+// token windows below.
+const modelStore = new AsyncLocalStorage<{ model?: string; tokens: { input: number; output: number } }>();
 
 /** Runs a request handler in its own scope; the tier's model set inside it is seen by that request only. */
 export function withTutorScope<T>(fn: () => T): T {
-  return modelStore.run({}, fn);
+  return modelStore.run({ tokens: { input: 0, output: 0 } }, fn);
 }
 
 /** Sets the tier's model for the rest of this request. Outside a scope it does nothing (the old model stays). */
@@ -80,3 +82,60 @@ export function useTutorModelForRequest(model: string | null): void {
 
 /** The model the current request's tier asked for, if any. */
 export const tutorModelOverride = (): string | undefined => modelStore.getStore()?.model;
+
+/** Adds one OpenAI call's usage to the current request. Outside a scope (scripts, ingestion) it does nothing. */
+export function addTutorTokens(input: number, output: number): void {
+  const scope = modelStore.getStore();
+  if (!scope) return;
+  scope.tokens.input += Math.max(0, input || 0);
+  scope.tokens.output += Math.max(0, output || 0);
+}
+
+/** What the current request's OpenAI calls have cost so far. */
+export const tutorRequestTokens = (): { input: number; output: number } => ({ ...(modelStore.getStore()?.tokens ?? { input: 0, output: 0 }) });
+
+// ── Token quota in 4-hour windows (TUTOR_TOKEN_QUOTA_ENABLED), the same rules as Varta's ──────────────────────
+//
+// A window opens with the first answer after the last one closed and lasts TUTOR_WINDOW_HOURS (4), so a day holds at
+// most six. Paid: TUTOR_WINDOW_TOKENS (150,000) per window, 75% Basic, 25% Prime (TUTOR_PRIME_SHARE); a free trial
+// has TUTOR_TRIAL_TOKEN_SHARE (half). A question is let in while its tier has tokens left.
+
+export const tutorTokenQuotaEnabled = (env: Env = process.env): boolean => (env.TUTOR_TOKEN_QUOTA_ENABLED ?? '').trim().toLowerCase() === 'true';
+
+export function tutorWindowLimits(trial: boolean, env: Env = process.env): TutorTierLimits & { hours: number } {
+  const n = parseInt(env.TUTOR_WINDOW_TOKENS ?? '', 10);
+  const paid = Number.isFinite(n) && n >= 0 ? n : 150_000;
+  const trialShare = Math.min(1, Math.max(0, Number(env.TUTOR_TRIAL_TOKEN_SHARE ?? '0.5') || 0));
+  const h = parseInt(env.TUTOR_WINDOW_HOURS ?? '', 10);
+  const hours = Number.isFinite(h) && h >= 1 ? h : 4;
+  const total = trial ? Math.floor(paid * trialShare) : paid;
+  return { ...tutorTierLimits(total, env), hours };
+}
+
+export interface TutorWindow {
+  startedAt: Date | null;
+  resetsAt: Date | null;
+  used: TutorTierUsage;
+}
+
+/** The current window from a student's answers of the last day, oldest first. */
+export function currentTutorWindow(answers: { at: Date; tier: string; tokens: number }[], now: Date, hours: number): TutorWindow {
+  const span = hours * 3600_000;
+  let start: number | null = null;
+  for (const a of answers) {
+    const t = a.at.getTime();
+    if (start === null || t >= start + span) start = t;
+  }
+  if (start === null || now.getTime() >= start + span) return { startedAt: null, resetsAt: null, used: { basic: 0, prime: 0 } };
+  const used: TutorTierUsage = { basic: 0, prime: 0 };
+  for (const a of answers) {
+    if (a.at.getTime() < start) continue;
+    if (a.tier === 'prime') used.prime += a.tokens;
+    else used.basic += a.tokens;
+  }
+  return { startedAt: new Date(start), resetsAt: new Date(start + span), used };
+}
+
+/** "4:30 pm" in India time, for the message that says when a window resets. */
+export const resetClock = (d: Date | null): string =>
+  d ? d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }) : 'soon';

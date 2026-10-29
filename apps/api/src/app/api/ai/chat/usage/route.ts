@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { auth } from '@/auth'
 import { subscriptionValidationService } from '@/lib/services/subscription-validation-service'
-import { tutorTiersEnabled } from '@/lib/ai/tutor-tiers'
+import { tutorTiersEnabled, tutorTokenQuotaEnabled } from '@/lib/ai/tutor-tiers'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,6 +16,20 @@ export async function GET() {
   if (!userId) return NextResponse.json({ error: 'AUTHENTICATION_REQUIRED' }, { status: 401 })
   if (!tutorTiersEnabled()) return NextResponse.json({ tiersEnabled: false })
   try {
+    if (tutorTokenQuotaEnabled()) {
+      // Tokens per 4-hour window: what is left of each tier, as a share, and when the window resets.
+      const { window, limits, trial } = await subscriptionValidationService.tutorWindowUsage(userId)
+      const part = (used: number, limit: number) => ({ used, limit, left: Math.max(0, limit - used), leftPct: limit ? Math.max(0, Math.round((1 - used / limit) * 100)) : 0 })
+      return NextResponse.json({
+        tiersEnabled: true,
+        quota: 'tokens',
+        plan: trial ? 'trial' : 'paid',
+        windowHours: limits.hours,
+        resetsAt: window.resetsAt,
+        basic: part(window.used.basic, limits.basic),
+        prime: part(window.used.prime, limits.prime),
+      })
+    }
     const { used, limits } = await subscriptionValidationService.tutorTierUsage(userId)
     return NextResponse.json({
       tiersEnabled: true,

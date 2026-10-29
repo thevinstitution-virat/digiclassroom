@@ -12,15 +12,20 @@
  */
 
 import { db } from '@/db'
-import { userSubscriptions, freeTrials, aiTutorUsage, quotaAlerts } from '@/db/schema'
+import { userSubscriptions, freeTrials, aiTutorUsage, quotaAlerts, tutorTokenUsage } from '@/db/schema'
 import { eq, and, gt, sql, inArray } from 'drizzle-orm'
 import {
+  currentTutorWindow,
   decideTutorTier,
+  resetClock,
   tutorTierLimits,
   tutorTiersEnabled,
+  tutorTokenQuotaEnabled,
+  tutorWindowLimits,
   type TutorTier,
   type TutorTierLimits,
   type TutorTierUsage,
+  type TutorWindow,
 } from '@/lib/ai/tutor-tiers'
 import type {
   UserSubscription,
@@ -228,6 +233,16 @@ export class SubscriptionValidationService {
     | { allowed: true; tier: TutorTier; downgraded: boolean; limit: number; remaining: number }
     | { allowed: false; limit: number; message: string }
   > {
+    // TUTOR_TOKEN_QUOTA_ENABLED: tokens per 4-hour window instead of questions per day.
+    if (tutorTokenQuotaEnabled()) {
+      const { window, limits } = await this.tutorWindowUsage(userId)
+      const d = decideTutorTier(requested, window.used, limits)
+      if (!d.allowed) {
+        return { allowed: false, limit: limits.total, message: `You have used this window's AI allowance. It resets at ${resetClock(window.resetsAt)}.` }
+      }
+      const left = d.tier === 'prime' ? limits.prime - window.used.prime : limits.basic - window.used.basic
+      return { allowed: true, tier: d.tier, downgraded: d.downgraded, limit: limits.total, remaining: Math.max(0, left) }
+    }
     const { used, limits } = await this.tutorTierUsage(userId)
     const d = decideTutorTier(requested, used, limits)
     if (!d.allowed) {
@@ -245,6 +260,32 @@ export class SubscriptionValidationService {
    * NOTE: This still uses raw SQL via the shared pool for the complex
    * JSON operations (questions_log append). Will be fully migrated in Phase 5.
    */
+  /** The student's current 4-hour token window (a free trial has half the allowance). */
+  async tutorWindowUsage(userId: string): Promise<{ enabled: boolean; window: TutorWindow; limits: TutorTierLimits & { hours: number }; trial: boolean }> {
+    const subscription = await this.getUserSubscription(userId)
+    const trial = subscription?.subscription_status === 'trial'
+    const limits = tutorWindowLimits(trial)
+    const now = new Date()
+    const rows = await db
+      .select({ at: tutorTokenUsage.createdAt, tier: tutorTokenUsage.tier, tokensIn: tutorTokenUsage.tokensIn, tokensOut: tutorTokenUsage.tokensOut })
+      .from(tutorTokenUsage)
+      .where(and(eq(tutorTokenUsage.userId, userId), gt(tutorTokenUsage.createdAt, new Date(now.getTime() - 24 * 3600_000))))
+      .orderBy(tutorTokenUsage.createdAt)
+    const enabled = tutorTiersEnabled()
+    const window = currentTutorWindow(
+      rows.map((r) => ({ at: r.at, tier: enabled ? r.tier : 'basic', tokens: r.tokensIn + r.tokensOut })),
+      now,
+      limits.hours,
+    )
+    return { enabled, window, limits, trial }
+  }
+
+  /** What one answer cost, for the token windows. Only while TUTOR_TOKEN_QUOTA_ENABLED (the table is migration 018). */
+  async recordTutorTokens(userId: string, tier: TutorTier, tokens: { input: number; output: number }): Promise<void> {
+    if (!tutorTokenQuotaEnabled()) return
+    await db.insert(tutorTokenUsage).values({ userId, tier, tokensIn: tokens.input, tokensOut: tokens.output })
+  }
+
   async incrementQuestionCount(userId: string, clerkId: string, metadata: QuestionLogEntry, tier: TutorTier = 'basic'): Promise<void> {
     // A Prime answer also counts in prime_asked. Only Prime touches that column, so with tiers off this runs exactly
     // as before, migration 017 or not.

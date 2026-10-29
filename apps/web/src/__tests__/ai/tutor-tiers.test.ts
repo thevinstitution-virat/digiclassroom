@@ -57,3 +57,51 @@ describe('tutor tiers', () => {
     expect(tutorModelOverride()).toBeUndefined()
   })
 })
+
+import {
+  addTutorTokens,
+  currentTutorWindow,
+  decideTutorTier as decide,
+  tutorRequestTokens,
+  tutorWindowLimits,
+} from '../../../../../packages/core/src/lib/ai/tutor-tiers'
+
+describe('tutor token windows', () => {
+  const on = { TUTOR_TIERS_ENABLED: 'true' }
+  const at = (h: number) => new Date(Date.UTC(2026, 9, 30, 0, 0) + h * 3600_000)
+
+  it('gives paid 150k a window split 75/25, and a free trial half of it', () => {
+    expect(tutorWindowLimits(false, on)).toEqual({ total: 150_000, basic: 112_500, prime: 37_500, hours: 4 })
+    expect(tutorWindowLimits(true, on)).toEqual({ total: 75_000, basic: 56_250, prime: 18_750, hours: 4 })
+  })
+
+  it('opens a window with the first answer after the last one closed', () => {
+    const answers = [
+      { at: at(0), tier: 'basic', tokens: 50_000 },
+      { at: at(5), tier: 'basic', tokens: 20_000 },
+      { at: at(6), tier: 'prime', tokens: 7_000 },
+    ]
+    const w = currentTutorWindow(answers, at(7), 4)
+    expect(w).toEqual({ startedAt: at(5), resetsAt: at(9), used: { basic: 20_000, prime: 7_000 } })
+    expect(decide('prime', w.used, tutorWindowLimits(false, on))).toEqual({ allowed: true, tier: 'prime', downgraded: false })
+    expect(currentTutorWindow(answers, at(9.5), 4).startedAt).toBeNull()
+  })
+
+  it('adds up each request\'s own OpenAI calls, never another request\'s', async () => {
+    const one = withTutorScope(async () => {
+      addTutorTokens(1000, 200)
+      await new Promise((r) => setTimeout(r, 5))
+      addTutorTokens(500, 100)
+      return tutorRequestTokens()
+    })
+    const two = withTutorScope(async () => {
+      addTutorTokens(9000, 900)
+      await new Promise((r) => setTimeout(r, 1))
+      return tutorRequestTokens()
+    })
+    expect(await one).toEqual({ input: 1500, output: 300 })
+    expect(await two).toEqual({ input: 9000, output: 900 })
+    addTutorTokens(5, 5) // outside a scope: ignored
+    expect(tutorRequestTokens()).toEqual({ input: 0, output: 0 })
+  })
+})

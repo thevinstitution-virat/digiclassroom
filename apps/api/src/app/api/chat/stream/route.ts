@@ -15,7 +15,7 @@ import { GRAPH_FEATURE_FLAGS } from '@/lib/agents/graph/registry';
 import { studentRateLimiter } from '@/lib/services/student-rate-limiter';
 import { StudentCostMonitor } from '@/lib/services/cost-monitor';
 import { subscriptionValidationService } from '@/lib/services/subscription-validation-service';
-import { isTutorTier, tutorTierModel, tutorTiersEnabled, useTutorModelForRequest, withTutorScope, type TutorTier } from '@/lib/ai/tutor-tiers';
+import { isTutorTier, tutorRequestTokens, tutorTierModel, tutorTiersEnabled, tutorTokenQuotaEnabled, useTutorModelForRequest, withTutorScope, type TutorTier } from '@/lib/ai/tutor-tiers';
 
 export const runtime = 'nodejs'; // Required for streaming + BullMQ
 
@@ -101,7 +101,8 @@ async function handlePost(req: NextRequest) {
     const requestedTier: TutorTier = isTutorTier(inputForTier.tier ?? body.tier) ? (inputForTier.tier ?? body.tier) : 'basic';
     let tier: TutorTier = 'basic';
     let downgraded = false;
-    if (tutorTiersEnabled()) {
+    // The token windows are checked by the same tier check (it counts tokens when TUTOR_TOKEN_QUOTA_ENABLED).
+    if (tutorTiersEnabled() || tutorTokenQuotaEnabled()) {
         const check = await subscriptionValidationService.checkTutorTier(userId, requestedTier);
         if (!check.allowed) {
             return Response.json({ error: 'DAILY_LIMIT_EXCEEDED', message: check.message, limit: check.limit }, { status: 429 });
@@ -187,7 +188,11 @@ async function handlePost(req: NextRequest) {
                 
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done', tier, downgraded })}\n\n`));
                 controller.close();
-                if (tutorTiersEnabled()) {
+                // What every OpenAI call of this answer cost, for the token window.
+                subscriptionValidationService
+                    .recordTutorTokens(userId, tier, tutorRequestTokens())
+                    .catch((e) => console.error('[tutor] failed to record tokens:', e));
+                if (tutorTiersEnabled() || tutorTokenQuotaEnabled()) {
                     subscriptionValidationService
                         .incrementQuestionCount(userId, userId, {
                             subject: String(inputForTier.subject || 'general'),

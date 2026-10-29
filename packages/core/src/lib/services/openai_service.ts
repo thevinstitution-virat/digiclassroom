@@ -3,6 +3,8 @@ type ChatCompletionMessageParam = OpenAI.Chat.ChatCompletionMessageParam
 import { ServiceLifecycleManager } from './service-lifecycle-manager'
 import { openrouter } from '@/lib/openrouter/client'
 import { ModelRouter } from '@/lib/openrouter/router'
+import { addTutorTokens } from '@/lib/ai/tutor-tiers'
+import { reportAiFailure } from '@/lib/ai/ai-alert'
 
 export interface OpenAIChatRequest {
   messages: ChatCompletionMessageParam[]
@@ -55,7 +57,12 @@ export class OpenAIService {
       messages: request.messages,
       temperature: request.temperature ?? 0,
       max_tokens: request.maxTokens ?? 3000  // Increased from 1200 to allow comprehensive, detailed answers
+    }).catch((err) => {
+      reportAiFailure('tutor-chat', err, { model: targetModel })
+      throw err
     })
+    // The tutor's token window counts every call a question makes.
+    addTutorTokens(response.usage?.prompt_tokens ?? 0, response.usage?.completion_tokens ?? 0)
 
     const message = response.choices?.[0]?.message?.content ?? ''
 
@@ -90,14 +97,25 @@ export class OpenAIService {
       messages: request.messages,
       temperature: request.temperature ?? 0,
       max_tokens: request.maxTokens ?? 3000,
-      stream: true  // Enable streaming
+      stream: true,  // Enable streaming
+      // The last chunk carries the token counts, for the tutor's token window.
+      stream_options: { include_usage: true },
+    }).catch((err) => {
+      reportAiFailure('tutor-chat', err, { model: targetModel })
+      throw err
     })
 
-    for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content
-      if (content) {
-        yield content
+    try {
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content
+        if (content) {
+          yield content
+        }
+        if (chunk.usage) addTutorTokens(chunk.usage.prompt_tokens ?? 0, chunk.usage.completion_tokens ?? 0)
       }
+    } catch (err) {
+      reportAiFailure('tutor-chat', err, { model: targetModel })
+      throw err
     }
   }
 
