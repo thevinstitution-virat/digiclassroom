@@ -15,7 +15,7 @@ import { GRAPH_FEATURE_FLAGS } from '@/lib/agents/graph/registry';
 import { studentRateLimiter } from '@/lib/services/student-rate-limiter';
 import { StudentCostMonitor } from '@/lib/services/cost-monitor';
 import { subscriptionValidationService } from '@/lib/services/subscription-validation-service';
-import { isTutorTier, tutorRequestTokens, tutorTierModel, tutorTiersEnabled, tutorTokenQuotaEnabled, useTutorModelForRequest, withTutorScope, type TutorTier } from '@/lib/ai/tutor-tiers';
+import { capTutorHistory, isTutorTier, tutorRequestTokens, tutorTierModel, tutorTiersEnabled, tutorTokenQuotaEnabled, useTutorModelForRequest, withTutorScope, type TutorTier } from '@/lib/ai/tutor-tiers';
 
 export const runtime = 'nodejs'; // Required for streaming + BullMQ
 
@@ -125,7 +125,8 @@ async function handlePost(req: NextRequest) {
                 const graph = getAgentGraph(menuIntent);
 
                 const inputData = (body.input as any) || {};
-                const messages = (inputData.conversationHistory || []).map((msg: any) =>
+                // At most the last 6 messages, as the tutor screen sends (capTutorHistory).
+                const messages = capTutorHistory(inputData.conversationHistory).map((msg: any) =>
                     msg.role === 'user' ? new HumanMessage(msg.content) : new AIMessage(msg.content)
                 );
                 

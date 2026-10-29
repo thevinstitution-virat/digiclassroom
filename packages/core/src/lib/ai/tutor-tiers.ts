@@ -139,3 +139,53 @@ export function currentTutorWindow(answers: { at: Date; tier: string; tokens: nu
 /** "4:30 pm" in India time, for the message that says when a window resets. */
 export const resetClock = (d: Date | null): string =>
   d ? d.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }) : 'soon';
+
+// ── Monthly ceiling under the windows (same rules as Varta) ────────────────────────────────────────────────────
+//
+// TUTOR_MONTHLY_BASIC_TOKENS (2,000,000) and TUTOR_MONTHLY_PRIME_TOKENS (200,000) a calendar month in India time, about
+// ₹45 at most; a free trial has TUTOR_TRIAL_TOKEN_SHARE of it. Answers are unchanged; a normal student never meets it.
+
+export function tutorMonthlyLimits(trial: boolean, env: Env = process.env): { basic: number; prime: number } {
+  const num = (v: string | undefined, d: number) => { const n = parseInt(v ?? '', 10); return Number.isFinite(n) && n >= 0 ? n : d };
+  const share = trial ? Math.min(1, Math.max(0, Number(env.TUTOR_TRIAL_TOKEN_SHARE ?? '0.5') || 0)) : 1;
+  return {
+    basic: Math.floor(num(env.TUTOR_MONTHLY_BASIC_TOKENS, 2_000_000) * share),
+    prime: tutorTiersEnabled(env) ? Math.floor(num(env.TUTOR_MONTHLY_PRIME_TOKENS, 200_000) * share) : 0,
+  };
+}
+
+/** The first moment of this month and of the next, in India time (UTC+5:30). */
+export function tutorMonthBounds(now: Date): { start: Date; next: Date } {
+  const ist = new Date(now.getTime() + 330 * 60_000);
+  return {
+    start: new Date(Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), 1) - 330 * 60_000),
+    next: new Date(Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth() + 1, 1) - 330 * 60_000),
+  };
+}
+
+/** decideTutorTier with the month on top: no Prime left this month answers on Basic; no Basic left refuses ('month'). */
+export function decideTutorWithMonth(
+  requested: TutorTier,
+  used: TutorTierUsage,
+  limits: TutorTierLimits,
+  month: TutorTierUsage,
+  monthLimits: { basic: number; prime: number },
+): TutorTierDecision | { allowed: false; month: true } {
+  const primeMonth = month.prime < monthLimits.prime;
+  const d = decideTutorTier(requested, used, primeMonth ? limits : { ...limits, prime: 0 });
+  if (month.basic >= monthLimits.basic && (!d.allowed || d.tier === 'basic')) return { allowed: false, month: true };
+  return d;
+}
+
+/**
+ * The conversation sent with a question: the last TUTOR_HISTORY_MESSAGES (6) messages, each at most 12,000 characters
+ * (the longest answer the tutor writes, 3,000 tokens). The tutor screen already sends at most 6 whole messages, so it
+ * is unchanged; this only makes the server hold to it, so a changed client cannot run up cost.
+ */
+export function capTutorHistory<T extends { content?: unknown }>(history: T[] | undefined, env: Env = process.env): T[] {
+  const n = parseInt(env.TUTOR_HISTORY_MESSAGES ?? '', 10);
+  const keep = Number.isFinite(n) && n >= 0 ? n : 6;
+  const list = Array.isArray(history) ? history : [];
+  const recent = keep === 0 ? [] : list.slice(-keep);
+  return recent.map((m) => (typeof m?.content === 'string' && m.content.length > 12_000 ? { ...m, content: m.content.slice(0, 12_000) } : m));
+}

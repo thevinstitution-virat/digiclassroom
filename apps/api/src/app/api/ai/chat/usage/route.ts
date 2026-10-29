@@ -18,16 +18,21 @@ export async function GET() {
   try {
     if (tutorTokenQuotaEnabled()) {
       // Tokens per 4-hour window: what is left of each tier, as a share, and when the window resets.
-      const { window, limits, trial } = await subscriptionValidationService.tutorWindowUsage(userId)
-      const part = (used: number, limit: number) => ({ used, limit, left: Math.max(0, limit - used), leftPct: limit ? Math.max(0, Math.round((1 - used / limit) * 100)) : 0 })
+      const { window, limits, trial, month, monthLimits, renewsAt } = await subscriptionValidationService.tutorWindowUsage(userId)
+      // What is left is the smaller of the window and the month; monthOut says the month ran out.
+      const part = (used: number, limit: number, mUsed: number, mLimit: number) => {
+        const monthOut = mUsed >= mLimit
+        return { used, limit, left: monthOut ? 0 : Math.max(0, limit - used), leftPct: monthOut || !limit ? 0 : Math.max(0, Math.round((1 - used / limit) * 100)), monthOut }
+      }
       return NextResponse.json({
         tiersEnabled: true,
         quota: 'tokens',
         plan: trial ? 'trial' : 'paid',
         windowHours: limits.hours,
         resetsAt: window.resetsAt,
-        basic: part(window.used.basic, limits.basic),
-        prime: part(window.used.prime, limits.prime),
+        renewsAt,
+        basic: part(window.used.basic, limits.basic, month.basic, monthLimits.basic),
+        prime: part(window.used.prime, limits.prime, month.prime, monthLimits.prime),
       })
     }
     const { used, limits } = await subscriptionValidationService.tutorTierUsage(userId)

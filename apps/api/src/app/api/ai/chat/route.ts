@@ -3,7 +3,7 @@ import { auth } from '@/auth'
 import { headers } from 'next/headers'
 import { runTutorGraph } from '@/lib/ai/langgraph/graph'
 import { subscriptionValidationService } from '@/lib/services/subscription-validation-service'
-import { isTutorTier, tutorRequestTokens, tutorTierModel, tutorTiersEnabled, tutorTokenQuotaEnabled, useTutorModelForRequest, withTutorScope, type TutorTier } from '@/lib/ai/tutor-tiers'
+import { capTutorHistory, isTutorTier, tutorRequestTokens, tutorTierModel, tutorTiersEnabled, tutorTokenQuotaEnabled, useTutorModelForRequest, withTutorScope, type TutorTier } from '@/lib/ai/tutor-tiers'
 import { findPreGeneratedAnswer, recordPreGeneratedAnswerHit, generateQuestionHash } from '@/lib/services/pre-generated-answers-service'
 import { routeQuery } from '@/lib/ai/routing/query-router'
 import { getSemanticCache } from '@/lib/ai/cache/semantic-cache-service'
@@ -84,8 +84,9 @@ async function handlePost(req: NextRequest) {
       : undefined) as 'vsa' | 'sa' | 'la' | 'essay' | undefined
 
     // Extract conversation history for context-aware agents (e.g., Homework Help)
+    // At most the last 6 messages, as the tutor screen sends (capTutorHistory): a changed client cannot run up cost.
     const conversationHistory = Array.isArray(body.conversationHistory)
-      ? body.conversationHistory.map((msg: any) => ({
+      ? capTutorHistory(body.conversationHistory).map((msg: any) => ({
         role: msg.role === 'user' ? 'student' : 'assistant',
         content: String(msg.content || '')
       }))

@@ -105,3 +105,37 @@ describe('tutor token windows', () => {
     expect(tutorRequestTokens()).toEqual({ input: 0, output: 0 })
   })
 })
+
+import { capTutorHistory, decideTutorWithMonth, tutorMonthBounds, tutorMonthlyLimits } from '../../../../../packages/core/src/lib/ai/tutor-tiers'
+
+describe('tutor monthly ceiling and history cap', () => {
+  const on = { TUTOR_TIERS_ENABLED: 'true' }
+
+  it('is 2M Basic + 200k Prime a month, half on a free trial', () => {
+    expect(tutorMonthlyLimits(false, on)).toEqual({ basic: 2_000_000, prime: 200_000 })
+    expect(tutorMonthlyLimits(true, on)).toEqual({ basic: 1_000_000, prime: 100_000 })
+  })
+
+  it('changes nothing with the month left; Basic when Prime is out; refuses when Basic is out', () => {
+    const limits = tutorWindowLimits(false, on)
+    const m = tutorMonthlyLimits(false, on)
+    const none = { basic: 0, prime: 0 }
+    expect(decideTutorWithMonth('prime', none, limits, { basic: 5, prime: 5 }, m)).toEqual({ allowed: true, tier: 'prime', downgraded: false })
+    expect(decideTutorWithMonth('prime', none, limits, { basic: 0, prime: m.prime }, m)).toEqual({ allowed: true, tier: 'basic', downgraded: true })
+    expect(decideTutorWithMonth('basic', none, limits, { basic: m.basic, prime: 0 }, m)).toEqual({ allowed: false, month: true })
+  })
+
+  it('counts months in India time', () => {
+    expect(tutorMonthBounds(new Date('2026-10-31T20:00:00Z')).start).toEqual(new Date('2026-10-31T18:30:00Z'))
+  })
+
+  it('keeps what the tutor screen sends, and cuts what it never would', () => {
+    const msg = (i: number, len = 10) => ({ role: i % 2 ? 'assistant' : 'user', content: 'x'.repeat(len) })
+    const six = [0, 1, 2, 3, 4, 5].map((i) => msg(i))
+    expect(capTutorHistory(six)).toEqual(six)
+    expect(capTutorHistory([...six, msg(6), msg(7)])).toHaveLength(6)
+    expect(capTutorHistory([msg(1, 20_000)])[0].content).toHaveLength(12_000)
+    expect(capTutorHistory([msg(1, 11_000)])[0].content).toHaveLength(11_000)
+    expect(capTutorHistory(undefined)).toEqual([])
+  })
+})

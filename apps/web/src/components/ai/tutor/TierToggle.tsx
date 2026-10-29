@@ -8,8 +8,10 @@ export type TutorTier = 'basic' | 'prime'
 
 export interface TutorUsage {
   tiersEnabled: boolean
-  basic?: { used: number; limit: number; left: number; leftPct?: number }
-  prime?: { used: number; limit: number; left: number; leftPct?: number }
+  basic?: { used: number; limit: number; left: number; leftPct?: number; monthOut?: boolean }
+  prime?: { used: number; limit: number; left: number; leftPct?: number; monthOut?: boolean }
+  /** When the monthly ceiling renews (start of next month). */
+  renewsAt?: string
   /** 'tokens': the limits are tokens per window of windowHours, whole again at resetsAt (null: no window open). */
   quota?: 'tokens'
   windowHours?: number
@@ -39,8 +41,12 @@ export function TierToggle({
   const resets = usage.resetsAt
     ? new Date(usage.resetsAt).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true })
     : null
+  // The monthly ceiling, rarely met: says the month, so the student does not wait for a window reset that won't help.
+  const monthOut = !!usage.prime.monthOut
   const status = tokens
-    ? primeOut
+    ? monthOut
+      ? 'Prime used up this month'
+      : primeOut
       ? `Prime used up${resets ? ` · resets ${resets}` : ''}`
       : `Prime: ${usage.prime.leftPct ?? 100}% left${resets ? ` · resets ${resets}` : ''}`
     : primeOut

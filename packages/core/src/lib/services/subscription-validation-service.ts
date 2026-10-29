@@ -17,6 +17,9 @@ import { eq, and, gt, sql, inArray } from 'drizzle-orm'
 import {
   currentTutorWindow,
   decideTutorTier,
+  decideTutorWithMonth,
+  tutorMonthBounds,
+  tutorMonthlyLimits,
   resetClock,
   tutorTierLimits,
   tutorTiersEnabled,
@@ -235,10 +238,13 @@ export class SubscriptionValidationService {
   > {
     // TUTOR_TOKEN_QUOTA_ENABLED: tokens per 4-hour window instead of questions per day.
     if (tutorTokenQuotaEnabled()) {
-      const { window, limits } = await this.tutorWindowUsage(userId)
-      const d = decideTutorTier(requested, window.used, limits)
+      const { window, limits, month, monthLimits, renewsAt } = await this.tutorWindowUsage(userId)
+      const d = decideTutorWithMonth(requested, window.used, limits, month, monthLimits)
       if (!d.allowed) {
-        return { allowed: false, limit: limits.total, message: `You have used this window's AI allowance. It resets at ${resetClock(window.resetsAt)}.` }
+        const message = 'month' in d
+          ? `You have used this month's AI allowance. It renews on ${renewsAt.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' })}.`
+          : `You have used this window's AI allowance. It resets at ${resetClock(window.resetsAt)}.`
+        return { allowed: false, limit: limits.total, message }
       }
       const left = d.tier === 'prime' ? limits.prime - window.used.prime : limits.basic - window.used.basic
       return { allowed: true, tier: d.tier, downgraded: d.downgraded, limit: limits.total, remaining: Math.max(0, left) }
@@ -261,7 +267,10 @@ export class SubscriptionValidationService {
    * JSON operations (questions_log append). Will be fully migrated in Phase 5.
    */
   /** The student's current 4-hour token window (a free trial has half the allowance). */
-  async tutorWindowUsage(userId: string): Promise<{ enabled: boolean; window: TutorWindow; limits: TutorTierLimits & { hours: number }; trial: boolean }> {
+  async tutorWindowUsage(userId: string): Promise<{
+    enabled: boolean; window: TutorWindow; limits: TutorTierLimits & { hours: number }; trial: boolean;
+    month: TutorTierUsage; monthLimits: { basic: number; prime: number }; renewsAt: Date
+  }> {
     const subscription = await this.getUserSubscription(userId)
     const trial = subscription?.subscription_status === 'trial'
     const limits = tutorWindowLimits(trial)
@@ -277,7 +286,15 @@ export class SubscriptionValidationService {
       now,
       limits.hours,
     )
-    return { enabled, window, limits, trial }
+    // This month's tokens per tier, for the monthly ceiling.
+    const { start, next } = tutorMonthBounds(now)
+    const sums = await db
+      .select({ tier: tutorTokenUsage.tier, tokens: sql<number>`coalesce(sum(${tutorTokenUsage.tokensIn} + ${tutorTokenUsage.tokensOut}), 0)::int` })
+      .from(tutorTokenUsage)
+      .where(and(eq(tutorTokenUsage.userId, userId), gt(tutorTokenUsage.createdAt, start)))
+      .groupBy(tutorTokenUsage.tier)
+    const sum = (t: TutorTier) => sums.filter((r) => (enabled ? r.tier === t : t === 'basic')).reduce((n, r) => n + Number(r.tokens), 0)
+    return { enabled, window, limits, trial, month: { basic: sum('basic'), prime: sum('prime') }, monthLimits: tutorMonthlyLimits(trial), renewsAt: next }
   }
 
   /** What one answer cost, for the token windows. Only while TUTOR_TOKEN_QUOTA_ENABLED (the table is migration 018). */
