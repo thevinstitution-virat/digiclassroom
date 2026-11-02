@@ -3,7 +3,7 @@
 //   npm run hw:eval -- --dataset <name@vN> (--config <file.json> | --profile R1,E-gemini,M1,K1) --mode read|key|mark|e2e \
 //     --budget-inr <cap> [--repeat 5] [--resume <runId>] [--compare <runId>] [--concurrency 2] \
 //     [--datasets-root hw-evals/datasets] [--runs-root hw-evals/runs] [--max-tasks N] [--upload] \
-//     [--read-group N] [--force-escalation] [--split-image-tokens] [--log-requests <file.json>] [--label "…"] [--print-estimate]
+//     [--read-group N] [--force-escalation] [--split-image-tokens] [--only-language en|hi|mixed] [--log-requests <file.json>] [--label "…"] [--print-estimate]
 //
 // --profile takes profile ids from lib/hw/eval/profiles.ts (one per stage at most); a combination
 // that breaks the family rules is refused. --read-group N reads N answers per call (production reads
@@ -121,8 +121,11 @@ async function main() {
 
   const cfg = getHwConfig();
   const loaded = loadDataset(datasetsRoot, need('dataset'));
-  const ds = onlyLanguage ? { ...loaded, items: loaded.items.filter((i) => i.language === onlyLanguage) } : loaded;
-  if (onlyLanguage) console.log(`profile ${profileSet!.reading.id}: only ${onlyLanguage} items (${ds.items.length} of ${loaded.items.length})`);
+  // --only-language en|hi|mixed keeps one language (to price a language on its own); a profile such as R-luna can also require it.
+  const langFilter = arg('only-language') ?? onlyLanguage;
+  if (langFilter && !['en', 'hi', 'mixed'].includes(langFilter)) throw new Error('--only-language must be en, hi or mixed');
+  const ds = langFilter ? { ...loaded, items: loaded.items.filter((i) => i.language === langFilter) } : loaded;
+  if (langFilter) console.log(`only ${langFilter} items (${ds.items.length} of ${loaded.items.length})`);
   let keys = mode === 'key' ? keySettingsFromEnv() : undefined;
   if (keys && profileSet?.keys) {
     const k = profileSet.keys;
@@ -135,7 +138,7 @@ async function main() {
     provider: cfg.HW_AI_PROVIDER, thinkingLevel: cfg.HW_THINKING_LEVEL, mediaResolution: cfg.HW_READ_MEDIA_RESOLUTION,
     reader: config.reader, grader: config.grader, prompts: { read: READ_PROMPT_VERSION, grade: GRADE_PROMPT_VERSION },
     ...(profileSet ? { profiles: { ids: profileArg, tier1Options, tier2Options, gradeOptions, batchPricing, valuePointsOnly, onlyLanguage: onlyLanguage ?? null, keyWriter: profileSet.keys?.writer ?? null, keyVerifier: profileSet.keys?.verifier ?? null } } : {}),
-    forceEscalation: flag('force-escalation'), readGroup: Number(arg('read-group', '1')),
+    forceEscalation: flag('force-escalation'), readGroup: Number(arg('read-group', '1')), languageFilter: langFilter ?? null,
     keyConfigHash: keys ? keyConfigHash(keys, `${cfg.QDRANT_COLLECTION_NAME}|${cfg.HW_KEY_EMBED_MODEL}`) : null,
   };
   const configHash = sha256(canonicalJson(effective));

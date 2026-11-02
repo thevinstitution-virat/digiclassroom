@@ -1,0 +1,120 @@
+{
+  "reading": {
+    "R2": {
+      "hi": {
+        "standard": 0.048187749999999994,
+        "batch": 0.024093874999999997
+      },
+      "en": {
+        "standard": 0.048417625,
+        "batch": 0.02420875
+      }
+    },
+    "R0": {
+      "en": {
+        "standard": 0.026796,
+        "batch": 0.013398
+      },
+      "hi": {
+        "standard": 0.026455000000000003,
+        "batch": 0.013227500000000001
+      }
+    },
+    "R-luna": {
+      "en": {
+        "standard": 0.0034507500000000003,
+        "batch": 0.0017253750000000001
+      }
+    },
+    "R1": {
+      "en": {
+        "standard": 0.026796,
+        "batch": 0.013398
+      },
+      "hi": {
+        "standard": 0.026455000000000003,
+        "batch": 0.013227500000000001
+      }
+    }
+  },
+  "escalation": {
+    "E1": {
+      "en": {
+        "standard": 0.08448,
+        "batch": 0.04224
+      },
+      "hi": {
+        "standard": 0.09817500000000001,
+        "batch": 0.049087500000000006
+      }
+    },
+    "E-gemini": {
+      "en": {
+        "standard": 0.1105335,
+        "batch": 0.05526675
+      },
+      "hi": {
+        "standard": 0.2552385,
+        "batch": 0.12761925
+      }
+    },
+    "E0": {
+      "hi": {
+        "standard": 0.09817500000000001,
+        "batch": 0.049087500000000006
+      },
+      "en": {
+        "standard": 0.08448,
+        "batch": 0.04224
+      }
+    }
+  },
+  "marking": {
+    "M0": {
+      "standard": 0.048839307692307696,
+      "batch": 0.024419692307692305
+    },
+    "M1": {
+      "standard": 0.015123615384615386,
+      "batch": 0.007561743589743591
+    },
+    "M2": {
+      "standard": 0.01471520512820513,
+      "batch": 0.007357538461538461
+    }
+  },
+  "keys": {
+    "K1": {
+      "standard": 0.18631033333333327,
+      "batch": 0.09315533333333331
+    },
+    "K0": {
+      "standard": 0.41811,
+      "batch": 0.209055
+    }
+  },
+  "runs": [
+    "run_20261102_09382305",
+    "run_20261102_0eb2b1d6",
+    "run_20261102_0f30da6d",
+    "run_20261102_2700eaf7",
+    "run_20261102_34676d50",
+    "run_20261102_6bde88fe",
+    "run_20261102_6df46408",
+    "run_20261102_740c3bd5",
+    "run_20261102_8e83ffca",
+    "run_20261102_90f043fd",
+    "run_20261102_95798e79",
+    "run_20261102_ba074f0d",
+    "run_20261102_c4b3c6a3",
+    "run_20261102_c6ca4a17",
+    "run_20261102_e18dce2b",
+    "run_20261102_ecc22d14",
+    "run_20261102_f3072fd8",
+    "run_20261102_f6ed5a1b",
+    "run_20261102_fad58e16"
+  ],
+  "notes": [
+    "Costs are the price table's rates (docs/hw-eval/price-table.json, ₹88/$) applied to tokens measured in these runs; the key embedding is not included (see notes in the report)."
+  ]
+}

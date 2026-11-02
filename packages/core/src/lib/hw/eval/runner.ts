@@ -398,7 +398,7 @@ export async function runEval(ds: Dataset, deps: RunnerDeps, o: RunOptions): Pro
       const req = keyRequestOf(t.items[0]) as KeyRequest;
       try {
         const k = await deps.buildKey(req);
-        const calls: CallCost[] = k.calls.map((c) => ({ model: c.model, usage: c.usage, costUsd: c.costUsd, step: (c.role === 'embed' ? 'key_retrieval' : c.role === 'writer' ? 'key_writer' : 'key_verifier') as CostStep }));
+        const calls: CallCost[] = k.calls.map((c) => ({ model: c.model, usage: c.usage, costUsd: c.costUsd, batchPricing: c.batchPricing, step: (c.role === 'embed' ? 'key_retrieval' : c.role === 'writer' ? 'key_writer' : 'key_verifier') as CostStep }));
         const summary: ItemRow['key'] = k.status === 'grounded'
           ? { status: k.status, source: k.source, points: k.key.valuePoints.length, marksSum: k.key.valuePoints.reduce((s, p) => s + p.marks, 0), partial: k.partial, citations: k.citations.length, notes: k.notes }
           : { status: k.status, reason: k.reason, notes: k.notes };

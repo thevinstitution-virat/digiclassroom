@@ -152,7 +152,7 @@ export function liveDeps(ds: Dataset, s: LiveSettings): RunnerDeps {
     async buildKey(req) {
       if (!keyDeps || !s.keys) throw new Error('key mode needs key settings (HW_KEY_* and a calibrated HW_KEY_R_MIN)');
       const k = await buildKey(req, { ...keyDeps, generate: (p, c) => withStep(c.model === s.keys!.verifier.model ? 'key_verifier' : 'key_writer', () => keyDeps.generate(p, c)) }, s.keys);
-      if (s.keyBatchPricing) for (const c of k.calls) if (c.role !== 'embed') (c as { batchPricing?: boolean }).batchPricing = true;
+      if (s.keyBatchPricing) for (const c of k.calls) if (c.role !== 'embed') c.batchPricing = true;
       return k;
     },
 

@@ -92,6 +92,8 @@ export interface KeyCallUsage {
   model: string;
   usage: TokenUsage;
   costUsd?: number;
+  /** Eval profiles priced as batch: set by the eval harness, never by the key service. */
+  batchPricing?: boolean;
 }
 
 export type NoGroundingReason =

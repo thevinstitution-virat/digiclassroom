@@ -160,7 +160,7 @@ describe('explicit caching for GPT-5.6+ (flag on)', () => {
 
 describe('profiles', () => {
   it('every named profile of the cost work exists', () => {
-    expect(PROFILES.map((p) => p.id)).toEqual(expect.arrayContaining(['R0', 'R1', 'R2', 'R-luna', 'E-gemini', 'E-sarvam', 'M0', 'M1', 'M2', 'K0', 'K1']))
+    expect(PROFILES.map((p) => p.id)).toEqual(expect.arrayContaining(['R0', 'R1', 'R2', 'R-luna', 'E-gemini', 'E-sarvam', 'E1', 'M0', 'M1', 'M2', 'K0', 'K1']))
   })
 
   it('every marking profile marks one answer per call except M0, which is today\'s ten', () => {
