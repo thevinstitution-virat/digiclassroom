@@ -11,7 +11,8 @@ import { getHwConfig } from '../config';
 import { HwError } from '../errors';
 import { db, num, type Exec } from '../db';
 import { countUnclear } from '../text/normalise';
-import { gradeRulesThenQueue, setTranscript } from '../pipeline';
+import { aiWorkStatus } from '../jobs/homework-batch';
+import { gradeRulesThenQueue, setTranscript, suggestionSources, type SuggestionSource } from '../pipeline';
 import { signedReadUrl } from '../storage/r2';
 
 type AnswerRow = typeof hwAnswer.$inferSelect;
@@ -248,7 +249,10 @@ export async function classOverview(actor: HwActor, assignmentId: string) {
     .where(and(eq(hwAiJob.organizationId, actor.orgId), eq(hwAiJob.status, 'failed'),
       sql`(${hwAiJob.submissionId} IN (SELECT id FROM hw_submission WHERE assignment_id = ${a.id}) OR ${hwAiJob.questionId} IN (SELECT id FROM hw_question WHERE assignment_id = ${a.id}))`))
     .orderBy(desc(hwAiJob.updatedAt)).limit(50);
+  // Only while homework batching is on: what the AI is doing, when it will be ready, and any fallback.
+  const aiWork = getHwConfig().HW_HOMEWORK_BATCH_ENABLED ? await aiWorkStatus(db, actor.orgId, a.id) : undefined;
   return {
+    ...(aiWork ? { aiWork } : {}),
     assignment: { id: a.id, title: a.title, status: a.status, dueAt: a.dueAt, totalMarks: num(a.totalMarks), returnedAt: a.returnedAt },
     students: inScope.map((st) => {
       const s = subs.find((x) => x.studentId === st.id);
@@ -280,8 +284,14 @@ export async function questionQueue(actor: HwActor, questionId: string, filter: 
        ORDER BY answer_id, created_at DESC`)
     : { rows: [] };
   const hi = getHwConfig().HW_HIGH_CONFIDENCE;
+  // Only while a cost flag that records it is on (needs migration 019): where each suggestion came from.
+  const sourceFlags = getHwConfig().HW_CODE_MARKING_ENABLED || getHwConfig().HW_DEDUPE_MARKING_ENABLED;
+  const sources = sourceFlags
+    ? await suggestionSources(db, actor.orgId, (ai.rows as unknown as { id: string }[]).map((x) => x.id))
+    : new Map<string, SuggestionSource>();
   const items = rows.map((r) => {
     const suggestion = (ai.rows as unknown as Record<string, unknown>[]).find((x) => x.answer_id === r.a.id) ?? null;
+    const src = suggestion ? sources.get(suggestion.id as string) : undefined;
     return {
       answerId: r.a.id,
       studentName: r.name,
@@ -302,6 +312,7 @@ export async function questionQueue(actor: HwActor, questionId: string, filter: 
         rubricVersion: suggestion.rubric_version as number,
         validationNotes: suggestion.validation_notes,
         model: suggestion.model as string,
+        ...(src ? { source: src.markSource, reusedFromAnswerId: src.reusedFromAnswerId, sameAsOthers: src.sameAsOthers } : {}),
       },
       grade: r.g && { marks: num(r.g.marks), itemMarks: r.g.itemMarks, comment: r.g.comment, source: r.g.source },
     };

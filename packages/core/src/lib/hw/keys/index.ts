@@ -11,6 +11,7 @@ import { trioReader, type TrioReader } from './trio';
 
 export { buildKey, keyConfigHash, keySettingsFromEnv, KEY_RETRIEVAL_VERSION, type KeyDeps, type KeySettings, type OfficialScheme } from './service';
 export { fileKeyCache, memoryKeyCache, type KeyCache } from './cache';
+export { memorySharedKeyStore, isPublicOrigin, type SharedKeyStore } from './shared';
 export type * from './types';
 
 /** Real dependencies: Gyankosh Qdrant (read), trio content tables (read-only transaction), AI providers. */

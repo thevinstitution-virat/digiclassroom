@@ -27,6 +27,11 @@ export interface KeyRequest {
   competency?: string;
   passageText?: string;
   /**
+   * Where the question comes from. Only a public question (a textbook exercise or a board paper)
+   * may use the shared key library; absent or "custom" never does.
+   */
+  questionOrigin?: 'textbook_exercise' | 'board_paper' | 'custom';
+  /**
    * Library hub scope (curriculum v2 node ids or codes, or work ids), used while LIBRARY_HUB_ENABLED is on. Absent, the
    * scope is the CBSE class and subject above. In hub mode `bookHint.contentItemId` is a hub work id.
    */

@@ -3,6 +3,8 @@
 
 import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { hwAiGrade, hwAnswer, hwGrade, hwQuestion, hwRubricItem, hwSubmission, hwTranscriptRevision } from '@/db/hw-schema';
+import { hwAiGradeSource } from '@/db/hw-cost-schema';
+import { REUSE_NOTE } from './grader/dedupe';
 import { getHwConfig } from './config';
 import { newId, num, type Exec } from './db';
 import { gradeWithoutAi } from './grader/exact-match';
@@ -32,8 +34,9 @@ export async function loadGradeQuestion(x: Exec, questionId: string): Promise<Gr
 
 export async function insertAiGrades(x: Exec, orgId: string, jobId: string | null, results: GradeResult[]): Promise<void> {
   if (!results.length) return;
-  await x.insert(hwAiGrade).values(results.map((r) => ({
-    id: newId(),
+  const rows = results.map((r) => ({ id: newId(), r }));
+  await x.insert(hwAiGrade).values(rows.map(({ id, r }) => ({
+    id,
     organizationId: orgId,
     answerId: r.answerId,
     jobId,
@@ -45,6 +48,79 @@ export async function insertAiGrades(x: Exec, orgId: string, jobId: string | nul
     confidence: String(r.confidence),
     validationNotes: r.validationNotes,
   })));
+  // How each suggestion was produced, only while a cost flag that records it is on (migration 019).
+  const sourced = rows.filter(({ r }) => r.markSource !== undefined);
+  if (sourced.length) {
+    await x.insert(hwAiGradeSource).values(sourced.map(({ id, r }) => ({
+      aiGradeId: id,
+      organizationId: orgId,
+      answerId: r.answerId,
+      markSource: r.markSource!,
+      reusedFromAnswerId: r.markSource === 'reuse' ? r.reusedFromAnswerId! : null,
+      transcriptHash: r.transcriptHash ?? null,
+      keyVersionHash: r.keyVersionHash ?? null,
+    })));
+  }
+}
+
+/** Suggestions an AI already made for the same question, key version and transcript (originals only, newest first). */
+export async function findPriorSuggestions(x: Exec, orgId: string, keyHash: string, transcriptHashes: string[]): Promise<Map<string, GradeResult>> {
+  const out = new Map<string, GradeResult>();
+  if (!transcriptHashes.length) return out;
+  const rows = await x.execute<{ answer_id: string; model: string; prompt_version: string; rubric_version: number; items: GradeResult['items']; suggested_marks: string; confidence: string; validation_notes: string[]; transcript_hash: string }>(sql`
+    SELECT DISTINCT ON (s.transcript_hash) g.answer_id, g.model, g.prompt_version, g.rubric_version, g.items, g.suggested_marks, g.confidence, g.validation_notes, s.transcript_hash
+      FROM hw_ai_grade_source s JOIN hw_ai_grade g ON g.id = s.ai_grade_id AND g.organization_id = s.organization_id
+     WHERE s.organization_id = ${orgId} AND s.key_version_hash = ${keyHash} AND s.mark_source = 'ai'
+       AND s.transcript_hash IN (${sql.join(transcriptHashes.map((h) => sql`${h}`), sql`, `)})
+     ORDER BY s.transcript_hash, g.created_at DESC`);
+  for (const r of rows.rows) {
+    out.set(r.transcript_hash, {
+      answerId: r.answer_id, model: r.model, promptVersion: r.prompt_version, rubricVersion: r.rubric_version, items: r.items,
+      suggestedMarks: Number(r.suggested_marks), confidence: Number(r.confidence), validationNotes: r.validation_notes,
+    });
+  }
+  return out;
+}
+
+/** A copy of an original suggestion for another answer with the same transcript, question and key version. */
+export function reusedSuggestion(original: GradeResult, toAnswerId: string, hashes: { transcriptHash: string; keyVersionHash: string }): GradeResult {
+  return {
+    ...original,
+    answerId: toAnswerId,
+    markSource: 'reuse',
+    reusedFromAnswerId: original.answerId,
+    ...hashes,
+    validationNotes: [...original.validationNotes.filter((n) => n !== REUSE_NOTE), REUSE_NOTE],
+  };
+}
+
+export interface SuggestionSource { markSource: 'ai' | 'code' | 'reuse'; reusedFromAnswerId: string | null; sameAsOthers: number }
+
+/** For the marking view: how each listed suggestion was produced, and how many other answers share its transcript. */
+export async function suggestionSources(x: Exec, orgId: string, aiGradeIds: string[]): Promise<Map<string, SuggestionSource>> {
+  const out = new Map<string, SuggestionSource>();
+  if (!aiGradeIds.length) return out;
+  const rows = await x.execute<{ ai_grade_id: string; mark_source: SuggestionSource['markSource']; reused_from_answer_id: string | null; same_as_others: number }>(sql`
+    SELECT s.ai_grade_id, s.mark_source, s.reused_from_answer_id,
+           CASE WHEN s.transcript_hash IS NULL THEN 0 ELSE
+             (SELECT count(DISTINCT o.answer_id)::int FROM hw_ai_grade_source o
+               WHERE o.organization_id = s.organization_id AND o.key_version_hash = s.key_version_hash
+                 AND o.transcript_hash = s.transcript_hash AND o.answer_id <> s.answer_id) END AS same_as_others
+      FROM hw_ai_grade_source s
+     WHERE s.organization_id = ${orgId} AND s.ai_grade_id IN (${sql.join(aiGradeIds.map((i) => sql`${i}`), sql`, `)})`);
+  for (const r of rows.rows) out.set(r.ai_grade_id, { markSource: r.mark_source, reusedFromAnswerId: r.reused_from_answer_id, sameAsOthers: r.same_as_others });
+  return out;
+}
+
+/** How many OTHER answers to the same question share this answer's transcript and key version (0 when unknown). */
+export async function sameAsOthers(x: Exec, orgId: string, answerId: string): Promise<number> {
+  const rows = await x.execute<{ n: number }>(sql`
+    SELECT count(DISTINCT o.answer_id)::int AS n
+      FROM hw_ai_grade_source me
+      JOIN hw_ai_grade_source o ON o.organization_id = me.organization_id AND o.key_version_hash = me.key_version_hash
+                               AND o.transcript_hash = me.transcript_hash AND o.answer_id <> me.answer_id
+     WHERE me.organization_id = ${orgId} AND me.answer_id = ${answerId} AND me.transcript_hash IS NOT NULL`);
+  return rows.rows[0]?.n ?? 0;
 }
 
 /**
@@ -91,8 +167,9 @@ export async function gradeByRules(x: Exec, orgId: string, q: GradeQuestion): Pr
   const pending = await answersNeedingSuggestion(x, q);
   const byRule: GradeResult[] = [];
   let forAi = 0;
+  const codeMarking = getHwConfig().HW_CODE_MARKING_ENABLED;
   for (const a of pending) {
-    const r = gradeWithoutAi(q, a.answerId, a.transcript);
+    const r = gradeWithoutAi(q, a.answerId, a.transcript, { codeMarking });
     if (r) byRule.push(r);
     else forAi++;
   }

@@ -33,6 +33,13 @@ export interface GradeResult {
   suggestedMarks: number;
   confidence: number;
   validationNotes: string[];
+  /** How this suggestion was produced. Set only while a cost flag that records it is on. */
+  markSource?: 'ai' | 'code' | 'reuse';
+  /** reuse: the answer whose suggestion this one copies. */
+  reusedFromAnswerId?: string;
+  /** Hashes that make a suggestion reusable (see grader/dedupe.ts). */
+  transcriptHash?: string;
+  keyVersionHash?: string;
 }
 
 export interface AnswerGrader {

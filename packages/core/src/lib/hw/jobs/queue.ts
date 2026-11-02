@@ -19,11 +19,24 @@ export interface ReadPayload {
   tier: 1 | 2;
   /** Only these answers; omitted = every pending ink/photo answer of the submission. */
   answerIds?: string[];
+  /** HW_HOMEWORK_BATCH_ENABLED: the latest time the batch may take (ISO). */
+  readyBy?: string;
+  /** HW_HOMEWORK_BATCH_ENABLED: a batch failed or ran out of time; run on the standard path, never batch again. */
+  standard?: boolean;
+  fallbackReason?: string;
 }
 
 export interface GradePayload {
   rubricVersion: number;
   chunks: string[][];
+  /** HW_DEDUPE_MARKING_ENABLED: representative answer id -> later answers with the same transcript, marked from its suggestion. */
+  followers?: Record<string, string[]>;
+  /** HW_DEDUPE_MARKING_ENABLED: key version hash at the time of the request. */
+  keyHash?: string;
+  /** HW_HOMEWORK_BATCH_ENABLED, as for ReadPayload. */
+  readyBy?: string;
+  standard?: boolean;
+  fallbackReason?: string;
 }
 
 export function payloadOf<T>(job: JobRow): T | null {
@@ -48,15 +61,21 @@ export async function enqueueRead(x: Exec, orgId: string, submissionId: string, 
  * job is already queued is picked up by that job; the delay lets a class's submissions
  * accumulate so they are marked together.
  */
-export async function enqueueGrade(x: Exec, orgId: string, questionId: string, delaySeconds: number): Promise<void> {
+export async function enqueueGrade(x: Exec, orgId: string, questionId: string, delaySeconds: number, opts: { standard?: { reason: string } } = {}): Promise<void> {
   await x.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${'hw-grade:' + questionId}))`);
   const [existing] = await x.select({ id: hwAiJob.id }).from(hwAiJob)
     .where(and(eq(hwAiJob.kind, 'grade'), eq(hwAiJob.questionId, questionId), eq(hwAiJob.status, 'queued')))
     .limit(1);
-  if (existing) return;
+  // A fallback must not be swallowed by a job that would batch again: it makes that job standard.
+  const payloadRef = opts.standard ? JSON.stringify({ standard: true, fallbackReason: opts.standard.reason }) : undefined;
+  if (existing) {
+    if (payloadRef) await x.update(hwAiJob).set({ payloadRef, error: opts.standard!.reason }).where(eq(hwAiJob.id, existing.id));
+    return;
+  }
   await x.insert(hwAiJob).values({
     id: newId(), organizationId: orgId, kind: 'grade', questionId, provider: currentProvider(),
     runAfter: sql`now() + make_interval(secs => ${delaySeconds})`,
+    ...(payloadRef ? { payloadRef, error: opts.standard!.reason } : {}),
   });
 }
 

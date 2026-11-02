@@ -3,6 +3,7 @@
 
 import { readFileSync } from 'node:fs';
 import { extname, join } from 'node:path';
+import { getHwConfig } from '../config';
 import { estimateCost, parsePriceTable } from '../cost/pricing';
 import { generate, withStep, type CallOptions } from '../ai';
 import { AiGrader } from '../grader/ai-grader';
@@ -135,7 +136,7 @@ export function liveDeps(ds: Dataset, s: LiveSettings): RunnerDeps {
       const results: GradeResult[] = [];
       const toAi: typeof answers = [];
       for (const a of answers) {
-        const rule = gradeWithoutAi(q, a.answerId, a.transcript);
+        const rule = gradeWithoutAi(q, a.answerId, a.transcript, { codeMarking: getHwConfig().HW_CODE_MARKING_ENABLED });
         if (rule) results.push(rule);
         else toAi.push(a);
       }

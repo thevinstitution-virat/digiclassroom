@@ -88,6 +88,8 @@ const EnvSchema = z.object({
   HW_HOMEWORK_BATCH_ENABLED: bool(false),
   /** Hours a homework batch may take before it is given up and re-run on the standard path. */
   HW_HOMEWORK_BATCH_DEADLINE_HOURS: num(24, 1, 96),
+  /** Work due within this many hours (or already past due) is not batched: the teacher is waiting for it. */
+  HW_HOMEWORK_URGENT_HOURS: num(3, 0, 720),
   /** A key built from the official scheme or the textbook for a public question is reused across tenants. */
   HW_SHARED_KEYS_ENABLED: bool(false),
   /** One-mark answers equal to an accepted answer (after normalisation) are marked in code. */

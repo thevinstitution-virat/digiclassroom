@@ -20,12 +20,15 @@ import { getHwObject } from '../storage/r2';
 import { failAnswers, finishSubmissionIfRead, setTranscript } from '../pipeline';
 import { claim, claimBatchPending, complete, enqueueRead, fail, markBatchPending, payloadOf, type JobRow, type ReadPayload } from './queue';
 import { shadowAfterRead } from '../shadow/shadow';
+import { decideBatch, dueFor, homeworkBatchSettings, isOverdue, readyBy, requeueStandard } from './homework-batch';
 
 interface PreparedRead {
   job: JobRow;
   tier: 1 | 2;
   input: ReadInput;
   bytes: number;
+  /** HW_HOMEWORK_BATCH_ENABLED: why this ran on the standard path, when the teacher should know. */
+  standardReason?: string;
 }
 
 const policy = (): EscalationPolicy => ({
@@ -85,7 +88,7 @@ async function prepare(job: JobRow): Promise<PreparedRead | null> {
   return { job, tier: payload.tier, input: { answers }, bytes: answers.reduce((s, a) => s + a.png.length, 0) };
 }
 
-type ReadJobRef = Pick<PreparedRead, 'job' | 'tier'>;
+type ReadJobRef = Pick<PreparedRead, 'job' | 'tier'> & { standardReason?: string };
 
 /** Save one read's results and decide what happens to each answer. */
 async function applyRead(p: ReadJobRef, results: ReadAnswerResult[], billing: Pick<AiResult, 'model' | 'usage' | 'costUsd'>, batch: boolean): Promise<void> {
@@ -118,7 +121,9 @@ async function applyRead(p: ReadJobRef, results: ReadAnswerResult[], billing: Pi
       });
     }
     if (escalate.length) await enqueueRead(tx, p.job.organizationId, p.job.submissionId!, { tier: 2, answerIds: escalate });
-    await complete(tx, p.job.id, model, note);
+    // A re-run on the standard path keeps its reason on the finished job, where the teacher can see it.
+    const why = [payloadOf<ReadPayload>(p.job)?.fallbackReason, p.standardReason].filter(Boolean)[0];
+    await complete(tx, p.job.id, model, [why, note].filter(Boolean).join(' | ') || undefined);
     if (!escalate.length) await finishSubmissionIfRead(tx, p.job.submissionId!);
   });
   // Production is committed; the candidate configuration may now read the same answers.
@@ -171,7 +176,20 @@ export async function runReadJobs(workerId: string, deadline: number): Promise<n
     }
     if (!p) continue;
 
-    if (p.tier === 2 || !cfg.HW_BATCH_ENABLED || !readBatchSupported()) {
+    if (cfg.HW_HOMEWORK_BATCH_ENABLED) {
+      // Homework batches; urgent work, escalation, a fallback and anything the provider cannot batch stay standard.
+      const payload = payloadOf<ReadPayload>(p.job);
+      const s = homeworkBatchSettings();
+      const d = decideBatch({
+        standardForced: p.tier === 2 || Boolean(payload?.standard), fallbackReason: payload?.fallbackReason,
+        providerCanBatch: readBatchSupported(), dueAt: await dueFor(db, { submissionId: p.job.submissionId }), now: new Date(), urgentHours: s.urgentHours,
+      });
+      if (!d.batch) {
+        if (p.tier === 1 && !payload?.standard && d.reason) p.standardReason = d.reason;
+        await runSync(p);
+        continue;
+      }
+    } else if (p.tier === 2 || !cfg.HW_BATCH_ENABLED || !readBatchSupported()) {
       await runSync(p);
       continue;
     }
@@ -192,7 +210,10 @@ async function submitReadBatch(group: PreparedRead[]): Promise<void> {
     await db.transaction(async (tx) => {
       for (const p of group) {
         // Record exactly which answers were sent, so results apply without re-reading anything.
-        const sent: ReadPayload = { tier: 1, answerIds: p.input.answers.map((a) => a.answerId) };
+        const sent: ReadPayload = {
+          tier: 1, answerIds: p.input.answers.map((a) => a.answerId),
+          ...(getHwConfig().HW_HOMEWORK_BATCH_ENABLED ? { readyBy: readyBy(new Date(), homeworkBatchSettings().deadlineHours).toISOString() } : {}),
+        };
         await markBatchPending(tx, p.job.id, name, model, sent, getHwConfig().HW_BATCH_POLL_SECONDS);
       }
     });
@@ -213,25 +234,40 @@ export async function pollReadBatches(workerId: string): Promise<number> {
     byBatch.set(j.batchRef, [...(byBatch.get(j.batchRef) ?? []), j]);
   }
 
+  const managed = getHwConfig().HW_HOMEWORK_BATCH_ENABLED;
+  // Managed mode: a batch that fails, errors for a request or runs out of time is re-run on the
+  // standard path with the reason recorded; it does not fail the job or wait for ever.
+  const fallback = (j: JobRow, reason: string) => db.transaction((tx) => requeueStandard(tx, j.id, payloadOf<ReadPayload>(j) ?? { tier: 1 }, reason));
+
   for (const [name, group] of byBatch) {
     let outcome;
     try {
       outcome = await pollBatch(group[0].provider, name, group[0].model ?? 'unknown');
     } catch (e) {
       console.error(`[hw] polling ${name} failed: ${describeError(e)}`);
+      if (managed) {
+        // The provider cannot be reached to poll: past the deadline, stop waiting.
+        for (const j of group) if (isOverdue(payloadOf<ReadPayload>(j)?.readyBy, new Date())) await fallback(j, `the batch could not be checked and its time ran out (${describeError(e)})`);
+      }
       continue; // run_after was pushed forward; try again next poll
     }
-    if (outcome.state === 'pending') continue;
+    if (outcome.state === 'pending') {
+      if (managed) for (const j of group) if (isOverdue(payloadOf<ReadPayload>(j)?.readyBy, new Date())) await fallback(j, `the batch was not finished by ${payloadOf<ReadPayload>(j)!.readyBy}`);
+      continue;
+    }
     if (outcome.state === 'failed') {
+      if (managed) { for (const j of group) await fallback(j, `the batch failed (${outcome.reason})`); continue; }
       for (const j of group) await settleFailure(j, new HwError('PROVIDER_ERROR', 'The AI batch failed.', outcome.reason));
       continue;
     }
     for (const j of group) {
       const entry = outcome.results.get(j.id);
       if (!entry) {
+        if (managed) { await fallback(j, 'the batch returned no result for this submission'); continue; }
         await settleFailure(j, new HwError('PROVIDER_ERROR', 'The AI could not read this submission.', 'no result in batch'));
         continue;
       }
+      if (managed && !entry.ok) { await fallback(j, `the batch could not read this submission (${describeError(entry.error)})`); continue; }
       try {
         if (!entry.ok) throw entry.error;
         const sent = payloadOf<ReadPayload>(j)?.answerIds;

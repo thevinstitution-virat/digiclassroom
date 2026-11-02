@@ -41,6 +41,15 @@ export function Overview({ detail, onChanged }: { detail: Detail; onChanged: () 
       </div>
       {(close.error || reopen.error || ret.error) && <HwMessage tone="error">{(close.error ?? reopen.error ?? ret.error)!.message}</HwMessage>}
 
+      {ov.data && 'aiWork' in ov.data && ov.data.aiWork && ov.data.aiWork.state !== 'idle' && (
+        <HwMessage tone="info">
+          {ov.data.aiWork.state === 'waiting_for_batch' && ov.data.aiWork.readyBy
+            ? t('tc.ov.aiWaiting', { time: new Date(ov.data.aiWork.readyBy).toLocaleString() })
+            : t('tc.ov.aiWorking')}
+        </HwMessage>
+      )}
+      {ov.data && 'aiWork' in ov.data && ov.data.aiWork?.fallbacks.map((f, i) => <HwMessage key={i} tone="info">{t('tc.ov.aiFallback')}: {f.replace(/^Re-run on the standard path: /, '')}</HwMessage>)}
+
       <Card>
         <CardHeader><CardTitle>{t('tc.ov.title')}</CardTitle></CardHeader>
         <CardContent className="overflow-x-auto">

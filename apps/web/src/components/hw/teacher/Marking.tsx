@@ -135,6 +135,9 @@ function Panel({ q, row, onDone }: { q: Queue; row: Row; onDone: () => void }) {
           <span className="text-sm font-medium">{t('mk.suggestion')}</span>
           {s && <Badge variant={s.confidence >= 0.85 ? 'default' : 'secondary'}>{t('mk.confidence', { n: Math.round(s.confidence * 100) })}</Badge>}
         </div>
+        {s && 'source' in s && s.source === 'code' && <p className="text-xs text-muted-foreground">{t('mk.src.code')}</p>}
+        {s && 'source' in s && s.source === 'reuse' && <p className="text-xs text-muted-foreground">{t('mk.src.reuse', { n: s.sameAsOthers ?? 0 })}</p>}
+        {s && 'source' in s && s.source === 'ai' && (s.sameAsOthers ?? 0) > 0 && <p className="text-xs text-muted-foreground">{t('mk.src.shared', { n: s.sameAsOthers ?? 0 })}</p>}
         {!q.rubric.length ? null : (
           <ul className="space-y-2">
             {q.rubric.map((r) => {

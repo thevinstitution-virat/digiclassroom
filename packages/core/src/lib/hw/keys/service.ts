@@ -11,6 +11,7 @@ import { textPart, type AiCall, type AiProvider, type AiResult, type CallOptions
 import { KEY_WRITER_PROMPT_VERSION, KEY_WRITER_RESPONSE_SCHEMA, KEY_WRITER_SYSTEM_PROMPT, keyWriterUserText } from '../prompts/key-writer.v1';
 import { KEY_VERIFIER_PROMPT_VERSION, KEY_VERIFIER_RESPONSE_SCHEMA, KEY_VERIFIER_SYSTEM_PROMPT, keyVerifierUserText } from '../prompts/key-verifier.v1';
 import { cacheKeyOf, canonicalJson, sha256, type CachedKey, type KeyCache } from './cache';
+import { isPublicOrigin, keyServiceVersion, sharedKeyId, textbookSourceRef, type SharedKeyId, type SharedKeyStore } from './shared';
 import { checkKey, modelFamily, parseVerifierOutput, parseWriterOutput } from './checks';
 import { buildCitation } from './citations';
 import { bestExerciseMatch } from './exercise-match';
@@ -34,6 +35,8 @@ export interface KeySettings {
   topK: number;
   maxPassages: number;
   pagesVerified: ReadonlySet<string>;
+  /** HW_SHARED_KEYS_ENABLED: textbook keys for public questions are read from and written to the shared library. */
+  sharedKeys?: boolean;
 }
 
 export interface OfficialScheme {
@@ -49,6 +52,8 @@ export interface KeyDeps {
   trio: TrioReader;
   generate: (provider: AiProvider, call: AiCall) => Promise<AiResult>;
   cache?: KeyCache;
+  /** The cross-tenant library of keys for public questions; used only when settings.sharedKeys is on. */
+  shared?: SharedKeyStore;
   /** Looks up a person-checked official scheme; absent until the question bank exists. */
   official?: (ref: NonNullable<KeyRequest['officialRef']>) => Promise<OfficialScheme | null>;
 }
@@ -68,6 +73,7 @@ export function keySettingsFromEnv(): KeySettings {
     topK: c.HW_KEY_TOP_K,
     maxPassages: c.HW_KEY_MAX_PASSAGES,
     pagesVerified: c.HW_KEY_PAGES_VERIFIED,
+    ...(c.HW_SHARED_KEYS_ENABLED ? { sharedKeys: true } : {}),
   };
   assertDifferentFamilies(s);
   return s;
@@ -229,6 +235,17 @@ async function writeAndVerify(
   const cached = deps.cache ? await deps.cache.get(cacheKey) : null;
   if (cached) return { ...cached, notes: [...notes, 'key from cache'], calls, cacheKey, fromCache: true };
 
+  // The shared library: a textbook key for a PUBLIC question, built once for every tenant. A
+  // teacher's own question (any origin but a textbook exercise or board paper) never gets here.
+  let sharedId: SharedKeyId | null = null;
+  if (source === 'textbook' && settings.sharedKeys && deps.shared && isPublicOrigin(req.questionOrigin)) {
+    sharedId = sharedKeyId(req, 'textbook', textbookSourceRef(citations, passages), SERVICE_VERSION(), meta().configHash);
+    const hit = await deps.shared.get(sharedId.cacheKey);
+    if (hit && hit.status === 'grounded' && hit.source === 'textbook' && !hit.partial) {
+      return { ...hit, notes: [...notes, 'key from the shared library'], calls, cacheKey, fromCache: true };
+    }
+  }
+
   const writer = await deps.generate(settings.writer.provider, {
     model: settings.writer.model,
     systemInstruction: KEY_WRITER_SYSTEM_PROMPT,
@@ -275,5 +292,11 @@ async function writeAndVerify(
     partial: verdicts.verdicts.some((v) => v.support === 'partial'),
   };
   if (deps.cache) await deps.cache.set(cacheKey, result);
+  // Only fully supported keys are shared: a partly supported one is usable only in runs that allow it.
+  if (sharedId && deps.shared && source === 'textbook' && !result.partial && isPublicOrigin(req.questionOrigin)) {
+    await deps.shared.put({ id: sharedId, origin: req.questionOrigin, source: 'textbook', keyServiceVersion: SERVICE_VERSION(), configHash: meta().configHash, key: result });
+  }
   return result;
 }
+
+const SERVICE_VERSION = () => keyServiceVersion({ writerPrompt: KEY_WRITER_PROMPT_VERSION, verifierPrompt: KEY_VERIFIER_PROMPT_VERSION, retrieval: KEY_RETRIEVAL_VERSION });
