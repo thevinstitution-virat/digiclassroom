@@ -1,0 +1,14 @@
+{
+  "_comment": "USD per 1M tokens. Standard and batch rates confirmed 2026-11-03 against Google (aistudio.google.com/docs/pricing), OpenAI (developers.openai.com/api/docs/pricing, prompt-caching guide) and OpenRouter (openrouter.ai/api/v1/models, which lists the same rates). gemini-3.6-flash doubles on 2027-01-01 (input 1.50, output 7.50, cached 0.15; batch 0.75 / 3.75 / 0.075). gemini-3.5-flash is not on Google's pricing page; its rates here are OpenRouter's. cache_write = price of tokens written to a cache (GPT-5.6+: 1.25x input at the 30m TTL).",
+  "inr_per_usd": 88,
+  "models": {
+    "google/gemini-3.5-flash-lite": { "input": 0.30, "cached": 0.03, "output": 2.50, "batch_input": 0.15, "batch_output": 1.25, "batch_cached": 0.015 },
+    "google/gemini-3.6-flash": { "input": 0.75, "cached": 0.075, "output": 3.75, "batch_input": 0.375, "batch_output": 1.875, "batch_cached": 0.0375 },
+    "google/gemini-3.5-flash": { "input": 1.50, "cached": 0.15, "output": 9.00, "batch_input": 0.75, "batch_output": 4.50, "batch_cached": 0.075 },
+    "google/gemini-3.8-flash": { "input": 0.75, "cached": 0.075, "output": 3.75, "batch_input": 0.375, "batch_output": 1.875, "batch_cached": 0.0375 },
+    "openai/gpt-6-luna": { "input": 0.10, "cached": 0.01, "output": 0.50, "cache_write": 0.125, "batch_input": 0.05, "batch_output": 0.25, "batch_cached": 0.005, "batch_cache_write": 0.0625 },
+    "openai/gpt-5.4-mini": { "input": 0.75, "cached": 0.075, "output": 4.50, "batch_input": 0.375, "batch_output": 2.25, "batch_cached": 0.0375 },
+    "anthropic/claude-haiku-5.5": { "input": 0.10, "cached": 0.01, "output": 0.50, "cache_write": 0.125, "batch_input": 0.05, "batch_output": 0.25, "batch_cached": 0.005 },
+    "text-embedding-3-large": { "input": 0.13, "cached": 0.13, "output": 0 }
+  }
+}

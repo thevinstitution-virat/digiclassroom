@@ -2,30 +2,31 @@
 // models (HW_READ_MODEL / HW_ESCALATE_MODEL).
 
 import { requireModel } from '../config';
-import { generate, imagePart, textPart, type AiCall as GeminiCall } from '../ai';
+import { generate, imagePart, textPart, type AiCall as GeminiCall, type CallOptions } from '../ai';
 import { READ_PROMPT_VERSION, READ_RESPONSE_SCHEMA, READ_SYSTEM_PROMPT, readAnswerLabel } from '../prompts/read.v1';
 import { parseReadOutput } from './parse';
 import type { HandwritingReader, ReadInput, ReadResult } from './types';
 
 /** The request for one submission: each answer as a label followed by its image. */
-export function readCall(model: string, input: ReadInput): GeminiCall {
+export function readCall(model: string, input: ReadInput, options?: CallOptions): GeminiCall {
   return {
     model,
     systemInstruction: READ_SYSTEM_PROMPT,
     schema: READ_RESPONSE_SCHEMA,
-    parts: input.answers.flatMap((a) => [textPart(readAnswerLabel(a.answerId, a.languageHint)), imagePart(a.png, a.mimeType)]),
+    parts: input.answers.flatMap((a) => [textPart(readAnswerLabel(a.answerId, a.languageHint)), imagePart(a.png, a.mimeType, options?.mediaResolution)]),
+    ...(options ? { options } : {}),
   };
 }
 
 export class GeminiReader implements HandwritingReader {
   readonly id: string;
 
-  constructor(readonly model: string, readonly tier: 1 | 2) {
+  constructor(readonly model: string, readonly tier: 1 | 2, readonly options?: CallOptions) {
     this.id = `gemini:${model}:${READ_PROMPT_VERSION}`;
   }
 
   async read(input: ReadInput): Promise<ReadResult> {
-    const res = await generate(readCall(this.model, input));
+    const res = await generate(readCall(this.model, input, this.options));
     return {
       answers: parseReadOutput(res.json, input.answers.map((a) => a.answerId)),
       usage: res.usage,

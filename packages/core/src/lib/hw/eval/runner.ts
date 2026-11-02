@@ -25,11 +25,42 @@ export type RunMode = 'read' | 'key' | 'mark' | 'e2e';
 export type RowStatus = 'ok' | 'failed' | 'no_grounding' | 'skipped';
 export type ReadRoute = 'tier1' | 'tier2' | 'needs_review';
 
-export interface CallCost { model: string; usage: TokenUsage; costUsd?: number }
+/** Which part of the pipeline a call belongs to; the cost table is one row per step. */
+export type CostStep = 'read_tier1' | 'read_escalation' | 'key_retrieval' | 'key_writer' | 'key_verifier' | 'grade';
+
+export interface CallCost {
+  model: string;
+  usage: TokenUsage;
+  costUsd?: number;
+  step?: CostStep;
+  /** Price this call at the provider's batch rate (tokens are the measured ones; see the profile's note). */
+  batchPricing?: boolean;
+  /** Images in the call, as sent. */
+  images?: { count: number; bytes: number; pixels: number };
+  /** Answers handled by this one call. */
+  answers?: number;
+  /** A call made only to measure (the paired truth-transcript mark of an e2e run, or the text-only twin used to split image tokens from text tokens); not part of the production cost per answer. */
+  purpose?: 'eval_truth_mark' | 'measurement';
+}
+
+/** A call as recorded in a run: what was sent, what was used, what it cost. */
+export interface LedgerCall extends CallCost {
+  paise: number;
+  /** 'reported' = the provider's own charge; 'table' = measured tokens at the price table's standard rates; 'table_batch' = measured tokens at its batch rates. */
+  basis: 'reported' | 'table' | 'table_batch';
+  /** The same measured tokens at the table's standard and batch rates, for comparing profiles. */
+  tableStandardPaise?: number;
+  tableBatchPaise?: number;
+}
 
 export interface RunnerDeps {
   /** The production route: tier 1, escalated to tier 2 when in doubt. Every call made is returned. */
   read(item: EvalItem): Promise<{ text: string; unclearCount: number; confidence: number; route: ReadRoute; calls: CallCost[] }>;
+  /**
+   * Several answers in ONE reader call, the way production reads a submission. Results are in item
+   * order; calls are shared by the group. Used by `read` mode when readGroup > 1.
+   */
+  readGroup?(items: EvalItem[]): Promise<{ results: { text: string; unclearCount: number; confidence: number; route: ReadRoute }[]; calls: CallCost[] }>;
   /** Marks several answers to one question in one call, as production does. Exact-match/blank answers cost nothing. */
   grade(question: GradeQuestion, answers: { answerId: string; transcript: string }[]): Promise<{ results: GradeResult[]; calls: CallCost[] }>;
   buildKey(req: KeyRequest): Promise<KeyResult>;
@@ -38,6 +69,8 @@ export interface RunnerDeps {
    * table's estimate; null when neither exists (the run refuses to start without prices).
    */
   price(call: CallCost): number | null;
+  /** The same call's measured tokens at the price table's standard or batch rates (ignores what the provider reported). */
+  priceAs?(call: CallCost, batch: boolean): number | null;
 }
 
 export interface Estimates {
@@ -56,6 +89,8 @@ export interface RunOptions {
   budgetPaise: number;
   concurrency: number;
   gradeChunkSize: number;
+  /** Answers per reader call in `read` mode (production sends every ink/photo answer of a submission together). Default 1. */
+  readGroup?: number;
   seed: number;
   estimates: Estimates;
   /** Recorded in run.json; computed by the caller (git commit, config hash, settings). */
@@ -86,6 +121,8 @@ export interface ItemRow {
   tokens: TokenUsage;
   costPaise: number;
   latencyMs: number;
+  /** Every provider call behind this row's cost (a chunk's or group's calls sit on its first row). */
+  calls?: LedgerCall[];
 }
 
 export type RunStatus = 'running' | 'completed' | 'budget_reached' | 'aborted';
@@ -187,13 +224,18 @@ export class Budget {
   }
 }
 
-const addUsage = (a: TokenUsage, b: TokenUsage): TokenUsage => ({ input: a.input + b.input, cached: a.cached + b.cached, output: a.output + b.output });
+const OPTIONAL_USAGE = ['cacheWrite', 'thinking', 'inputImage', 'inputText'] as const;
+const addUsage = (a: TokenUsage, b: TokenUsage): TokenUsage => {
+  const out: TokenUsage = { input: a.input + b.input, cached: a.cached + b.cached, output: a.output + b.output };
+  for (const k of OPTIONAL_USAGE) if (a[k] !== undefined || b[k] !== undefined) out[k] = (a[k] ?? 0) + (b[k] ?? 0);
+  return out;
+};
 const ZERO: TokenUsage = { input: 0, cached: 0, output: 0 };
 const scale = (u: TokenUsage, n: number): TokenUsage => ({ input: u.input * n, cached: u.cached * n, output: u.output * n });
 
 // ── Tasks ──────────────────────────────────────────────────────────────────────────────
 
-interface Task { kind: 'read' | 'mark' | 'e2e' | 'key'; repeat: number; items: EvalItem[]; projected: number }
+interface Task { kind: 'read' | 'mark' | 'e2e' | 'key' | 'read_group'; repeat: number; items: EvalItem[]; projected: number }
 
 function eligible(it: EvalItem, mode: RunMode): string | null {
   const hasMedia = !!(it.media.render || it.media.photo);
@@ -215,7 +257,7 @@ export function latestRows(rows: readonly ItemRow[]): ItemRow[] {
   return [...m.values()];
 }
 
-export function planTasks(ds: Dataset, o: Pick<RunOptions, 'mode' | 'repeat' | 'gradeChunkSize' | 'seed' | 'estimates'>, done: ReadonlySet<string>, price: RunnerDeps['price']): { tasks: Task[]; skipped: ItemRow[] } {
+export function planTasks(ds: Dataset, o: Pick<RunOptions, 'mode' | 'repeat' | 'gradeChunkSize' | 'seed' | 'estimates' | 'readGroup'>, done: ReadonlySet<string>, price: RunnerDeps['price']): { tasks: Task[]; skipped: ItemRow[] } {
   const skipped: ItemRow[] = [];
   const tasks: Task[] = [];
   const p = (model: string, u: TokenUsage) => {
@@ -235,7 +277,15 @@ export function planTasks(ds: Dataset, o: Pick<RunOptions, 'mode' | 'repeat' | '
       pending.push(it);
     }
     if (o.mode === 'read') {
-      for (const it of pending) tasks.push({ kind: 'read', repeat: r, items: [it], projected: p(o.estimates.read.model, o.estimates.read.usage) });
+      const g = Math.max(1, o.readGroup ?? 1);
+      if (g === 1) {
+        for (const it of pending) tasks.push({ kind: 'read', repeat: r, items: [it], projected: p(o.estimates.read.model, o.estimates.read.usage) });
+      } else {
+        for (let i = 0; i < pending.length; i += g) {
+          const items = pending.slice(i, i + g);
+          tasks.push({ kind: 'read_group', repeat: r, items, projected: items.length * p(o.estimates.read.model, o.estimates.read.usage) });
+        }
+      }
     } else if (o.mode === 'key') {
       // One key per question; every item of the question shares it.
       const byQ = new Map<string, EvalItem[]>();
@@ -309,6 +359,13 @@ export async function runEval(ds: Dataset, deps: RunnerDeps, o: RunOptions): Pro
     return s + p;
   }, 0);
   const usageOf = (calls: CallCost[]) => calls.reduce((u, c) => addUsage(u, c.usage), ZERO);
+  const ledger = (calls: CallCost[]): LedgerCall[] => calls.map((c) => ({
+    ...c,
+    paise: deps.price(c) ?? 0,
+    basis: c.batchPricing ? 'table_batch' as const : c.costUsd !== undefined ? 'reported' as const : 'table' as const,
+    tableStandardPaise: deps.priceAs?.(c, false) ?? undefined,
+    tableBatchPaise: deps.priceAs?.(c, true) ?? undefined,
+  }));
 
   const base = (it: EvalItem, t: Task) => ({ itemId: it.id, questionId: it.question.id, repeat: t.repeat, mode: o.mode });
 
@@ -318,16 +375,30 @@ export async function runEval(ds: Dataset, deps: RunnerDeps, o: RunOptions): Pro
       const it = t.items[0];
       try {
         const r = await deps.read(it);
-        return [{ ...base(it, t), status: 'ok', stage: 'read', transcript: r.text, readConfidence: r.confidence, readRoute: r.route, reading: scoreReading(r.text, it.truthTranscript!.text), tokens: usageOf(r.calls), costPaise: paise(r.calls), latencyMs: Date.now() - started }];
+        return [{ ...base(it, t), status: 'ok', stage: 'read', transcript: r.text, readConfidence: r.confidence, readRoute: r.route, reading: scoreReading(r.text, it.truthTranscript!.text), tokens: usageOf(r.calls), costPaise: paise(r.calls), latencyMs: Date.now() - started, calls: ledger(r.calls) }];
       } catch (e) {
         return [{ ...base(it, t), status: 'failed', stage: 'read', reason: errText(e), tokens: ZERO, costPaise: 0, latencyMs: Date.now() - started }];
+      }
+    }
+    if (t.kind === 'read_group') {
+      try {
+        const g = await deps.readGroup!(t.items);
+        const calls = ledger(g.calls);
+        // The group's calls are carried once, on its first item.
+        return t.items.map((it, i) => ({
+          ...base(it, t), status: 'ok' as const, stage: 'read' as const, transcript: g.results[i].text, readConfidence: g.results[i].confidence, readRoute: g.results[i].route,
+          reading: scoreReading(g.results[i].text, it.truthTranscript!.text),
+          tokens: i === 0 ? usageOf(g.calls) : ZERO, costPaise: i === 0 ? calls.reduce((s, c) => s + c.paise, 0) : 0, latencyMs: Date.now() - started, ...(i === 0 ? { calls } : {}),
+        }));
+      } catch (e) {
+        return t.items.map((it) => ({ ...base(it, t), status: 'failed' as const, stage: 'read' as const, reason: errText(e), tokens: ZERO, costPaise: 0, latencyMs: Date.now() - started }));
       }
     }
     if (t.kind === 'key') {
       const req = keyRequestOf(t.items[0]) as KeyRequest;
       try {
         const k = await deps.buildKey(req);
-        const calls = k.calls.map((c) => ({ model: c.model, usage: c.usage, costUsd: c.costUsd }));
+        const calls: CallCost[] = k.calls.map((c) => ({ model: c.model, usage: c.usage, costUsd: c.costUsd, step: (c.role === 'embed' ? 'key_retrieval' : c.role === 'writer' ? 'key_writer' : 'key_verifier') as CostStep }));
         const summary: ItemRow['key'] = k.status === 'grounded'
           ? { status: k.status, source: k.source, points: k.key.valuePoints.length, marksSum: k.key.valuePoints.reduce((s, p) => s + p.marks, 0), partial: k.partial, citations: k.citations.length, notes: k.notes }
           : { status: k.status, reason: k.reason, notes: k.notes };
@@ -335,7 +406,7 @@ export async function runEval(ds: Dataset, deps: RunnerDeps, o: RunOptions): Pro
         // Cost is carried once, on the question's first item.
         return t.items.map((it, i) => ({
           ...base(it, t), status, stage: 'key' as const, reason: k.status === 'grounded' ? undefined : `${k.reason}: ${k.detail}`, key: summary,
-          tokens: i === 0 ? usageOf(calls) : ZERO, costPaise: i === 0 ? paise(calls) : 0, latencyMs: Date.now() - started,
+          tokens: i === 0 ? usageOf(calls) : ZERO, costPaise: i === 0 ? paise(calls) : 0, latencyMs: Date.now() - started, ...(i === 0 ? { calls: ledger(calls) } : {}),
         }));
       } catch (e) {
         return t.items.map((it) => ({ ...base(it, t), status: 'failed' as const, stage: 'key' as const, reason: errText(e), tokens: ZERO, costPaise: 0, latencyMs: Date.now() - started }));
@@ -351,7 +422,7 @@ export async function runEval(ds: Dataset, deps: RunnerDeps, o: RunOptions): Pro
         try {
           const r = await deps.read(it);
           transcripts.set(it.id, r.text);
-          rows.set(it.id, { ...base(it, t), status: 'ok', transcript: r.text, readConfidence: r.confidence, readRoute: r.route, reading: scoreReading(r.text, it.truthTranscript!.text), tokens: usageOf(r.calls), costPaise: paise(r.calls), latencyMs: 0 });
+          rows.set(it.id, { ...base(it, t), status: 'ok', transcript: r.text, readConfidence: r.confidence, readRoute: r.route, reading: scoreReading(r.text, it.truthTranscript!.text), tokens: usageOf(r.calls), costPaise: paise(r.calls), latencyMs: 0, calls: ledger(r.calls) });
         } catch (e) {
           rows.set(it.id, { ...base(it, t), status: 'failed', stage: 'read', reason: errText(e), tokens: ZERO, costPaise: 0, latencyMs: 0 });
         }
@@ -370,7 +441,7 @@ export async function runEval(ds: Dataset, deps: RunnerDeps, o: RunOptions): Pro
           if (!res) Object.assign(row, { status: 'failed', stage: 'mark', reason: 'no grade result for this answer' });
           else row[field] = markOf(res);
           // The chunk's cost is carried once, on its first answer.
-          if (i === 0) { row.tokens = addUsage(row.tokens, each.tokens); row.costPaise += each.cost; }
+          if (i === 0) { row.tokens = addUsage(row.tokens, each.tokens); row.costPaise += each.cost; row.calls = [...(row.calls ?? []), ...ledger(field === 'markTruth' ? g.calls.map((c) => ({ ...c, purpose: 'eval_truth_mark' as const })) : g.calls)]; }
           rows.set(a.answerId, row);
         });
       } catch (e) {

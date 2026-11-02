@@ -83,6 +83,19 @@ const EnvSchema = z.object({
   HW_SHADOW_RATE: num(0, 0, 1),
   /** Candidate for shadow mode: {"reader":{"model","escalateModel"?},"grader":{"model"}} (either part may be absent). */
   HW_SHADOW_CONFIG_JSON: str(),
+  // Cost savings that cannot change an answer, a mark or a key (docs/hw-eval/cost-phase1.md). Each is off unless set.
+  /** Homework goes through the provider's batch API with a visible status and a visible fallback to the standard path; tests and urgent work stay standard. */
+  HW_HOMEWORK_BATCH_ENABLED: bool(false),
+  /** Hours a homework batch may take before it is given up and re-run on the standard path. */
+  HW_HOMEWORK_BATCH_DEADLINE_HOURS: num(24, 1, 96),
+  /** A key built from the official scheme or the textbook for a public question is reused across tenants. */
+  HW_SHARED_KEYS_ENABLED: bool(false),
+  /** One-mark answers equal to an accepted answer (after normalisation) are marked in code. */
+  HW_CODE_MARKING_ENABLED: bool(false),
+  /** Answers with the same normalised transcript for the same question and key version are marked once. */
+  HW_DEDUPE_MARKING_ENABLED: bool(false),
+  /** OpenAI GPT-5.6+ models: caching in explicit mode, so nothing is written to a cache that is never read. */
+  HW_OPENAI_EXPLICIT_CACHE_ENABLED: bool(false),
   OPENAI_API_KEY: str(),
   QDRANT_URL: str(),
   QDRANT_API_KEY: str(),

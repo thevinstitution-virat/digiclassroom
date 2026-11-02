@@ -1,8 +1,15 @@
 // Virat Evaluator — eval runner (docs/hw-eval/stage1-design.md §7).
 //
-//   npm run hw:eval -- --dataset <name@vN> --config <file.json> --mode read|key|mark|e2e \
+//   npm run hw:eval -- --dataset <name@vN> (--config <file.json> | --profile R1,E-gemini,M1,K1) --mode read|key|mark|e2e \
 //     --budget-inr <cap> [--repeat 5] [--resume <runId>] [--compare <runId>] [--concurrency 2] \
-//     [--datasets-root hw-evals/datasets] [--runs-root hw-evals/runs] [--max-tasks N] [--upload]
+//     [--datasets-root hw-evals/datasets] [--runs-root hw-evals/runs] [--max-tasks N] [--upload] \
+//     [--read-group N] [--force-escalation] [--split-image-tokens] [--log-requests <file.json>] [--label "…"] [--print-estimate]
+//
+// --profile takes profile ids from lib/hw/eval/profiles.ts (one per stage at most); a combination
+// that breaks the family rules is refused. --read-group N reads N answers per call (production reads
+// a whole submission per call). --force-escalation sends every answer to tier 2, to measure that
+// step on its own. --log-requests keeps the first request sent for each step (images replaced by
+// their size), so the parameters actually sent can be checked.
 //
 // (from apps/api; or from the repo root:
 //   npx tsx --tsconfig apps/api/tsconfig.json --env-file=apps/api/.env.local scripts/hw-eval-run.ts …)
@@ -37,6 +44,10 @@ function need(name: string): string {
   return v;
 }
 
+const CALL_OPTIONS = ['thinkingLevel', 'reasoningEffort', 'mediaResolution'] as const;
+const optionsOf = (c: { thinkingLevel?: string; reasoningEffort?: string; mediaResolution?: string }) =>
+  Object.fromEntries(CALL_OPTIONS.filter((k) => c[k] !== undefined).map((k) => [k, c[k]])) as Record<string, string>;
+
 const Usage = z.object({ input: z.number().nonnegative(), output: z.number().nonnegative() });
 const Config = z.object({
   provider: z.enum(['gemini', 'openrouter']),
@@ -52,7 +63,41 @@ async function main() {
   if (!['read', 'key', 'mark', 'e2e'].includes(mode)) throw new Error(`unknown mode ${mode}`);
   const budgetInr = Number(need('budget-inr'));
   if (!(budgetInr > 0)) throw new Error('--budget-inr must be a positive number');
-  const config = Config.parse(JSON.parse(readFileSync(need('config'), 'utf8')));
+  const profileArg = arg('profile');
+  if (!profileArg === !arg('config')) throw new Error('give exactly one of --config <file> and --profile <ids>');
+  const { loadProfileSet, PROFILES } = await import('@/lib/hw/eval/profiles');
+  let profileSet: ReturnType<typeof loadProfileSet> | null = null;
+  let config: z.infer<typeof Config>;
+  let tier1Options: Record<string, string> | undefined;
+  let tier2Options: Record<string, string> | undefined;
+  let gradeOptions: Record<string, string> | undefined;
+  let batchPricing = { tier1: false, tier2: false, grade: false, keys: false };
+  let onlyLanguage: 'en' | undefined;
+  let valuePointsOnly = false;
+  if (profileArg) {
+    const ids = profileArg.split(',').map((x) => x.trim()).filter(Boolean);
+    const stageOf = (id: string) => PROFILES.find((p) => p.id === id)?.stage;
+    const pick = (stage: string) => ids.filter((id) => stageOf(id) === stage);
+    for (const id of ids) if (!stageOf(id)) throw new Error(`unknown profile "${id}" (known: ${PROFILES.map((p) => p.id).join(', ')})`);
+    for (const st of ['reading', 'escalation', 'marking', 'keys']) if (pick(st).length > 1) throw new Error(`at most one ${st} profile per run, got ${pick(st).join(', ')}`);
+    profileSet = loadProfileSet({ reading: pick('reading')[0] ?? 'R0', escalation: pick('escalation')[0], marking: pick('marking')[0] ?? 'M0', keys: pick('keys')[0] });
+    const rd = profileSet.reading;
+    const esc = profileSet.escalation;
+    if (esc && 'vendor' in esc.call) throw new Error(`profile ${esc.id} cannot be run: ${esc.notRunnable}`);
+    config = Config.parse({
+      provider: rd.call.provider, thinkingLevel: rd.call.thinkingLevel ?? 'MINIMAL', mediaResolution: rd.call.mediaResolution ?? 'LOW',
+      reader: { model: rd.call.model, ...(esc && !('vendor' in esc.call) ? { escalateModel: esc.call.model } : {}) },
+      grader: { model: profileSet.marking.call.model, chunkSize: profileSet.marking.answersPerCall },
+    });
+    tier1Options = optionsOf(rd.call);
+    tier2Options = esc && !('vendor' in esc.call) ? optionsOf(esc.call) : undefined;
+    gradeOptions = optionsOf(profileSet.marking.call);
+    batchPricing = { tier1: rd.batch, tier2: esc?.batch ?? false, grade: profileSet.marking.batch, keys: profileSet.keys?.batch ?? false };
+    onlyLanguage = rd.onlyLanguage;
+    valuePointsOnly = profileSet.marking.valuePointsOnly;
+  } else {
+    config = Config.parse(JSON.parse(readFileSync(need('config'), 'utf8')));
+  }
   const repeat = Number(arg('repeat', '1'));
   const datasetsRoot = arg('datasets-root', 'hw-evals/datasets')!;
   const runsRoot = arg('runs-root', 'hw-evals/runs')!;
@@ -75,14 +120,22 @@ async function main() {
   const { parsePriceTable } = await import('@/lib/hw/cost/pricing');
 
   const cfg = getHwConfig();
-  const ds = loadDataset(datasetsRoot, need('dataset'));
-  const keys = mode === 'key' ? keySettingsFromEnv() : undefined;
+  const loaded = loadDataset(datasetsRoot, need('dataset'));
+  const ds = onlyLanguage ? { ...loaded, items: loaded.items.filter((i) => i.language === onlyLanguage) } : loaded;
+  if (onlyLanguage) console.log(`profile ${profileSet!.reading.id}: only ${onlyLanguage} items (${ds.items.length} of ${loaded.items.length})`);
+  let keys = mode === 'key' ? keySettingsFromEnv() : undefined;
+  if (keys && profileSet?.keys) {
+    const k = profileSet.keys;
+    keys = { ...keys, writer: { provider: k.writer.provider, model: k.writer.model, options: optionsOf(k.writer) }, verifier: { provider: k.verifier.provider, model: k.verifier.model, options: optionsOf(k.verifier) } };
+  }
   const table = parsePriceTable(cfg.HW_PRICE_TABLE_JSON);
   if ('problem' in table) throw new Error(`${table.problem}: the budget cannot be enforced`);
 
   const effective = {
     provider: cfg.HW_AI_PROVIDER, thinkingLevel: cfg.HW_THINKING_LEVEL, mediaResolution: cfg.HW_READ_MEDIA_RESOLUTION,
     reader: config.reader, grader: config.grader, prompts: { read: READ_PROMPT_VERSION, grade: GRADE_PROMPT_VERSION },
+    ...(profileSet ? { profiles: { ids: profileArg, tier1Options, tier2Options, gradeOptions, batchPricing, valuePointsOnly, onlyLanguage: onlyLanguage ?? null, keyWriter: profileSet.keys?.writer ?? null, keyVerifier: profileSet.keys?.verifier ?? null } } : {}),
+    forceEscalation: flag('force-escalation'), readGroup: Number(arg('read-group', '1')),
     keyConfigHash: keys ? keyConfigHash(keys, `${cfg.QDRANT_COLLECTION_NAME}|${cfg.HW_KEY_EMBED_MODEL}`) : null,
   };
   const configHash = sha256(canonicalJson(effective));
@@ -93,17 +146,30 @@ async function main() {
     gitDirty = execSync('git status --porcelain', { encoding: 'utf8' }).trim().length > 0;
   } catch { /* recorded as unknown */ }
 
+  // What is actually sent: the first request of each step, with images replaced by their size.
+  const logFile = arg('log-requests');
+  const seen = new Map<string, unknown>();
+  if (logFile) {
+    const { setRequestObserver } = await import('@/lib/hw/ai/observe');
+    setRequestObserver((r) => { const k = `${r.step ?? 'unlabelled'} (${r.provider}, ${r.path})`; if (!seen.has(k)) seen.set(k, r.body); });
+  }
   const runId = arg('resume') ?? `run_${new Date().toISOString().slice(0, 10).replace(/-/g, '')}_${randomBytes(4).toString('hex')}`;
   const est = (u: { input: number; output: number } | undefined, d: { input: number; output: number }) => ({ input: (u ?? d).input, cached: 0, output: (u ?? d).output });
-  const record = await runEval(ds, liveDeps(ds, {
-    reader: { model: config.reader.model, escalateModel: config.reader.escalateModel, policy: { escalateBelow: config.reader.escalateBelow, unclearAbove: config.reader.unclearAbove } },
-    grader: { model: config.grader.model },
+  const deps = liveDeps(ds, {
+    reader: {
+      model: config.reader.model, escalateModel: config.reader.escalateModel, policy: { escalateBelow: config.reader.escalateBelow, unclearAbove: config.reader.unclearAbove },
+      tier1Options, tier2Options, forceEscalation: flag('force-escalation'), batchPricing: { tier1: batchPricing.tier1, tier2: batchPricing.tier2 },
+    },
+    grader: { model: config.grader.model, options: gradeOptions, valuePointsOnly, batchPricing: batchPricing.grade },
+    keyBatchPricing: batchPricing.keys,
+    splitImageTokens: flag('split-image-tokens'),
     keys,
     keyCacheDir: keyCacheDirFor(runsRoot),
     priceTableJson: cfg.HW_PRICE_TABLE_JSON,
-  }), {
+  });
+  const runOptions = {
     runId, runsRoot, mode, repeat, budgetPaise: budgetInr * 100, concurrency: Number(arg('concurrency', '2')),
-    gradeChunkSize: config.grader.chunkSize, seed: 20261026,
+    gradeChunkSize: config.grader.chunkSize, readGroup: Number(arg('read-group', '1')), seed: 20261026,
     maxTasks: arg('max-tasks') ? Number(arg('max-tasks')) : undefined,
     estimates: {
       // Reading may escalate, so its estimate covers more than one tier-1 call.
@@ -116,12 +182,32 @@ async function main() {
     },
     meta: {
       configHash, config: effective, gitCommit, gitDirty, node: process.version, unicode: process.versions.unicode, icu: process.versions.icu,
-      inrPerUsd: table.inr_per_usd,
+      inrPerUsd: table.inr_per_usd, label: arg('label') ?? null, profiles: profileArg ?? null,
     },
-  });
+  };
+  {
+    // The spend this run could reach, printed before any call is made (the budget cap still decides).
+    const { planTasks } = await import('@/lib/hw/eval/runner');
+    const plan = planTasks(ds, runOptions, new Set(), deps.price);
+    const tasks = runOptions.maxTasks !== undefined ? plan.tasks.slice(0, runOptions.maxTasks) : plan.tasks;
+    const projected = tasks.reduce((s, t) => s + t.projected, 0) / 100;
+    console.log(`estimated spend (conservative reservations): up to ₹${projected.toFixed(2)} for ${tasks.length} tasks on ${ds.items.length} items; cap ₹${budgetInr}`);
+    if (flag('print-estimate')) return;
+  }
+  const record = await runEval(ds, deps, runOptions);
 
   const dir = join(runsRoot, runId);
   const rows = latestRows(readRows(join(dir, 'items.jsonl')));
+  if (logFile) writeFileSync(logFile, JSON.stringify(Object.fromEntries(seen), null, 2));
+  {
+    const { stepTable, stepTableMarkdown } = await import('@/lib/hw/eval/cost-table');
+    const answers = mode === 'key' ? rows.filter((r) => r.calls?.length).length : rows.filter((r) => r.status === 'ok').length;
+    if (answers) {
+      const steps = stepTable(rows, answers);
+      writeFileSync(join(dir, 'cost-steps.json'), JSON.stringify({ answers, label: arg('label') ?? null, steps }, null, 2));
+      console.log(`\ncost by step (${answers} ${mode === 'key' ? 'keys' : 'answers'})${arg('label') ? ` — ${arg('label')}` : ''}:\n${stepTableMarkdown(steps)}`);
+    }
+  }
   const summary = summariseRun(mode, rows, ds.items);
   writeFileSync(join(dir, 'summary.json'), JSON.stringify(summary, null, 2));
 

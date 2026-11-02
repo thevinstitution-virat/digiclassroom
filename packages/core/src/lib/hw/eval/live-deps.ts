@@ -4,82 +4,173 @@
 import { readFileSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { estimateCost, parsePriceTable } from '../cost/pricing';
+import { generate, withStep, type CallOptions } from '../ai';
 import { AiGrader } from '../grader/ai-grader';
 import { gradeWithoutAi } from '../grader/exact-match';
 import type { GradeResult } from '../grader/types';
-import { GeminiReader } from '../reader/gemini-reader';
+import { GeminiReader, readCall } from '../reader/gemini-reader';
 import { decideAfterRead, type EscalationPolicy } from '../reader/escalation';
 import { buildKey, defaultKeyDeps, fileKeyCache, type KeySettings } from '../keys';
 import type { HwLanguage } from '@/db/hw-schema';
 import { mediaPath, type Dataset, type EvalItem } from './dataset';
-import type { CallCost, RunnerDeps } from './runner';
+import type { CallCost, CostStep, ReadRoute, RunnerDeps } from './runner';
 
 const MIME: Record<string, 'image/png' | 'image/jpeg' | 'image/webp'> = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp' };
 
+/** Width and height of a PNG or JPEG, read from its header; null for anything else. */
+export function imageSize(b: Uint8Array): { width: number; height: number } | null {
+  if (b.length > 24 && b[0] === 0x89 && b[1] === 0x50) {
+    const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+    return { width: v.getUint32(16), height: v.getUint32(20) };
+  }
+  if (b.length > 4 && b[0] === 0xff && b[1] === 0xd8) {
+    const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
+    let i = 2;
+    while (i + 9 < b.length) {
+      if (b[i] !== 0xff) { i++; continue; }
+      const marker = b[i + 1];
+      if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+        return { height: v.getUint16(i + 5), width: v.getUint16(i + 7) };
+      }
+      i += 2 + v.getUint16(i + 2);
+    }
+  }
+  return null;
+}
+
 export interface LiveSettings {
   /** Tier 1 model, and the tier 2 model with the policy that escalates to it (production route). */
-  reader: { model: string; escalateModel?: string; policy: EscalationPolicy };
-  grader: { model: string };
+  reader: {
+    model: string;
+    escalateModel?: string;
+    policy: EscalationPolicy;
+    tier1Options?: CallOptions;
+    tier2Options?: CallOptions;
+    /** Escalate every answer (to measure the escalation step on its own). */
+    forceEscalation?: boolean;
+    /** Price this tier at the batch rate from the measured tokens. */
+    batchPricing?: { tier1?: boolean; tier2?: boolean };
+  };
+  grader: { model: string; options?: CallOptions; valuePointsOnly?: boolean; batchPricing?: boolean };
   keys?: KeySettings;
+  keyBatchPricing?: boolean;
+  /** Measure how many of a read call's input tokens are the image: one text-only twin call per model and shape (its cost is recorded as a measurement). */
+  splitImageTokens?: boolean;
   keyCacheDir: string;
   priceTableJson: string | undefined;
 }
 
 export function liveDeps(ds: Dataset, s: LiveSettings): RunnerDeps {
   const table = parsePriceTable(s.priceTableJson);
-  const tier1 = new GeminiReader(s.reader.model, 1);
-  const tier2 = s.reader.escalateModel ? new GeminiReader(s.reader.escalateModel, 2) : null;
+  const tier1 = new GeminiReader(s.reader.model, 1, s.reader.tier1Options);
+  const tier2 = s.reader.escalateModel ? new GeminiReader(s.reader.escalateModel, 2, s.reader.tier2Options) : null;
   const keyDeps = s.keys ? defaultKeyDeps({ cache: fileKeyCache(s.keyCacheDir) }) : null;
+
+  const imageOf = (item: EvalItem) => {
+    const rel = item.media.render ?? item.media.photo;
+    if (!rel) throw new Error('no render or photo');
+    const mimeType = MIME[extname(rel).toLowerCase()];
+    if (!mimeType) throw new Error(`unsupported image type ${extname(rel)}`);
+    const png = new Uint8Array(readFileSync(mediaPath(ds, rel)));
+    return { rel, mimeType, png, size: imageSize(png) };
+  };
+  const inputFor = (items: EvalItem[]) => {
+    const imgs = items.map(imageOf);
+    return {
+      input: { answers: items.map((item, i) => ({ answerId: item.id, languageHint: item.language as HwLanguage, png: imgs[i].png, mimeType: imgs[i].mimeType })) },
+      images: { count: imgs.length, bytes: imgs.reduce((n, x) => n + x.png.length, 0), pixels: imgs.reduce((n, x) => n + (x.size ? x.size.width * x.size.height : 0), 0) },
+    };
+  };
+  const call = (step: CostStep, r: { model: string; usage: CallCost['usage']; costUsd?: number }, extra: Partial<CallCost>): CallCost =>
+    ({ model: r.model, usage: r.usage, costUsd: r.costUsd, step, ...extra });
+
+  // The same request without its images: its prompt tokens are the text part of a read call.
+  const twins = new Map<string, number>();
+  async function withImageSplit(c: CallCost, reader: GeminiReader, input: ReturnType<typeof inputFor>['input'], extra: CallCost[]): Promise<CallCost> {
+    if (!s.splitImageTokens) return c;
+    const key = `${reader.model}|${input.answers.length}|${reader.options?.mediaResolution ?? ''}`;
+    if (!twins.has(key)) {
+      const full = readCall(reader.model, input, reader.options);
+      const res = await withStep('measure_text_only', () => generate({ ...full, parts: full.parts.filter((p) => !p.inlineData) }));
+      twins.set(key, res.usage.input);
+      extra.push({ model: res.model, usage: res.usage, costUsd: res.costUsd, purpose: 'measurement' });
+    }
+    const text = twins.get(key)!;
+    return { ...c, usage: { ...c.usage, inputText: text, inputImage: Math.max(0, c.usage.input - text) } };
+  }
+
+  /** Tier 1, then tier 2 when the policy (or the forced escalation) says so, for a set of answers read together. */
+  async function readTogether(items: EvalItem[]) {
+    const { input, images } = inputFor(items);
+    const calls: CallCost[] = [];
+    const r1 = await withStep('read_tier1', () => tier1.read(input));
+    calls.push(await withImageSplit(call('read_tier1', r1, { images, answers: items.length, batchPricing: s.reader.batchPricing?.tier1 }), tier1, input, calls));
+    let answers = r1.answers;
+    const routes: ReadRoute[] = items.map(() => 'tier1');
+    // Tier 2 re-reads only the answers in doubt, as the read handler does.
+    const doubtful = items.map((_, i) => i).filter((i) => s.reader.forceEscalation || decideAfterRead(r1.answers[i], 1, s.reader.policy).action === 'escalate');
+    if (tier2 && doubtful.length) {
+      const sub = inputFor(doubtful.map((i) => items[i]));
+      const r2 = await withStep('read_escalation', () => tier2.read(sub.input));
+      calls.push(await withImageSplit(call('read_escalation', r2, { images: sub.images, answers: doubtful.length, batchPricing: s.reader.batchPricing?.tier2 }), tier2, sub.input, calls));
+      answers = [...answers];
+      doubtful.forEach((i, k) => {
+        answers[i] = r2.answers[k];
+        routes[i] = decideAfterRead(r2.answers[k], 2, s.reader.policy).action === 'needs_review' ? 'needs_review' : 'tier2';
+      });
+    }
+    return { results: answers.map((a, i) => ({ text: a.text, unclearCount: a.unclearCount, confidence: a.confidence, route: routes[i] })), calls };
+  }
 
   return {
     async read(item: EvalItem) {
-      const rel = item.media.render ?? item.media.photo;
-      if (!rel) throw new Error('no render or photo');
-      const mimeType = MIME[extname(rel).toLowerCase()];
-      if (!mimeType) throw new Error(`unsupported image type ${extname(rel)}`);
-      const png = new Uint8Array(readFileSync(mediaPath(ds, rel)));
-      const input = { answers: [{ answerId: item.id, languageHint: item.language as HwLanguage, png, mimeType }] };
-      const r1 = await tier1.read(input);
-      const calls: CallCost[] = [{ model: r1.model, usage: r1.usage, costUsd: r1.costUsd }];
-      let a = r1.answers[0];
-      let route: 'tier1' | 'tier2' | 'needs_review' = 'tier1';
-      if (decideAfterRead(a, 1, s.reader.policy).action === 'escalate' && tier2) {
-        const r2 = await tier2.read(input);
-        calls.push({ model: r2.model, usage: r2.usage, costUsd: r2.costUsd });
-        a = r2.answers[0];
-        route = decideAfterRead(a, 2, s.reader.policy).action === 'needs_review' ? 'needs_review' : 'tier2';
-      }
-      return { text: a.text, unclearCount: a.unclearCount, confidence: a.confidence, route, calls };
+      const { results, calls } = await readTogether([item]);
+      return { ...results[0], calls };
     },
+    readGroup: (items) => readTogether(items),
 
     async grade(question, answers) {
       // As production: blank and exact-match answers are marked by rule, the rest by AI.
+      const q = s.grader.valuePointsOnly ? { ...question, modelAnswer: null } : question;
       const results: GradeResult[] = [];
       const toAi: typeof answers = [];
       for (const a of answers) {
-        const rule = gradeWithoutAi(question, a.answerId, a.transcript);
+        const rule = gradeWithoutAi(q, a.answerId, a.transcript);
         if (rule) results.push(rule);
         else toAi.push(a);
       }
       const calls: CallCost[] = [];
       if (toAi.length) {
-        const g = new AiGrader(s.grader.model);
-        results.push(...(await g.grade({ question, answers: toAi })));
-        if (g.lastCall) calls.push({ model: g.lastCall.model, usage: g.lastCall.usage, costUsd: g.lastCall.costUsd });
+        const g = new AiGrader(s.grader.model, s.grader.options);
+        results.push(...(await withStep('grade', () => g.grade({ question: q, answers: toAi }))));
+        if (g.lastCall) calls.push(call('grade', g.lastCall, { answers: toAi.length, batchPricing: s.grader.batchPricing }));
       }
       return { results, calls };
     },
 
     async buildKey(req) {
       if (!keyDeps || !s.keys) throw new Error('key mode needs key settings (HW_KEY_* and a calibrated HW_KEY_R_MIN)');
-      return buildKey(req, keyDeps, s.keys);
+      const k = await buildKey(req, { ...keyDeps, generate: (p, c) => withStep(c.model === s.keys!.verifier.model ? 'key_verifier' : 'key_writer', () => keyDeps.generate(p, c)) }, s.keys);
+      if (s.keyBatchPricing) for (const c of k.calls) if (c.role !== 'embed') (c as { batchPricing?: boolean }).batchPricing = true;
+      return k;
     },
 
-    price(call) {
+    price(c) {
       if ('problem' in table) return null;
-      if (call.costUsd !== undefined) return Math.round(call.costUsd * table.inr_per_usd * 100 * 10_000) / 10_000;
-      const c = estimateCost(table, call.model, call.usage, { batch: false });
-      return c.problem ? null : c.paise;
+      // A call priced as batch uses the measured tokens at the table's batch rates, whatever the provider charged.
+      if (c.batchPricing) {
+        const e = estimateCost(table, c.model, c.usage, { batch: true });
+        return e.problem ? null : e.paise;
+      }
+      if (c.costUsd !== undefined) return Math.round(c.costUsd * table.inr_per_usd * 100 * 10_000) / 10_000;
+      const e = estimateCost(table, c.model, c.usage, { batch: false });
+      return e.problem ? null : e.paise;
+    },
+
+    priceAs(c, batch) {
+      if ('problem' in table) return null;
+      const e = estimateCost(table, c.model, c.usage, { batch });
+      return e.problem ? null : e.paise;
     },
   };
 }

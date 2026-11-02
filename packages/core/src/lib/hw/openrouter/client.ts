@@ -22,6 +22,7 @@ import { getHwConfig } from '../config';
 import { HwError } from '../errors';
 import type { TokenUsage } from '../cost/pricing';
 import type { BatchEntry, BatchItem, BatchOutcome, GeminiCall, GeminiResult } from '../gemini/client';
+import { emitRequest } from '../ai/observe';
 
 const BASE = 'https://openrouter.ai/api/v1';
 
@@ -54,30 +55,66 @@ async function request(path: string, init: RequestInit): Promise<unknown> {
   return body;
 }
 
+/** OpenAI GPT-5.6 and later (explicit prompt caching exists only there). */
+export const isExplicitCacheModel = (model: string): boolean => /^(openai\/)?gpt-(5\.([6-9]|\d\d+)|[6-9](\.\d+)?)(-|$)/i.test(model.trim());
+
+/** OpenAI's minimum cacheable prefix. */
+export const MIN_CACHEABLE_TOKENS = 1024;
+
+/**
+ * A deliberately LOW estimate of tokens (never above the real count for English; Devanagari and
+ * numerals use more tokens per character, so they are under-counted too): a breakpoint is added
+ * only when even this estimate reaches the minimum, so a write is never paid for a prefix too
+ * short to be read back.
+ */
+export const lowTokenEstimate = (text: string): number => Math.floor(text.length / 4);
+
+export interface ChatBody {
+  model: string;
+  messages: { role: 'system' | 'user'; content: string | Record<string, unknown>[] }[];
+  response_format: unknown;
+  reasoning: { effort: string };
+  prompt_cache_options?: { mode: 'explicit' };
+}
+
 /** Gemini-shaped call -> chat completions body. */
-export function chatBody(call: GeminiCall) {
+export function chatBody(call: GeminiCall): ChatBody {
   const cfg = getHwConfig();
-  const content = call.parts.map((p) => {
+  const resolution = call.options?.mediaResolution ?? cfg.HW_READ_MEDIA_RESOLUTION;
+  const content: Record<string, unknown>[] = call.parts.map((p) => {
     if (p.inlineData) {
       return {
         type: 'image_url',
         image_url: {
           url: `data:${p.inlineData.mimeType};base64,${p.inlineData.data}`,
-          detail: cfg.HW_READ_MEDIA_RESOLUTION === 'LOW' ? 'low' : 'high',
+          detail: resolution === 'LOW' ? 'low' : 'high',
         },
       };
     }
     return { type: 'text', text: p.text ?? '' };
   });
-  return {
+  const body: ChatBody = {
     model: call.model,
     messages: [
       { role: 'system', content: call.systemInstruction },
       { role: 'user', content },
     ],
     response_format: { type: 'json_schema', json_schema: { name: 'hw_output', strict: true, schema: call.schema } },
-    reasoning: { effort: cfg.HW_THINKING_LEVEL.toLowerCase() },
+    reasoning: { effort: call.options?.reasoningEffort ?? cfg.HW_THINKING_LEVEL.toLowerCase() },
   };
+  // GPT-5.6+ charges 1.25x input for every cache WRITE, and writes happen automatically. A prompt
+  // whose prefix is never sent twice pays that premium for nothing, so with the flag on the mode
+  // is explicit: no breakpoint, no write. A breakpoint goes only after the static prefix, and only
+  // when that prefix is long enough to be cached at all.
+  if (cfg.HW_OPENAI_EXPLICIT_CACHE_ENABLED && isExplicitCacheModel(call.model)) {
+    body.prompt_cache_options = { mode: 'explicit' };
+    const n = call.options?.staticPrefixParts ?? 0;
+    if (n > 0 && n <= content.length && content.slice(0, n).every((c) => c.type === 'text')) {
+      const prefix = [call.systemInstruction, ...content.slice(0, n).map((c) => String(c.text))].join(' ');
+      if (lowTokenEstimate(prefix) >= MIN_CACHEABLE_TOKENS) content[n - 1] = { ...content[n - 1], prompt_cache_breakpoint: { mode: 'explicit' } };
+    }
+  }
+  return body;
 }
 
 interface ChatResponse {
@@ -86,7 +123,8 @@ interface ChatResponse {
   usage?: {
     prompt_tokens?: number;
     completion_tokens?: number;
-    prompt_tokens_details?: { cached_tokens?: number };
+    prompt_tokens_details?: { cached_tokens?: number; cache_write_tokens?: number; image_tokens?: number; text_tokens?: number };
+    completion_tokens_details?: { reasoning_tokens?: number };
     cost?: number;
   };
 }
@@ -97,7 +135,18 @@ export function parseChat(res: ChatResponse, model: string): GeminiResult {
   if (!u || typeof u.prompt_tokens !== 'number') {
     throw new HwError('INVALID_PROVIDER_OUTPUT', 'The AI response could not be used.', 'OpenRouter response has no usage');
   }
-  const usage: TokenUsage = { input: u.prompt_tokens, cached: u.prompt_tokens_details?.cached_tokens ?? 0, output: u.completion_tokens ?? 0 };
+  const pd = u.prompt_tokens_details;
+  // Every detail the provider reports is kept (cache writes and reasoning are billed differently
+  // from plain input and visible output); a detail it does not report stays undefined.
+  const usage: TokenUsage = {
+    input: u.prompt_tokens,
+    cached: pd?.cached_tokens ?? 0,
+    output: u.completion_tokens ?? 0,
+    ...(pd?.cache_write_tokens !== undefined ? { cacheWrite: pd.cache_write_tokens } : {}),
+    ...(u.completion_tokens_details?.reasoning_tokens !== undefined ? { thinking: u.completion_tokens_details.reasoning_tokens } : {}),
+    ...(pd?.image_tokens !== undefined ? { inputImage: pd.image_tokens } : {}),
+    ...(pd?.text_tokens !== undefined ? { inputText: pd.text_tokens } : {}),
+  };
   const used = res.model ?? model;
   const costUsd = typeof u.cost === 'number' ? u.cost : undefined;
   const withUsage = (e: HwError) => Object.assign(e, { usage, model: used, costUsd });
@@ -115,7 +164,9 @@ export function parseChat(res: ChatResponse, model: string): GeminiResult {
 }
 
 export async function generate(call: GeminiCall): Promise<GeminiResult> {
-  const res = (await request('/chat/completions', { method: 'POST', body: JSON.stringify(chatBody(call)) })) as ChatResponse;
+  const body = chatBody(call);
+  emitRequest('openrouter', 'generate', body);
+  const res = (await request('/chat/completions', { method: 'POST', body: JSON.stringify(body) })) as ChatResponse;
   return parseChat(res, call.model);
 }
 
@@ -133,6 +184,7 @@ export async function createBatch(items: BatchItem[], _displayName: string): Pro
     completion_window: '24h',
     requests: items.map((i) => ({ custom_id: i.key, body: chatBody(i.call) })),
   };
+  for (const r of body.requests) emitRequest('openrouter', 'batch', r.body);
   const res = (await request('/batches', { method: 'POST', body: JSON.stringify(body) })) as { id?: string };
   if (!res?.id) throw new HwError('PROVIDER_ERROR', 'The AI batch service failed.', 'OpenRouter batch created without an id');
   return res.id;

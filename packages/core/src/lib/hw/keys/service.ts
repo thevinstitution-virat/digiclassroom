@@ -7,7 +7,7 @@
 
 import { getHwConfig } from '../config';
 import { HwError } from '../errors';
-import { textPart, type AiCall, type AiProvider, type AiResult } from '../ai';
+import { textPart, type AiCall, type AiProvider, type AiResult, type CallOptions } from '../ai';
 import { KEY_WRITER_PROMPT_VERSION, KEY_WRITER_RESPONSE_SCHEMA, KEY_WRITER_SYSTEM_PROMPT, keyWriterUserText } from '../prompts/key-writer.v1';
 import { KEY_VERIFIER_PROMPT_VERSION, KEY_VERIFIER_RESPONSE_SCHEMA, KEY_VERIFIER_SYSTEM_PROMPT, keyVerifierUserText } from '../prompts/key-verifier.v1';
 import { cacheKeyOf, canonicalJson, sha256, type CachedKey, type KeyCache } from './cache';
@@ -26,8 +26,8 @@ import {
 export const KEY_RETRIEVAL_VERSION = 'dense-cosine-strict.v1';
 
 export interface KeySettings {
-  writer: { provider: AiProvider; model: string };
-  verifier: { provider: AiProvider; model: string };
+  writer: { provider: AiProvider; model: string; options?: CallOptions };
+  verifier: { provider: AiProvider; model: string; options?: CallOptions };
   /** Calibrated threshold; needed only for textbook keys (official and given-passage keys do not retrieve). */
   rMin: number | undefined;
   theta: number;
@@ -237,6 +237,7 @@ async function writeAndVerify(
       subject: req.subject, medium: req.medium, competency: req.competency, passages,
     }))],
     schema: KEY_WRITER_RESPONSE_SCHEMA,
+    ...(settings.writer.options ? { options: settings.writer.options } : {}),
   });
   calls.push(callOf('writer', settings.writer.provider, writer));
   const parsed = parseWriterOutput(writer.json);
@@ -252,6 +253,7 @@ async function writeAndVerify(
       points: parsed.key.valuePoints.map((p) => ({ id: p.id, text: p.text, cites: p.cites })),
     }))],
     schema: KEY_VERIFIER_RESPONSE_SCHEMA,
+    ...(settings.verifier.options ? { options: settings.verifier.options } : {}),
   });
   calls.push(callOf('verifier', settings.verifier.provider, verifier));
   const verdicts = parseVerifierOutput(verifier.json, parsed.key.valuePoints.map((p) => p.id));

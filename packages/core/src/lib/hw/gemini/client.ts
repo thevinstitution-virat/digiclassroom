@@ -26,12 +26,30 @@ import {
 import { getHwConfig, requireGeminiKey } from '../config';
 import { HwError } from '../errors';
 import type { TokenUsage } from '../cost/pricing';
+import { emitRequest } from '../ai/observe';
+
+/** Per-call overrides of the environment's defaults. Absent = the environment decides, as before. */
+export interface CallOptions {
+  /** Gemini thinking level. */
+  thinkingLevel?: 'MINIMAL' | 'LOW' | 'MEDIUM' | 'HIGH';
+  /** Reasoning effort for models whose scale is not Gemini's (OpenRouter: 'none' | 'minimal' | 'low' | ...). Wins over thinkingLevel there. */
+  reasoningEffort?: string;
+  /** Image resolution for the image parts of this call. */
+  mediaResolution?: 'LOW' | 'MEDIUM' | 'HIGH';
+  /**
+   * Number of leading content parts that are identical for every call of this kind (the question
+   * block of a marking call). Only used for OpenAI GPT-5.6+ models, and only when explicit
+   * caching is on and the prefix is long enough to be cached (see openrouter/client.ts).
+   */
+  staticPrefixParts?: number;
+}
 
 export interface GeminiCall {
   model: string;
   systemInstruction: string;
   parts: Part[];
   schema: object;
+  options?: CallOptions;
 }
 
 export interface GeminiResult {
@@ -59,8 +77,8 @@ export function textPart(text: string): Part {
   return { text };
 }
 
-export function imagePart(image: Uint8Array, mimeType: 'image/png' | 'image/jpeg' | 'image/webp' = 'image/png'): Part {
-  const level = PartMediaResolutionLevel[`MEDIA_RESOLUTION_${getHwConfig().HW_READ_MEDIA_RESOLUTION}` as keyof typeof PartMediaResolutionLevel];
+export function imagePart(image: Uint8Array, mimeType: 'image/png' | 'image/jpeg' | 'image/webp' = 'image/png', resolution?: 'LOW' | 'MEDIUM' | 'HIGH'): Part {
+  const level = PartMediaResolutionLevel[`MEDIA_RESOLUTION_${resolution ?? getHwConfig().HW_READ_MEDIA_RESOLUTION}` as keyof typeof PartMediaResolutionLevel];
   return {
     inlineData: { mimeType, data: Buffer.from(image).toString('base64') },
     mediaResolution: { level },
@@ -75,7 +93,7 @@ function requestFor(call: GeminiCall) {
       systemInstruction: call.systemInstruction,
       responseMimeType: 'application/json',
       responseJsonSchema: call.schema,
-      thinkingConfig: { thinkingLevel: ThinkingLevel[getHwConfig().HW_THINKING_LEVEL] },
+      thinkingConfig: { thinkingLevel: ThinkingLevel[call.options?.thinkingLevel ?? getHwConfig().HW_THINKING_LEVEL] },
     },
   };
 }
@@ -85,11 +103,16 @@ export function usageOf(res: GenerateContentResponse): { usage: TokenUsage; rawU
   if (!u || typeof u.promptTokenCount !== 'number') {
     throw new HwError('INVALID_PROVIDER_OUTPUT', 'The AI response could not be used.', 'response has no usageMetadata');
   }
+  const modality = (m: string) => u.promptTokensDetails?.filter((d) => d.modality === m).reduce((s, d) => s + (d.tokenCount ?? 0), 0);
+  const image = modality('IMAGE');
+  const text = modality('TEXT');
   return {
     usage: {
       input: u.promptTokenCount,
       cached: u.cachedContentTokenCount ?? 0,
       output: (u.candidatesTokenCount ?? 0) + (u.thoughtsTokenCount ?? 0),
+      ...(u.thoughtsTokenCount !== undefined ? { thinking: u.thoughtsTokenCount } : {}),
+      ...(u.promptTokensDetails?.length ? { inputImage: image ?? 0, inputText: text ?? 0 } : {}),
     },
     rawUsage: JSON.parse(JSON.stringify(u)) as Record<string, unknown>,
   };
@@ -142,7 +165,9 @@ export async function generate(call: GeminiCall): Promise<GeminiResult> {
   const client = ai(); // configuration errors surface as NOT_CONFIGURED, not as a provider failure
   let res: GenerateContentResponse;
   try {
-    res = await client.models.generateContent(requestFor(call));
+    const req = requestFor(call);
+    emitRequest('gemini', 'generate', req);
+    res = await client.models.generateContent(req);
   } catch (e) {
     throw new HwError('PROVIDER_ERROR', 'The AI service failed.', `generateContent(${call.model}): ${(e as Error).message}`);
   }
@@ -163,6 +188,7 @@ export async function createBatch(items: BatchItem[], displayName: string): Prom
   if (items.some((i) => i.call.model !== model)) throw new Error('createBatch: mixed models');
   const src: InlinedRequest[] = items.map((i) => {
     const r = requestFor(i.call);
+    emitRequest('gemini', 'batch', r);
     return { contents: r.contents, config: r.config, metadata: { key: i.key } };
   });
   const client = ai();

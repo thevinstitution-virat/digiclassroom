@@ -8,10 +8,11 @@
 import { getHwConfig } from '../config';
 import * as gemini from '../gemini/client';
 import * as openrouter from '../openrouter/client';
-import type { BatchItem, BatchOutcome, GeminiCall, GeminiResult } from '../gemini/client';
+import type { BatchItem, BatchOutcome, CallOptions, GeminiCall, GeminiResult } from '../gemini/client';
 
 export type AiProvider = 'gemini' | 'openrouter';
-export type { BatchEntry, BatchItem, BatchOutcome, GeminiCall as AiCall, GeminiResult as AiResult } from '../gemini/client';
+export type { BatchEntry, BatchItem, BatchOutcome, CallOptions, GeminiCall as AiCall, GeminiResult as AiResult } from '../gemini/client';
+export { setRequestObserver, withStep } from './observe';
 export { imagePart, textPart, usageFromError } from '../gemini/client';
 
 export function currentProvider(): AiProvider {

@@ -2,7 +2,7 @@
 // same for every chunk, so it goes first (cacheable prefix); answers go last.
 
 import { requireModel } from '../config';
-import { generate, textPart, type AiCall as GeminiCall, type AiResult as GeminiResult } from '../ai';
+import { generate, textPart, type AiCall as GeminiCall, type AiResult as GeminiResult, type CallOptions } from '../ai';
 import {
   GRADE_PROMPT_VERSION,
   GRADE_RESPONSE_SCHEMA,
@@ -13,9 +13,10 @@ import {
 import { validateGradeOutput } from './validate';
 import type { AnswerGrader, GradeInput, GradeResult } from './types';
 
-export function gradeCall(model: string, input: GradeInput): GeminiCall {
+export function gradeCall(model: string, input: GradeInput, options?: CallOptions): GeminiCall {
   return {
     model,
+    ...(options ? { options: { staticPrefixParts: 1, ...options } } : {}),
     systemInstruction: GRADE_SYSTEM_PROMPT,
     schema: GRADE_RESPONSE_SCHEMA,
     parts: [
@@ -32,10 +33,10 @@ export function gradeResultsFrom(res: GeminiResult, input: GradeInput): GradeRes
 export class AiGrader implements AnswerGrader {
   lastCall: GeminiResult | null = null;
 
-  constructor(readonly model: string = requireModel('grade')) {}
+  constructor(readonly model: string = requireModel('grade'), readonly options?: CallOptions) {}
 
   async grade(input: GradeInput): Promise<GradeResult[]> {
-    const res = await generate(gradeCall(this.model, input));
+    const res = await generate(gradeCall(this.model, input, this.options));
     this.lastCall = res;
     return gradeResultsFrom(res, input);
   }
