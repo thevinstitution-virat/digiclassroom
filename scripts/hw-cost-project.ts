@@ -1,6 +1,6 @@
 // Monthly AI cost per student, teacher and guardian, from MEASURED per-step costs.
 //
-//   npm run hw:cost:project -- collect [--runs-root ../../hw-evals/cost1/runs] [--out ../../docs/hw-eval/cost1/unit-costs.json] [--price-table ../../docs/hw-eval/price-table.json]
+//   npm run hw:cost:project -- collect [--runs-root ../../hw-evals/cost1/runs] [--out ../../docs/hw-eval/cost1/unit-costs.json] [--price-table ../../docs/hw-eval/price-table.json] [--no-cache]
 //       reads finished eval runs and writes the unit costs (₹ per answer / per key) they measured. With --price-table the
 //       measured tokens are re-priced at that table's rates (e.g. the gemini-3.6-flash rates from 1 Jan 2027).
 //
@@ -29,17 +29,19 @@ async function main() {
 
   if (sub === 'collect') {
     const { readRows, latestRows } = await import('@/lib/hw/eval/runner');
-    const runsRoot = arg('runs-root', '../../hw-evals/cost1/runs')!;
+    const runsRoots = arg('runs-root', '../../hw-evals/cost1/runs')!.split(',');
     const out = arg('out', '../../docs/hw-eval/cost1/unit-costs.json')!;
-    const runs = readdirSync(runsRoot).filter((d) => existsSync(join(runsRoot, d, 'run.json'))).map((d) => {
+    const runs = runsRoots.flatMap((runsRoot) => readdirSync(runsRoot).filter((d) => existsSync(join(runsRoot, d, 'run.json'))).map((d) => {
       const rec = JSON.parse(readFileSync(join(runsRoot, d, 'run.json'), 'utf8')) as { mode: 'read' | 'key' | 'mark' | 'e2e'; status: string; dataset: { ref: string }; meta: { label?: string | null; profiles?: string | null; config?: { forceEscalation?: boolean; readGroup?: number; languageFilter?: string | null } } };
       return {
         runId: d, label: rec.meta.label ?? null, mode: rec.mode, dataset: rec.dataset.ref, profiles: rec.meta.profiles ?? null, status: rec.status,
         forceEscalation: Boolean(rec.meta.config?.forceEscalation), readGroup: rec.meta.config?.readGroup ?? 1, languageFilter: rec.meta.config?.languageFilter ?? null,
         rows: latestRows(readRows(join(runsRoot, d, 'items.jsonl'))),
       };
-    });
+    }));
     const tableFile = arg('price-table');
+    // --no-cache prices every prompt token as uncached: repeating identical requests (repeat runs) hits the provider's cache, which real, different answers do not.
+    const noCache = process.argv.includes('--no-cache');
     if (tableFile) {
       const { estimateCost, parsePriceTable } = await import('@/lib/hw/cost/pricing');
       const raw = JSON.parse(readFileSync(tableFile, 'utf8')) as Record<string, unknown>;
@@ -47,8 +49,9 @@ async function main() {
       const table = parsePriceTable(JSON.stringify(raw));
       if ('problem' in table) throw new Error(table.problem);
       for (const r of runs) for (const row of r.rows) for (const c of row.calls ?? []) {
-        c.tableStandardPaise = estimateCost(table, c.model, c.usage, { batch: false }).paise;
-        c.tableBatchPaise = estimateCost(table, c.model, c.usage, { batch: true }).paise;
+        const usage = noCache ? { ...c.usage, cached: 0, cacheWrite: 0 } : c.usage;
+        c.tableStandardPaise = estimateCost(table, c.model, usage, { batch: false }).paise;
+        c.tableBatchPaise = estimateCost(table, c.model, usage, { batch: true }).paise;
       }
       console.log(`re-priced at ${tableFile} (₹${table.inr_per_usd}/$)`);
     }
@@ -96,7 +99,7 @@ async function main() {
     ];
 
     const flags = arg('flags', 'all') === 'none' ? lib.NO_FLAGS : lib.ALL_FLAGS;
-    const combos = arg('combos', 'headline') === 'all' ? lib.allCombos() : [
+    const combos: import('@/lib/hw/eval/cost-project').Combo[] = arg('combos', 'headline') === 'all' ? lib.allCombos() : [
       { reading: 'R1', escalation: 'E0', marking: 'M0', keys: 'K0' },
       { reading: 'R1', escalation: 'E-gemini', marking: 'M0', keys: 'K0' },
       { reading: 'R1', escalation: 'E-gemini', marking: 'M1', keys: 'K0' },
@@ -107,6 +110,11 @@ async function main() {
       { reading: 'R-luna', escalation: 'E-sarvam', marking: 'M1', keys: 'K1' },
       { reading: 'R1', escalation: 'E-sarvam', marking: 'M1', keys: 'K1' },
     ];
+    // --custom "R0+E0+M0-single+K0;R-luna+E0+M1+K0": extra combinations, reading+escalation+marking+keys.
+    for (const spec of (arg('custom') ?? '').split(';').filter(Boolean)) {
+      const [reading, escalation, marking, keysId] = spec.split('+');
+      combos.push({ reading, escalation, marking, keys: keysId });
+    }
     const rows: { c: import('@/lib/hw/eval/cost-project').Combo; p: import('@/lib/hw/eval/cost-project').Projection }[] = [];
     for (const c of combos) {
       try { rows.push({ c, p: lib.project(units, c, flags, a) }); } catch (e) { console.error(`skipped ${JSON.stringify(c)}: ${(e as Error).message}`); }

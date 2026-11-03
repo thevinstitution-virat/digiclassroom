@@ -11,7 +11,7 @@ import { HwError } from '../errors';
 import { db, newId, num, type Exec } from '../db';
 import { quotaAllows, quotaRefusal, quotaState } from '../cost/quota';
 import { recordUsage } from '../cost/usage';
-import { currentProvider, generate, textPart, usageFromError } from '../ai';
+import { generate, providerFor, routed, textPart, usageFromError } from '../ai';
 import { complete, fail } from '../jobs/queue';
 import { RUBRIC_PROMPT_VERSION, RUBRIC_RESPONSE_SCHEMA, RUBRIC_SYSTEM_PROMPT, rubricDraftInput } from '../prompts/rubric-draft.v1';
 import { z } from 'zod';
@@ -310,18 +310,18 @@ export async function draftRubric(actor: HwActor, questionId: string, opts: { re
   const jobId = newId();
   await db.insert(hwAiJob).values({
     id: jobId, organizationId: actor.orgId, kind: 'rubric_draft', status: 'running', questionId: q.id,
-    provider: currentProvider(), model, attempts: 1, startedAt: new Date(),
+    provider: providerFor('rubric'), model, attempts: 1, startedAt: new Date(),
     payloadRef: JSON.stringify({ promptVersion: RUBRIC_PROMPT_VERSION }),
   });
   const job = (await db.select().from(hwAiJob).where(eq(hwAiJob.id, jobId)))[0];
 
   try {
-    const res = await generate({
+    const res = await generate(routed({
       model,
       systemInstruction: RUBRIC_SYSTEM_PROMPT,
       schema: RUBRIC_RESPONSE_SCHEMA,
       parts: [textPart(rubricDraftInput({ type: q.type, prompt: q.prompt, marks: num(q.marks), modelAnswer: q.modelAnswer, languageHint: q.languageHint }))],
-    });
+    }, 'rubric'));
     const parsed = RubricDraft.safeParse(res.json);
     if (!parsed.success) throw new HwError('INVALID_PROVIDER_OUTPUT', 'The AI draft could not be used.', `rubric draft failed validation: ${parsed.error.issues[0]?.message}`);
     const marks = num(q.marks);

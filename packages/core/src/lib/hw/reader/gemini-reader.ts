@@ -2,7 +2,7 @@
 // models (HW_READ_MODEL / HW_ESCALATE_MODEL).
 
 import { requireModel } from '../config';
-import { generate, imagePart, textPart, type AiCall as GeminiCall, type CallOptions } from '../ai';
+import { generate, imagePart, routed, textPart, type AiCall as GeminiCall, type CallOptions } from '../ai';
 import { READ_PROMPT_VERSION, READ_RESPONSE_SCHEMA, READ_SYSTEM_PROMPT, readAnswerLabel } from '../prompts/read.v1';
 import { parseReadOutput } from './parse';
 import type { HandwritingReader, ReadInput, ReadResult } from './types';
@@ -26,7 +26,7 @@ export class GeminiReader implements HandwritingReader {
   }
 
   async read(input: ReadInput): Promise<ReadResult> {
-    const res = await generate(readCall(this.model, input, this.options));
+    const res = await generate(routed(readCall(this.model, input, this.options), this.tier === 1 ? 'read' : 'escalate'));
     return {
       answers: parseReadOutput(res.json, input.answers.map((a) => a.answerId)),
       usage: res.usage,

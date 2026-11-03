@@ -35,6 +35,8 @@ const gem = {
   batches: new Map<string, (Req & { metadata: { key: string } })[]>(),
   /** What a polled batch does: succeed, fail as a whole, never finish, or fail every request. */
   batchMode: 'succeed' as 'succeed' | 'fail' | 'pending' | 'request_error',
+  /** The provider refuses to create a batch at all. */
+  createFails: false,
 }
 
 function respond(model: string, body: unknown) {
@@ -69,6 +71,7 @@ const fakeClient = {
   models: { generateContent: async (req: Req) => handle(req) },
   batches: {
     create: async ({ src }: { model: string; src: (Req & { metadata: { key: string } })[] }) => {
+      if (gem.createFails) throw new Error('503 batch service unavailable (fake)')
       const name = `batches/fake-${randomUUID()}`
       gem.batches.set(name, src)
       return { name }
@@ -110,6 +113,12 @@ let svc: {
 }
 let raw: Pool
 
+// Like setFlags, but leaves HW_BATCH_ENABLED as the test set it.
+const setFlagsKeepBatch = (on: string[]) => {
+  for (const f of FLAGS) delete process.env[f]
+  for (const f of on) process.env[f] = 'true'
+  svc.config._resetHwConfig()
+}
 const setFlags = (on: string[]) => {
   for (const f of FLAGS) delete process.env[f]
   for (const f of on) process.env[f] = 'true'
@@ -212,6 +221,9 @@ suite('cost work, task 2 — integration', () => {
     gem.read = new Map()
     gem.batches = new Map()
     gem.batchMode = 'succeed'
+    gem.createFails = false
+    delete process.env.HW_BATCH_ENABLED
+    process.env.HW_BATCH_ENABLED = 'false'
     setFlags([])
   })
 
@@ -441,6 +453,60 @@ suite('cost work, task 2 — integration', () => {
       await drainAll(3)
       expect(aiCallsFor('grade').length).toBeGreaterThan(0)
       expect(await marksOf(s1.a2)).toMatchObject({ m: 2 })
+    })
+
+    it('a batch the provider refuses to create is re-run on the standard path with the reason shown (flag on)', async () => {
+      setFlags(['HW_HOMEWORK_BATCH_ENABLED'])
+      const w = await makeWorld()
+      const a = await publish(w, farFuture())
+      const h = await inkHandIn(w.s1, a, 'plants make food from sun lite')
+      gem.createFails = true
+      await svc.runner.drain('itest', 20_000)
+      const ov = (await svc.marking.classOverview(w.teacher, a.id)) as unknown as { aiWork: { fallbacks: string[] }; failedJobs: unknown[] }
+      expect(ov.aiWork.fallbacks[0]).toMatch(/^Re-run on the standard path: the batch could not be created \(.*503 batch service unavailable/)
+      expect(ov.failedJobs).toHaveLength(0)
+      await drainAll(4)
+      expect(aiCallsFor('read')).toHaveLength(1)
+      expect((await raw.query(`SELECT status FROM hw_submission WHERE id = $1`, [h.sid])).rows[0].status).toBe('ready_for_review')
+    })
+
+    it('HW_BATCH_ENABLED alone (no homework flag): a failed batch falls back too, instead of leaving the answer pending with no reason', async () => {
+      process.env.HW_BATCH_ENABLED = 'true'; setFlagsKeepBatch([])
+      const w = await makeWorld()
+      const a = await publish(w, null)
+      const h = await inkHandIn(w.s1, a, 'plants make food from sun lite')
+      gem.batchMode = 'fail'
+      await svc.runner.drain('itest', 20_000)
+      await raw.query(`UPDATE hw_ai_job SET run_after = now() WHERE status = 'batch_pending'`)
+      await svc.runner.drain('itest', 20_000)
+      const ov = (await svc.marking.classOverview(w.teacher, a.id)) as unknown as { aiWork: { fallbacks: string[] }; failedJobs: unknown[] }
+      expect(ov.aiWork.fallbacks[0]).toMatch(/^Re-run on the standard path: the batch failed/)
+      expect(ov.failedJobs).toHaveLength(0)
+      gem.batchMode = 'succeed'
+      await drainAll(4)
+      expect((await raw.query(`SELECT status FROM hw_submission WHERE id = $1`, [h.sid])).rows[0].status).toBe('ready_for_review')
+    })
+
+    it('the finished batch job keeps how long the batch took, and how it ended', async () => {
+      setFlags(['HW_HOMEWORK_BATCH_ENABLED'])
+      const w = await makeWorld()
+      const a = await publish(w, farFuture())
+      const ok = await inkHandIn(w.s1, a, 'plants make food from sun lite')
+      await drainAll(4)
+      const done = (await raw.query(`SELECT payload_ref FROM hw_ai_job WHERE submission_id = $1 AND kind = 'read'`, [ok.sid])).rows[0].payload_ref
+      expect(JSON.parse(done)).toMatchObject({ batchOutcome: 'completed' })
+      expect(JSON.parse(done).turnaroundSeconds).toBeGreaterThanOrEqual(0)
+      expect(Date.parse(JSON.parse(done).submittedAt)).toBeLessThanOrEqual(Date.parse(JSON.parse(done).completedAt))
+
+      const w2 = await makeWorld()
+      const a2 = await publish(w2, farFuture())
+      const bad = await inkHandIn(w2.s1, a2, 'plants make food from sun lite')
+      gem.batchMode = 'fail'
+      await svc.runner.drain('itest', 20_000)
+      await raw.query(`UPDATE hw_ai_job SET run_after = now() WHERE status = 'batch_pending'`)
+      await svc.runner.drain('itest', 20_000)
+      const failed = (await raw.query(`SELECT payload_ref FROM hw_ai_job WHERE submission_id = $1 AND kind = 'read'`, [bad.sid])).rows[0].payload_ref
+      expect(JSON.parse(failed)).toMatchObject({ batchOutcome: 'failed', standard: true })
     })
 
     it('flag off: the overview has no aiWork key and no batch is made when HW_BATCH_ENABLED is off', async () => {

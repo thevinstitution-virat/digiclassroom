@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto';
 
 export interface ObservedRequest {
   step: string | null;
-  provider: 'gemini' | 'openrouter';
+  provider: 'gemini' | 'openrouter' | 'openai';
   /** 'generate' or 'batch' (one entry per batched request). */
   path: 'generate' | 'batch';
   body: unknown;

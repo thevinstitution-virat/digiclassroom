@@ -250,7 +250,7 @@ export async function classOverview(actor: HwActor, assignmentId: string) {
       sql`(${hwAiJob.submissionId} IN (SELECT id FROM hw_submission WHERE assignment_id = ${a.id}) OR ${hwAiJob.questionId} IN (SELECT id FROM hw_question WHERE assignment_id = ${a.id}))`))
     .orderBy(desc(hwAiJob.updatedAt)).limit(50);
   // Only while homework batching is on: what the AI is doing, when it will be ready, and any fallback.
-  const aiWork = getHwConfig().HW_HOMEWORK_BATCH_ENABLED ? await aiWorkStatus(db, actor.orgId, a.id) : undefined;
+  const aiWork = getHwConfig().HW_HOMEWORK_BATCH_ENABLED || getHwConfig().HW_BATCH_ENABLED ? await aiWorkStatus(db, actor.orgId, a.id) : undefined;
   return {
     ...(aiWork ? { aiWork } : {}),
     assignment: { id: a.id, title: a.title, status: a.status, dueAt: a.dueAt, totalMarks: num(a.totalMarks), returnedAt: a.returnedAt },

@@ -1,8 +1,8 @@
 // AI marking: one call per chunk of answers to the same question. The question block is the
 // same for every chunk, so it goes first (cacheable prefix); answers go last.
 
-import { requireModel } from '../config';
-import { generate, textPart, type AiCall as GeminiCall, type AiResult as GeminiResult, type CallOptions } from '../ai';
+import { getHwConfig, requireModel } from '../config';
+import { generate, routed, textPart, type AiCall as GeminiCall, type AiResult as GeminiResult, type CallOptions } from '../ai';
 import {
   GRADE_PROMPT_VERSION,
   GRADE_RESPONSE_SCHEMA,
@@ -30,13 +30,19 @@ export function gradeResultsFrom(res: GeminiResult, input: GradeInput): GradeRes
   return validateGradeOutput(res.json, input, { model: res.model, promptVersion: GRADE_PROMPT_VERSION });
 }
 
+/** Per-call options the environment asks for (HW_GRADE_REASONING_EFFORT); none when it is unset, so requests stay as they were. */
+export function defaultGradeOptions(): CallOptions | undefined {
+  const effort = getHwConfig().HW_GRADE_REASONING_EFFORT;
+  return effort ? { reasoningEffort: effort.toLowerCase() } : undefined;
+}
+
 export class AiGrader implements AnswerGrader {
   lastCall: GeminiResult | null = null;
 
-  constructor(readonly model: string = requireModel('grade'), readonly options?: CallOptions) {}
+  constructor(readonly model: string = requireModel('grade'), readonly options: CallOptions | undefined = defaultGradeOptions()) {}
 
   async grade(input: GradeInput): Promise<GradeResult[]> {
-    const res = await generate(gradeCall(this.model, input, this.options));
+    const res = await generate(routed(gradeCall(this.model, input, this.options), 'grade'));
     this.lastCall = res;
     return gradeResultsFrom(res, input);
   }

@@ -11,7 +11,7 @@ import { describeError, HwError } from '../errors';
 import { db, type Exec } from '../db';
 import { quotaAllows, quotaRefusal, quotaState } from '../cost/quota';
 import { recordUsage } from '../cost/usage';
-import { createBatch, pollBatch, readBatchSupported, usageFromError, type AiResult, type BatchItem } from '../ai';
+import { createBatch, pollBatch, providerFor, readBatchSupported, routed, usageFromError, type AiResult, type BatchItem } from '../ai';
 import { decideAfterRead, type EscalationPolicy } from '../reader/escalation';
 import { readCall, readerForTier } from '../reader/gemini-reader';
 import { parseReadOutput } from '../reader/parse';
@@ -20,7 +20,7 @@ import { getHwObject } from '../storage/r2';
 import { failAnswers, finishSubmissionIfRead, setTranscript } from '../pipeline';
 import { claim, claimBatchPending, complete, enqueueRead, fail, markBatchPending, payloadOf, type JobRow, type ReadPayload } from './queue';
 import { shadowAfterRead } from '../shadow/shadow';
-import { decideBatch, dueFor, homeworkBatchSettings, isOverdue, readyBy, requeueStandard } from './homework-batch';
+import { decideBatch, dueFor, homeworkBatchSettings, isOverdue, readyBy, requeueStandard, saveStamp, stampPayload } from './homework-batch';
 
 interface PreparedRead {
   job: JobRow;
@@ -182,14 +182,14 @@ export async function runReadJobs(workerId: string, deadline: number): Promise<n
       const s = homeworkBatchSettings();
       const d = decideBatch({
         standardForced: p.tier === 2 || Boolean(payload?.standard), fallbackReason: payload?.fallbackReason,
-        providerCanBatch: readBatchSupported(), dueAt: await dueFor(db, { submissionId: p.job.submissionId }), now: new Date(), urgentHours: s.urgentHours,
+        providerCanBatch: readBatchSupported(providerFor('read')), dueAt: await dueFor(db, { submissionId: p.job.submissionId }), now: new Date(), urgentHours: s.urgentHours,
       });
       if (!d.batch) {
         if (p.tier === 1 && !payload?.standard && d.reason) p.standardReason = d.reason;
         await runSync(p);
         continue;
       }
-    } else if (p.tier === 2 || !cfg.HW_BATCH_ENABLED || !readBatchSupported()) {
+    } else if (p.tier === 2 || !cfg.HW_BATCH_ENABLED || !readBatchSupported(providerFor('read'))) {
       await runSync(p);
       continue;
     }
@@ -204,7 +204,7 @@ export async function runReadJobs(workerId: string, deadline: number): Promise<n
 
 async function submitReadBatch(group: PreparedRead[]): Promise<void> {
   const model = readerForTier(1).model;
-  const items: BatchItem[] = group.map((p) => ({ key: p.job.id, call: readCall(model, p.input) }));
+  const items: BatchItem[] = group.map((p) => ({ key: p.job.id, call: routed(readCall(model, p.input), 'read') }));
   try {
     const name = await createBatch(items, `hw-read-${new Date().toISOString()}`);
     await db.transaction(async (tx) => {
@@ -212,12 +212,18 @@ async function submitReadBatch(group: PreparedRead[]): Promise<void> {
         // Record exactly which answers were sent, so results apply without re-reading anything.
         const sent: ReadPayload = {
           tier: 1, answerIds: p.input.answers.map((a) => a.answerId),
-          ...(getHwConfig().HW_HOMEWORK_BATCH_ENABLED ? { readyBy: readyBy(new Date(), homeworkBatchSettings().deadlineHours).toISOString() } : {}),
+          ...(getHwConfig().HW_HOMEWORK_BATCH_ENABLED ? { readyBy: readyBy(new Date(), homeworkBatchSettings().deadlineHours).toISOString(), submittedAt: new Date().toISOString() } : {}),
         };
-        await markBatchPending(tx, p.job.id, name, model, sent, getHwConfig().HW_BATCH_POLL_SECONDS);
+        await markBatchPending(tx, p.job.id, name, model, sent, getHwConfig().HW_BATCH_POLL_SECONDS, providerFor('read'));
       }
     });
   } catch (e) {
+    // A batch that could not even be created is re-run on the standard path with the reason shown, whatever flag
+    // asked for the batch: a failed batch must never leave an answer waiting without a reason.
+    {
+      for (const p of group) await db.transaction((tx) => requeueStandard(tx, p.job.id, payloadOf<ReadPayload>(p.job) ?? { tier: 1 }, `the batch could not be created (${describeError(e)})`));
+      return;
+    }
     for (const p of group) await settleFailure(p.job, e);
   }
 }
@@ -234,10 +240,13 @@ export async function pollReadBatches(workerId: string): Promise<number> {
     byBatch.set(j.batchRef, [...(byBatch.get(j.batchRef) ?? []), j]);
   }
 
-  const managed = getHwConfig().HW_HOMEWORK_BATCH_ENABLED;
+  // A batch that fails, errors for a request or runs out of time is ALWAYS re-run on the standard path with the
+  // reason recorded (found in phase 1b: without this the answer stays pending with no reason until retries run out).
+  const managed = true;
   // Managed mode: a batch that fails, errors for a request or runs out of time is re-run on the
   // standard path with the reason recorded; it does not fail the job or wait for ever.
-  const fallback = (j: JobRow, reason: string) => db.transaction((tx) => requeueStandard(tx, j.id, payloadOf<ReadPayload>(j) ?? { tier: 1 }, reason));
+  const stamped = (j: JobRow, outcome: 'completed' | 'failed' | 'overdue') => stampPayload(payloadOf<ReadPayload>(j) ?? ({ tier: 1 } as ReadPayload), new Date(), outcome);
+  const fallback = (j: JobRow, reason: string, outcome: 'failed' | 'overdue' = 'failed') => db.transaction((tx) => requeueStandard(tx, j.id, stamped(j, outcome), reason));
 
   for (const [name, group] of byBatch) {
     let outcome;
@@ -247,12 +256,12 @@ export async function pollReadBatches(workerId: string): Promise<number> {
       console.error(`[hw] polling ${name} failed: ${describeError(e)}`);
       if (managed) {
         // The provider cannot be reached to poll: past the deadline, stop waiting.
-        for (const j of group) if (isOverdue(payloadOf<ReadPayload>(j)?.readyBy, new Date())) await fallback(j, `the batch could not be checked and its time ran out (${describeError(e)})`);
+        for (const j of group) if (isOverdue(payloadOf<ReadPayload>(j)?.readyBy, new Date())) await fallback(j, `the batch could not be checked and its time ran out (${describeError(e)})`, 'overdue');
       }
       continue; // run_after was pushed forward; try again next poll
     }
     if (outcome.state === 'pending') {
-      if (managed) for (const j of group) if (isOverdue(payloadOf<ReadPayload>(j)?.readyBy, new Date())) await fallback(j, `the batch was not finished by ${payloadOf<ReadPayload>(j)!.readyBy}`);
+      if (managed) for (const j of group) if (isOverdue(payloadOf<ReadPayload>(j)?.readyBy, new Date())) await fallback(j, `the batch was not finished by ${payloadOf<ReadPayload>(j)!.readyBy}`, 'overdue');
       continue;
     }
     if (outcome.state === 'failed') {
@@ -268,6 +277,7 @@ export async function pollReadBatches(workerId: string): Promise<number> {
         continue;
       }
       if (managed && !entry.ok) { await fallback(j, `the batch could not read this submission (${describeError(entry.error)})`); continue; }
+      if (managed) await saveStamp(db, j.id, stamped(j, 'completed'));
       try {
         if (!entry.ok) throw entry.error;
         const sent = payloadOf<ReadPayload>(j)?.answerIds;

@@ -60,6 +60,8 @@ export interface RunnerDeps {
    * Several answers in ONE reader call, the way production reads a submission. Results are in item
    * order; calls are shared by the group. Used by `read` mode when readGroup > 1.
    */
+  /** Counted by the harness: how many provider calls were retried after a transient error. */
+  stats?: { retries: number };
   readGroup?(items: EvalItem[]): Promise<{ results: { text: string; unclearCount: number; confidence: number; route: ReadRoute }[]; calls: CallCost[] }>;
   /** Marks several answers to one question in one call, as production does. Exact-match/blank answers cost nothing. */
   grade(question: GradeQuestion, answers: { answerId: string; transcript: string }[]): Promise<{ results: GradeResult[]; calls: CallCost[] }>;

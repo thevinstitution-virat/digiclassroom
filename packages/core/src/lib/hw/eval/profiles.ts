@@ -38,6 +38,8 @@ export interface ReadingProfile extends Base {
 }
 export interface EscalationProfile extends Base {
   stage: 'escalation';
+  /** Escalates only answers in this language. */
+  onlyLanguage?: 'hi';
   /** 'sarvam' is a per-page document reader, not a token-priced model. */
   call: ModelCall | { vendor: 'sarvam'; inrPerPage: number };
   /** Cannot be run yet, and why. */
@@ -93,7 +95,7 @@ export const PROFILES: readonly Profile[] = [
   { id: 'E-gemini', stage: 'escalation', label: 'gemini-3.5-flash, batch', batch: true,
     call: { provider: 'openrouter', model: FLASH_35, thinkingLevel: 'MINIMAL', mediaResolution: 'LOW' },
     notes: 'Escalation runs synchronously in production today (read-handler); batching it adds up to 24 h to the doubtful answers.' },
-  { id: 'E-sarvam', stage: 'escalation', label: 'Sarvam Vision, per page', batch: false,
+  { id: 'E-sarvam', stage: 'escalation', label: 'Sarvam Vision, per page', batch: false, onlyLanguage: 'hi',
     call: { vendor: 'sarvam', inrPerPage: 0.5 },
     notRunnable: 'no SARVAM_API_KEY in this environment, and SarvamReader is not implemented (reader/sarvam-reader.ts). Priced at the published ₹0.50 per page only.',
     notes: 'Sarvam Document Intelligence "Parse" price. One page per answer is assumed.' },
@@ -108,6 +110,15 @@ export const PROFILES: readonly Profile[] = [
   { id: 'M2', stage: 'marking', label: 'M1 with effort none', batch: false,
     call: { provider: 'openrouter', model: LUNA, reasoningEffort: 'none' }, answersPerCall: 1, valuePointsOnly: true,
     notes: 'As M1, reasoning off.' },
+  { id: 'M1-medium', stage: 'marking', label: 'M1 at medium effort', batch: false,
+    call: { provider: 'openrouter', model: LUNA, reasoningEffort: 'medium' }, answersPerCall: 1, valuePointsOnly: true,
+    notes: 'As M1, medium reasoning. Enters the pilot only if the phase 1b smoke run passes (detection at least 95%, no injection succeeds).' },
+  { id: 'M1-high', stage: 'marking', label: 'M1 at high effort', batch: false,
+    call: { provider: 'openrouter', model: LUNA, reasoningEffort: 'high' }, answersPerCall: 1, valuePointsOnly: true,
+    notes: 'As M1, high reasoning. Run once only if M1-medium lands between 90% and 95% detection.' },
+  { id: 'M0-single', stage: 'marking', label: 'M0 model and prompt, one answer per call', batch: false,
+    call: { provider: 'openrouter', model: FLASH_LITE, thinkingLevel: 'MINIMAL' }, answersPerCall: 1, valuePointsOnly: false,
+    notes: 'Replaces M0 as the pilot control if another student\'s answer can move a neighbour\'s mark in M0 (phase 1b, task 3).' },
 
   // ── Keys ────────────────────────────────────────────────────────────────────
   { id: 'K0', stage: 'keys', label: "today's settings", batch: false,
@@ -160,4 +171,53 @@ export function assertFamilyRules(set: Pick<ProfileSet, 'marking' | 'keys' | 'mu
   const g = modelFamily(set.marking.call.model);
   const m = modelFamily(set.mutationModel);
   if (g === m) throw new ProfileError(`marking profile ${set.marking.id}: the grader (${set.marking.call.model}) and the mutation generator (${set.mutationModel}) are both ${g}; the generator must be another model family`);
+}
+
+// ── The pilot set ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * pilot@v1: the profiles the pilot (docs/hw-eval/pilot-plan.md steps 1-3) carries, as decided after the cost work's
+ * phase 1 and 1b. Everything else keeps its definition above so it can be run again, but is not in the pilot.
+ */
+export const PILOT_V1 = {
+  id: 'pilot@v1',
+  reading: ['R0', 'R1', 'R-luna'],
+  escalation: ['E0', 'E-sarvam'],
+  /**
+   * M0-single is the control: M0 marks ten students' answers in one call, and phase 1b task 3 saw a neighbour's mark
+   * move the way an injected line asked (5 of 162 comparisons), so the control marks one answer per call.
+   * M1-medium did not pass its smoke run (detection 74.3%, 52/70; the bar was 95%), so it is not carried.
+   */
+  marking: ['M0-single', 'M1'],
+  keys: ['K0'],
+  /** Held back, with the reason. */
+  reserve: {
+    R2: 'one resolution up; run only if R0 reads real handwriting poorly',
+    M0: 'the original control. Replaced by M0-single under the phase 1b rule, but the evidence was mixed (a second sample found no neighbour moving the way the line asked), and M0-single costs 61% more per answer; the owner can put M0 back.',
+  },
+  pending: { E1: 'the E0 request at batch price: decided on measured batch turnaround on Gemini direct, which needs a key (phase 1b task 4.4)' },
+  dropped: ['E-gemini', 'M2', 'K1', 'M1-medium', 'M1-high'],
+} as const;
+
+export interface PilotSet {
+  id: string;
+  reading: ReadingProfile[];
+  escalation: EscalationProfile[];
+  marking: MarkingProfile[];
+  keys: KeyProfile[];
+}
+
+/** Loads pilot@v1 and checks the family rules for every marking x key pairing the pilot can produce. */
+export function loadPilotSet(mutationModel = DEFAULT_MUTATION_MODEL): PilotSet {
+  const set: PilotSet = {
+    id: PILOT_V1.id,
+    reading: PILOT_V1.reading.map((id) => profileById<ReadingProfile>(id, 'reading')),
+    escalation: PILOT_V1.escalation.map((id) => profileById<EscalationProfile>(id, 'escalation')),
+    marking: PILOT_V1.marking.map((id) => profileById<MarkingProfile>(id, 'marking')),
+    keys: PILOT_V1.keys.map((id) => profileById<KeyProfile>(id, 'keys')),
+  };
+  for (const marking of set.marking) for (const keys of set.keys) assertFamilyRules({ marking, keys, mutationModel });
+  // A grader alone, when the pilot runs no key profile.
+  for (const marking of set.marking) assertFamilyRules({ marking, mutationModel });
+  return set;
 }

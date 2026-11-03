@@ -24,11 +24,17 @@ const choice = <T extends readonly [string, ...string[]]>(values: T, fallback: T
   z.preprocess((v) => (v === '' ? undefined : typeof v === 'string' ? v.trim().toUpperCase() : v), z.enum(values).optional())
     .transform((v) => v ?? fallback);
 
-const provider = () => z.preprocess((v) => (v === '' || v === undefined ? undefined : String(v).trim().toLowerCase()), z.enum(['gemini', 'openrouter']).optional());
+const provider = () => z.preprocess((v) => (v === '' || v === undefined ? undefined : String(v).trim().toLowerCase()), z.enum(['gemini', 'openrouter', 'openai']).optional());
 
 const EnvSchema = z.object({
   HW_FEATURE_DEFAULT_ENABLED: bool(false),
   HW_AI_PROVIDER: provider().transform((v) => v ?? 'gemini'),
+  // Per-step routes; each defaults to HW_AI_PROVIDER. A model id must be one the chosen provider knows
+  // (bare "gemini-…" on gemini, "gpt-…" on openai, "vendor/model" on openrouter).
+  HW_READ_PROVIDER: provider(),
+  HW_ESCALATE_PROVIDER: provider(),
+  HW_GRADE_PROVIDER: provider(),
+  HW_RUBRIC_PROVIDER: provider(),
   GEMINI_API_KEY: str(),
   OPENROUTER_API_KEY: str(),
   HW_READ_MODEL: str(),
@@ -41,6 +47,8 @@ const EnvSchema = z.object({
   HW_READ_ESCALATE_BELOW: num(0.7, 0, 1),
   HW_UNCLEAR_ESCALATE_ABOVE: num(3, 0, 1000),
   HW_GRADE_BATCH_SIZE: num(10, 1, 50),
+  /** Reasoning effort for marking calls (e.g. low, for gpt-6-luna). Unset = HW_THINKING_LEVEL, as before. */
+  HW_GRADE_REASONING_EFFORT: str(),
   HW_GRADE_DEBOUNCE_SECONDS: num(120, 0, 86_400),
   HW_HIGH_CONFIDENCE: num(0.85, 0, 1),
   HW_RENDER_MAX_WIDTH: num(1000, 200, 4000),

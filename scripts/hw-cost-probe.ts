@@ -2,6 +2,9 @@
 //
 //   npm run hw:cost:probe -- cache   [--budget-inr 2]    does a GPT-5.6+ model write a cache that is never read?
 //   npm run hw:cost:probe -- batch   [--wait-minutes 6]   does the provider batch path work, with what usage and what cost?
+//   npm run hw:cost:probe -- direct gemini|openai [--wait-minutes 30] [--images 3]
+//       a real image batch through the production provider code (Gemini direct, or OpenAI direct with gpt-6-luna): submit-to-complete
+//       time and usage, appended to docs/hw-eval/cost1/batch-timings.jsonl. Needs a valid GEMINI_API_KEY / OPENAI_API_KEY.
 //
 // (from apps/api). Uses synthetic text only (no student data), spends well under ₹1, and prints
 // every number from the provider's own usage fields.
@@ -119,11 +122,48 @@ async function batchProbe() {
   console.log(`still not finished after ${wait} minutes (id ${id}); a homework batch must wait for this`);
 }
 
+async function directProbe(which: string) {
+  const { appendFileSync, readFileSync: read } = await import('node:fs');
+  const wait = Number(arg('wait-minutes', '30'));
+  const nImages = Number(arg('images', '3'));
+  const cfg = which === 'gemini'
+    ? { provider: 'gemini' as const, model: 'gemini-3.5-flash-lite', keyName: 'GEMINI_API_KEY', options: { thinkingLevel: 'MINIMAL' as const } }
+    : { provider: 'openai' as const, model: 'gpt-6-luna', keyName: 'OPENAI_API_KEY', options: { reasoningEffort: 'low' } };
+  const key = process.env[cfg.keyName];
+  if (!key || /placeholder|your_|^sk-\.\.\./i.test(key)) throw new Error(`${cfg.keyName} is not set to a real key in this environment (apps/api/.env.local): no ${which} round trip is possible. Put a PAID-tier key there and rerun.`);
+  const { readCall } = await import('@/lib/hw/reader/gemini-reader');
+  const { createBatch, pollBatch } = await import('@/lib/hw/ai');
+  // Synthetic font images from the existing small-run dataset: no student data.
+  const dir = '../../hw-evals/datasets/smallrun-a/v2';
+  const items = read(`${dir}/manifest.jsonl`, 'utf8').trim().split(String.fromCharCode(10)).map((l) => JSON.parse(l) as { id: string; language: string; media: { render?: string } }).filter((i) => i.media.render).slice(0, nImages);
+  const answers = items.map((i) => ({ answerId: i.id, languageHint: i.language as 'en' | 'hi' | 'mixed', png: new Uint8Array(read(`${dir}/${i.media.render}`)), mimeType: 'image/png' as const }));
+  const call = { ...readCall(cfg.model, { answers }, cfg.options), provider: cfg.provider };
+  const submitted = Date.now();
+  const id = await createBatch([{ key: 'probe', call }], `hw-probe-${which}`);
+  console.log(`${which}: batch ${id} submitted with ${nImages} image(s) in one request`);
+  const row: Record<string, unknown> = { provider: cfg.provider, model: cfg.model, kind: 'read', images: nImages, submittedAt: new Date(submitted).toISOString() };
+  while ((Date.now() - submitted) / 60_000 < wait) {
+    await new Promise((r) => setTimeout(r, 15_000));
+    const o = await pollBatch(cfg.provider, id, cfg.model);
+    const secs = Math.round((Date.now() - submitted) / 1000);
+    console.log(`  ${secs} s: ${o.state}`);
+    if (o.state === 'pending') continue;
+    Object.assign(row, { completedAt: new Date().toISOString(), seconds: secs, outcome: o.state === 'failed' ? 'failed' : 'completed' });
+    if (o.state === 'failed') row.reason = o.reason;
+    else { const e = o.results.get('probe'); row.requestOk = Boolean(e?.ok); if (e?.ok) row.usage = e.result.usage; else row.error = String((e as { error?: Error } | undefined)?.error?.message ?? 'no result'); }
+    break;
+  }
+  if (!row.outcome) Object.assign(row, { outcome: 'still_pending', seconds: Math.round((Date.now() - submitted) / 1000) });
+  console.log(JSON.stringify(row));
+  appendFileSync('../../docs/hw-eval/cost1/batch-timings.jsonl', JSON.stringify(row) + String.fromCharCode(10));
+}
+
 async function main() {
   const mode = process.argv[2];
-  if (!process.env.OPENROUTER_API_KEY) throw new Error('OPENROUTER_API_KEY is not set (apps/api/.env.local)');
+  if (mode !== 'direct' && !process.env.OPENROUTER_API_KEY) throw new Error('OPENROUTER_API_KEY is not set (apps/api/.env.local)');
   if (mode === 'cache') await cacheProbe();
   else if (mode === 'batch') await batchProbe();
+  else if (mode === 'direct') await directProbe(process.argv[3] ?? '');
   else throw new Error('usage: hw-cost-probe cache|batch');
 }
 main().catch((e) => { console.error(e instanceof Error ? e.message : e); process.exit(1); });

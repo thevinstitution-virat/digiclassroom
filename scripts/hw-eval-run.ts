@@ -198,6 +198,11 @@ async function main() {
     if (flag('print-estimate')) return;
   }
   const record = await runEval(ds, deps, runOptions);
+  if (deps.stats?.retries) {
+    console.log(`provider calls retried after a transient error: ${deps.stats.retries}`);
+    record.meta = { ...record.meta, retries: deps.stats.retries };
+    writeFileSync(join(runsRoot, runId, 'run.json'), JSON.stringify(record, null, 2));
+  }
 
   const dir = join(runsRoot, runId);
   const rows = latestRows(readRows(join(dir, 'items.jsonl')));

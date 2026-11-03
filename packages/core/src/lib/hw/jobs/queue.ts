@@ -10,7 +10,7 @@ import { and, eq, inArray, lte, sql } from 'drizzle-orm';
 import { hwAiJob, type HwJobKind } from '@/db/hw-schema';
 import { describeError, isHwError } from '../errors';
 import { db, newId, type Exec } from '../db';
-import { currentProvider } from '../ai';
+import { currentProvider, providerFor } from '../ai';
 
 export type JobRow = typeof hwAiJob.$inferSelect;
 
@@ -21,6 +21,11 @@ export interface ReadPayload {
   answerIds?: string[];
   /** HW_HOMEWORK_BATCH_ENABLED: the latest time the batch may take (ISO). */
   readyBy?: string;
+  /** HW_HOMEWORK_BATCH_ENABLED: when the batch was submitted, and how it ended (see stampPayload). */
+  submittedAt?: string;
+  completedAt?: string;
+  turnaroundSeconds?: number;
+  batchOutcome?: 'completed' | 'failed' | 'overdue';
   /** HW_HOMEWORK_BATCH_ENABLED: a batch failed or ran out of time; run on the standard path, never batch again. */
   standard?: boolean;
   fallbackReason?: string;
@@ -35,6 +40,10 @@ export interface GradePayload {
   keyHash?: string;
   /** HW_HOMEWORK_BATCH_ENABLED, as for ReadPayload. */
   readyBy?: string;
+  submittedAt?: string;
+  completedAt?: string;
+  turnaroundSeconds?: number;
+  batchOutcome?: 'completed' | 'failed' | 'overdue';
   standard?: boolean;
   fallbackReason?: string;
 }
@@ -51,7 +60,7 @@ export function payloadOf<T>(job: JobRow): T | null {
 export async function enqueueRead(x: Exec, orgId: string, submissionId: string, payload: ReadPayload): Promise<string> {
   const id = newId();
   await x.insert(hwAiJob).values({
-    id, organizationId: orgId, kind: 'read', submissionId, payloadRef: JSON.stringify(payload), provider: currentProvider(),
+    id, organizationId: orgId, kind: 'read', submissionId, payloadRef: JSON.stringify(payload), provider: providerFor(payload.tier === 2 ? 'escalate' : 'read'),
   });
   return id;
 }
@@ -73,7 +82,7 @@ export async function enqueueGrade(x: Exec, orgId: string, questionId: string, d
     return;
   }
   await x.insert(hwAiJob).values({
-    id: newId(), organizationId: orgId, kind: 'grade', questionId, provider: currentProvider(),
+    id: newId(), organizationId: orgId, kind: 'grade', questionId, provider: providerFor('grade'),
     runAfter: sql`now() + make_interval(secs => ${delaySeconds})`,
     ...(payloadRef ? { payloadRef, error: opts.standard!.reason } : {}),
   });
@@ -113,9 +122,9 @@ export async function claimBatchPending(kind: HwJobKind, limit: number, workerId
   return ids.length ? db.select().from(hwAiJob).where(inArray(hwAiJob.id, ids)) : [];
 }
 
-export async function markBatchPending(x: Exec, jobId: string, batchRef: string, model: string, payload?: unknown, pollSeconds = 60): Promise<void> {
+export async function markBatchPending(x: Exec, jobId: string, batchRef: string, model: string, payload?: unknown, pollSeconds = 60, provider: string = currentProvider()): Promise<void> {
   await x.update(hwAiJob).set({
-    status: 'batch_pending', batchRef, model, provider: currentProvider(), lockedAt: null, lockedBy: null,
+    status: 'batch_pending', batchRef, model, provider, lockedAt: null, lockedBy: null,
     runAfter: sql`now() + make_interval(secs => ${pollSeconds})`,
     ...(payload !== undefined ? { payloadRef: JSON.stringify(payload) } : {}),
   }).where(eq(hwAiJob.id, jobId));

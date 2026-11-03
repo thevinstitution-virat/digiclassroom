@@ -61,7 +61,27 @@ export interface LiveSettings {
   priceTableJson: string | undefined;
 }
 
+/** A provider hiccup worth another try: rate limiting, a credit check that timed out, a server error, a dropped connection. */
+export const isTransient = (e: unknown): boolean => /HTTP (429|5\d\d)|ECONNRESET|ETIMEDOUT|fetch failed|socket hang up/i.test(e instanceof Error ? e.message : String(e));
+
+/**
+ * Eval-only retry with exponential backoff (4 s, 8 s, 16 s, 32 s, 64 s). Production has its own: the job queue
+ * retries provider errors. Every retry is counted so a run says how often the provider pushed back.
+ */
+export async function withRetry<T>(fn: () => Promise<T>, stats: { retries: number }, sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms))): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (e) {
+      if (attempt >= 5 || !isTransient(e)) throw e;
+      stats.retries++;
+      await sleep(4000 * 2 ** attempt);
+    }
+  }
+}
+
 export function liveDeps(ds: Dataset, s: LiveSettings): RunnerDeps {
+  const stats = { retries: 0 };
   const table = parsePriceTable(s.priceTableJson);
   const tier1 = new GeminiReader(s.reader.model, 1, s.reader.tier1Options);
   const tier2 = s.reader.escalateModel ? new GeminiReader(s.reader.escalateModel, 2, s.reader.tier2Options) : null;
@@ -104,7 +124,7 @@ export function liveDeps(ds: Dataset, s: LiveSettings): RunnerDeps {
   async function readTogether(items: EvalItem[]) {
     const { input, images } = inputFor(items);
     const calls: CallCost[] = [];
-    const r1 = await withStep('read_tier1', () => tier1.read(input));
+    const r1 = await withStep('read_tier1', () => withRetry(() => tier1.read(input), stats));
     calls.push(await withImageSplit(call('read_tier1', r1, { images, answers: items.length, batchPricing: s.reader.batchPricing?.tier1 }), tier1, input, calls));
     let answers = r1.answers;
     const routes: ReadRoute[] = items.map(() => 'tier1');
@@ -112,7 +132,7 @@ export function liveDeps(ds: Dataset, s: LiveSettings): RunnerDeps {
     const doubtful = items.map((_, i) => i).filter((i) => s.reader.forceEscalation || decideAfterRead(r1.answers[i], 1, s.reader.policy).action === 'escalate');
     if (tier2 && doubtful.length) {
       const sub = inputFor(doubtful.map((i) => items[i]));
-      const r2 = await withStep('read_escalation', () => tier2.read(sub.input));
+      const r2 = await withStep('read_escalation', () => withRetry(() => tier2.read(sub.input), stats));
       calls.push(await withImageSplit(call('read_escalation', r2, { images: sub.images, answers: doubtful.length, batchPricing: s.reader.batchPricing?.tier2 }), tier2, sub.input, calls));
       answers = [...answers];
       doubtful.forEach((i, k) => {
@@ -124,6 +144,7 @@ export function liveDeps(ds: Dataset, s: LiveSettings): RunnerDeps {
   }
 
   return {
+    stats,
     async read(item: EvalItem) {
       const { results, calls } = await readTogether([item]);
       return { ...results[0], calls };
@@ -143,7 +164,7 @@ export function liveDeps(ds: Dataset, s: LiveSettings): RunnerDeps {
       const calls: CallCost[] = [];
       if (toAi.length) {
         const g = new AiGrader(s.grader.model, s.grader.options);
-        results.push(...(await withStep('grade', () => g.grade({ question: q, answers: toAi }))));
+        results.push(...(await withStep('grade', () => withRetry(() => g.grade({ question: q, answers: toAi }), stats))));
         if (g.lastCall) calls.push(call('grade', g.lastCall, { answers: toAi.length, batchPricing: s.grader.batchPricing }));
       }
       return { results, calls };

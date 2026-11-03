@@ -196,6 +196,9 @@ const profileIds = (r: RunInfo) => (r.profiles ?? '').split(',').map((x) => x.tr
  */
 export function collectUnitCosts(runs: readonly RunInfo[], inrPerUsdNote = ''): UnitCosts {
   const out: UnitCosts = { reading: {}, escalation: {}, marking: {}, keys: {}, runs: [], notes: inrPerUsdNote ? [inrPerUsdNote] : [] };
+  // Where several runs measure the same thing, the one with more answers behind it wins (ties: the later one listed).
+  const weight = new Map<string, number>();
+  const wins = (key: string, n: number) => { if ((weight.get(key) ?? -1) > n) return false; weight.set(key, n); return true; };
   const stdBatch = (rows: ItemRow[], step: string, answers: number): StdBatch | null => {
     const t = stepTable(rows, answers).find((s) => s.step === step);
     return t ? { standard: t.tableStandardInr / answers, batch: t.tableBatchInr / answers } : null;
@@ -211,9 +214,9 @@ export function collectUnitCosts(runs: readonly RunInfo[], inrPerUsdNote = ''): 
       const reading = ids.find((i) => /^R/.test(i));
       const esc = ids.find((i) => /^E/.test(i));
       const t1 = stdBatch(r.rows, 'read_tier1', answers);
-      if (reading && t1 && !r.forceEscalation && lang !== 'all') { (out.reading[reading] ??= {})[lang] = t1; out.runs.push(r.runId); }
+      if (reading && t1 && !r.forceEscalation && lang !== 'all' && wins(`R|${reading}|${lang}`, answers)) { (out.reading[reading] ??= {})[lang] = t1; out.runs.push(r.runId); }
       const t2 = stdBatch(r.rows, 'read_escalation', answers);
-      if (esc && t2 && r.forceEscalation && lang !== 'all') {
+      if (esc && t2 && r.forceEscalation && lang !== 'all' && wins(`E|${esc}|${lang}`, answers)) {
         const slot = out.escalation[esc] as Partial<Record<Lang, StdBatch>> | undefined;
         (out.escalation[esc] = { ...(slot ?? {}), [lang]: t2 }); out.runs.push(r.runId);
       }
@@ -221,7 +224,7 @@ export function collectUnitCosts(runs: readonly RunInfo[], inrPerUsdNote = ''): 
     if (r.mode === 'mark') {
       const m = ids.find((i) => /^M/.test(i));
       const g = stdBatch(r.rows, 'grade', answers);
-      if (m && g) { out.marking[m] = g; out.runs.push(r.runId); }
+      if (m && g && wins(`M|${m}`, answers)) { out.marking[m] = g; out.runs.push(r.runId); }
     }
     if (r.mode === 'key') {
       const k = ids.find((i) => /^K/.test(i));

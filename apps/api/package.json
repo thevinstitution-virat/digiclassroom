@@ -16,7 +16,9 @@
     "hw:eval:regression": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-eval-regression.ts",
     "hw:eval:live": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-eval-live-report.ts",
     "hw:cost:probe": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-cost-probe.ts",
-    "hw:cost:project": "npx tsx --tsconfig tsconfig.json ../../scripts/hw-cost-project.ts"
+    "hw:cost:project": "npx tsx --tsconfig tsconfig.json ../../scripts/hw-cost-project.ts",
+    "hw:eval:inject": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-eval-inject.ts",
+    "hw:cost:1b": "npx tsx --tsconfig tsconfig.json ../../scripts/hw-cost-1b-report.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

@@ -9,15 +9,15 @@ import { describeError, HwError } from '../errors';
 import { db } from '../db';
 import { quotaAllows, quotaRefusal, quotaState } from '../cost/quota';
 import { recordUsage } from '../cost/usage';
-import { createBatch, generate, pollBatch, usageFromError, type AiResult } from '../ai';
-import { gradeCall, gradeResultsFrom } from '../grader/ai-grader';
+import { createBatch, generate, pollBatch, providerFor, routed, usageFromError, type AiResult } from '../ai';
+import { defaultGradeOptions, gradeCall, gradeResultsFrom } from '../grader/ai-grader';
 import type { GradeInput, GradeQuestion } from '../grader/types';
 import { answersNeedingSuggestion, findPriorSuggestions, gradeByRules, insertAiGrades, loadGradeQuestion, reusedSuggestion } from '../pipeline';
 import { keyVersionHash, planDuplicates, transcriptHash } from '../grader/dedupe';
 import type { GradeResult } from '../grader/types';
 import { claim, claimBatchPending, complete, enqueueGrade, fail, markBatchPending, payloadOf, type GradePayload, type JobRow } from './queue';
 import { shadowAfterGrade } from '../shadow/shadow';
-import { decideBatch, dueFor, fallbackNote, homeworkBatchSettings, isOverdue, readyBy, requeueStandard } from './homework-batch';
+import { decideBatch, dueFor, fallbackNote, homeworkBatchSettings, isOverdue, readyBy, requeueStandard, saveStamp, stampPayload } from './homework-batch';
 
 const RUBRIC_CHANGED = 'rubric changed while marking; suggestions discarded and re-queued';
 
@@ -147,7 +147,7 @@ async function runSync(job: JobRow, q: GradeQuestion, chunks: string[][], dupOf?
     const input = await inputsFor(q, ids);
     if (!input.answers.length) continue;
     try {
-      const res = await generate(gradeCall(model, input));
+      const res = await generate(routed(gradeCall(model, input, defaultGradeOptions()), 'grade'));
       const note = await applyChunk(job, q.rubricVersion, input, res, false, dupOf);
       if (note) notes.push(note);
       // Production is committed; the candidate configuration may now mark the same answers.
@@ -194,13 +194,20 @@ export async function runGradeJobs(workerId: string, deadline: number): Promise<
         continue;
       }
       const model = requireModel('grade');
-      const items = await Promise.all(p.chunks.map(async (ids, i) => ({ key: `${job.id}:${i}`, call: gradeCall(model, await inputsFor(p.q, ids)) })));
-      const name = await createBatch(items, `hw-grade-${job.id}`);
+      const items = await Promise.all(p.chunks.map(async (ids, i) => ({ key: `${job.id}:${i}`, call: routed(gradeCall(model, await inputsFor(p.q, ids), defaultGradeOptions()), 'grade') })));
+      let name: string;
+      try {
+        name = await createBatch(items, `hw-grade-${job.id}`);
+      } catch (e) {
+        // A batch that could not even be created is re-run on the standard path, with the reason shown.
+        await db.transaction((tx) => requeueStandard(tx, job.id, {}, `the batch could not be created (${describeError(e)})`));
+        continue;
+      }
       const payload: GradePayload = {
         rubricVersion: p.q.rubricVersion, chunks: p.chunks, ...(p.followers ? { followers: p.followers, keyHash: p.keyHash } : {}),
-        ...(cfg.HW_HOMEWORK_BATCH_ENABLED ? { readyBy: readyBy(new Date(), homeworkBatchSettings().deadlineHours).toISOString() } : {}),
+        ...(cfg.HW_HOMEWORK_BATCH_ENABLED ? { readyBy: readyBy(new Date(), homeworkBatchSettings().deadlineHours).toISOString(), submittedAt: new Date().toISOString() } : {}),
       };
-      await markBatchPending(db, job.id, name, model, payload, cfg.HW_BATCH_POLL_SECONDS);
+      await markBatchPending(db, job.id, name, model, payload, cfg.HW_BATCH_POLL_SECONDS, providerFor('grade'));
     } catch (e) {
       await settleFailure(job, e);
     }
@@ -210,9 +217,10 @@ export async function runGradeJobs(workerId: string, deadline: number): Promise<
 
 export async function pollGradeBatches(workerId: string): Promise<number> {
   const jobs = await claimBatchPending('grade', 20, workerId, getHwConfig().HW_BATCH_POLL_SECONDS);
-  const managed = getHwConfig().HW_HOMEWORK_BATCH_ENABLED;
+  // A batch that fails, errors or runs out of time is ALWAYS re-run on the standard path with the reason recorded.
+  const managed = true;
   // Managed mode: a batch that fails, errors or runs out of time is re-run on the standard path, with the reason recorded.
-  const fallback = (j: JobRow, reason: string) => db.transaction((tx) => requeueStandard(tx, j.id, {}, reason));
+  const fallback = (j: JobRow, reason: string, outcome: 'failed' | 'overdue' = 'failed') => db.transaction((tx) => requeueStandard(tx, j.id, stampPayload(payloadOf<GradePayload>(j) ?? {}, new Date(), outcome), reason));
   for (const job of jobs) {
     const payload = payloadOf<GradePayload>(job);
     if (!job.batchRef || !payload) {
@@ -224,11 +232,11 @@ export async function pollGradeBatches(workerId: string): Promise<number> {
       outcome = await pollBatch(job.provider, job.batchRef, job.model ?? 'unknown');
     } catch (e) {
       console.error(`[hw] polling ${job.batchRef} failed: ${describeError(e)}`);
-      if (managed && isOverdue(payload.readyBy, new Date())) await fallback(job, `the batch could not be checked and its time ran out (${describeError(e)})`);
+      if (managed && isOverdue(payload.readyBy, new Date())) await fallback(job, `the batch could not be checked and its time ran out (${describeError(e)})`, 'overdue');
       continue;
     }
     if (outcome.state === 'pending') {
-      if (managed && isOverdue(payload.readyBy, new Date())) await fallback(job, `the batch was not finished by ${payload.readyBy}`);
+      if (managed && isOverdue(payload.readyBy, new Date())) await fallback(job, `the batch was not finished by ${payload.readyBy}`, 'overdue');
       continue;
     }
     if (outcome.state === 'failed') {
@@ -237,6 +245,7 @@ export async function pollGradeBatches(workerId: string): Promise<number> {
       continue;
     }
 
+    if (managed) await saveStamp(db, job.id, stampPayload(payload, new Date(), 'completed'));
     const q = await loadGradeQuestion(db, job.questionId!);
     const notes: string[] = [];
     let failedChunks = 0;

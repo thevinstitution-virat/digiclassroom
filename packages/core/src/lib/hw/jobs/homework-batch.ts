@@ -35,6 +35,35 @@ export function decideBatch(input: { standardForced: boolean; fallbackReason?: s
   return { batch: true };
 }
 
+/** Submit-to-complete time of a batch, written into the job payload when the batch ends (or is given up on). */
+export function stampPayload<T extends { submittedAt?: string }>(payload: T, now: Date, outcome: 'completed' | 'failed' | 'overdue'): T & { completedAt?: string; turnaroundSeconds?: number; batchOutcome: typeof outcome } {
+  if (!payload.submittedAt) return { ...payload, batchOutcome: outcome };
+  return {
+    ...payload, completedAt: now.toISOString(), batchOutcome: outcome,
+    turnaroundSeconds: Math.max(0, Math.round((now.getTime() - Date.parse(payload.submittedAt)) / 1000)),
+  };
+}
+
+/** Keep the stamped payload on the job: the finished job is the pilot's record of how long the batch took. */
+export async function saveStamp(x: Exec, jobId: string, payload: object): Promise<void> {
+  await x.update(hwAiJob).set({ payloadRef: JSON.stringify(payload) }).where(eq(hwAiJob.id, jobId));
+}
+
+export interface TurnaroundRow { kind: string; provider: string | null; model: string | null; outcome: string; n: number; medianSeconds: number; p90Seconds: number; maxSeconds: number }
+
+/** Batch turnaround by kind, provider and model: the evidence for choosing between a synchronous escalation (E0) and a batched one (E1). */
+export async function batchTurnaround(x: Exec, since: Date): Promise<TurnaroundRow[]> {
+  const r = await x.execute<{ kind: string; provider: string | null; model: string | null; outcome: string; n: number; med: number; p90: number; max: number }>(sql`
+    SELECT kind, provider, model, payload_ref::jsonb->>'batchOutcome' AS outcome, count(*)::int AS n,
+           percentile_cont(0.5) WITHIN GROUP (ORDER BY (payload_ref::jsonb->>'turnaroundSeconds')::float)::float AS med,
+           percentile_cont(0.9) WITHIN GROUP (ORDER BY (payload_ref::jsonb->>'turnaroundSeconds')::float)::float AS p90,
+           max((payload_ref::jsonb->>'turnaroundSeconds')::float)::float AS max
+      FROM hw_ai_job
+     WHERE created_at >= ${since} AND payload_ref LIKE '{%' AND payload_ref::jsonb ? 'turnaroundSeconds'
+     GROUP BY 1, 2, 3, 4 ORDER BY 1, 2, 3, 4`);
+  return r.rows.map((x2) => ({ kind: x2.kind, provider: x2.provider, model: x2.model, outcome: x2.outcome, n: x2.n, medianSeconds: x2.med, p90Seconds: x2.p90, maxSeconds: x2.max }));
+}
+
 export const FALLBACK_PREFIX = 'Re-run on the standard path';
 export const fallbackNote = (reason: string): string => `${FALLBACK_PREFIX}: ${reason}`;
 

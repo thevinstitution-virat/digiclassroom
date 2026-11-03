@@ -45,6 +45,8 @@ export interface CallOptions {
 }
 
 export interface GeminiCall {
+  /** Which provider runs this call. Absent = HW_AI_PROVIDER (as before per-step routes existed). */
+  provider?: 'gemini' | 'openrouter' | 'openai';
   model: string;
   systemInstruction: string;
   parts: Part[];
