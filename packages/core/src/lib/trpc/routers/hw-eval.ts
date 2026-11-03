@@ -11,6 +11,7 @@ import { requireToolsEnabled, type EvalActor } from '@/lib/hw/eval-tools/access'
 import { resolveEvalActor } from '@/lib/hw/eval-tools/actor';
 import * as admin from '@/lib/hw/eval-tools/admin';
 import * as invites from '@/lib/hw/eval-tools/invites';
+import * as consent from '@/lib/hw/eval-tools/consent';
 import * as work from '@/lib/hw/eval-tools/work';
 import { copyDatasets, copyQueue } from '@/lib/hw/eval-tools/copies';
 import { getHwConfig } from '@/lib/hw/config';
@@ -62,6 +63,25 @@ export const hwEvalRouter = createTRPCRouter({
     createRater: protectedProcedure
       .input(z.object({ email: z.string().email().max(255), pseudonym: z.string().trim().regex(/^[A-Za-z0-9_-]{3,40}$/, '3–40 letters, digits, _ or -'), skills: z.array(z.string().max(80)).max(30) }))
       .mutation(({ ctx, input }) => run(ctx, (a) => admin.createRater(a, input))),
+    consents: protectedProcedure.query(({ ctx }) => run(ctx, (a) => consent.listConsents(a))),
+    recordConsent: protectedProcedure
+      .input(z.object({
+        subjectKind: z.enum(['student', 'parent', 'teacher', 'volunteer']),
+        pseudonym: z.string().trim().min(3).max(40),
+        organizationId: z.string().max(255).nullable().optional(),
+        formVersion: z.string().trim().min(1).max(40),
+        language: z.enum(['en', 'hi']),
+        sources: z.array(z.enum(['A', 'B', 'C', 'D', 'E', 'F'])).min(1).max(6),
+        uses: z.array(z.enum(['evaluation', 'shadow', 'report'])).min(1).max(3),
+        signedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        collectedBy: z.string().trim().min(2).max(120),
+        subjectEmail: z.string().email().max(255).optional(),
+        guardianConsentId: z.string().max(64).optional(),
+        evidenceKey: z.string().max(300).optional(),
+      }))
+      .mutation(({ ctx, input }) => run(ctx, (a) => consent.recordConsent(a, input))),
+    withdrawConsent: protectedProcedure.input(z.object({ consentId: id, reason: z.string().trim().min(3).max(500) }))
+      .mutation(({ ctx, input }) => run(ctx, (a) => consent.withdrawConsent(a, input.consentId, input.reason))),
     invites: protectedProcedure.query(({ ctx }) => run(ctx, (a) => invites.listInvites(a))),
     inviteRater: protectedProcedure
       .input(z.object({ email: z.string().email().max(255), pseudonym: z.string().trim().regex(/^[A-Za-z0-9_-]{3,40}$/, '3–40 letters, digits, _ or -'), skills: z.array(z.string().max(80)).max(30) }))

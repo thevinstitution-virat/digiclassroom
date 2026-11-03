@@ -11,6 +11,8 @@ import { hwEvalAdjudication, hwEvalAssignment, hwEvalRater, hwEvalSubmission, hw
 import { HwError } from '../errors';
 import { parseDatasetRef } from '../eval/dataset';
 import { requireSuperAdmin, type EvalActor } from './access';
+import { consentLookup } from './consent';
+import { splitByConsent } from '../eval/consent-rules';
 import { eligibleForTask } from './payloads';
 import { evalSource } from './source';
 
@@ -78,7 +80,10 @@ const REQUIRED: Record<HwEvalTaskKind, number> = { transcribe: 2, blind_mark: 2,
 export async function createTasks(a: EvalActor, input: { datasetRef: string; kind: HwEvalTaskKind }) {
   requireSuperAdmin(a);
   parseDatasetRef(input.datasetRef);
-  const items = await evalSource().items(input.datasetRef);
+  const all = await evalSource().items(input.datasetRef);
+  // Roadmap 3.1: an item of real people's work (sources A, C, D, E) becomes a task only while a live consent covers it.
+  const consented = input.kind === 'key_audit' ? { allowed: all, refused: [] as typeof all } : splitByConsent(all, await consentLookup(all.map((i) => i.consent.ref ?? '')));
+  const items = consented.allowed;
   const rows: (typeof hwEvalTask.$inferInsert)[] = [];
   if (input.kind === 'key_audit') {
     const seen = new Set<string>();
@@ -97,9 +102,10 @@ export async function createTasks(a: EvalActor, input: { datasetRef: string; kin
       });
     }
   }
-  if (!rows.length) return { created: 0, eligible: 0 };
+  const skippedNoConsent = consented.refused.length;
+  if (!rows.length) return { created: 0, eligible: 0, skippedNoConsent };
   const created = await db.insert(hwEvalTask).values(rows).onConflictDoNothing().returning({ id: hwEvalTask.id });
-  return { created: created.length, eligible: rows.length };
+  return { created: created.length, eligible: rows.length, skippedNoConsent };
 }
 
 const skillFor = (kind: HwEvalTaskKind, subject: string | null) =>

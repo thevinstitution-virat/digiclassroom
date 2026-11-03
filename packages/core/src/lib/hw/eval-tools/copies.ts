@@ -16,6 +16,7 @@ import { inkSummary, validateEncodedInk } from '../ink/stroke-format';
 import { checkRender } from '../ink/png';
 import { putHwObject } from '../storage/r2';
 import { requireRater, type EvalActor } from './access';
+import { requireVolunteerConsent } from './consent';
 import { evalSource } from './source';
 
 export function copyDatasets(): string[] {
@@ -80,6 +81,7 @@ const store = () => override ?? (getHwConfig().HW_EVAL_LOCAL_ROOT ? localStore(g
 /** The next texts for this rater to copy, across the open datasets. */
 export async function copyQueue(a: EvalActor, limit = 20) {
   const r = requireRater(a);
+  await requireVolunteerConsent(a); // roadmap 3.1: source A needs the volunteer's own consent on record
   const out: { datasetRef: string; itemId: string; text: string; language: string; question: string }[] = [];
   let remaining = 0;
   for (const ref of copyDatasets()) {
@@ -95,6 +97,7 @@ export async function copyQueue(a: EvalActor, limit = 20) {
 
 export async function storeCopy(a: EvalActor, input: { datasetRef: string; itemId: string; ink: Uint8Array; render: Uint8Array; durationMs: number; device: string }) {
   const r = requireRater(a);
+  await requireVolunteerConsent(a);
   const cfg = getHwConfig();
   if (!copyDatasets().includes(input.datasetRef)) throw new HwError('FORBIDDEN', 'This dataset is not open for copying.');
   const it = (await evalSource().items(input.datasetRef)).find((x) => x.id === input.itemId);

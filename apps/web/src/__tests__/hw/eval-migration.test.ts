@@ -113,14 +113,16 @@ suite('migration 015 rules', () => {
     await refused(`UPDATE hw_eval_adjudication SET reason = 'x' WHERE task_id = $1`, [t.id], /append-only/)
   })
 
-  it('consent: a student needs a parent consent; only withdrawal may change, once', async () => {
-    await refused(`INSERT INTO hw_eval_consent (subject_kind, form_version, language, scope, signed_at, recorded_by) VALUES ('student', 'v1', 'hi', '{handwriting_eval}', '2026-10-01', $1)`, [teacherId], /check constraint/)
-    const parent = await one(`INSERT INTO hw_eval_consent (subject_kind, form_version, language, scope, signed_at, recorded_by) VALUES ('parent', 'v1', 'hi', '{handwriting_eval}', '2026-10-01', $1) RETURNING id`, [teacherId])
-    const kid = await one(`INSERT INTO hw_eval_consent (subject_kind, form_version, language, scope, signed_at, recorded_by, guardian_consent_id) VALUES ('student', 'v1', 'hi', '{handwriting_eval}', '2026-10-01', $1, $2) RETURNING id`, [teacherId, parent.id])
-    await refused(`UPDATE hw_eval_consent SET scope = '{everything}' WHERE id = $1`, [kid.id], /only withdrawn_at/)
-    await c.query(`UPDATE hw_eval_consent SET withdrawn_at = now() WHERE id = $1`, [kid.id])
-    await refused(`UPDATE hw_eval_consent SET withdrawn_at = now() + interval '1 day' WHERE id = $1`, [kid.id], /only withdrawn_at may be set, once/)
-    await refused(`INSERT INTO hw_eval_consent (subject_kind, form_version, language, scope, signed_at, recorded_by, evidence_key) VALUES ('teacher', 'v1', 'en', '{x}', '2026-10-01', $1, 'other/form.pdf')`, [teacherId], /check constraint/)
+  it('consent (015, and 022\'s scope and withdrawal rules): a student needs a parent consent; only the withdrawal may change, once', async () => {
+    await refused(`INSERT INTO hw_eval_consent (subject_kind, form_version, language, scope, signed_at, recorded_by) VALUES ('student', 'v1', 'hi', '{source:C,use:evaluation}', '2026-10-01', $1)`, [teacherId], /check constraint/)
+    const parent = await one(`INSERT INTO hw_eval_consent (subject_kind, form_version, language, scope, signed_at, recorded_by) VALUES ('parent', 'v1', 'hi', '{source:C,use:evaluation}', '2026-10-01', $1) RETURNING id`, [teacherId])
+    const kid = await one(`INSERT INTO hw_eval_consent (subject_kind, form_version, language, scope, signed_at, recorded_by, guardian_consent_id) VALUES ('student', 'v1', 'hi', '{source:C,use:evaluation}', '2026-10-01', $1, $2) RETURNING id`, [teacherId, parent.id])
+    await refused(`UPDATE hw_eval_consent SET scope = '{everything}' WHERE id = $1`, [kid.id], /only the withdrawal may be set, once/)
+    await refused(`UPDATE hw_eval_consent SET withdrawn_at = now() WHERE id = $1`, [kid.id], /withdrawn_together/) // 022: who and why come with it
+    await c.query(`UPDATE hw_eval_consent SET withdrawn_at = now(), withdrawn_by = $2, withdrawn_reason = 'asked to stop' WHERE id = $1`, [kid.id, teacherId])
+    await refused(`UPDATE hw_eval_consent SET withdrawn_at = now() + interval '1 day' WHERE id = $1`, [kid.id], /only the withdrawal may be set, once/)
+    await refused(`INSERT INTO hw_eval_consent (subject_kind, form_version, language, scope, signed_at, recorded_by) VALUES ('teacher', 'v1', 'en', '{handwriting_eval}', '2026-10-01', $1)`, [teacherId], /scope_known/) // 022: only known sources and uses
+    await refused(`INSERT INTO hw_eval_consent (subject_kind, form_version, language, scope, signed_at, recorded_by, evidence_key) VALUES ('teacher', 'v1', 'en', '{source:A,use:report}', '2026-10-01', $1, 'other/form.pdf')`, [teacherId], /check constraint/)
   })
 
   it('shadow results: only the final-marks comparison may be filled in later', async () => {

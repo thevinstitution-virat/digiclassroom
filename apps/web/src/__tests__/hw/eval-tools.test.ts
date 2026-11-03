@@ -180,6 +180,8 @@ suite('evaluator tools against Postgres', () => {
     const { rows } = await raw.query(`SELECT u.id, u.email FROM "user" u WHERE u.role = 'teacher' AND NOT EXISTS (SELECT 1 FROM hw_eval_rater r WHERE r.user_id = u.id) ORDER BY u.id LIMIT 3`)
     if (rows.length < 3) throw new Error('hw_itest needs 3 teacher users that are not raters')
     admin.userId = rows[0].id
+    // The dataset's items carry consent ref 'consent_1' (source C): a live record that covers source C for evaluation (roadmap 3.1).
+    await raw.query(`INSERT INTO hw_eval_consent (id, subject_kind, form_version, language, scope, signed_at, recorded_by, pseudonym) VALUES ('consent_1', 'teacher', 'itest-v1', 'en', '{source:C,use:evaluation}', current_date, $1, 'ItestConsent1') ON CONFLICT (id) DO NOTHING`, [admin.userId])
     const specs = [['ItestA', ['transcribe', 'mark:science']], ['ItestB', ['transcribe', 'mark:science']], ['ItestC', ['adjudicate', 'transcribe', 'mark:science']]] as const
     for (let i = 0; i < 3; i++) {
       const r = await m.admin.createRater(admin, { email: rows[i].email, pseudonym: `${specs[i][0]}${Date.now().toString(36).slice(-4)}`, skills: [...specs[i][1]] })
@@ -193,6 +195,7 @@ suite('evaluator tools against Postgres', () => {
 
   afterAll(async () => {
     await raw.query(`DELETE FROM hw_eval_task WHERE dataset_ref = $1`, [ref])
+    await raw.query(`DELETE FROM hw_eval_consent WHERE id = 'consent_1'`)
     await raw.query(`DELETE FROM hw_eval_rater WHERE id = ANY($1)`, [raterIds])
     await raw.end()
     await m?.pool.end()
@@ -208,7 +211,7 @@ suite('evaluator tools against Postgres', () => {
   })
 
   it('transcription: two raters disagree, a third resolves, the export carries both and the decision', async () => {
-    expect(await m.admin.createTasks(admin, { datasetRef: ref, kind: 'transcribe' })).toEqual({ created: 2, eligible: 2 })
+    expect(await m.admin.createTasks(admin, { datasetRef: ref, kind: 'transcribe' })).toEqual({ created: 2, eligible: 2, skippedNoConsent: 0 })
     expect((await m.admin.createTasks(admin, { datasetRef: ref, kind: 'transcribe' })).created).toBe(0)
     const as = await m.admin.assignOpenTasks(admin, { datasetRef: ref })
     expect(as.assigned).toBe(4)

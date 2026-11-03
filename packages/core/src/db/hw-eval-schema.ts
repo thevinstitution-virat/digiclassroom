@@ -76,6 +76,12 @@ export const hwEvalConsent = pgTable('hw_eval_consent', {
   recordedBy: varchar('recorded_by', { length: 255 }).notNull(),
   createdAt: ts('created_at').notNull().defaultNow(),
   guardianConsentId: varchar('guardian_consent_id', { length: 36 }),
+  // Migration 022 (roadmap task 3.1).
+  pseudonym: varchar('pseudonym', { length: 40 }),
+  subjectUserId: varchar('subject_user_id', { length: 255 }),
+  collectedBy: varchar('collected_by', { length: 120 }),
+  withdrawnBy: varchar('withdrawn_by', { length: 255 }),
+  withdrawnReason: text('withdrawn_reason'),
 });
 
 /** Never read by product code (see the isolation test). */

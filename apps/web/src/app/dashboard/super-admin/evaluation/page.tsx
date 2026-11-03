@@ -129,6 +129,113 @@ function Invites() {
   )
 }
 
+// Consent records (roadmap task 3.1). Only the platform owner sees this tab. A record holds a pseudonym, never a name; the account link
+// exists only for volunteers and teachers who copy texts by hand. Withdrawing is one action: the next dataset version leaves the person out.
+const SOURCES = [['A', 'A: volunteers copy known texts'], ['B', 'B: constructed answers'], ['C', 'C: real student answers'], ['D', 'D: previously checked copies'], ['E', 'E: teacher marking baseline'], ['F', 'F: answer keys']] as const
+const USES = [['evaluation', 'evaluation'], ['shadow', 'shadow mode'], ['report', 'the report']] as const
+
+function Consents() {
+  const utils = api.useUtils()
+  const list = api.hwEval.admin.consents.useQuery()
+  const record = api.hwEval.admin.recordConsent.useMutation({ onSuccess: () => { utils.hwEval.admin.consents.invalidate(); setPseudonym(''); setEmail(''); setCollected(''); setGuardian('') } })
+  const withdraw = api.hwEval.admin.withdrawConsent.useMutation({ onSuccess: () => utils.hwEval.admin.consents.invalidate() })
+  const [kind, setKind] = useState<'volunteer' | 'teacher' | 'parent' | 'student'>('volunteer')
+  const [pseudonym, setPseudonym] = useState('')
+  const [org, setOrg] = useState('')
+  const [form, setForm] = useState('')
+  const [lang, setLang] = useState<'en' | 'hi'>('en')
+  const [sources, setSources] = useState<string[]>(['A'])
+  const [uses, setUses] = useState<string[]>(['evaluation'])
+  const [signed, setSigned] = useState('')
+  const [collected, setCollected] = useState('')
+  const [email, setEmail] = useState('')
+  const [guardian, setGuardian] = useState('')
+  const toggle = (xs: string[], set: (v: string[]) => void, v: string) => set(xs.includes(v) ? xs.filter((x) => x !== v) : [...xs, v])
+  const parents = (list.data ?? []).filter((c) => c.subjectKind === 'parent' && c.status === 'active')
+  const needsAccount = (kind === 'volunteer' || kind === 'teacher') && sources.includes('A')
+  const ready = pseudonym && form && signed && collected && sources.length && uses.length && (!needsAccount || email) && (kind !== 'student' || guardian)
+
+  return (
+    <Card>
+      <CardHeader className="pb-2"><CardTitle className="text-base">Consent</CardTitle></CardHeader>
+      <CardContent className="space-y-4 text-sm">
+        <p className="text-muted-foreground">
+          Record the signed form of every person whose work is used. Work of real people (sources A, C, D, E) becomes a task only while a live consent covers it.
+          A student needs a parent&apos;s record first. Withdrawing is one action and cannot be undone: open tasks on the person&apos;s items stop, the runner refuses any dataset version that
+          contains them, and the next version leaves them out. Forms: docs/hw-eval/consent-forms (get them reviewed legally before use).
+        </p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field label="Who signed">
+            <select className="h-9 w-full rounded-md border bg-background px-2" value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
+              <option value="volunteer">Volunteer (adult)</option><option value="teacher">Teacher</option><option value="parent">Parent</option><option value="student">Student (with a parent&apos;s record)</option>
+            </select>
+          </Field>
+          <Field label="Pseudonym" hint="never a name"><Input value={pseudonym} onChange={(e) => setPseudonym(e.target.value)} /></Field>
+          <Field label="School id" hint="optional"><Input value={org} onChange={(e) => setOrg(e.target.value)} /></Field>
+          <Field label="Form version" hint="e.g. volunteer-v1"><Input value={form} onChange={(e) => setForm(e.target.value)} /></Field>
+          <Field label="Form language">
+            <select className="h-9 w-full rounded-md border bg-background px-2" value={lang} onChange={(e) => setLang(e.target.value as 'en' | 'hi')}><option value="en">English</option><option value="hi">हिन्दी</option></select>
+          </Field>
+          <Field label="Date signed"><Input type="date" value={signed} onChange={(e) => setSigned(e.target.value)} /></Field>
+          <Field label="Collected by" hint="a name or a role"><Input value={collected} onChange={(e) => setCollected(e.target.value)} /></Field>
+          {(kind === 'volunteer' || kind === 'teacher') && <Field label={needsAccount ? 'Account email (needed for source A)' : 'Account email (optional)'}><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>}
+          {kind === 'student' && (
+            <Field label="Parent's record">
+              <select className="h-9 w-full rounded-md border bg-background px-2" value={guardian} onChange={(e) => setGuardian(e.target.value)}>
+                <option value="" />{parents.map((p) => <option key={p.id} value={p.id}>{p.pseudonym} · {p.sources.join('')} · {p.formVersion}</option>)}
+              </select>
+            </Field>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-x-6 gap-y-2">
+          <fieldset className="space-y-1"><legend className="font-medium">Sources agreed</legend>
+            {SOURCES.map(([k, label]) => <label key={k} className="mr-4 inline-flex items-center gap-1"><input type="checkbox" checked={sources.includes(k)} onChange={() => toggle(sources, setSources, k)} />{label}</label>)}
+          </fieldset>
+          <fieldset className="space-y-1"><legend className="font-medium">Uses agreed</legend>
+            {USES.map(([k, label]) => <label key={k} className="mr-4 inline-flex items-center gap-1"><input type="checkbox" checked={uses.includes(k)} onChange={() => toggle(uses, setUses, k)} />{label}</label>)}
+          </fieldset>
+        </div>
+        <Button disabled={record.isPending || !ready} onClick={() => record.mutate({
+          subjectKind: kind, pseudonym, organizationId: org || null, formVersion: form, language: lang, sources: sources as ('A' | 'B' | 'C' | 'D' | 'E' | 'F')[],
+          uses: uses as ('evaluation' | 'shadow' | 'report')[], signedAt: signed, collectedBy: collected, ...(email ? { subjectEmail: email } : {}), ...(guardian ? { guardianConsentId: guardian } : {}),
+        })}>Record consent</Button>
+        {record.error && <HwMessage tone="error">{record.error.message}</HwMessage>}
+        {withdraw.error && <HwMessage tone="error">{withdraw.error.message}</HwMessage>}
+        {withdraw.data && <p>Withdrawn ({withdraw.data.withdrawn} record{withdraw.data.withdrawn === 1 ? '' : 's'}); {withdraw.data.cancelledTasks} open task{withdraw.data.cancelledTasks === 1 ? '' : 's'} stopped. Make the next dataset version with: npm run hw:eval:consent -- withdrawn, then exclude.</p>}
+        {list.isLoading ? <HwLoading /> : list.error ? <HwError message={list.error.message} onRetry={() => list.refetch()} /> : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="text-xs text-muted-foreground"><tr><th className="py-1 pr-3">Pseudonym</th><th className="pr-3">Kind</th><th className="pr-3">Sources / uses</th><th className="pr-3">Signed</th><th className="pr-3">Status</th><th className="pr-3">Account</th><th /></tr></thead>
+              <tbody>
+                {list.data!.map((c) => (
+                  <tr key={c.id} className="border-t align-top">
+                    <td className="py-2 pr-3 font-medium">{c.pseudonym ?? '(none)'}</td>
+                    <td className="pr-3">{c.subjectKind}</td>
+                    <td className="pr-3">{c.sources.join('') || '–'} · {c.uses.join(', ') || '–'}</td>
+                    <td className="pr-3">{c.signedAt}<div className="text-xs text-muted-foreground">{c.formVersion} ({c.language}) · {c.collectedBy ?? '–'}</div></td>
+                    <td className="pr-3">
+                      <Badge variant={c.status === 'active' ? 'default' : 'secondary'}>{c.status === 'parent_withdrawn' ? "parent's withdrawn" : c.status}</Badge>
+                      {c.withdrawnReason && <div className="mt-1 text-xs text-muted-foreground">{c.withdrawnReason}</div>}
+                    </td>
+                    <td className="pr-3">{c.accountEmail ?? '–'}</td>
+                    <td>{c.status !== 'withdrawn' ? (
+                      <Button size="sm" variant="outline" disabled={withdraw.isPending} onClick={() => {
+                        const reason = window.prompt('Why is this consent being withdrawn? (kept in the audit record)')
+                        if (reason && reason.trim().length >= 3 && window.confirm('Withdraw this consent? This cannot be undone.')) withdraw.mutate({ consentId: c.id, reason })
+                      }}>Withdraw</Button>
+                    ) : null}</td>
+                  </tr>
+                ))}
+                {!list.data!.length && <tr><td colSpan={7} className="py-2 text-muted-foreground">No consent recorded yet.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 function download(name: string, data: unknown) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
   const a = document.createElement('a')
@@ -172,7 +279,7 @@ function Dataset() {
                 </tbody>
               </table>
             )}
-            {createTasks.data && <p>{createTasks.data.created} new tasks ({createTasks.data.eligible} eligible items; existing tasks are kept).</p>}
+            {createTasks.data && <p>{createTasks.data.created} new tasks ({createTasks.data.eligible} eligible items; existing tasks are kept).{createTasks.data.skippedNoConsent > 0 && <> {createTasks.data.skippedNoConsent} item(s) skipped: no live consent covers them.</>}</p>}
             <div className="flex flex-wrap gap-2">
               <Button disabled={assign.isPending} onClick={() => assign.mutate({ datasetRef: ref })}>Assign open tasks to raters</Button>
               <Button variant="outline" disabled={exp.isPending} onClick={() => exp.mutate({ datasetRef: ref })}>Download reference export</Button>
@@ -196,6 +303,7 @@ export default function EvaluationAdminPage() {
       <div className="space-y-5">
         <Raters />
         <Invites />
+        <Consents />
         <Dataset />
       </div>
     </EvalShell>

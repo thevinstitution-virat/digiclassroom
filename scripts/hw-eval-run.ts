@@ -131,6 +131,15 @@ async function main() {
 
   const cfg = getHwConfig();
   const loaded = loadDataset(datasetsRoot, need('dataset'));
+  // Consent gate (roadmap 3.1): a dataset version that holds an item of a person whose consent was withdrawn is not run; the next
+  // version (hw-eval-consent exclude) is. --withdrawn takes the list exported by hw-eval-consent withdrawn; --consent-unchecked says
+  // out loud that consent was not checked, and is recorded in the run.
+  const { consentProblems } = await import('@/lib/hw/eval/consent-rules');
+  const withdrawnFile = arg('withdrawn');
+  const withdrawn = withdrawnFile ? new Set<string>((JSON.parse(readFileSync(withdrawnFile, 'utf8')) as { refs: string[] }).refs) : null;
+  const consentIssues = consentProblems(loaded.items, withdrawn, { unchecked: flag('consent-unchecked') });
+  if (consentIssues.length) throw new Error(`consent: ${consentIssues.join(' ')}`);
+  const consentMeta = { checkedAgainstWithdrawnList: Boolean(withdrawn), unchecked: !withdrawn && loaded.items.some((i) => i.consent.ref) };
   // --only-language en|hi|mixed keeps one language (to price a language on its own); a profile such as R-luna can also require it.
   const langFilter = arg('only-language') ?? onlyLanguage;
   if (langFilter && !['en', 'hi', 'mixed'].includes(langFilter)) throw new Error('--only-language must be en, hi or mixed');
@@ -195,7 +204,7 @@ async function main() {
     },
     meta: {
       configHash, config: effective, gitCommit, gitDirty, node: process.version, unicode: process.versions.unicode, icu: process.versions.icu,
-      inrPerUsd: table.inr_per_usd, label: arg('label') ?? null, profiles: profileArg ?? null, seed: runOptionsSeed(), fixedGrouping: flag('fixed-grouping'),
+      inrPerUsd: table.inr_per_usd, label: arg('label') ?? null, profiles: profileArg ?? null, seed: runOptionsSeed(), fixedGrouping: flag('fixed-grouping'), consent: consentMeta,
     },
   };
   {
