@@ -188,12 +188,22 @@ Report the leak rate first: how often a reversed fact gets the verdict `right_id
 
 This phase is mostly people's work. Claude Code's tasks are marked.
 
-2.1 **Books (pilot 0.1).** Index the Class 9–10 Science and Social Science books, English and Hindi medium, through the trio pipeline. Remove the duplicate Class 9 SST book and fix the medium filter in Gyankosh search.
-- **Claude Code first:** check whether the trio Markdown ingest lane works in production now (it couldn't in August), and list what is already indexed.
-- **Then:** each chapter goes prep app → enriched Markdown → ingest, as decided in Oct 2026.
-- **Owners:** YOU prepare chapters; Claude Code ingests and fixes the filter. This touches the trio repo, so follow that repo's rules.
+2.1 **Books (pilot 0.1).** Get the pilot's books into the shared library through the PDLMS hub (the only writer of `trio.library` and the Qdrant collection `library_v2_te3l_3072`).
 
-2.2 **`HW_KEY_R_MIN` calibration (pilot 0.2).**
+**Where things stand (checked read-only on production, 4 Nov 2026; details in `phase2-support.md` and the findings below):**
+- **Inventory: one book.** NCERT Science, Class IX, **English** (`sci9-en`, ISBN 8174504923, edition "Reprint 2025-26", 12 chapters, 987 passages). There is no Social Science, no Class 10 and no Hindi-medium book. The earlier plan's premise (Class 9 SST twice, Class 11 Geography) no longer holds.
+- **Why the earlier books are gone: deliberately, on 26 Oct.** The library hub plan (`PLAN-library-hub-v2.md`, Phase 8) says all current book content is wiped and reloaded. On 26 Oct 2026 at 17:05:50 UTC the old Qdrant collection `trio_content_v1_openai3072` was deleted (`DELETE /collections/…` from the host, `curl/8.5.0`) and at 17:07 UTC a `TRUNCATE content.*` ran (its first attempt is in the Postgres log, refused by a foreign key from `notes.note`; the `content` tables are now empty and `notes.note` has 0 rows). The only backups of the old collection are daily snapshots up to 27 Aug; no dump of `trio.content` or of the collection from 25–26 Oct was found in `/root/backups`. The books' sources (enriched Markdown) are re-ingestable.
+- **A path that can delete ingested books, found and reported first:** Qdrant on the shared Docker network has **no API key** (`QDRANT__SERVICE__API_KEY` is unset), so any container or host process on that network can delete a collection or its points. That is what the 26 Oct deletion used. The library code's own deletes are scoped (previews by work, revision and status; points by explicit id; Postgres rows by chapter revision or work), and no application path deletes a whole work or the collection. Nothing should be ingested until the owner has decided whether to put an API key on Qdrant (and give every client the key) or to keep the network the only protection, and has a snapshot schedule for `library_v2_te3l_3072` (the old collection's daily snapshots stopped on 27 Aug).
+- **The ingest lane:** the last success was 26 Oct (12 live runs after four early failures on a database check). It has not run since, so it is **unproven for a new book, for Hindi-medium text, and for today's build**.
+- **Hindi readiness, without ingesting (found by reading the code):**
+  - Ready: the dense model (`text-embedding-3-large`) and NFC normalisation; the sparse tokenizer keeps Devanagari combining marks (`\p{M}`) and hashes UTF-8 bytes (pinned in its header and fixtures; not run here); `hindi` maps to the medium code `hi`; each work has its own ISBN and `book_code`, a work has one medium, and hub search filters works by medium (`resolveScope`), which DCP's key service already sends (`hub-retrieval.ts:53`, with the reason `no_book` when none exists). `LIBRARY_HUB_ENABLED` is true in production.
+  - **Gaps:** (1) the medium defaults to English when the manifest's medium is missing or unrecognised (`library-hub.service.ts:133`, `library-hub.controller.ts:58`), so a Hindi book must be checked after upload; (2) the Markdown parser's structural labels (Activity, Fig., Table, Example, Questions, Exercises) default to the Science IX English set, and no per-book labels are passed in the upload hub path, so a Hindi book needs its own labels pack and that wiring; (3) the prep skill is Science IX English; a Hindi pack is needed; (4) no stemming or stopwords in the sparse tokenizer (by contract), so Hindi inflections rely on the IDF weighting; (5) `R_min` has to be calibrated per medium.
+  - "Fix the medium filter in Gyankosh search" is superseded: the old payload filter pointed at the deleted collection; the live path is the hub's work-level medium filter above. It has not been exercised with a Hindi book, because none exists.
+- **Claude Code first, before any ingest:** confirm the owner's decision on the Qdrant key and snapshots; then run a one-chapter test ingest of the English book to a scratch collection (not the shared one), then the Hindi labels pack and a one-chapter Hindi test, before the full books.
+- **Then:** each chapter goes prep app → enriched Markdown → ingest.
+- **Owners:** YOU prepare chapters and decide D11; Claude Code builds the Hindi labels pack and wiring and ingests. This touches the PDLMS repo, so follow that repo's rules.
+
+2.2 **`HW_KEY_R_MIN` calibration (pilot 0.2).** Calibration has to run **on the server**: `scripts/hw-key-calibrate.ts` needs Qdrant, the trio database and a real OpenAI key, none of which this development machine has. Run it per medium (English now; Hindi once a Hindi book is in).
 1. Claude Code exports 60 question → passage pairs as a labelling sheet.
 2. YOU (or a teacher) label them.
 3. Claude Code runs `scripts/hw-key-calibrate.ts` and reports the value.
@@ -404,6 +414,7 @@ Reading paper photos is already measured in pilot step 1, where half the items a
 
 ### Phase 6: pilot step 4, the classroom
 
+- **Prerequisite: the scheduled job worker (production change; only with the owner's go-ahead, and not before Phase 5 is merged).** Found on 4 Nov 2026 after the first deploy: no Coolify scheduled task calls `/api/cron/hw-jobs` (Coolify has no scheduled tasks and 0 executions) and `HW_CRON_SECRET` is unset in production (the route refuses every call), so nothing would process reading or marking even with the feature on, and the 15-minute monitoring roll-up (which runs inside the worker pass) does not run either. Before the classroom step: create the Coolify scheduled task for the route (every minute, as `cron/hw-jobs/route.ts` documents), set `HW_CRON_SECRET` (at least 32 characters) in production, and confirm one clean pass, including the monitoring roll-up, in the logs.
 - **YOU, on the Tenants tab:** switch on the pilot classes and set their quota.
 - **Settings:** eligibility comes from Phase 4. Shadow mode runs at 0.1–0.2. Monitoring runs daily, and automatic demotion is live.
 - **Reviews:** a 15-minute weekly review with the teachers.
@@ -474,6 +485,31 @@ Real figures come from Phase 4.
 | D8 | Quota unit | YOU | Rupees, stored as paise, with IST months | Open |
 | D9 | Batching escalation (E0 or E1) | YOU | E0, until the Gemini probe shows image batches finishing fast | **Decided 4 Nov 2026: stays E0** |
 | D10 | Parent access | YOU | After the pilot, policy first | Open |
+| D11 | Pilot round 1 scope | YOU | Class 9 Science, English and Hindi medium, with Social Science and Class 10 in round 2 once the lane has ingested a Hindi book | Open |
+| D12 | Qdrant protection before anything is ingested (found 4 Nov) | YOU | Put an API key on Qdrant and give every client the key, and snapshot `library_v2_te3l_3072` on a schedule. Until then ingest nothing | Open |
+
+---
+
+## 8a. Model inventory (4 Nov 2026)
+
+Exact model IDs, so the family rules can be checked at a glance. Sources: the production backend's environment (read-only, IDs and set/unset only), `apps/api/.env.example`, and `packages/core/src/lib/hw/eval/profiles.ts`. In evaluation runs every call goes through OpenRouter; production code defaults to Gemini direct (`HW_AI_PROVIDER`, default `gemini`).
+
+**Production today.** No model runs for reading, escalation, marking or rubric drafting: `HW_READ_MODEL`, `HW_ESCALATE_MODEL`, `HW_GRADE_MODEL`, `HW_RUBRIC_MODEL` and `HW_AI_PROVIDER` are unset, and there is no `GEMINI_API_KEY`, `OPENROUTER_API_KEY` or `SARVAM_API_KEY` (only `OPENAI_API_KEY` is set). The AI path would refuse with NOT_CONFIGURED.
+
+| Step | Production env now | `.env.example` | `pilot@v1` profiles (via OpenRouter) | Family |
+|---|---|---|---|---|
+| Read (tier 1) | none (unset) | `gemini-3.5-flash-lite`, Gemini direct | R0 and R1: `google/gemini-3.5-flash-lite` (R1 in batch); R-luna: `openai/gpt-6-luna`, low effort, English only | google; openai for R-luna |
+| Escalate (tier 2) | none (unset) | `gemini-3.6-flash`, Gemini direct | E0: `google/gemini-3.6-flash`; E-sarvam: Sarvam Vision, per page, Hindi only (not runnable: no key, and `SarvamReader` is not implemented) | google; sarvam |
+| Mark | none (unset) | `gemini-3.5-flash-lite`, batch size 10 (commented alternative: OpenAI `gpt-6-luna`, low effort, batch size 1) | M0-guarded and M0-strict: `google/gemini-3.5-flash-lite` (10 answers a call); M1-strict: `openai/gpt-6-luna`, low effort, 1 answer a call | google; openai for M1-strict |
+| Rubric draft ("Draft with AI") | none (unset) | `gemini-3.5-flash-lite` | not in the profiles | google |
+| Key write | `google/gemini-3.6-flash` via OpenRouter (no OpenRouter key set, so it could not run) | blank (commented example `gemini-3.6-flash`) | K0: `google/gemini-3.6-flash` | google |
+| Key verify | `openai/gpt-5.4-mini` via OpenRouter (same key gap) | blank, provider `openrouter` (commented example `gpt-5.4-mini`) | K0: `openai/gpt-5.4-mini` | openai |
+| Mutation and near-miss generation | not a production step | not set | `anthropic/claude-haiku-5.5` (`DEFAULT_MUTATION_MODEL`; near-miss uses the same) | anthropic |
+| Embeddings (key retrieval and the book library) | `text-embedding-3-large` (OpenAI key set; used by the library hub) | `text-embedding-3-large` | same | openai |
+
+**Family rules, checked:** key writer (google) differs from key verifier (openai) in production env and in K0; the mutation generator (anthropic) differs from every candidate grader (google for M0-guarded and M0-strict, openai for M1-strict). `profiles.ts` (lines 182-188) refuses a profile set that breaks either rule. `.env.example` leaves the writer and verifier blank, so the rule there is unchecked until they are set. Varta (the tutor) is separate from this feature; the owner states Basic runs GPT-6 Luna and Prime GPT-5.4 mini (not re-verified here).
+
+**Sequential scans on the new tables (checked 4 Nov).** `hw_ai_grade_source` 4, `hw_shared_key` 2, `hw_instruction_flag` 2. They do not come from row-count queries (none was run on these tables) or from the app: `last_seq_scan` is 18:47:35 to 18:47:36 UTC, the moment migrations 019 and 020 ran, with none since (including after the new code started at 19:28 UTC). The counts equal the number of indexes the migrations build (4, 2, 2), and `CREATE INDEX` scans the table once per index. Harmless.
 
 ---
 
@@ -481,7 +517,7 @@ Real figures come from Phase 4.
 
 | Phase | Status | Branch / commit | Updated |
 |---|---|---|---|
-| 1 | Merge approved (D1). Migrations 019 and 020 applied on production 4 Nov (rehearsed on the production schema; backup and restore point recorded). **Push to `main` not done: no GitHub credential for `thevinstitution-virat` in this session.** Post-deploy checks and the tag wait for the push. 1.2 and 1.3 skipped (no credit, no keys) | `perf/hw-cost` | 4 Nov 2026 |
+| 1 | Merge approved (D1). Migrations 019 and 020 applied on production 4 Nov (rehearsed on the production schema; backup and restore point recorded). **Done 4 Nov 2026:** `perf/hw-cost` fast-forwarded into `main` (`d558558..50a2d34`), deployed by Coolify, tag `hw-cost-merged-2026-11-04` pushed; every post-deploy check passed (runbook, "Executed on 4 Nov 2026"). 1.2 and 1.3 skipped (no credit, no keys) | `perf/hw-cost` | 4 Nov 2026 |
 | 2 | Support prepared (teacher pack, R_min labelling sheet, trio check); the people's work has not started. Findings in `phase2-support.md` | n/a | 4 Nov 2026 |
 | 3 | Not started: waits for the push in Phase 1 | `feat/hw-pilot-a` | 4 Nov 2026 |
 | 4 | Not started | n/a | 3 Nov 2026 |
@@ -523,3 +559,7 @@ The one result to read first is the leak rate in task 1.2. If it’s high, the v
 4 Nov 2026, Phase 1: no credit or keys, so 1.2 runs and 1.3 probes skipped; leak rate from stored runs is M0-strict 3/15 (20%, over the 5% line) and M1-strict 0/69; gaps a-g verified (docs/hw-eval/roadmap-phase1-report.md); merge runbook written (docs/hw-eval/merge-hw-cost-runbook.md); stopped at 1.5 for the owner's go-ahead.
 
 4 Nov 2026, Phase 1 close-out: D1 approved with three conditions; production schema rehearsed (no dependency differs from dev), roles and grants checked (app role `digiclassroom_app` owns everything and has full privileges on the 3 new tables), fresh backup at restore point 2026-11-03 18:45 UTC; 019 and 020 applied on production; push to `main` blocked by a missing GitHub credential for `thevinstitution-virat` (nothing pushed, deployed code does not use the new tables). Roadmap updated (§2 quota rule, §3.3 gaps verified, tasks 1.2, 3.2, 3.4, 5.1, 5.4, §8). Phase 2 support prepared (`phase2-support.md`): teacher pack (4-page A4, English and Hindi), R_min labelling sheet (60 questions, git-ignored in `hw-evals/rmin-labelling/`; the only book in the shared library is NCERT Science IX English, so SST, Class 10 and Hindi need books first). Part D skipped (OpenRouter -$0.045, no Gemini key, OpenAI key is a placeholder). Phase 3 not started.
+
+4 Nov 2026, push preparation and read-only checks: `origin/main` (`d558558`) is an ancestor of `perf/hw-cost` (9 commits, head `50a2d34`); annotated tag `hw-cost-merged-2026-11-04` created locally; owner pushes. Production backend env checked read-only (names, plus the values of the non-secret switches): `HW_FEATURE_DEFAULT_ENABLED=false`, `HW_EVAL_TOOLS_ENABLED=false`, `HW_SHADOW_RATE=0`, `HW_KEY_R_MIN=0.50`, no new flags, `HW_PARTIAL_CREDIT_RULE` unset, `HW_CRON_SECRET` unset (so the cron route refuses every call), `hw_tenant_quota` 0 rows. Read-only checks on the shared library: the old books were wiped deliberately on 26 Oct (Phase 8 of the library hub plan); Qdrant has no API key (decision D12, ingest nothing until decided); Hindi readiness gaps listed in task 2.1. Roadmap: task 2.1 rewritten, task 2.2 note, D11 and D12 added.
+
+4 Nov 2026, Phase 1 DONE: the owner approved a browser login; `perf/hw-cost` fast-forwarded into `main` (`d558558..50a2d34`), the branch and the annotated tag `hw-cost-merged-2026-11-04` pushed. Coolify deployed both apps (19:28 and 19:31 UTC); all post-deploy checks pass: 0 restarts, feature off for every institution (`hw_tenant_quota` 0 rows), no new flag set, `HW_PARTIAL_CREDIT_RULE` unset, cron route 401 without the secret, clean error logs for over 30 minutes. Found: no scheduled task calls the job worker and `HW_CRON_SECRET` is unset (Phase 6 prerequisite added). Model inventory added (§8a). Phase 3 next.
