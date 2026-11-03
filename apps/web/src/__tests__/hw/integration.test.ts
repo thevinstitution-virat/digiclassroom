@@ -45,6 +45,8 @@ const gem = {
   readByModel: new Map<string, Map<string, ReadPlan>>(), // per-model override (escalation)
   gradeQuote: (transcript: string) => transcript.split(/\s+/).slice(0, 3).join(' '),
   fail: null as null | 'throw' | 'badjson',
+  /** The last "Draft with AI" request: system prompt and user text. */
+  lastRubric: null as null | { system: string; text: string },
   batches: new Map<string, Req[]>(),
 }
 
@@ -84,6 +86,7 @@ function handle(req: Req) {
       })),
     })
   }
+  gem.lastRubric = { system: sys, text: parts.map((p) => p.text ?? '').join(String.fromCharCode(10)) }
   return respond(req.model, { items: [{ kind: 'key_point', description: 'Drafted point', marks: 1 }] })
 }
 
@@ -223,6 +226,7 @@ suite('handwritten assignments — integration', () => {
     gem.readByModel = new Map()
     gem.gradeQuote = (t) => t.split(/\s+/).slice(0, 3).join(' ')
     gem.fail = null
+    gem.lastRubric = null
     process.env.HW_BATCH_ENABLED = 'false'
     svc.config._resetHwConfig()
   })
@@ -483,6 +487,67 @@ suite('handwritten assignments — integration', () => {
       expect(gem.calls.filter((c) => c.model === CANDIDATE)).toHaveLength(0)
       const sh = (await raw.query(`SELECT kind, status, failure_reason FROM hw_eval_shadow_result WHERE organization_id = $1 AND kind = 'read'`, [w.org])).rows
       expect(sh).toEqual([{ kind: 'read', status: 'failed', failure_reason: 'AI quota reached: not run' }])
+    })
+  })
+
+  // ── Roadmap task 3.4: "Draft with AI" ─────────────────────────────────────────────────────────────────
+  describe('Draft with AI (roadmap task 3.4)', () => {
+    async function draftWorld(modelAnswer: string | null) {
+      const w = await makeWorld()
+      const { id } = await svc.assignments.createAssignment(w.teacher, { classId: w.classId, sectionId: null, subject: 'Science', title: 'Draft rules', allowedModes: ['typed'] })
+      const q = await svc.assignments.addQuestion(w.teacher, id, { type: 'very_short', prompt: 'What do plants take in for photosynthesis?', marks: 1, ...(modelAnswer ? { modelAnswer } : {}) })
+      return { w, id, qid: q.id }
+    }
+    const sources = async (qid: string) => (await raw.query(`SELECT source FROM hw_rubric_item WHERE question_id = $1 AND retired_at IS NULL ORDER BY position`, [qid])).rows.map((r) => r.source as string)
+
+    it('rule 1: a question without a model answer is not drafted: refused, no model call, no job', async () => {
+      const { w, qid } = await draftWorld(null)
+      await expect(svc.assignments.draftRubric(w.teacher, qid, { replace: false })).rejects.toMatchObject({ code: 'BAD_REQUEST', publicMessage: 'Add a model answer first.' })
+      expect(gem.calls.filter((c) => c.kind === 'rubric')).toHaveLength(0)
+      expect((await raw.query(`SELECT count(*)::int AS n FROM hw_ai_job WHERE question_id = $1`, [qid])).rows[0].n).toBe(0)
+      // a blank model answer counts as none
+      await svc.assignments.updateQuestion(w.teacher, qid, { modelAnswer: '   ' })
+      await expect(svc.assignments.draftRubric(w.teacher, qid, { replace: false })).rejects.toMatchObject({ publicMessage: 'Add a model answer first.' })
+    })
+
+    it("rule 2: the draft is made only from the teacher's model answer (prompt rubric-draft.v2)", async () => {
+      const { w, qid } = await draftWorld('Plants take in carbon dioxide.')
+      await svc.assignments.draftRubric(w.teacher, qid, { replace: false })
+      expect(gem.calls.filter((c) => c.kind === 'rubric')).toHaveLength(1)
+      const sent = gem.lastRubric!
+      expect(sent.system).toContain('Use ONLY the model answer')
+      expect(sent.system).not.toContain('standard for the question')
+      expect(sent.text).toContain('Plants take in carbon dioxide.')
+      expect(sent.text).not.toContain('(none given)')
+      const job = (await raw.query(`SELECT payload_ref FROM hw_ai_job WHERE question_id = $1 AND kind = 'rubric_draft'`, [qid])).rows[0]
+      expect(JSON.parse(job.payload_ref)).toEqual({ promptVersion: 'rubric-draft.v2' })
+    })
+
+    it('rule 3: drafted points are stored as AI drafts and stay so until the teacher saves the key points', async () => {
+      const { w, qid } = await draftWorld('Plants take in carbon dioxide.')
+      await svc.assignments.draftRubric(w.teacher, qid, { replace: false })
+      expect(await sources(qid)).toEqual(['ai_draft'])
+      // the teacher saves the key points (unchanged is enough): they become the teacher's
+      await svc.assignments.setRubric(w.teacher, qid, [{ kind: 'key_point', description: 'Drafted point', marks: 1 }])
+      expect(await sources(qid)).toEqual(['teacher'])
+    })
+
+    it('rule 4: Publish is refused while an unsaved AI-draft point exists, and works once the key points are saved', async () => {
+      const { w, id, qid } = await draftWorld('Plants take in carbon dioxide.')
+      await svc.assignments.draftRubric(w.teacher, qid, { replace: false })
+      await expect(svc.assignments.publishAssignment(w.teacher, id)).rejects.toMatchObject({ code: 'CONFLICT' })
+      await expect(svc.assignments.publishAssignment(w.teacher, id)).rejects.toThrow(/Question 1 still has AI-drafted key points/)
+      expect((await raw.query(`SELECT status FROM hw_assignment WHERE id = $1`, [id])).rows[0].status).toBe('draft')
+      await svc.assignments.setRubric(w.teacher, qid, [{ kind: 'key_point', description: 'Drafted point', marks: 1 }])
+      const pub = await svc.assignments.publishAssignment(w.teacher, id)
+      expect(pub.totalMarks).toBe(1)
+      expect((await raw.query(`SELECT status FROM hw_assignment WHERE id = $1`, [id])).rows[0].status).toBe('published')
+    })
+
+    it('a teacher-written rubric never blocks Publish (nothing was drafted)', async () => {
+      const { w, id, qid } = await draftWorld(null)
+      await svc.assignments.setRubric(w.teacher, qid, [{ kind: 'key_point', description: 'Carbon dioxide', marks: 1 }])
+      await expect(svc.assignments.publishAssignment(w.teacher, id)).resolves.toMatchObject({ totalMarks: 1 })
     })
   })
 })

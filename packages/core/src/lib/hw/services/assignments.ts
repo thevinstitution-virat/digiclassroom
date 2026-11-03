@@ -13,7 +13,8 @@ import { quotaAllows, quotaRefusal, quotaState } from '../cost/quota';
 import { recordUsage } from '../cost/usage';
 import { generate, providerFor, routed, textPart, usageFromError } from '../ai';
 import { complete, fail } from '../jobs/queue';
-import { RUBRIC_PROMPT_VERSION, RUBRIC_RESPONSE_SCHEMA, RUBRIC_SYSTEM_PROMPT, rubricDraftInput } from '../prompts/rubric-draft.v1';
+import { RUBRIC_PROMPT_VERSION, RUBRIC_RESPONSE_SCHEMA, RUBRIC_SYSTEM_PROMPT, rubricDraftInput } from '../prompts/rubric-draft.v2';
+import { draftBlockedReason, publishBlockedByDraft } from '../rubric-draft-rules';
 import { z } from 'zod';
 
 export interface AssignmentInput {
@@ -143,6 +144,9 @@ export async function publishAssignment(actor: HwActor, assignmentId: string) {
   const { questions } = await getForManage(actor, assignmentId);
   const blank = questions.filter((q) => !q.prompt.trim()).map((q) => q.position + 1);
   if (blank.length) throw new HwError('BAD_REQUEST', `Write the question text for question ${blank.join(', ')} before publishing.`);
+  // Key points the AI drafted and the teacher has not saved yet are not a marking scheme the teacher has checked.
+  const unchecked = publishBlockedByDraft(questions);
+  if (unchecked) throw new HwError('CONFLICT', unchecked);
   const warnings: string[] = [];
   for (const q of questions) {
     if (!q.rubric.length) warnings.push(`Question ${q.position + 1} has no marking scheme, so AI cannot suggest marks for it; you will mark it by hand.`);
@@ -299,6 +303,9 @@ const RubricDraft = z.object({
 export async function draftRubric(actor: HwActor, questionId: string, opts: { replace: boolean }) {
   const { q, a } = await questionForManage(actor, questionId);
   requireDraft(a, 'The marking scheme');
+  // The draft comes only from the teacher's model answer (prompt rubric-draft.v2); without one there is nothing to draft from.
+  const blocked = draftBlockedReason(q);
+  if (blocked) throw new HwError('BAD_REQUEST', blocked);
   const existing = await db.select({ id: hwRubricItem.id }).from(hwRubricItem)
     .where(and(eq(hwRubricItem.questionId, q.id), isNull(hwRubricItem.retiredAt))).limit(1);
   if (existing.length && !opts.replace) throw new HwError('CONFLICT', 'This question already has key points. Confirm to replace them with an AI draft.');
@@ -320,7 +327,7 @@ export async function draftRubric(actor: HwActor, questionId: string, opts: { re
       model,
       systemInstruction: RUBRIC_SYSTEM_PROMPT,
       schema: RUBRIC_RESPONSE_SCHEMA,
-      parts: [textPart(rubricDraftInput({ type: q.type, prompt: q.prompt, marks: num(q.marks), modelAnswer: q.modelAnswer, languageHint: q.languageHint }))],
+      parts: [textPart(rubricDraftInput({ type: q.type, prompt: q.prompt, marks: num(q.marks), modelAnswer: q.modelAnswer as string, languageHint: q.languageHint }))],
     }, 'rubric'));
     const parsed = RubricDraft.safeParse(res.json);
     if (!parsed.success) throw new HwError('INVALID_PROVIDER_OUTPUT', 'The AI draft could not be used.', `rubric draft failed validation: ${parsed.error.issues[0]?.message}`);

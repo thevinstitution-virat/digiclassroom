@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { draftBlockedReason, isUnsavedDraft, unsavedDraftQuestions } from '@/lib/hw/rubric-draft-rules'
 import { Field, NativeSelect } from '../fields'
 import { marksLabel, useHwT } from '../strings'
 import type { HwOut } from '../types'
@@ -36,6 +37,9 @@ function RubricEditor({ q, onSaved }: { q: Question; onSaved: () => void }) {
 
   const total = items.reduce((s, i) => s + (Number.isFinite(i.marks) ? i.marks : 0), 0)
   const qMarks = n(q.marks)
+  // Drafting needs the teacher's saved model answer; points stay "AI draft" until the teacher saves the key points.
+  const draftBlocked = draftBlockedReason(q) !== null
+  const hasDraft = items.some((i) => i.source && isUnsavedDraft({ source: i.source }))
   const edit = (i: number, patch: Partial<Item>) => { setDirty(true); setItems((xs) => xs.map((x, j) => (j === i ? { ...x, ...patch } : x))) }
   const move = (i: number, d: -1 | 1) => {
     const j = i + d
@@ -56,11 +60,13 @@ function RubricEditor({ q, onSaved }: { q: Question; onSaved: () => void }) {
           <p className="text-sm font-medium">{t('tc.b.rubric')}</p>
           <p className="text-xs text-muted-foreground">{t('tc.b.rubricHelp')}</p>
         </div>
-        <Button size="sm" variant="outline" onClick={askDraft} disabled={draft.isPending || !q.prompt.trim()}>
+        <Button size="sm" variant="outline" onClick={askDraft} disabled={draft.isPending || !q.prompt.trim() || draftBlocked}>
           {draft.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1 h-4 w-4" />}
           {draft.isPending ? t('tc.b.drafting') : t('tc.b.draftAi')}
         </Button>
       </div>
+      {draftBlocked && <p className="text-xs text-muted-foreground">{t('tc.b.draftNeedsModelAnswer')}</p>}
+      {hasDraft && <p className="text-xs text-amber-700 dark:text-amber-400">{t('tc.b.draftUnsaved')}</p>}
       {draft.error && <p className="text-sm text-red-600">{draft.error.message}</p>}
       {items.map((it, i) => (
         <div key={i} className="grid gap-2 sm:grid-cols-[8rem_1fr_5rem_auto]">
@@ -69,7 +75,7 @@ function RubricEditor({ q, onSaved }: { q: Question; onSaved: () => void }) {
           </NativeSelect>
           <div className="space-y-1">
             <Input value={it.description} onChange={(e) => edit(i, { description: e.target.value })} maxLength={1000} aria-label={`${t('tc.b.rubric')} ${i + 1}`} />
-            {it.source === 'ai_draft' && !dirty && <Badge variant="secondary">{t('tc.b.aiDraft')}</Badge>}
+            {it.source && isUnsavedDraft({ source: it.source }) && <Badge variant="secondary">{t('tc.b.aiDraft')}</Badge>}
           </div>
           <Input type="number" step={0.5} min={0.5} max={qMarks} value={it.marks} onChange={(e) => edit(i, { marks: Number(e.target.value) })} aria-label={t('tc.b.marks')} />
           <div className="flex gap-1">
@@ -86,7 +92,7 @@ function RubricEditor({ q, onSaved }: { q: Question; onSaved: () => void }) {
         <span className={total === qMarks ? 'text-sm text-green-700 dark:text-green-400' : 'text-sm text-amber-700 dark:text-amber-400'}>
           {t('tc.b.pointsTotal', { got: total, of: qMarks })}
         </span>
-        <Button size="sm" className="ml-auto" disabled={!dirty || save.isPending || !okMarks || total > qMarks || items.some((i) => !i.description.trim())}
+        <Button size="sm" className="ml-auto" disabled={!(dirty || hasDraft) || save.isPending || !okMarks || total > qMarks || items.some((i) => !i.description.trim())}
           onClick={() => save.mutate({ questionId: q.id, items: items.map(({ kind, description, marks }) => ({ kind, description, marks })) })}>
           {save.isPending && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}{t('tc.b.saveRubric')}
         </Button>
@@ -179,6 +185,8 @@ export function Builder({ detail, onChanged }: { detail: Detail; onChanged: () =
   })
   const qs = detail.questions
   const total = qs.reduce((s, q) => s + n(q.marks), 0)
+  // Publishing waits until the teacher has saved every AI-drafted key point (the server refuses it too).
+  const unchecked = unsavedDraftQuestions(qs)
 
   const addOf = (type: QType) => {
     const p = presets.data?.[type]
@@ -209,10 +217,11 @@ export function Builder({ detail, onChanged }: { detail: Detail; onChanged: () =
       </Card>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm font-medium">{t('tc.b.total', { n: total })}</span>
-        <Button disabled={!qs.length || publish.isPending} onClick={() => window.confirm(t('tc.b.publishConfirm')) && publish.mutate({ assignmentId: detail.assignment.id })}>
+        <Button disabled={!qs.length || publish.isPending || unchecked.length > 0} onClick={() => window.confirm(t('tc.b.publishConfirm')) && publish.mutate({ assignmentId: detail.assignment.id })}>
           {publish.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{t('tc.b.publish')}
         </Button>
       </div>
+      {unchecked.length > 0 && <p className="text-sm text-amber-700 dark:text-amber-400">{t('tc.b.publishBlocked', { qs: unchecked.join(', ') })}</p>}
       {publish.error && <p className="text-sm text-red-600">{publish.error.message}</p>}
     </div>
   )
