@@ -23,6 +23,7 @@ import {
   PenLine,
 } from 'lucide-react'
 import { useHwStatus } from '@/components/hw/HwShell'
+import { EVALUATE_NAV, useIsRater } from '@/components/hw-eval/useEvaluateNav'
 
 interface UserSidebarProps {
   user?: {
@@ -36,6 +37,7 @@ interface UserSidebarProps {
 export default function UserSidebar({ user }: UserSidebarProps) {
   const persona = user?.persona || 'student'
   const hw = useHwStatus()
+  const isRater = useIsRater()
 
   // Grouped by use case (mirrors the section pattern already shipped on PDLMS's
   // super-admin sidebar). BaseSidebar renders a header above the first item of
@@ -180,7 +182,7 @@ export default function UserSidebar({ user }: UserSidebarProps) {
 
   return (
     <BaseSidebar
-      navigation={navigation}
+      navigation={isRater ? [...navigation, createNavigationItem(EVALUATE_NAV.name, EVALUATE_NAV.href, EVALUATE_NAV.icon, { description: EVALUATE_NAV.description, section: EVALUATE_NAV.section })] : navigation}
       user={sidebarUser}
       brandName="Digi Classroom"
       brandSubtitle={`${getPersonaLabel()} Portal`}

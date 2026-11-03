@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { NativeSelect } from '@/components/hw/fields'
+import { useHwT } from '@/components/hw/strings'
 import type { HwEvalRouterOutputs } from '@/lib/trpc/routers/hw-eval'
 
 export type TaskView = HwEvalRouterOutputs['open']['view']
@@ -35,9 +36,10 @@ export function TaskImage({ src, alt }: { src: string; alt: string }) {
 }
 
 function QuestionCard({ q }: { q: { text: string; marks: number; passageText?: string | null; class: string; subject: string; medium: string } }) {
+  const { t } = useHwT()
   return (
     <Card>
-      <CardHeader className="pb-2"><CardTitle className="text-base">{q.class} · {q.subject} · {q.medium} medium · {q.marks} marks</CardTitle></CardHeader>
+      <CardHeader className="pb-2"><CardTitle className="text-base">{t('ev.f.qhead', { class: q.class, subject: q.subject, medium: q.medium, marks: q.marks })}</CardTitle></CardHeader>
       <CardContent className="space-y-2 text-sm">
         {q.passageText && <p className="whitespace-pre-wrap rounded-md bg-muted p-3">{q.passageText}</p>}
         <p className="whitespace-pre-wrap font-medium">{q.text}</p>
@@ -49,6 +51,7 @@ function QuestionCard({ q }: { q: { text: string; marks: number; passageText?: s
 // ── Transcription ─────────────────────────────────────────────────────────────
 
 export function TranscribeForm({ view, initial, busy, submitLabel, onSubmit }: FormProps<'transcribe', { text: string }>) {
+  const { t } = useHwT()
   const [text, setText] = useState(initial?.text ?? '')
   const ref = useRef<HTMLTextAreaElement>(null)
   // Where the cursor goes once React has written the new text (setting it earlier is undone by the update).
@@ -63,25 +66,24 @@ export function TranscribeForm({ view, initial, busy, submitLabel, onSubmit }: F
   }, [text])
   const insertUnclear = () => {
     const el = ref.current
-    if (!el) return setText((t) => `${t}[?]`)
+    if (!el) return setText((x) => `${x}[?]`)
     const s = el.selectionStart
     caret.current = s + 3
     setText(`${text.slice(0, s)}[?]${text.slice(el.selectionEnd)}`)
   }
   return (
     <div className="space-y-4">
-      {view.image ? <TaskImage src={view.image} alt="Handwritten answer to transcribe" /> : <p className="text-sm text-red-600">This item has no image.</p>}
+      {view.image ? <TaskImage src={view.image} alt={t('ev.tr.alt')} /> : <p className="text-sm text-red-600">{t('ev.f.noImage')}</p>}
       <div className="rounded-md border bg-muted/40 p-3 text-sm">
-        Type exactly what is written: the same words, spelling, punctuation and line breaks, mistakes included. Do not correct anything.
-        Where a word cannot be read, type <code>[?]</code> for that word. Language: {view.language === 'hi' ? 'Hindi' : view.language === 'mixed' ? 'Hindi and English' : 'English'}.
+        {t('ev.tr.help', { lang: view.language === 'hi' ? t('ev.lang.hi') : view.language === 'mixed' ? t('ev.lang.mixed') : t('ev.lang.en') })}
       </div>
-      <Textarea ref={ref} value={text} onChange={(e) => setText(e.target.value)} rows={10} lang={view.language === 'en' ? 'en' : 'hi'} spellCheck={false} autoCorrect="off" autoCapitalize="off" className="text-base" aria-label="Transcription" />
+      <Textarea ref={ref} value={text} onChange={(e) => setText(e.target.value)} rows={10} lang={view.language === 'en' ? 'en' : 'hi'} spellCheck={false} autoCorrect="off" autoCapitalize="off" className="text-base" aria-label={t('ev.tr.aria')} />
       <div className="flex flex-wrap gap-2">
         {/* onMouseDown: keep the text box focused, so its cursor position is the one used */}
-        <Button type="button" variant="outline" onMouseDown={(e) => e.preventDefault()} onClick={insertUnclear}>Insert [?]</Button>
+        <Button type="button" variant="outline" onMouseDown={(e) => e.preventDefault()} onClick={insertUnclear}>{t('ev.tr.insert')}</Button>
         <Button type="button" disabled={busy} onClick={() => onSubmit({ text })}>{submitLabel}</Button>
       </div>
-      {!text.trim() && <p className="text-xs text-muted-foreground">An empty transcription means the page is blank.</p>}
+      {!text.trim() && <p className="text-xs text-muted-foreground">{t('ev.tr.empty')}</p>}
     </div>
   )
 }
@@ -89,6 +91,7 @@ export function TranscribeForm({ view, initial, busy, submitLabel, onSubmit }: F
 // ── Blind marking ─────────────────────────────────────────────────────────────
 
 export function BlindMarkForm({ view, initial, busy, submitLabel, onSubmit }: FormProps<'blind_mark', { byPoint: Record<string, number>; note?: string }>) {
+  const { t } = useHwT()
   const [by, setBy] = useState<Record<string, number | undefined>>(initial?.byPoint ?? {})
   const [note, setNote] = useState(initial?.note ?? '')
   const total = view.points.reduce((s, p) => s + (by[p.id] ?? 0), 0)
@@ -97,31 +100,31 @@ export function BlindMarkForm({ view, initial, busy, submitLabel, onSubmit }: Fo
     <div className="space-y-4">
       <QuestionCard q={view.question} />
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">The student&apos;s answer</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-base">{t('ev.bm.answer')}</CardTitle></CardHeader>
         <CardContent>
-          {view.image ? <TaskImage src={view.image} alt="The student's handwritten answer" /> : <p className="whitespace-pre-wrap text-sm">{view.typedText ?? '(no answer)'}</p>}
+          {view.image ? <TaskImage src={view.image} alt={t('ev.bm.alt')} /> : <p className="whitespace-pre-wrap text-sm">{view.typedText ?? t('ev.bm.noAnswer')}</p>}
         </CardContent>
       </Card>
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Marking scheme: give marks for each point</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-base">{t('ev.bm.scheme')}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          {view.referenceAnswer && <p className="rounded-md bg-muted p-3 text-sm"><span className="font-medium">Model answer: </span>{view.referenceAnswer}</p>}
+          {view.referenceAnswer && <p className="rounded-md bg-muted p-3 text-sm"><span className="font-medium">{t('ev.bm.model')}</span>{view.referenceAnswer}</p>}
           {view.points.map((p) => (
             <div key={p.id} className="grid gap-2 sm:grid-cols-[1fr_8rem] sm:items-center">
               <div className="text-sm">
-                <span className="font-medium">{p.id}.</span> {p.text} <span className="text-muted-foreground">({p.marks} marks)</span>
-                {p.acceptedAlternatives.length > 0 && <div className="text-xs text-muted-foreground">Also accept: {p.acceptedAlternatives.join('; ')}</div>}
+                <span className="font-medium">{p.id}.</span> {p.text} <span className="text-muted-foreground">{t('ev.bm.marksOf', { n: p.marks })}</span>
+                {p.acceptedAlternatives.length > 0 && <div className="text-xs text-muted-foreground">{t('ev.bm.alsoAccept', { list: p.acceptedAlternatives.join('; ') })}</div>}
               </div>
-              <NativeSelect aria-label={`Marks for ${p.id}`} value={by[p.id] === undefined ? '' : String(by[p.id])} onChange={(e) => setBy((x) => ({ ...x, [p.id]: e.target.value === '' ? undefined : Number(e.target.value) }))}>
+              <NativeSelect aria-label={t('ev.bm.marksFor', { id: p.id })} value={by[p.id] === undefined ? '' : String(by[p.id])} onChange={(e) => setBy((x) => ({ ...x, [p.id]: e.target.value === '' ? undefined : Number(e.target.value) }))}>
                 <option value="">—</option>
                 {halves(p.marks).map((m) => <option key={m} value={m}>{m}</option>)}
               </NativeSelect>
             </div>
           ))}
-          <p className="text-sm font-medium">Total: {total} / {view.question.marks}</p>
-          <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Note (optional): anything another marker should know" />
+          <p className="text-sm font-medium">{t('ev.bm.total', { got: total, of: view.question.marks })}</p>
+          <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder={t('ev.bm.notePh')} />
           <Button type="button" disabled={busy || !complete} onClick={() => onSubmit({ byPoint: Object.fromEntries(view.points.map((p) => [p.id, by[p.id] as number])), ...(note.trim() ? { note: note.trim() } : {}) })}>{submitLabel}</Button>
-          {!complete && <p className="text-xs text-muted-foreground">Give marks for every point (0 is a mark).</p>}
+          {!complete && <p className="text-xs text-muted-foreground">{t('ev.bm.complete')}</p>}
         </CardContent>
       </Card>
     </div>
@@ -132,9 +135,10 @@ export function BlindMarkForm({ view, initial, busy, submitLabel, onSubmit }: Fo
 
 type AuditVerdict = 'correct' | 'partly_correct' | 'wrong' | 'not_in_source'
 type AuditPayload = { points: { id: string; verdict: AuditVerdict; note?: string }[]; missing: string[]; note?: string }
-const VERDICT_LABEL: Record<AuditVerdict, string> = { correct: 'Correct', partly_correct: 'Partly correct', wrong: 'Wrong', not_in_source: 'Not in the source' }
+const VERDICTS: AuditVerdict[] = ['correct', 'partly_correct', 'wrong', 'not_in_source']
 
 export function KeyAuditForm({ view, initial, busy, submitLabel, onSubmit }: FormProps<'key_audit', AuditPayload>) {
+  const { t } = useHwT()
   const [v, setV] = useState<Record<string, AuditVerdict | undefined>>(Object.fromEntries((initial?.points ?? []).map((p) => [p.id, p.verdict])))
   const [notes, setNotes] = useState<Record<string, string>>(Object.fromEntries((initial?.points ?? []).map((p) => [p.id, p.note ?? ''])))
   const [missing, setMissing] = useState((initial?.missing ?? []).join('\n'))
@@ -144,37 +148,37 @@ export function KeyAuditForm({ view, initial, busy, submitLabel, onSubmit }: For
     <div className="space-y-4">
       {view.question && <QuestionCard q={{ ...view.question, passageText: null }} />}
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Sources the key was written from ({view.source})</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-base">{t('ev.ka.sources', { source: view.source })}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          {view.passages.length === 0 && <p className="text-sm text-muted-foreground">No passages (official scheme or the question&apos;s own passage).</p>}
+          {view.passages.length === 0 && <p className="text-sm text-muted-foreground">{t('ev.ka.noPassages')}</p>}
           {view.passages.map((p) => (
             <div key={p.id} className="rounded-md border p-3 text-sm">
-              <div className="mb-1 text-xs text-muted-foreground">{p.citation ?? 'Given passage'} · <code>{p.id.slice(0, 8)}</code></div>
+              <div className="mb-1 text-xs text-muted-foreground">{p.citation ?? t('ev.ka.given')} · <code>{p.id.slice(0, 8)}</code></div>
               <p className="whitespace-pre-wrap">{p.text}</p>
             </div>
           ))}
         </CardContent>
       </Card>
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Check each point against the sources and the syllabus</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-base">{t('ev.ka.check')}</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          {view.referenceAnswer && <p className="rounded-md bg-muted p-3 text-sm"><span className="font-medium">Model answer: </span>{view.referenceAnswer}</p>}
+          {view.referenceAnswer && <p className="rounded-md bg-muted p-3 text-sm"><span className="font-medium">{t('ev.bm.model')}</span>{view.referenceAnswer}</p>}
           {view.points.map((p) => (
             <div key={p.id} className="space-y-2 border-b pb-3 last:border-0">
-              <p className="text-sm"><span className="font-medium">{p.id}.</span> {p.text} <span className="text-muted-foreground">({p.marks} marks, {p.kind.replace('_', ' ')}, cites {p.cites.map((c) => c.slice(0, 8)).join(', ')})</span></p>
+              <p className="text-sm"><span className="font-medium">{p.id}.</span> {p.text} <span className="text-muted-foreground">{t('ev.ka.pointMeta', { marks: p.marks, kind: p.kind.replace('_', ' '), cites: p.cites.map((c) => c.slice(0, 8)).join(', ') })}</span></p>
               <div className="flex flex-wrap gap-2">
-                {(Object.keys(VERDICT_LABEL) as AuditVerdict[]).map((k) => (
-                  <Button key={k} type="button" size="sm" variant={v[p.id] === k ? 'default' : 'outline'} onClick={() => setV((x) => ({ ...x, [p.id]: k }))}>{VERDICT_LABEL[k]}</Button>
+                {VERDICTS.map((k) => (
+                  <Button key={k} type="button" size="sm" variant={v[p.id] === k ? 'default' : 'outline'} onClick={() => setV((x) => ({ ...x, [p.id]: k }))}>{t(`ev.ka.${k}`)}</Button>
                 ))}
               </div>
-              {v[p.id] && v[p.id] !== 'correct' && <Textarea rows={2} value={notes[p.id] ?? ''} onChange={(e) => setNotes((x) => ({ ...x, [p.id]: e.target.value }))} placeholder="What is wrong, and what should it say?" />}
+              {v[p.id] && v[p.id] !== 'correct' && <Textarea rows={2} value={notes[p.id] ?? ''} onChange={(e) => setNotes((x) => ({ ...x, [p.id]: e.target.value }))} placeholder={t('ev.ka.wrongPh')} />}
             </div>
           ))}
           <label className="block space-y-1 text-sm">
-            <span className="font-medium">Points the key is missing (one per line)</span>
+            <span className="font-medium">{t('ev.ka.missing')}</span>
             <Textarea rows={3} value={missing} onChange={(e) => setMissing(e.target.value)} />
           </label>
-          <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Note (optional)" />
+          <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder={t('ev.note')} />
           <Button type="button" disabled={busy || !complete} onClick={() => onSubmit({
             points: view.points.map((p) => ({ id: p.id, verdict: v[p.id] as AuditVerdict, ...(notes[p.id]?.trim() ? { note: notes[p.id].trim() } : {}) })),
             missing: missing.split('\n').map((s) => s.trim()).filter(Boolean),
@@ -192,6 +196,7 @@ type Region = { x: number; y: number; w: number; h: number }
 type DeidPayload = { verdict: 'clean' | 'needs_blanking'; regions: Region[]; note?: string }
 
 export function DeidentifyForm({ view, initial, busy, submitLabel, onSubmit }: FormProps<'deidentify', DeidPayload>) {
+  const { t } = useHwT()
   const [regions, setRegions] = useState<Region[]>(initial?.regions ?? [])
   const [draft, setDraft] = useState<Region | null>(null)
   const [note, setNote] = useState(initial?.note ?? '')
@@ -202,12 +207,11 @@ export function DeidentifyForm({ view, initial, busy, submitLabel, onSubmit }: F
     return { x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)) }
   }
   const rect = (a: { x: number; y: number }, b: { x: number; y: number }): Region => ({ x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(a.x - b.x), h: Math.abs(a.y - b.y) })
-  if (!view.image) return <p className="text-sm text-red-600">This item has no image.</p>
+  if (!view.image) return <p className="text-sm text-red-600">{t('ev.f.noImage')}</p>
   return (
     <div className="space-y-4">
       <div className="rounded-md border bg-muted/40 p-3 text-sm">
-        Look for anything that identifies a person or school: names, roll or admission numbers, signatures, school names or stamps, phone numbers.
-        If you see any, drag a box over each one and choose &ldquo;Needs blanking&rdquo;.
+        {t('ev.de.help')}
       </div>
       <div ref={box} className="relative touch-none select-none overflow-hidden rounded-md border bg-white"
         onPointerDown={(e) => {
@@ -219,22 +223,22 @@ export function DeidentifyForm({ view, initial, busy, submitLabel, onSubmit }: F
         onPointerMove={(e) => { if (start.current) setDraft(rect(start.current, at(e))) }}
         onPointerUp={(e) => { if (start.current) { const r = rect(start.current, at(e)); if (r.w > 0.01 && r.h > 0.01) setRegions((x) => [...x, r]) } start.current = null; setDraft(null) }}>
         {/* eslint-disable-next-line @next/next/no-img-element -- private, per-request image from our API */}
-        <img src={view.image} alt="Page to check for personal data" className="block w-full" draggable={false} />
+        <img src={view.image} alt={t('ev.de.alt')} className="block w-full" draggable={false} />
         {[...regions, ...(draft ? [draft] : [])].map((g, i) => (
           <div key={i} className="absolute border-2 border-red-600 bg-red-600/30" style={{ left: `${g.x * 100}%`, top: `${g.y * 100}%`, width: `${g.w * 100}%`, height: `${g.h * 100}%` }} />
         ))}
       </div>
       {regions.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          {regions.length} box{regions.length > 1 ? 'es' : ''} marked.
-          <Button type="button" size="sm" variant="outline" onClick={() => setRegions((x) => x.slice(0, -1))}>Undo last box</Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => setRegions([])}>Clear</Button>
+          {t('ev.de.boxes', { n: regions.length })}
+          <Button type="button" size="sm" variant="outline" onClick={() => setRegions((x) => x.slice(0, -1))}>{t('ev.de.undo')}</Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => setRegions([])}>{t('ev.de.clear')}</Button>
         </div>
       )}
-      <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Note (optional)" />
+      <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder={t('ev.note')} />
       <div className="flex flex-wrap gap-2">
-        <Button type="button" disabled={busy || regions.length > 0} onClick={() => onSubmit({ verdict: 'clean', regions: [], ...(note.trim() ? { note: note.trim() } : {}) })}>Clean: nothing identifying</Button>
-        <Button type="button" variant="destructive" disabled={busy || regions.length === 0} onClick={() => onSubmit({ verdict: 'needs_blanking', regions, ...(note.trim() ? { note: note.trim() } : {}) })}>Needs blanking ({submitLabel.toLowerCase()})</Button>
+        <Button type="button" disabled={busy || regions.length > 0} onClick={() => onSubmit({ verdict: 'clean', regions: [], ...(note.trim() ? { note: note.trim() } : {}) })}>{t('ev.de.clean')}</Button>
+        <Button type="button" variant="destructive" disabled={busy || regions.length === 0} onClick={() => onSubmit({ verdict: 'needs_blanking', regions, ...(note.trim() ? { note: note.trim() } : {}) })}>{t('ev.de.blank', { label: submitLabel.toLowerCase() })}</Button>
       </div>
     </div>
   )

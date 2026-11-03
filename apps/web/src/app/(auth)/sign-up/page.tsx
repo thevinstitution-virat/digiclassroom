@@ -25,7 +25,8 @@ function SignUpForm() {
     }, [isLoaded, user, router])
 
     const [name, setName] = useState('')
-    const [email, setEmail] = useState('')
+    // An evaluator invitation link carries the invited address (?email=), so the person signs up with the address that was invited.
+    const [email, setEmail] = useState(searchParams.get('email') ?? '')
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
     const [loading, setLoading] = useState(false)

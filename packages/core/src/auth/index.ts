@@ -6,6 +6,7 @@ import { db } from '../db';
 import * as schema from '../db/schema';
 import { syncFederatedSession } from '../lib/federation/jit';
 import { sendEmail, emailLayout } from '../lib/email/send-email';
+import { acceptRaterInvitesSafely } from '../lib/hw/eval-tools/invites';
 import { isDesignatedSuperAdmin } from '../lib/auth/super-admin-guard';
 import { normaliseEmail } from '../lib/email/normalise';
 import { AUTH_COOKIE_PREFIX } from '../lib/auth/auth-cookies';
@@ -193,7 +194,12 @@ export const auth = betterAuth({
                     ctaUrl: url,
                 }),
             });
-        }
+        },
+        // A pending evaluator invitation for this address (roadmap task 3.2) is accepted once the address is verified.
+        // It never blocks or fails the verification.
+        afterEmailVerification: async (user: { id: string; email: string }) => {
+            await acceptRaterInvitesSafely(user);
+        },
     },
     // Only register Google when REAL credentials are configured. Registering it
     // unconditionally makes better-auth render the sign-in button and send users
@@ -313,7 +319,11 @@ export const auth = betterAuth({
                     //    (teacher approval, org_admin assignment) happens through dedicated
                     //    admin flows, not at signup.
                     return { data: { ...user, role: 'student' } };
-                }
+                },
+                // Accounts that arrive already verified (federated or OAuth) accept a pending evaluator invitation at once.
+                after: async (created: { id: string; email: string; emailVerified?: boolean }) => {
+                    if (created.emailVerified) await acceptRaterInvitesSafely(created);
+                },
             }
         },
         session: {

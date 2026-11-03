@@ -200,8 +200,9 @@ suite('evaluator tools against Postgres', () => {
   })
 
   it('a student account cannot be added; only super admins manage raters', async () => {
-    const { rows } = await raw.query(`SELECT email FROM "user" WHERE role = 'student' LIMIT 1`)
-    await expect(m.admin.createRater(admin, { email: rows[0].email, pseudonym: 'KidRater1', skills: ['transcribe'] })).rejects.toThrow(/student account cannot be a rater/)
+    // A student who belongs to an institution (migration 021: a bare sign-up with no institution and no class may be a rater).
+    const { rows } = await raw.query(`SELECT u.email FROM "user" u WHERE u.role = 'student' AND EXISTS (SELECT 1 FROM member m WHERE m.user_id = u.id) LIMIT 1`)
+    await expect(m.admin.createRater(admin, { email: rows[0].email, pseudonym: 'KidRater1', skills: ['transcribe'] })).rejects.toThrow(/student account of an institution cannot be a rater/)
     await expect(m.admin.listRaters(actors.ItestA)).rejects.toThrow(/Only the platform owner/)
     await expect(m.admin.createRater(admin, { email: rows[0].email, pseudonym: 'KidRater2', skills: ['grade:all'] })).rejects.toThrow(/Unknown skills/)
   })

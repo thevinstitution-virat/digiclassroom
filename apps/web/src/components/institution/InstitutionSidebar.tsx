@@ -5,9 +5,11 @@ import BaseSidebar from '@/components/core/shared/BaseSidebar'
 import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 import { INSTITUTION_NAV } from '@/lib/dashboard/dashboard-nav'
 import { Building2 } from 'lucide-react'
+import { EVALUATE_NAV, useIsRater } from '@/components/hw-eval/useEvaluateNav'
 
 export default function InstitutionSidebar() {
   const { user } = useBetterAuthUser()
+  const isRater = useIsRater()
 
   const sidebarUser = user
     ? {
@@ -19,7 +21,7 @@ export default function InstitutionSidebar() {
 
   return (
     <BaseSidebar
-      navigation={INSTITUTION_NAV}
+      navigation={isRater ? [...INSTITUTION_NAV, EVALUATE_NAV] : INSTITUTION_NAV}
       user={sidebarUser}
       brandName="DigiClassroom"
       brandSubtitle="Institution Admin"

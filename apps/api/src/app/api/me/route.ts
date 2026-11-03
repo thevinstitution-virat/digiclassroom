@@ -8,13 +8,16 @@ import { headers } from 'next/headers';
 import { getSafeSession } from '@/auth';
 import { getOrgContextOrNull } from '@/lib/auth/get-org-context';
 import type { Role, OrgRole } from '@/auth/permissions';
+import { isEvaluatorOnly } from '@/lib/hw/eval-tools/evaluator-only';
 
 export interface MeResponse {
   userId: string;
   globalRole: Role;
   orgRole: OrgRole | null;
   orgId: string | null;
-  dashboard: '/dashboard/super-admin' | '/dashboard/institution' | '/dashboard/teacher' | '/dashboard/parent' | '/dashboard/user';
+  dashboard: '/dashboard/super-admin' | '/dashboard/institution' | '/dashboard/teacher' | '/dashboard/parent' | '/dashboard/user' | '/evaluate';
+  /** An invited volunteer who is only an evaluator: their one page is /evaluate (roadmap task 3.2). */
+  evaluatorOnly: boolean;
 }
 
 function resolveDashboard(
@@ -75,7 +78,9 @@ export async function GET(): Promise<NextResponse> {
   const orgRole = ctx?.orgRole ?? null;
   const orgId = ctx && ctx.orgId !== 'system' ? ctx.orgId : null;
 
-  const dashboard = resolveDashboard(globalRole, orgRole, ctx?.isPlatformBypass ?? false);
+  // A failed lookup must not lock anyone out: treat it as "not evaluator only".
+  const evaluatorOnly = await isEvaluatorOnly(session.user.id).catch(() => false);
+  const dashboard = evaluatorOnly ? '/evaluate' : resolveDashboard(globalRole, orgRole, ctx?.isPlatformBypass ?? false);
 
   const body: MeResponse = {
     userId:     session.user.id,
@@ -83,6 +88,7 @@ export async function GET(): Promise<NextResponse> {
     orgRole,
     orgId,
     dashboard,
+    evaluatorOnly,
   };
 
   return NextResponse.json(body);

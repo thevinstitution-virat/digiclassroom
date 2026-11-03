@@ -70,6 +70,65 @@ function Raters() {
   )
 }
 
+// Invite someone who has no account yet (roadmap task 3.2): they sign up with this address, verify it, and become a rater.
+function Invites() {
+  const utils = api.useUtils()
+  const list = api.hwEval.admin.invites.useQuery()
+  const invite = api.hwEval.admin.inviteRater.useMutation({ onSuccess: () => { utils.hwEval.admin.invites.invalidate(); setEmail(''); setPseudonym(''); setSkills('') } })
+  const cancel = api.hwEval.admin.cancelInvite.useMutation({ onSuccess: () => utils.hwEval.admin.invites.invalidate() })
+  const [email, setEmail] = useState('')
+  const [pseudonym, setPseudonym] = useState('')
+  const [skills, setSkills] = useState('')
+
+  return (
+    <Card>
+      <CardHeader className="pb-2"><CardTitle className="text-base">Invite an evaluator by email</CardTitle></CardHeader>
+      <CardContent className="space-y-4 text-sm">
+        <p className="text-muted-foreground">
+          For people who have no account yet. They get an email (English and Hindi) with a sign-up link; once they confirm their email address, they become a rater with this pseudonym and these skills.
+          The invitation is valid for 30 days. A student or parent account of an institution cannot become a rater; the invitation is then marked blocked, with the reason.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field label="Email address"><Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" /></Field>
+          <Field label="Pseudonym" hint="3–40 letters, digits, _ or -"><Input value={pseudonym} onChange={(e) => setPseudonym(e.target.value)} /></Field>
+          <Field label="Skills" hint="comma-separated"><Input value={skills} onChange={(e) => setSkills(e.target.value)} placeholder="transcribe, mark:science" /></Field>
+        </div>
+        <Button disabled={invite.isPending || !email || !pseudonym} onClick={() => invite.mutate({ email, pseudonym, skills: skillsOf(skills) })}>Send invitation</Button>
+        {invite.error && <HwMessage tone="error">{invite.error.message}</HwMessage>}
+        {invite.data && (
+          <HwMessage>
+            {invite.data.emailSent ? 'Invitation sent.' : `The invitation was saved but the email could not be sent (${invite.data.emailError}). Send this link yourself:`}
+            {!invite.data.emailSent && <span className="mt-1 block break-all font-mono text-xs">{invite.data.link}</span>}
+          </HwMessage>
+        )}
+        {list.isLoading ? <HwLoading /> : list.error ? <HwError message={list.error.message} onRetry={() => list.refetch()} /> : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="text-xs text-muted-foreground"><tr><th className="py-1 pr-3">Email</th><th className="pr-3">Pseudonym</th><th className="pr-3">Status</th><th className="pr-3">Valid until</th><th /></tr></thead>
+              <tbody>
+                {list.data!.map((i) => (
+                  <tr key={i.id} className="border-t align-top">
+                    <td className="py-2 pr-3">{i.email}</td>
+                    <td className="pr-3 font-medium">{i.pseudonym}</td>
+                    <td className="pr-3">
+                      <Badge variant={i.state === 'accepted' ? 'default' : 'secondary'}>{i.state}</Badge>
+                      {i.state === 'blocked' && i.blockedReason && <div className="mt-1 text-xs text-muted-foreground">{i.blockedReason}</div>}
+                    </td>
+                    <td className="pr-3">{new Date(i.expiresAt).toLocaleDateString()}</td>
+                    <td>{i.state === 'pending' && <Button size="sm" variant="outline" disabled={cancel.isPending} onClick={() => cancel.mutate({ inviteId: i.id })}>Cancel</Button>}</td>
+                  </tr>
+                ))}
+                {!list.data!.length && <tr><td colSpan={5} className="py-2 text-muted-foreground">No invitations yet.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {cancel.error && <HwMessage tone="error">{cancel.error.message}</HwMessage>}
+      </CardContent>
+    </Card>
+  )
+}
+
 function download(name: string, data: unknown) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }))
   const a = document.createElement('a')
@@ -136,6 +195,7 @@ export default function EvaluationAdminPage() {
     <EvalShell title="Evaluation" subtitle="Raters, human transcription and marking tasks, and reference data for the Virat Evaluator." needs="superAdmin">
       <div className="space-y-5">
         <Raters />
+        <Invites />
         <Dataset />
       </div>
     </EvalShell>

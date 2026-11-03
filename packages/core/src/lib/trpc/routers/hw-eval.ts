@@ -10,6 +10,7 @@ import { isHwError, type HwErrorCode } from '@/lib/hw/errors';
 import { requireToolsEnabled, type EvalActor } from '@/lib/hw/eval-tools/access';
 import { resolveEvalActor } from '@/lib/hw/eval-tools/actor';
 import * as admin from '@/lib/hw/eval-tools/admin';
+import * as invites from '@/lib/hw/eval-tools/invites';
 import * as work from '@/lib/hw/eval-tools/work';
 import { copyDatasets, copyQueue } from '@/lib/hw/eval-tools/copies';
 import { getHwConfig } from '@/lib/hw/config';
@@ -61,6 +62,12 @@ export const hwEvalRouter = createTRPCRouter({
     createRater: protectedProcedure
       .input(z.object({ email: z.string().email().max(255), pseudonym: z.string().trim().regex(/^[A-Za-z0-9_-]{3,40}$/, '3–40 letters, digits, _ or -'), skills: z.array(z.string().max(80)).max(30) }))
       .mutation(({ ctx, input }) => run(ctx, (a) => admin.createRater(a, input))),
+    invites: protectedProcedure.query(({ ctx }) => run(ctx, (a) => invites.listInvites(a))),
+    inviteRater: protectedProcedure
+      .input(z.object({ email: z.string().email().max(255), pseudonym: z.string().trim().regex(/^[A-Za-z0-9_-]{3,40}$/, '3–40 letters, digits, _ or -'), skills: z.array(z.string().max(80)).max(30) }))
+      .mutation(({ ctx, input }) => run(ctx, (a) => invites.inviteRater(a, input))),
+    cancelInvite: protectedProcedure.input(z.object({ inviteId: id, reason: z.string().max(500).optional() }))
+      .mutation(({ ctx, input }) => run(ctx, (a) => invites.cancelInvite(a, input.inviteId, input.reason))),
     updateRater: protectedProcedure.input(z.object({ raterId: id, skills: z.array(z.string().max(80)).max(30).optional(), active: z.boolean().optional() }))
       .mutation(({ ctx, input }) => run(ctx, (a) => admin.updateRater(a, input))),
     datasets: protectedProcedure.query(({ ctx }) => run(ctx, (a) => admin.datasetsWithTasks(a))),

@@ -1,4 +1,4 @@
-// Migration 015 against a real Postgres: every rule the database enforces, tried and refused.
+// Migration 015 (and 021's relaxed rater account rule) against a real Postgres: every rule the database enforces, tried and refused.
 // Each test runs in a transaction that is rolled back, so the database is left as it was.
 //
 //   HW_ITEST_DATABASE_URL=postgresql://postgres:...@127.0.0.1:5446/hw_itest npx jest src/__tests__/hw/eval-migration
@@ -16,16 +16,13 @@ suite('migration 015 rules', () => {
   let teacherId: string
   let teacher2Id: string
   let teacher3Id: string
-  let studentId: string
   let n = 0
 
   beforeAll(async () => {
     pool = new Pool({ connectionString: DB_URL })
     const t = await pool.query(`SELECT id FROM "user" WHERE role = 'teacher' ORDER BY id LIMIT 3`)
-    const s = await pool.query(`SELECT id FROM "user" WHERE role = 'student' ORDER BY id LIMIT 1`)
-    if (t.rows.length < 3 || !s.rows.length) throw new Error('hw_itest needs 3 teacher and 1 student users')
+    if (t.rows.length < 3) throw new Error('hw_itest needs 3 teacher users')
     ;[teacherId, teacher2Id, teacher3Id] = t.rows.map((r) => r.id)
-    studentId = s.rows[0].id
   })
   afterAll(async () => { await pool?.end() })
   beforeEach(async () => { c = await pool.connect(); await c.query('BEGIN') })
@@ -48,8 +45,13 @@ suite('migration 015 rules', () => {
   const submit = (assignmentId: string, payload: object = { text: 'x' }) =>
     one(`INSERT INTO hw_eval_submission (assignment_id, payload, time_ms) VALUES ($1, $2, 1000) RETURNING id`, [assignmentId, payload])
 
-  it('a student account can never be a rater; skills must be well formed', async () => {
-    await refused(`INSERT INTO hw_eval_rater (pseudonym, user_id, skills, created_by) VALUES ('kid', $1, '{transcribe}', $2)`, [studentId, teacherId], /student account cannot be a rater/)
+  it('a parent, or an institution\'s student, can never be a rater (a bare sign-up may: migration 021); skills must be well formed', async () => {
+    await one(`INSERT INTO "user" (id, name, email, role) VALUES ('mig-parent', 'P', 'mig-parent@example.test', 'parent'), ('mig-kid', 'K', 'mig-kid@example.test', 'student'), ('mig-bare', 'B', 'mig-bare@example.test', 'student')`)
+    await one(`INSERT INTO organization (id, name, slug, created_at) VALUES ('mig-org', 'mig-org', 'mig-org', now())`)
+    await one(`INSERT INTO member (id, organization_id, user_id, role, created_at) VALUES ('mig-m', 'mig-org', 'mig-kid', 'student', now())`)
+    await refused(`INSERT INTO hw_eval_rater (pseudonym, user_id, skills, created_by) VALUES ('mig_parent', 'mig-parent', '{transcribe}', $1)`, [teacherId], /parent account cannot be a rater/)
+    await refused(`INSERT INTO hw_eval_rater (pseudonym, user_id, skills, created_by) VALUES ('mig_kid', 'mig-kid', '{transcribe}', $1)`, [teacherId], /student account of an institution cannot be a rater/)
+    expect(await one(`INSERT INTO hw_eval_rater (pseudonym, user_id, skills, created_by) VALUES ('mig_bare', 'mig-bare', '{transcribe}', $1) RETURNING id`, [teacherId])).toHaveProperty('id')
     await refused(`INSERT INTO hw_eval_rater (pseudonym, user_id, skills, created_by) VALUES ('t1', $1, '{grade_everything}', $1)`, [teacherId], /hw_eval_rater_skills_check|check constraint/)
     await refused(`INSERT INTO hw_eval_rater (pseudonym, user_id, skills, created_by) VALUES ('a b', $1, '{}', $1)`, [teacherId], /pseudonym_check|check constraint/)
     expect(await rater(teacherId, 'Rater_01', ['transcribe', 'mark:science'])).toHaveProperty('id')

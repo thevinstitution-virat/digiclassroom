@@ -6,12 +6,17 @@ import { useBetterAuthUser } from '@/hooks/useBetterAuthUser'
 import { TEACHER_NAV } from '@/lib/dashboard/dashboard-nav'
 import { GraduationCap } from 'lucide-react'
 import { useHwStatus } from '@/components/hw/HwShell'
+import { EVALUATE_NAV, useIsRater } from '@/components/hw-eval/useEvaluateNav'
 
 export default function TeacherSidebar() {
   const { user } = useBetterAuthUser()
   // Assignments only appear for institutions that have the feature switched on.
   const hw = useHwStatus()
-  const navigation = TEACHER_NAV.filter((i) => i.href !== '/dashboard/teacher/assignments' || hw.data?.enabled)
+  const isRater = useIsRater()
+  const navigation = [
+    ...TEACHER_NAV.filter((i) => i.href !== '/dashboard/teacher/assignments' || hw.data?.enabled),
+    ...(isRater ? [EVALUATE_NAV] : []),
+  ]
 
   const sidebarUser = user
     ? {

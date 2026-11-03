@@ -13,6 +13,7 @@ import { gzipBytes } from '@/components/hw/ink/png-encode'
 import { renderForReader } from '@/components/hw/ink/render'
 import { RENDER_MAX_WIDTH } from '@/components/hw/student/sync'
 import { encodeInk, type InkDocument } from '@/lib/hw/ink/stroke-format'
+import { useHwT } from '@/components/hw/strings'
 import { EvalShell, useEvalMe, useVisibleTime } from '@/components/hw-eval/EvalShell'
 
 type Item = { datasetRef: string; itemId: string; text: string; language: string; question: string }
@@ -35,6 +36,7 @@ async function upload(item: Item, doc: InkDocument, durationMs: number, device: 
 }
 
 function CopyOne({ item, onDone }: { item: Item; onDone: () => void }) {
+  const { t } = useHwT()
   const [doc, setDoc] = useState<InkDocument | null>(null)
   const [stats, setStats] = useState<InkStats | null>(null)
   const [busy, setBusy] = useState(false)
@@ -57,15 +59,15 @@ function CopyOne({ item, onDone }: { item: Item; onDone: () => void }) {
   return (
     <div className="space-y-4">
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Copy this text exactly, by hand</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-base">{t('ev.copy.exact')}</CardTitle></CardHeader>
         <CardContent className="space-y-2">
-          <p className="text-xs text-muted-foreground">Same words, spelling and line breaks, mistakes included. Write the way you normally write. Do not write your name.</p>
+          <p className="text-xs text-muted-foreground">{t('ev.copy.rules')}</p>
           <p className="whitespace-pre-wrap rounded-md bg-muted p-3 text-lg leading-relaxed" lang={item.language === 'en' ? 'en' : 'hi'}>{item.text}</p>
         </CardContent>
       </Card>
       <InkPad value={doc} lines={lines} onChange={(d, s) => { setDoc(d); setStats(s) }} disabled={busy} />
       <div className="flex flex-wrap gap-2">
-        <Button type="button" disabled={busy || !doc?.strokes.length} onClick={send}>{busy ? 'Saving…' : 'Save and next'}</Button>
+        <Button type="button" disabled={busy || !doc?.strokes.length} onClick={send}>{busy ? t('ev.copy.saving') : t('ev.copy.saveNext')}</Button>
       </div>
       {error && <HwMessage tone="error">{error}</HwMessage>}
     </div>
@@ -73,14 +75,15 @@ function CopyOne({ item, onDone }: { item: Item; onDone: () => void }) {
 }
 
 function Copies() {
+  const { t } = useHwT()
   const q = api.hwEval.copies.useQuery(undefined, { refetchOnWindowFocus: false })
   if (q.isLoading) return <HwLoading />
   if (q.error) return <HwError message={q.error.message} onRetry={() => q.refetch()} />
   const item = q.data!.items[0]
-  if (!item) return <HwMessage>Nothing left to copy. Thank you!</HwMessage>
+  if (!item) return <HwMessage>{t('ev.copy.done')}</HwMessage>
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">{q.data!.remaining} {q.data!.remaining === 1 ? 'text' : 'texts'} left to copy.</p>
+      <p className="text-sm text-muted-foreground">{t('ev.copy.left', { n: q.data!.remaining })}</p>
       <CopyOne key={`${item.datasetRef}/${item.itemId}`} item={item} onDone={() => q.refetch()} />
     </div>
   )
@@ -88,8 +91,9 @@ function Copies() {
 
 export default function CopyPage() {
   const me = useEvalMe()
+  const { t } = useHwT()
   return (
-    <EvalShell title="Copy on the writing pad" back={{ href: '/evaluate', label: 'Your tasks' }}>
+    <EvalShell title={t('ev.copy.pageTitle')} back={{ href: '/evaluate', label: t('ev.back.tasks') }}>
       {me.data?.isRater && <Copies />}
     </EvalShell>
   )

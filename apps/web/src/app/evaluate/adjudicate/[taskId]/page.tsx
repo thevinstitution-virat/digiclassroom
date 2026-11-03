@@ -10,7 +10,8 @@ import { api } from '@/lib/trpc/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { HwError, HwLoading, HwMessage } from '@/components/hw/HwShell'
-import { EvalShell, KIND_LABEL, useEvalMe, useVisibleTime } from '@/components/hw-eval/EvalShell'
+import { useHwT } from '@/components/hw/strings'
+import { EvalShell, kindLabel, useEvalMe, useVisibleTime } from '@/components/hw-eval/EvalShell'
 import { TaskForm } from '@/components/hw-eval/TaskForms'
 import type { HwEvalRouterOutputs } from '@/lib/trpc/routers/hw-eval'
 
@@ -32,6 +33,7 @@ function WordDiff({ ops }: { ops: NonNullable<Adj['diff']> extends infer D ? D e
 }
 
 function Resolve({ taskId }: { taskId: string }) {
+  const { t } = useHwT()
   const router = useRouter()
   const utils = api.useUtils()
   const q = api.hwEval.openAdjudication.useQuery({ taskId }, { refetchOnWindowFocus: false })
@@ -45,14 +47,14 @@ function Resolve({ taskId }: { taskId: string }) {
 
   return (
     <div className="space-y-4">
-      <p className="text-sm font-medium">{KIND_LABEL[d.view.kind]}: the raters disagreed</p>
+      <p className="text-sm font-medium">{t('ev.adj.disagreed', { kind: kindLabel(t, d.view.kind) })}</p>
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">What differs</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-base">{t('ev.adj.differs')}</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-sm">
           {diff?.words && <WordDiff ops={diff.words} />}
           {diff?.marks && (
             <ul className="list-disc pl-5">
-              {diff.marks.map((m) => <li key={m.pointId}>{m.pointId}: Rater A gave {m.a ?? '—'}, Rater B gave {m.b ?? '—'}</li>)}
+              {diff.marks.map((m) => <li key={m.pointId}>{t('ev.adj.marksLine', { id: m.pointId, a: m.a ?? '—', b: m.b ?? '—' })}</li>)}
             </ul>
           )}
           {!diff && d.submissions.map((s) => (
@@ -64,10 +66,10 @@ function Resolve({ taskId }: { taskId: string }) {
         </CardContent>
       </Card>
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Your decision (starts from Rater A&apos;s answer)</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-base">{t('ev.adj.decision')}</CardTitle></CardHeader>
         <CardContent className="space-y-3">
-          <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder="Why, in a line (required): e.g. 'line 3 reads pressure, B is right'" />
-          <TaskForm view={d.view} initial={d.submissions[0]?.payload} busy={save.isPending || !reason.trim()} submitLabel="Save decision"
+          <Textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} placeholder={t('ev.adj.reasonPh')} />
+          <TaskForm view={d.view} initial={d.submissions[0]?.payload} busy={save.isPending || !reason.trim()} submitLabel={t('ev.adj.save')}
             onSubmit={(payload) => save.mutate({ taskId, payload, reason, timeMs: elapsed() }, {
               onSuccess: async () => {
                 const next = (await utils.hwEval.adjudications.fetch()).find((t) => t.id !== taskId)
@@ -84,8 +86,9 @@ function Resolve({ taskId }: { taskId: string }) {
 export default function AdjudicatePage({ params }: { params: Promise<{ taskId: string }> }) {
   const { taskId } = use(params)
   const me = useEvalMe()
+  const { t } = useHwT()
   return (
-    <EvalShell title="Resolve a disagreement" back={{ href: '/evaluate', label: 'Your tasks' }}>
+    <EvalShell title={t('ev.adj.pageTitle')} back={{ href: '/evaluate', label: t('ev.back.tasks') }}>
       {me.data?.isRater && <Resolve key={taskId} taskId={taskId} />}
     </EvalShell>
   )

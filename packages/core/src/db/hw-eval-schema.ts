@@ -114,3 +114,33 @@ export const hwEvalMonitorDaily = pgTable('hw_eval_monitor_daily', {
   misreadFlags: integer('misread_flags').notNull().default(0),
   updatedAt: ts('updated_at').notNull().defaultNow(),
 }, (t) => [primaryKey({ columns: [t.day, t.organizationId, t.subject, t.questionType] })]);
+
+// Migration 021 (roadmap task 3.2): rater invitations, and the append-only record of every super-admin change.
+export type HwEvalInviteStatus = 'pending' | 'accepted' | 'cancelled' | 'blocked';
+
+export const hwEvalRaterInvite = pgTable('hw_eval_rater_invite', {
+  id: id(),
+  email: varchar('email', { length: 255 }).notNull(),
+  pseudonym: varchar('pseudonym', { length: 40 }).notNull(),
+  skills: text('skills').array().notNull(),
+  status: text('status').$type<HwEvalInviteStatus>().notNull().default('pending'),
+  invitedBy: varchar('invited_by', { length: 255 }).notNull(),
+  emailSentAt: ts('email_sent_at'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  expiresAt: ts('expires_at').notNull(),
+  resolvedAt: ts('resolved_at'),
+  acceptedUserId: varchar('accepted_user_id', { length: 255 }),
+  blockedReason: text('blocked_reason'),
+});
+
+export const hwAdminAudit = pgTable('hw_admin_audit', {
+  id: id(),
+  at: ts('at').notNull().defaultNow(),
+  actorId: varchar('actor_id', { length: 255 }).notNull(),
+  action: text('action').notNull(),
+  entity: text('entity').notNull(),
+  entityId: text('entity_id'),
+  oldValue: jsonb('old_value').$type<unknown>(),
+  newValue: jsonb('new_value').$type<unknown>(),
+  reason: text('reason'),
+});
