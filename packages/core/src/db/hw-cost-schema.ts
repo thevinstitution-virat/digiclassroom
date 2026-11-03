@@ -2,7 +2,7 @@
 // the source of truth: CHECK constraints, the reuse-has-origin rule and the append-only trigger
 // live there, not here.
 
-import { pgTable, varchar, text, integer, jsonb, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, varchar, text, integer, jsonb, timestamp, primaryKey } from 'drizzle-orm/pg-core';
 
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: 'date' });
 
@@ -20,6 +20,18 @@ export const hwAiGradeSource = pgTable('hw_ai_grade_source', {
   keyVersionHash: text('key_version_hash'),
   createdAt: ts('created_at').notNull().defaultNow(),
 });
+
+/** Answers the instruction screen flagged when marked, and the teacher's "not an instruction" (migration 020). */
+export const hwInstructionFlag = pgTable('hw_instruction_flag', {
+  organizationId: varchar('organization_id', { length: 255 }).notNull(),
+  answerId: varchar('answer_id', { length: 36 }).notNull(),
+  transcriptHash: text('transcript_hash').notNull(),
+  screenVersion: text('screen_version').notNull(),
+  patternIds: jsonb('pattern_ids').$type<string[]>().notNull(),
+  flaggedAt: ts('flagged_at').notNull().defaultNow(),
+  dismissedAt: ts('dismissed_at'),
+  dismissedBy: varchar('dismissed_by', { length: 255 }),
+}, (t) => [primaryKey({ columns: [t.answerId, t.transcriptHash] })]);
 
 /** Answer keys for public questions, shared across tenants. No organization_id by design. */
 export const hwSharedKey = pgTable('hw_shared_key', {

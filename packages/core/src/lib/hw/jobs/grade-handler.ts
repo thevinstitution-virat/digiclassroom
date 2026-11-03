@@ -14,6 +14,7 @@ import { defaultGradeOptions, gradeCall, gradeResultsFrom } from '../grader/ai-g
 import type { GradeInput, GradeQuestion } from '../grader/types';
 import { answersNeedingSuggestion, findPriorSuggestions, gradeByRules, insertAiGrades, loadGradeQuestion, reusedSuggestion } from '../pipeline';
 import { keyVersionHash, planDuplicates, transcriptHash } from '../grader/dedupe';
+import { recordInstructionFlags } from '../instruction-flags';
 import { groupForMarking } from '../grader/instruction-screen';
 import type { GradeResult } from '../grader/types';
 import { claim, claimBatchPending, complete, enqueueGrade, fail, markBatchPending, payloadOf, type GradePayload, type JobRow } from './queue';
@@ -117,6 +118,8 @@ async function applyChunk(job: JobRow, requestedVersion: number, input: GradeInp
     }
     const results = gradeResultsFrom(res, input);
     const cfg = getHwConfig();
+    // The screen's record of what it flagged when marking (the denominator of its false-positive rate). Never blocks marking.
+    if (cfg.HW_INSTRUCTION_GUARD_ENABLED) await recordInstructionFlags(tx, job.organizationId, input.answers);
     if (cfg.HW_CODE_MARKING_ENABLED || cfg.HW_DEDUPE_MARKING_ENABLED) {
       // Record that a model marked these, and (for reuse) what makes them reusable.
       const byId = new Map(input.answers.map((a) => [a.answerId, a.transcript]));

@@ -13,6 +13,7 @@ import { db, num, type Exec } from '../db';
 import { countUnclear } from '../text/normalise';
 import { aiWorkStatus } from '../jobs/homework-batch';
 import { screenInstructions } from '../grader/instruction-screen';
+import { dismissedFlags, dismissInstructionFlag } from '../instruction-flags';
 import { gradeRulesThenQueue, setTranscript, suggestionSources, type SuggestionSource } from '../pipeline';
 import { signedReadUrl } from '../storage/r2';
 
@@ -138,6 +139,16 @@ export async function manualGrade(actor: HwActor, answerId: string, input: { mar
   await db.transaction((tx) => writeGrade(tx, actor, answer, { marks, itemMarks, comment: input.comment, source: 'manual', aiGradeId: null }));
 }
 
+/**
+ * The teacher says a flagged answer is not an instruction to the marker. Recorded with the patterns that fired (the pilot's
+ * false-positive measure); the flag is lifted for this text, so the answer can go into "accept all" again. It changes no mark.
+ */
+export async function notAnInstruction(actor: HwActor, answerId: string) {
+  if (!getHwConfig().HW_INSTRUCTION_GUARD_ENABLED) throw new HwError('NOT_FOUND', 'Not available.');
+  const { answer } = await answerForMarking(actor, answerId);
+  return dismissInstructionFlag(actor.orgId, actor.userId, { id: answer.id, transcript: answer.transcript });
+}
+
 export async function setComment(actor: HwActor, answerId: string, comment: string | null) {
   const { answer, submission } = await answerForMarking(actor, answerId);
   notReturned(submission);
@@ -165,10 +176,13 @@ async function highConfidenceCandidates(actor: HwActor, questionId: string, minC
   // Re-check each candidate with the same rule the single accept uses.
   const out: { answerId: string; aiGradeId: string }[] = [];
   const guard = getHwConfig().HW_INSTRUCTION_GUARD_ENABLED;
-  for (const r of rows.rows as unknown as { answer_id: string; transcript: string | null; ai_grade_id: string; confidence: string; rubric_version: number; created_at: Date }[]) {
+  const candidates = rows.rows as unknown as { answer_id: string; transcript: string | null; ai_grade_id: string; confidence: string; rubric_version: number; created_at: Date }[];
+  // A teacher's "not an instruction" on the answer's current text lifts the flag.
+  const dismissed = guard ? await dismissedFlags(actor.orgId, candidates.map((c) => ({ id: c.answer_id, transcript: c.transcript }))) : new Set<string>();
+  for (const r of candidates) {
     if (num(r.confidence) < minConfidence || r.rubric_version !== q.rubricVersion) continue;
     // An answer that addresses the marker is never accepted in bulk: the teacher reads it.
-    if (guard && screenInstructions(r.transcript ?? '').flagged) continue;
+    if (guard && !dismissed.has(r.answer_id) && screenInstructions(r.transcript ?? '').flagged) continue;
     const [rev] = await db.select({ at: hwTranscriptRevision.createdAt }).from(hwTranscriptRevision)
       .where(eq(hwTranscriptRevision.answerId, r.answer_id)).orderBy(desc(hwTranscriptRevision.createdAt)).limit(1);
     if (rev && new Date(r.created_at) < rev.at) continue;
@@ -293,6 +307,8 @@ export async function questionQueue(actor: HwActor, questionId: string, filter: 
   const sources = sourceFlags
     ? await suggestionSources(db, actor.orgId, (ai.rows as unknown as { id: string }[]).map((x) => x.id))
     : new Map<string, SuggestionSource>();
+  const guarded = getHwConfig().HW_INSTRUCTION_GUARD_ENABLED;
+  const dismissed = guarded ? await dismissedFlags(actor.orgId, rows.map((r) => ({ id: r.a.id, transcript: r.a.transcript }))) : new Set<string>();
   const items = rows.map((r) => {
     const suggestion = (ai.rows as unknown as Record<string, unknown>[]).find((x) => x.answer_id === r.a.id) ?? null;
     const src = suggestion ? sources.get(suggestion.id as string) : undefined;
@@ -306,7 +322,7 @@ export async function questionQueue(actor: HwActor, questionId: string, filter: 
       transcriptStatus: r.a.transcriptStatus,
       transcriptConfidence: r.a.transcriptConfidence === null ? null : num(r.a.transcriptConfidence),
       // Only while the instruction guard is on: the answer contains text addressed to the marker.
-      ...(getHwConfig().HW_INSTRUCTION_GUARD_ENABLED ? (() => { const s = screenInstructions(r.a.transcript ?? ''); return s.flagged ? { instructionFlag: s.hits.map((h) => h.note) } : {}; })() : {}),
+      ...(guarded ? (() => { const s = screenInstructions(r.a.transcript ?? ''); return s.flagged ? (dismissed.has(r.a.id) ? { instructionFlagDismissed: true } : { instructionFlag: s.hits.map((h) => h.note) }) : {}; })() : {}),
       unclearCount: r.a.unclearCount,
       studentFlags: r.a.studentFlags,
       failureReason: r.a.failureReason,

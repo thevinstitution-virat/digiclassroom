@@ -190,7 +190,7 @@ describe('profiles of phase 1c', () => {
     expect(() => loadProfileSet({ reading: 'R0', marking: 'M1-strict' }, 'openai/gpt-5.4-mini')).toThrow(/mutation generator/)
   })
   it('pilot@v1 has M0 with the guards as the control and M0-single in reserve', () => {
-    expect(loadPilotSet().marking.map((p) => p.id)).toEqual(expect.arrayContaining(['M0-guarded', 'M1', 'M0-strict', 'M1-strict']))
+    expect(loadPilotSet().marking.map((p) => p.id)).toEqual(expect.arrayContaining(['M0-guarded', 'M0-strict', 'M1-strict']))
     expect(loadPilotSet().marking[0].id).toBe('M0-guarded')
     expect(Object.keys(PILOT_V1.reserve)).toContain('M0-single')
     expect(PILOT_V1.marking as readonly string[]).not.toContain('M0-single')

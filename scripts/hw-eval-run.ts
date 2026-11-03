@@ -58,6 +58,8 @@ const Config = z.object({
   estimates: z.object({ read: Usage.optional(), gradePerAnswer: Usage.optional() }).default({}),
 }).strict();
 
+const runOptionsSeed = () => Number(arg('seed', '20261026'));
+
 async function main() {
   const mode = need('mode') as 'read' | 'key' | 'mark' | 'e2e';
   if (!['read', 'key', 'mark', 'e2e'].includes(mode)) throw new Error(`unknown mode ${mode}`);
@@ -75,6 +77,7 @@ async function main() {
   let onlyLanguage: 'en' | undefined;
   let valuePointsOnly = false;
   let strictMarking = false;
+  let strictVersion: 1 | 2 = 1;
   let guards = false;
   if (profileArg) {
     const ids = profileArg.split(',').map((x) => x.trim()).filter(Boolean);
@@ -98,6 +101,7 @@ async function main() {
     onlyLanguage = rd.onlyLanguage;
     valuePointsOnly = profileSet.marking.valuePointsOnly;
     strictMarking = Boolean(profileSet.marking.strict);
+    strictVersion = profileSet.marking.strictVersion ?? 1;
     guards = Boolean(profileSet.marking.guards);
     // The guards also apply inside the library (evidence failures lower confidence): switch them on before the config is read.
     if (guards) process.env.HW_INSTRUCTION_GUARD_ENABLED = 'true';
@@ -143,7 +147,7 @@ async function main() {
   const effective = {
     provider: cfg.HW_AI_PROVIDER, thinkingLevel: cfg.HW_THINKING_LEVEL, mediaResolution: cfg.HW_READ_MEDIA_RESOLUTION,
     reader: config.reader, grader: config.grader, prompts: { read: READ_PROMPT_VERSION, grade: GRADE_PROMPT_VERSION },
-    ...(profileSet ? { profiles: { ids: profileArg, tier1Options, tier2Options, gradeOptions, batchPricing, valuePointsOnly, onlyLanguage: onlyLanguage ?? null, strictMarking, guards, keyWriter: profileSet.keys?.writer ?? null, keyVerifier: profileSet.keys?.verifier ?? null } } : {}),
+    ...(profileSet ? { profiles: { ids: profileArg, tier1Options, tier2Options, gradeOptions, batchPricing, valuePointsOnly, onlyLanguage: onlyLanguage ?? null, strictMarking, ...(strictMarking && strictVersion === 2 ? { strictVersion } : {}), guards, keyWriter: profileSet.keys?.writer ?? null, keyVerifier: profileSet.keys?.verifier ?? null } } : {}),
     forceEscalation: flag('force-escalation'), readGroup: Number(arg('read-group', '1')), languageFilter: langFilter ?? null,
     keyConfigHash: keys ? keyConfigHash(keys, `${cfg.QDRANT_COLLECTION_NAME}|${cfg.HW_KEY_EMBED_MODEL}`) : null,
   };
@@ -169,7 +173,7 @@ async function main() {
       model: config.reader.model, escalateModel: config.reader.escalateModel, policy: { escalateBelow: config.reader.escalateBelow, unclearAbove: config.reader.unclearAbove },
       tier1Options, tier2Options, forceEscalation: flag('force-escalation'), batchPricing: { tier1: batchPricing.tier1, tier2: batchPricing.tier2 },
     },
-    grader: { model: config.grader.model, options: gradeOptions, valuePointsOnly, batchPricing: batchPricing.grade, strict: strictMarking, guards },
+    grader: { model: config.grader.model, options: gradeOptions, valuePointsOnly, batchPricing: batchPricing.grade, strict: strictMarking, strictVersion, guards },
     keyBatchPricing: batchPricing.keys,
     splitImageTokens: flag('split-image-tokens'),
     keys,
@@ -178,7 +182,7 @@ async function main() {
   });
   const runOptions = {
     runId, runsRoot, mode, repeat, budgetPaise: budgetInr * 100, concurrency: Number(arg('concurrency', '2')),
-    gradeChunkSize: config.grader.chunkSize, readGroup: Number(arg('read-group', '1')), seed: 20261026,
+    gradeChunkSize: config.grader.chunkSize, readGroup: Number(arg('read-group', '1')), seed: Number(arg('seed', '20261026')), fixedGrouping: flag('fixed-grouping'),
     maxTasks: arg('max-tasks') ? Number(arg('max-tasks')) : undefined,
     estimates: {
       // Reading may escalate, so its estimate covers more than one tier-1 call.
@@ -191,7 +195,7 @@ async function main() {
     },
     meta: {
       configHash, config: effective, gitCommit, gitDirty, node: process.version, unicode: process.versions.unicode, icu: process.versions.icu,
-      inrPerUsd: table.inr_per_usd, label: arg('label') ?? null, profiles: profileArg ?? null,
+      inrPerUsd: table.inr_per_usd, label: arg('label') ?? null, profiles: profileArg ?? null, seed: runOptionsSeed(), fixedGrouping: flag('fixed-grouping'),
     },
   };
   {

@@ -43,6 +43,15 @@ export interface HwAiGradeItem {
   quote: string;
   marks: number;
   confidence: number;
+  /**
+   * Strict marking only (stored in the jsonb, no migration): what the model decided for this key point, before any rule or
+   * evidence check, so marks can be recomputed under another partial-credit rule without calling a model.
+   */
+  fact?: 'same_fact' | 'right_idea_wrong_detail' | 'different_fact' | 'absent';
+  /** The words the model quoted for `fact`, as returned (the stored `quote` is empty when they failed the evidence check). */
+  claimed?: string;
+  /** Whether `claimed` is in the answer's own text. */
+  evidence?: boolean;
 }
 
 /** One rubric item's final marks inside hw_grade.item_marks. */

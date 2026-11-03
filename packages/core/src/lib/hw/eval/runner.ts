@@ -14,6 +14,7 @@
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import type { HwAiGradeItem } from '@/db/hw-schema';
 import type { TokenUsage } from '../cost/pricing';
 import type { GradeQuestion, GradeResult } from '../grader/types';
 import type { KeyQuestionType, KeyRequest, KeyResult } from '../keys/types';
@@ -94,6 +95,8 @@ export interface RunOptions {
   /** Answers per reader call in `read` mode (production sends every ink/photo answer of a submission together). Default 1. */
   readGroup?: number;
   seed: number;
+  /** mark mode: every repeat shuffles the answers the same way (one grouping), so repeats measure run-to-run noise alone. Default: each repeat shuffles differently. */
+  fixedGrouping?: boolean;
   estimates: Estimates;
   /** Recorded in run.json; computed by the caller (git commit, config hash, settings). */
   meta: Record<string, unknown>;
@@ -101,7 +104,11 @@ export interface RunOptions {
   maxTasks?: number;
 }
 
-export interface PointResult { pointId: string; verdict: 'met' | 'partial' | 'missing'; marks: number; quote: string; confidence: number }
+export interface PointResult {
+  pointId: string; verdict: 'met' | 'partial' | 'missing'; marks: number; quote: string; confidence: number;
+  /** Strict marking: what the model decided, the words it quoted, and whether they are in the answer (see HwAiGradeItem). */
+  fact?: NonNullable<HwAiGradeItem['fact']>; claimed?: string; evidence?: boolean;
+}
 export interface MarkResult { total: number; points: PointResult[]; confidence: number; model: string; notes: string[] }
 
 export interface ItemRow {
@@ -167,6 +174,7 @@ export function gradeQuestionOf(it: EvalItem): GradeQuestion | string {
   return {
     id: it.question.id,
     type: graderType(it.questionType),
+    subject: it.subject,
     prompt: it.question.passageText ? `${it.question.passageText}\n\n${it.question.text}` : it.question.text,
     marks: it.question.marks,
     modelAnswer: it.key.referenceAnswer ?? null,
@@ -203,7 +211,7 @@ function markOf(r: GradeResult): MarkResult {
     confidence: r.confidence,
     model: r.model,
     notes: r.validationNotes,
-    points: r.items.map((x) => ({ pointId: x.rubric_item_id, verdict: x.verdict, marks: x.marks, quote: x.quote, confidence: x.confidence })),
+    points: r.items.map((x) => ({ pointId: x.rubric_item_id, verdict: x.verdict, marks: x.marks, quote: x.quote, confidence: x.confidence, ...(x.fact ? { fact: x.fact, claimed: x.claimed, evidence: x.evidence } : {}) })),
   };
 }
 
@@ -259,7 +267,7 @@ export function latestRows(rows: readonly ItemRow[]): ItemRow[] {
   return [...m.values()];
 }
 
-export function planTasks(ds: Dataset, o: Pick<RunOptions, 'mode' | 'repeat' | 'gradeChunkSize' | 'seed' | 'estimates' | 'readGroup'>, done: ReadonlySet<string>, price: RunnerDeps['price']): { tasks: Task[]; skipped: ItemRow[] } {
+export function planTasks(ds: Dataset, o: Pick<RunOptions, 'mode' | 'repeat' | 'gradeChunkSize' | 'seed' | 'estimates' | 'readGroup' | 'fixedGrouping'>, done: ReadonlySet<string>, price: RunnerDeps['price']): { tasks: Task[]; skipped: ItemRow[] } {
   const skipped: ItemRow[] = [];
   const tasks: Task[] = [];
   const p = (model: string, u: TokenUsage) => {
@@ -295,7 +303,7 @@ export function planTasks(ds: Dataset, o: Pick<RunOptions, 'mode' | 'repeat' | '
       for (const items of byQ.values()) tasks.push({ kind: 'key', repeat: r, items, projected: o.estimates.key.reduce((s, k) => s + p(k.model, k.usage), 0) });
     } else {
       // Answers to one question are marked together, in a shuffled order per repeat.
-      const rnd = seededRandom(o.seed + r);
+      const rnd = seededRandom(o.fixedGrouping ? o.seed : o.seed + r);
       const byQ = new Map<string, EvalItem[]>();
       for (const it of pending) byQ.set(it.question.id, [...(byQ.get(it.question.id) ?? []), it]);
       for (const items of byQ.values()) {

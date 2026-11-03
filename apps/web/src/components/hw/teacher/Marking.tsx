@@ -92,8 +92,9 @@ function Panel({ q, row, onDone }: { q: Queue; row: Row; onDone: () => void }) {
   const hand = api.hw.marking.manual.useMutation({ onSuccess: onDone })
   const note = api.hw.marking.comment.useMutation({ onSuccess: onDone })
   const fix = api.hw.marking.fixTranscript.useMutation({ onSuccess: () => { setFixing(false); onDone() } })
-  const busy = accept.isPending || edit.isPending || hand.isPending || note.isPending || fix.isPending
-  const err = accept.error ?? edit.error ?? hand.error ?? note.error ?? fix.error
+  const notInstr = api.hw.marking.notAnInstruction.useMutation({ onSuccess: onDone })
+  const busy = accept.isPending || edit.isPending || hand.isPending || note.isPending || fix.isPending || notInstr.isPending
+  const err = accept.error ?? edit.error ?? hand.error ?? note.error ?? fix.error ?? notInstr.error
 
   const changed = s ? q.rubric.some((r) => (items[r.id] ?? 0) !== (sugItems.find((x) => x.rubric_item_id === r.id)?.marks ?? 0)) : false
   const itemTotal = q.rubric.reduce((sum, r) => sum + (items[r.id] ?? 0), 0)
@@ -128,7 +129,13 @@ function Panel({ q, row, onDone }: { q: Queue; row: Row; onDone: () => void }) {
           </div>
         ) : <Transcript row={row} quotes={sugItems.filter((x) => x.verdict !== 'missing').map((x) => x.quote)} />}
         {row.failureReason && <p className="mt-2 text-sm text-amber-700 dark:text-amber-400">{t('mk.failure')}: {row.failureReason}</p>}
-        {'instructionFlag' in row && row.instructionFlag && <p className="mt-2 rounded border border-amber-300 p-2 text-sm text-amber-800 dark:border-amber-700 dark:text-amber-300">{t('mk.instructionFlag')}</p>}
+        {'instructionFlag' in row && row.instructionFlag && (
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded border border-amber-300 p-2 text-sm text-amber-800 dark:border-amber-700 dark:text-amber-300">
+            <p>{t('mk.instructionFlag')}</p>
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => notInstr.mutate({ answerId: row.answerId })}>{t('mk.notInstruction')}</Button>
+          </div>
+        )}
+        {'instructionFlagDismissed' in row && row.instructionFlagDismissed && <p className="mt-2 text-xs text-muted-foreground">{t('mk.notInstructionDone')}</p>}
       </div>
 
       <div className="space-y-2">

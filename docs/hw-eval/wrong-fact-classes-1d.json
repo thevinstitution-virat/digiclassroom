@@ -1,0 +1,61 @@
+{
+ "rule": "reversed = the variant says the OPPOSITE of the key point (a direction, comparison, property, presence/absence or sign reversed); anything else a wrong_fact variant does (a number, name, colour or whole fact replaced) is \"replaced\". Fixed by reading the 40 variants once, before any run with the four-verdict prompt on heldout-1d or heldout-1c.",
+ "reversed": [
+  "evitem_b5nz4jwleb6rkyz322l3",
+  "evitem_brt6vsdxpyfhcncdjjxa",
+  "evitem_ossg3qxeur7jkh7rgg5h",
+  "evitem_d5p64bnbysycqtfpmhnf",
+  "evitem_5ki3d3xxyn3fklgwbylk",
+  "evitem_h4akipaucspgnvpnpxdn",
+  "evitem_bl2asb7h6b3pjatjiutd",
+  "evitem_epf7nca4kuudzwam45re",
+  "evitem_azwk6v5welvq5lskf2vs",
+  "evitem_zxpsyatteudqvje4fger",
+  "evitem_dvgo3luzujjifhpfgwwq",
+  "evitem_njgajiltskqh73pzzrvc",
+  "evitem_vqowso74hrbeurc3yhxb",
+  "evitem_s4zhq656jms662r7js2y"
+ ],
+ "replaced": [
+  "evitem_7bljfvkk574tiqygivbi",
+  "evitem_bhppaw6jxmqkizuxjxr3",
+  "evitem_tfujg64v4qftwkzvpaxo",
+  "evitem_sxndngteq47qrxnafsfy",
+  "evitem_zjuwfux2hwh5deluxjhs",
+  "evitem_mun4zo5swvngws5gvfik",
+  "evitem_xf376bkp4racycr3krzc",
+  "evitem_rms7u54einmlvmfcxeqm",
+  "evitem_k6vlzi646sapqcu7ej3k",
+  "evitem_zbyzbsemkisrphyh5pre",
+  "evitem_maqvgs2k7sfdaghonuyu",
+  "evitem_fptyo6wyyv3nnqxerosi",
+  "evitem_a5dgwg7lhzgbly6yymah",
+  "evitem_varelhom3cbwiz6fzmcj",
+  "evitem_k2kau5mmxqkjaxj3vr5k",
+  "evitem_f4z2y6garv3jbttorzxk",
+  "evitem_zwrwlqzodvg7sxewxgng",
+  "evitem_a6kafq6plpoflq2xxw5n",
+  "evitem_skj2wncm6uhp6x4yilwa",
+  "evitem_4fzxsa5tncbuxv3vyzkp",
+  "evitem_nusvwf4k6y422zcr4gru",
+  "evitem_lgomqjd7vwjkuckalym3",
+  "evitem_so2jgv3g2qc5743yl7cy",
+  "evitem_xm2z3ghtq7psoiii257r",
+  "evitem_3glhqeerffcdy4qjiyv4",
+  "evitem_j7wb424zv5qds3klfo3z"
+ ],
+ "smoke_note": "smallrun-b@v1 (7 wrong_fact variants): classified with the same rule, AFTER its M0-strict verdicts had been seen (so it is not pre-registered). Reversed: door open / plenty of sunlight, watered every morning / more water, shortage grew / wells dried. Replaced: oxygen for carbon dioxide, the dairy variants (several details), wheat for rice.",
+ "smoke": {
+  "reversed": [
+   "evitem_3zwrntevupbeigo2y4n7",
+   "evitem_d5qqsnaurprb54mdxim3",
+   "evitem_v4pbqf5tgt7d3ryiuqup"
+  ],
+  "replaced": [
+   "evitem_kz3dos6pl7e7dvyzc5ld",
+   "evitem_d4ulfwdngk36awssadzb",
+   "evitem_te6xemy53nmi4wchdr54",
+   "evitem_wbxyiuonj5xejlqqcqcg"
+  ]
+ }
+}

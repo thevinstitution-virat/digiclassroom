@@ -106,6 +106,21 @@ const EnvSchema = z.object({
   HW_DEDUPE_MARKING_ENABLED: bool(false),
   /** Instruction guard: an answer addressed to the marker is marked alone, flagged to the teacher and left out of bulk accept; a point whose evidence is not in the answer lowers the answer's confidence. */
   HW_INSTRUCTION_GUARD_ENABLED: bool(false),
+  /**
+   * Strict marking, "right idea, wrong detail" (docs/hw-eval/verdicts.md): the share of the key point's marks given.
+   * zero (the default; phase 1c's behaviour), half (half the point's marks, rounded down to a half mark) or full.
+   * The teachers decide this; the code only applies it.
+   */
+  HW_PARTIAL_CREDIT_RULE: z.preprocess((v) => (v === '' || v === undefined ? undefined : String(v).trim().toLowerCase()), z.enum(['zero', 'half', 'full']).optional()).transform((v) => v ?? 'zero'),
+  /** Per-subject override of the rule above, as JSON: {"science":"half","hindi":"full"}. Subjects are matched case-insensitively. */
+  HW_PARTIAL_CREDIT_BY_SUBJECT: z.string().optional().transform((v, ctx) => {
+    if (v === undefined || v.trim() === '') return {} as Record<string, 'zero' | 'half' | 'full'>;
+    let raw: unknown;
+    try { raw = JSON.parse(v); } catch { ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'must be JSON like {"science":"half"}' }); return z.NEVER; }
+    const parsed = z.record(z.enum(['zero', 'half', 'full'])).safeParse(raw);
+    if (!parsed.success) { ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'every value must be zero, half or full' }); return z.NEVER; }
+    return Object.fromEntries(Object.entries(parsed.data).map(([k, x]) => [k.trim().toLowerCase(), x])) as Record<string, 'zero' | 'half' | 'full'>;
+  }),
   /** OpenAI GPT-5.6+ models: caching in explicit mode, so nothing is written to a cache that is never read. */
   HW_OPENAI_EXPLICIT_CACHE_ENABLED: bool(false),
   OPENAI_API_KEY: str(),

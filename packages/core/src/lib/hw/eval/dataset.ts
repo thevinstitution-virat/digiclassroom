@@ -20,6 +20,8 @@ export const MUTATION_TYPES = [
   'original', 'remove_point', 'wrong_fact', 'numeric_arithmetic', 'numeric_unit', 'numeric_formula',
   'padding', 'over_word_limit', 'paraphrase', 'spelling', 'reorder', 'hindi_version', 'mixed_version',
   'hindi_spelling_variant', 'injection', 'wrong_section', 'extra_question',
+  // Phase 1d: the right idea with exactly one wrong detail. Its expected marks depend on the partial-credit rule (referenceMarks.byRule).
+  'near_miss',
 ] as const;
 export type MutationType = (typeof MUTATION_TYPES)[number];
 
@@ -66,6 +68,11 @@ export const EvalItemSchema = z.object({
     byPoint: z.record(halfGrid),
     total: halfGrid,
     how: z.enum(['by_construction', 'single_teacher', 'double_marked', 'adjudicated']),
+    /**
+     * Expected marks under each partial-credit rule (docs/hw-eval/verdicts.md), only where the rules differ (near_miss).
+     * byPoint/total above are the `zero` rule's, so every metric written before the rule existed reads the same.
+     */
+    byRule: z.record(z.enum(['zero', 'half', 'full']), z.object({ byPoint: z.record(halfGrid), total: halfGrid })).optional(),
   }).nullable().optional(),
   mutation: z.object({
     type: z.enum(MUTATION_TYPES),
@@ -108,6 +115,11 @@ export function itemProblems(it: EvalItem): string[] {
     const r = it.referenceMarks;
     if (Math.abs(sum(Object.values(r.byPoint)) - r.total) > 1e-9) p.push('referenceMarks.total is not the sum of byPoint');
     if (r.total > it.question.marks + 1e-9) p.push('referenceMarks.total exceeds the question marks');
+    for (const [rule, e] of Object.entries(r.byRule ?? {})) {
+      if (Math.abs(sum(Object.values(e.byPoint)) - e.total) > 1e-9) p.push(`referenceMarks.byRule.${rule}.total is not the sum of byPoint`);
+      if (e.total > it.question.marks + 1e-9) p.push(`referenceMarks.byRule.${rule}.total exceeds the question marks`);
+    }
+    if (r.byRule?.zero && (Math.abs(r.byRule.zero.total - r.total) > 1e-9)) p.push('referenceMarks.byRule.zero must equal referenceMarks');
     if (!it.key) p.push('referenceMarks without a key');
     else {
       const ids = new Map(it.key.points.map((x) => [x.id, x.marks]));

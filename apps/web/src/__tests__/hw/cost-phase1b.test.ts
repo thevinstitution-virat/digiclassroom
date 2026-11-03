@@ -230,7 +230,7 @@ describe('pilot@v1', () => {
     expect(set.id).toBe('pilot@v1')
     expect(set.reading.map((p) => p.id)).toEqual(['R0', 'R1', 'R-luna'])
     expect(set.escalation.map((p) => p.id)).toEqual(['E0', 'E-sarvam'])
-    expect(set.marking.map((p) => p.id)).toEqual(['M0-guarded', 'M1', 'M0-strict', 'M1-strict'])
+    expect(set.marking.map((p) => p.id)).toEqual(['M0-guarded', 'M0-strict', 'M1-strict'])
     expect(set.keys.map((p) => p.id)).toEqual(['K0'])
   })
 

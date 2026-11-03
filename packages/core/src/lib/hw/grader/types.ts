@@ -16,6 +16,8 @@ export interface GradeQuestion {
   acceptedAnswers: string[];
   rubricVersion: number;
   rubric: GradeRubricItem[];
+  /** For a per-subject partial-credit rule (HW_PARTIAL_CREDIT_BY_SUBJECT). */
+  subject?: string;
 }
 
 export interface GradeInput {

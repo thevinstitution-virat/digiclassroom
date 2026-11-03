@@ -187,6 +187,8 @@ export const hwRouter = createTRPCRouter({
       .mutation(({ ctx, input }) => run(ctx, (a) => marking.manualGrade(a, input.answerId, input))),
     comment: protectedProcedure.input(z.object({ answerId: id, comment: z.string().max(5000).nullable() }))
       .mutation(({ ctx, input }) => run(ctx, (a) => marking.setComment(a, input.answerId, input.comment))),
+    notAnInstruction: protectedProcedure.input(z.object({ answerId: id }))
+      .mutation(({ ctx, input }) => run(ctx, (a) => marking.notAnInstruction(a, input.answerId))),
     bulkAcceptPreview: protectedProcedure.input(z.object({ questionId: id }))
       .query(({ ctx, input }) => run(ctx, (a) => marking.bulkAcceptPreview(a, input.questionId))),
     bulkAccept: protectedProcedure.input(z.object({ questionId: id, confirmedCount: z.number().int().min(1) }))
