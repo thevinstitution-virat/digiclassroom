@@ -14,6 +14,9 @@ import * as invites from '@/lib/hw/eval-tools/invites';
 import * as consent from '@/lib/hw/eval-tools/consent';
 import * as work from '@/lib/hw/eval-tools/work';
 import * as tenants from '@/lib/hw/tenants';
+import * as registry from '@/lib/hw/eligibility/registry';
+import { runsAndGates } from '@/lib/hw/eligibility/runs-view';
+import { superMonitor } from '@/lib/hw/monitoring/views';
 import { copyDatasets, copyQueue } from '@/lib/hw/eval-tools/copies';
 import { getHwConfig } from '@/lib/hw/config';
 
@@ -91,6 +94,20 @@ export const hwEvalRouter = createTRPCRouter({
       .mutation(({ ctx, input }) => run(ctx, (a) => invites.cancelInvite(a, input.inviteId, input.reason))),
     updateRater: protectedProcedure.input(z.object({ raterId: id, skills: z.array(z.string().max(80)).max(30).optional(), active: z.boolean().optional() }))
       .mutation(({ ctx, input }) => run(ctx, (a) => admin.updateRater(a, input))),
+    // Eligibility tab (roadmap 5.3)
+    eligibility: protectedProcedure.query(({ ctx }) => run(ctx, (a) => registry.listEligibility(a))),
+    eligibilityHistory: protectedProcedure.input(z.object({ groupKey: z.string().min(1).max(300) }))
+      .query(({ ctx, input }) => run(ctx, (a) => registry.eligibilityHistory(a, input.groupKey))),
+    gateResults: protectedProcedure.input(z.object({ groupKey: z.string().min(1).max(300).optional() }))
+      .query(({ ctx, input }) => run(ctx, (a) => registry.listGateResults(a, input.groupKey))),
+    promote: protectedProcedure
+      .input(z.object({ groupKey: z.string().min(1).max(300), gateResultId: id, reason: z.string().trim().min(10).max(1000), confirm: z.boolean() }))
+      .mutation(({ ctx, input }) => run(ctx, (a) => registry.promote(a, input))),
+    demote: protectedProcedure.input(z.object({ groupKey: z.string().min(1).max(300), reason: z.string().trim().min(3).max(1000) }))
+      .mutation(({ ctx, input }) => run(ctx, (a) => registry.demote(a, input))),
+    // Monitoring tab (5.4) and Runs & gates tab (5.5, read-only)
+    monitoring: protectedProcedure.query(({ ctx }) => run(ctx, (a) => superMonitor(a))),
+    runsAndGates: protectedProcedure.query(({ ctx }) => run(ctx, (a) => runsAndGates(a))),
     // Tenants tab (roadmap 5.1)
     tenants: protectedProcedure.query(({ ctx }) => run(ctx, (a) => tenants.listTenants(a))),
     setTenant: protectedProcedure

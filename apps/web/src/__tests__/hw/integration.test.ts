@@ -783,4 +783,61 @@ suite('handwritten assignments — integration', () => {
       expect(rows.at(-1)?.new_value).toMatchObject({ monthlyAnswerQuota: 77 })
     })
   })
+
+  describe('Monitoring (roadmap 5.4)', () => {
+    it('the per-group roll-up counts what teachers did with the AI suggestions, from real marking, and is the same when run twice', async () => {
+      const w = await makeWorld()
+      const a = await publishedAssignment(w)
+      const h1 = await studentHandsIn(w, a)
+      const h2 = await studentHandsIn(w, a, w.s2)
+      gem.read.set(h1.a2, { text: 'plants make food from sun light', confidence: 'high' })
+      gem.read.set(h2.a2, { text: 'plants make food from sun light', confidence: 'high' })
+      await drainAll()
+
+      // Q1 (very short, exact match): the rule marked both; the teacher accepts. Q2 (short): one accepted as it was, one changed from 2 to 1.
+      const q1 = await svc.marking.questionQueue(w.teacher, a.q1, 'all')
+      for (const ans of q1.answers) await svc.marking.acceptAiGrade(w.teacher, ans.answerId, ans.suggestion!.id)
+      const q2 = await svc.marking.questionQueue(w.teacher, a.q2, 'all')
+      expect(q2.answers).toHaveLength(2)
+      const rubric = (await raw.query(`SELECT id FROM hw_rubric_item WHERE question_id = $1 AND retired_at IS NULL ORDER BY position`, [a.q2])).rows
+      await svc.marking.acceptAiGrade(w.teacher, q2.answers[0].answerId, q2.answers[0].suggestion!.id)
+      await svc.marking.editAiGrade(w.teacher, q2.answers[1].answerId, q2.answers[1].suggestion!.id, [{ rubric_item_id: rubric[0].id, marks: 1 }, { rubric_item_id: rubric[1].id, marks: 0 }])
+
+      const { rollupGroupDay } = await import('@/lib/hw/monitoring/rollup')
+      const { recentDays } = await import('@/lib/hw/shadow/monitor')
+      const today = recentDays()[1]
+      const read = async () => (await raw.query(
+        `SELECT group_key, question_type, language, scheme_source, answers_marked, suggestions_shown, accepted_unchanged, accepted_edited, marked_by_hand, marked_by_rule,
+                overrides, large_overrides, override_abs_sum::float AS abs_sum, jobs_total, jobs_failed, actual_cost_paise::float AS cost, projected_paise_per_answer
+           FROM hw_monitor_group_daily WHERE organization_id = $1 AND day = $2::date ORDER BY group_key`, [w.org, today])).rows
+      await rollupGroupDay(today)
+      const rows = await read()
+      expect(rows.map((r) => r.group_key)).toEqual(['science|short|en|custom', 'science|very_short|en|custom'])
+      const [short, veryShort] = rows
+      expect(short).toMatchObject({ answers_marked: 2, suggestions_shown: 2, accepted_unchanged: 1, accepted_edited: 1, marked_by_hand: 0, marked_by_rule: 0, overrides: 1, large_overrides: 1, abs_sum: 1, jobs_failed: 0, projected_paise_per_answer: null })
+      expect(short.jobs_total).toBeGreaterThanOrEqual(1)
+      expect(short.cost).toBeGreaterThan(0) // the marking call and this question's share of the reading call
+      expect(veryShort).toMatchObject({ answers_marked: 2, suggestions_shown: 0, marked_by_rule: 2, accepted_unchanged: 0, accepted_edited: 0, overrides: 0 }) // a rule in code is not an AI suggestion
+
+      await rollupGroupDay(today)
+      expect(await read()).toEqual(rows)
+    })
+
+    it('instruction flags, "not an instruction" taps, transcript fixes and misread taps are counted for the group', async () => {
+      const w = await makeWorld()
+      const a = await publishedAssignment(w)
+      const h = await studentHandsIn(w, a)
+      gem.read.set(h.a2, { text: 'plants make food from sun light', confidence: 'high' })
+      await drainAll()
+      await raw.query(`INSERT INTO hw_instruction_flag (organization_id, answer_id, transcript_hash, screen_version, pattern_ids, dismissed_at, dismissed_by) VALUES ($1, $2, 'h1', 'v1', '["p1"]'::jsonb, now(), $3)`, [w.org, h.a2, w.teacher.userId])
+      await raw.query(`UPDATE hw_answer SET student_flags = '[{"kind":"misread"}]'::jsonb WHERE id = $1`, [h.a2])
+      await svc.marking.fixTranscript(w.teacher, h.a2, { text: 'plants make food from sunlight' })
+      const { rollupGroupDay } = await import('@/lib/hw/monitoring/rollup')
+      const { recentDays } = await import('@/lib/hw/shadow/monitor')
+      await rollupGroupDay(recentDays()[1])
+      const r = (await raw.query(`SELECT instruction_flags, instruction_not_taps, transcript_fixes, misread_taps FROM hw_monitor_group_daily WHERE organization_id = $1 AND group_key = 'science|short|en|custom'`, [w.org])).rows[0]
+      expect(r).toMatchObject({ instruction_flags: 1, instruction_not_taps: 1, transcript_fixes: 1, misread_taps: 1 })
+      await drainAll() // the corrected transcript is marked again; leave nothing queued for the next test
+    })
+  })
 })

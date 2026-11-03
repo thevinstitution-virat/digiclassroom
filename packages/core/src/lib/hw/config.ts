@@ -129,6 +129,24 @@ const EnvSchema = z.object({
    * emergency switch). Leave it unset in production.
    */
   HW_ELIGIBILITY_ENFORCED: bool(true),
+  /**
+   * Monitoring and alerts (roadmap 5.4). Rates are over the last 7 Indian-time days, for one group, on the marking setup that was promoted.
+   * A rate over its limit raises an alert only when the sample is at least HW_MONITOR_MIN_ANSWERS. Only the two marking-quality alerts
+   * (override rate, large override rate) take a group out of 'eligible' automatically, and only while HW_MONITOR_AUTODEMOTE is on; the
+   * others (transcript fixes, failed jobs, cost) alert and email but never demote. HW_MONITOR_MIN_GROUP_SIZE hides a group's figures from an
+   * institution admin until it has that many answers. These defaults are the author's; the owner sets the real ones.
+   */
+  HW_MONITOR_AUTODEMOTE: bool(true),
+  HW_MONITOR_MIN_ANSWERS: num(30, 1, 100000),
+  HW_MONITOR_MIN_GROUP_SIZE: num(10, 1, 10000),
+  HW_MONITOR_MAX_OVERRIDE_RATE: num(0.5, 0, 1),
+  HW_MONITOR_MAX_LARGE_OVERRIDE_RATE: num(0.1, 0, 1),
+  HW_MONITOR_MAX_TRANSCRIPT_FIX_RATE: num(0.25, 0, 1),
+  HW_MONITOR_MAX_FAILED_JOB_RATE: num(0.1, 0, 1),
+  /** Actual cost per answer over this multiple of the projection raises a cost alert. */
+  HW_MONITOR_MAX_COST_RATIO: num(1.5, 1, 100),
+  /** Projected paise per answer by question type, e.g. {"short": 12, "long": 30}. Empty = none; the cost columns then show no projection. */
+  HW_MONITOR_PROJECTED_PAISE_JSON: str(),
   OPENAI_API_KEY: str(),
   QDRANT_URL: str(),
   QDRANT_API_KEY: str(),

@@ -14,6 +14,7 @@ import { QUESTION_PRESETS } from '@/lib/hw/presets';
 import * as assignments from '@/lib/hw/services/assignments';
 import * as submissions from '@/lib/hw/services/submissions';
 import * as marking from '@/lib/hw/services/marking';
+import { institutionMonitor } from '@/lib/hw/monitoring/views';
 import { conceptFeedbackForSubmission } from '@/lib/hw/concept-feedback';
 import { libraryGraphEnabled } from '@/lib/library/graph-client';
 
@@ -203,6 +204,8 @@ export const hwRouter = createTRPCRouter({
   // ── Institution admin / platform ──────────────────────────────────────────
   admin: createTRPCRouter({
     usage: protectedProcedure.query(({ ctx }) => run(ctx, (a) => marking.usageThisMonth(a))),
+    /** Roadmap 5.4: this institution's own marking figures, aggregates only, with the minimum group size. */
+    monitoring: protectedProcedure.query(({ ctx }) => run(ctx, (a) => institutionMonitor(a))),
     setQuota: protectedProcedure
       .input(z.object({ orgId: id, enabled: z.boolean(), monthlyAnswerQuota: z.number().int().min(0).max(10_000_000) }))
       .mutation(({ ctx, input }) => run(ctx, (a) => marking.setQuota(a, input.orgId, input))),

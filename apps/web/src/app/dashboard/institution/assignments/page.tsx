@@ -13,6 +13,47 @@ import { HwError, HwLoading, HwShell } from '@/components/hw/HwShell'
 import { Field, NativeSelect } from '@/components/hw/fields'
 import { useHwT } from '@/components/hw/strings'
 
+/** Roadmap 5.4: this institution's marking figures for the last 7 days. Aggregates only; a group under the minimum size shows no figures. */
+function MarkingQuality() {
+  const { t } = useHwT()
+  const mon = api.hw.admin.monitoring.useQuery()
+  const pct = (x: number | null) => (x === null ? '–' : `${Math.round(x * 100)}%`)
+  return (
+    <Card>
+      <CardHeader><CardTitle>{t('ad.mon.title')}</CardTitle></CardHeader>
+      <CardContent className="space-y-2 text-sm">
+        {mon.isLoading ? <HwLoading /> : mon.error ? <HwError message={mon.error.message} onRetry={() => mon.refetch()} /> : (
+          <>
+            <p className="text-muted-foreground">{t('ad.mon.hint', { n: mon.data!.minGroupSize })}</p>
+            {!mon.data!.groups.length ? <p>{t('ad.mon.empty')}</p> : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="text-xs text-muted-foreground"><tr><th className="py-1 pr-3">{t('ad.mon.group')}</th><th className="pr-3">{t('ad.mon.answers')}</th><th className="pr-3">{t('ad.mon.kept')}</th><th className="pr-3">{t('ad.mon.changed')}</th><th className="pr-3">{t('ad.mon.large')}</th><th className="pr-3">{t('ad.mon.fixes')}</th><th className="pr-3">{t('ad.mon.cost')}</th></tr></thead>
+                  <tbody>
+                    {mon.data!.groups.map((g) => g.suppressed
+                      ? <tr key={g.groupKey} className="border-t"><td className="py-1 pr-3">{g.label}</td><td colSpan={6} className="text-muted-foreground">{t('ad.mon.small', { n: g.minGroupSize })}</td></tr>
+                      : (
+                        <tr key={g.groupKey} className="border-t">
+                          <td className="py-1 pr-3">{g.label}</td>
+                          <td className="pr-3">{g.last7.counts.answers}</td>
+                          <td className="pr-3">{pct(g.last7.counts.shown ? g.last7.counts.unchanged / g.last7.counts.shown : null)}</td>
+                          <td className="pr-3">{pct(g.last7.rates.overrideRate)}</td>
+                          <td className="pr-3">{pct(g.last7.rates.largeOverrideRate)}</td>
+                          <td className="pr-3">{pct(g.last7.rates.transcriptFixRate)}</td>
+                          <td className="pr-3">{g.last7.rates.paisePerAnswer === null ? '–' : (g.last7.rates.paisePerAnswer / 100).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function InstitutionAssignmentsPage() {
   const { t } = useHwT()
   const options = api.hw.classTeachers.options.useQuery()
@@ -51,6 +92,8 @@ export default function InstitutionAssignmentsPage() {
             )}
           </CardContent>
         </Card>
+
+        <MarkingQuality />
 
         <Card>
           <CardHeader><CardTitle>{t('ad.link')}</CardTitle></CardHeader>

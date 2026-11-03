@@ -12,6 +12,8 @@ import { sql } from 'drizzle-orm';
 import { db } from '../db';
 import { EXACT_MATCH_MODEL, BLANK_MODEL } from '../grader/exact-match';
 import { fillShadowFinalMarks } from './shadow';
+import { rollupGroupDay } from '../monitoring/rollup';
+import { runAlerts } from '../monitoring/alerts';
 
 export const MONITOR_TZ = 'Asia/Kolkata';
 
@@ -112,6 +114,13 @@ export async function monitorTick(now = Date.now()): Promise<number> {
   let n = 0;
   for (const d of recentDays(new Date(now))) n += await rollupDay(d);
   n += await fillShadowFinalMarks();
+  // Roadmap 5.4: the per-group roll-up and its alerts. A failure here must never stop the job runner or the older roll-up above.
+  try {
+    for (const d of recentDays(new Date(now))) n += await rollupGroupDay(d);
+    await runAlerts();
+  } catch (e) {
+    console.error('[hw] group monitoring failed:', e instanceof Error ? e.message : e);
+  }
   return n;
 }
 

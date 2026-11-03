@@ -14,6 +14,9 @@ import { Field } from '@/components/hw/fields'
 import { EvalShell, KIND_LABEL } from '@/components/hw-eval/EvalShell'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { TenantsTab } from '@/components/hw-eval/admin/TenantsTab'
+import { EligibilityTab } from '@/components/hw-eval/admin/EligibilityTab'
+import { MonitoringTab } from '@/components/hw-eval/admin/MonitoringTab'
+import { RunsTab } from '@/components/hw-eval/admin/RunsTab'
 
 const KINDS = ['transcribe', 'blind_mark', 'key_audit', 'deidentify'] as const
 const skillsOf = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean)
@@ -307,6 +310,9 @@ export default function EvaluationAdminPage() {
           <TabsTrigger value="raters">Raters</TabsTrigger>
           <TabsTrigger value="consent">Consent</TabsTrigger>
           <TabsTrigger value="tenants">Tenants</TabsTrigger>
+          <TabsTrigger value="eligibility">Eligibility</TabsTrigger>
+          <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
+          <TabsTrigger value="runs">Runs &amp; gates</TabsTrigger>
         </TabsList>
         <TabsContent value="raters" className="space-y-5">
           <Raters />
@@ -315,6 +321,9 @@ export default function EvaluationAdminPage() {
         </TabsContent>
         <TabsContent value="consent"><Consents /></TabsContent>
         <TabsContent value="tenants"><TenantsTab /></TabsContent>
+        <TabsContent value="eligibility"><EligibilityTab /></TabsContent>
+        <TabsContent value="monitoring"><MonitoringTab /></TabsContent>
+        <TabsContent value="runs"><RunsTab /></TabsContent>
       </Tabs>
     </EvalShell>
   )
