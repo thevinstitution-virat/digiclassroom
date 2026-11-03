@@ -8,6 +8,7 @@ import { studentEnrollments } from '@/db/schema';
 import { hwAssignment, hwClassTeacher, hwSubmission, hwTenantQuota } from '@/db/hw-schema';
 import { HwError } from '../errors';
 import { getHwConfig } from '../config';
+import { loadScope, scopeAllows } from '../tenant-scope';
 import {
   canManageAssignment,
   canViewSubmission,
@@ -83,6 +84,8 @@ export async function assignmentForStudent(actor: HwActor, assignmentId: string)
   if (!studentCanSee(actor, scopeOf(a), await studentEnrollmentsOf(actor))) {
     throw new HwError('NOT_FOUND', 'Assignment not found.');
   }
+  // Roadmap 5.1: a restricted institution has the feature on for listed classes only; outside them it does not exist for a student.
+  if (!scopeAllows(await loadScope(db, actor.orgId), a.classId, a.sectionId)) throw new HwError('NOT_FOUND', 'Assignment not found.');
   return a;
 }
 

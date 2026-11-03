@@ -18,6 +18,8 @@ import { gradeRulesThenQueue, setTranscript, suggestionSources, type SuggestionS
 import { aiOffMessage, isRuleModel } from '../eligibility/decision';
 import { eligibilityOfQuestion } from '../eligibility/registry';
 import { signedReadUrl } from '../storage/r2';
+import { tenantUsage } from '../tenants';
+import { writeAudit } from '../admin-audit';
 
 type AnswerRow = typeof hwAnswer.$inferSelect;
 type AiGradeRow = typeof hwAiGrade.$inferSelect;
@@ -403,17 +405,26 @@ export async function returnAssignment(actor: HwActor, assignmentId: string) {
 
 export async function usageThisMonth(actor: HwActor) {
   requireRole(actor, 'admin');
+  // The same figures the super admin sees on the Tenants tab (lib/hw/tenants.ts), so the two screens cannot disagree.
+  const thisMonth = await tenantUsage(db, actor.orgId);
   const rows = await db.select().from(hwAiUsageMonthly).where(eq(hwAiUsageMonthly.organizationId, actor.orgId)).orderBy(desc(hwAiUsageMonthly.month)).limit(12);
   const [q] = await db.select().from(hwTenantQuota).where(eq(hwTenantQuota.organizationId, actor.orgId)).limit(1);
   return {
     enabled: q?.enabled ?? getHwConfig().HW_FEATURE_DEFAULT_ENABLED,
     monthlyAnswerQuota: q?.monthlyAnswerQuota ?? 0,
+    thisMonth,
     months: rows.map((r) => ({ month: r.month, pagesRead: r.pagesRead, answersGraded: r.answersGraded, tokensIn: r.tokensIn, tokensCached: r.tokensCached, tokensOut: r.tokensOut, costPaise: num(r.costPaise) })),
   };
 }
 
 export async function setQuota(actor: HwActor, orgId: string, input: { enabled: boolean; monthlyAnswerQuota: number }) {
   if (!canSetQuota(actor)) throw new HwError('FORBIDDEN', 'Only platform staff can change quotas.');
-  await db.insert(hwTenantQuota).values({ organizationId: orgId, enabled: input.enabled, monthlyAnswerQuota: input.monthlyAnswerQuota })
-    .onConflictDoUpdate({ target: hwTenantQuota.organizationId, set: { enabled: input.enabled, monthlyAnswerQuota: input.monthlyAnswerQuota } });
+  await db.transaction(async (tx) => {
+    const [before] = await tx.select({ enabled: hwTenantQuota.enabled, q: hwTenantQuota.monthlyAnswerQuota }).from(hwTenantQuota).where(eq(hwTenantQuota.organizationId, orgId)).limit(1);
+    await tx.insert(hwTenantQuota).values({ organizationId: orgId, enabled: input.enabled, monthlyAnswerQuota: input.monthlyAnswerQuota })
+      .onConflictDoUpdate({ target: hwTenantQuota.organizationId, set: { enabled: input.enabled, monthlyAnswerQuota: input.monthlyAnswerQuota } });
+    // Roadmap 5.1: every change to a quota leaves an audit row.
+    await writeAudit(tx, { actorId: actor.userId, action: 'quota_changed', entity: 'tenant', entityId: orgId,
+      oldValue: before ? { enabled: before.enabled, monthlyAnswerQuota: before.q } : null, newValue: { enabled: input.enabled, monthlyAnswerQuota: input.monthlyAnswerQuota }, reason: 'platform staff quota change' });
+  });
 }

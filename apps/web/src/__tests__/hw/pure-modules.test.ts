@@ -268,13 +268,13 @@ describe('grading prompt', () => {
 
 describe('quota', () => {
   it('allows up to the quota and not beyond', () => {
-    expect(quotaAllows({ quota: 100, used: 90 }, 10)).toBe(true);
-    expect(quotaAllows({ quota: 100, used: 95 }, 10)).toBe(false);
+    expect(quotaAllows({ quota: 100, used: 90, budgetPaise: 0, usedPaise: 0 }, 10)).toBe(true);
+    expect(quotaAllows({ quota: 100, used: 95, budgetPaise: 0, usedPaise: 0 }, 10)).toBe(false);
   });
   it('treats 0 as AI switched off', () => {
-    expect(quotaAllows({ quota: 0, used: 0 }, 1)).toBe(false);
-    expect(quotaRefusal({ quota: 0, used: 0 })).toMatch(/switched off/);
-    expect(quotaRefusal({ quota: 10, used: 10 })).toMatch(/AI quota reached/);
+    expect(quotaAllows({ quota: 0, used: 0, budgetPaise: 0, usedPaise: 0 }, 1)).toBe(false);
+    expect(quotaRefusal({ quota: 0, used: 0, budgetPaise: 0, usedPaise: 0 })).toMatch(/switched off/);
+    expect(quotaRefusal({ quota: 10, used: 10, budgetPaise: 0, usedPaise: 0 })).toMatch(/AI quota reached/);
   });
 });
 

@@ -265,8 +265,20 @@ export const hwTenantQuota = pgTable('hw_tenant_quota', {
   organizationId: varchar('organization_id', { length: 255 }).primaryKey(),
   enabled: boolean('enabled').notNull().default(false),
   monthlyAnswerQuota: integer('monthly_answer_quota').notNull().default(0),
+  /** Migration 025: the monthly AI budget in paise. Above 0 it is what the quota compares; 0 keeps the old answer-count rule. */
+  monthlyBudgetPaise: bigint('monthly_budget_paise', { mode: 'number' }).notNull().default(0),
+  /** Migration 025: true = the feature applies only to the classes and sections in hw_tenant_scope. */
+  scopeRestricted: boolean('scope_restricted').notNull().default(false),
   createdAt: ts('created_at').notNull().defaultNow(),
   updatedAt: ts('updated_at').notNull().defaultNow(),
+});
+
+/** Migration 025: the classes (section null = every section) a restricted institution has switched the feature on for. */
+export const hwTenantScope = pgTable('hw_tenant_scope', {
+  organizationId: varchar('organization_id', { length: 255 }).notNull(),
+  classId: varchar('class_id', { length: 36 }).notNull(),
+  sectionId: varchar('section_id', { length: 36 }),
+  createdAt: ts('created_at').notNull().defaultNow(),
 });
 
 // Reserved for Phase 2 — declared so the types exist, nothing reads them yet.

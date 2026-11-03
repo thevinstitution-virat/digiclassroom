@@ -657,4 +657,130 @@ suite('handwritten assignments — integration', () => {
       expect((await svc.marking.questionQueue(w.teacher, a.q2, 'all')).answers[0].suggestion).not.toBeNull()
     })
   })
+
+  describe('Tenant control (roadmap 5.1)', () => {
+    const owner = { userId: 'owner-itest', isSuperAdmin: true, rater: null }
+    let tenants: typeof import('@/lib/hw/tenants')
+    let monthKey: () => string
+    beforeAll(async () => {
+      tenants = await import('@/lib/hw/tenants')
+      monthKey = (await import('@/lib/hw/db')).monthKey
+    })
+    const edit = (w: World, over: Partial<import('@/lib/hw/tenants').TenantInput> = {}) =>
+      tenants.setTenant(owner, { organizationId: w.org, enabled: true, monthlyBudgetPaise: 0, scopeRestricted: false, scope: [], reason: 'pilot set-up', ...over })
+    const spend = (w: World, costPaise: number) =>
+      raw.query(`INSERT INTO hw_ai_usage_monthly (organization_id, month, pages_read, answers_graded, cost_paise) VALUES ($1, $2, 4, 3, $3)
+                 ON CONFLICT (organization_id, month) DO UPDATE SET cost_paise = $3`, [w.org, monthKey(), costPaise])
+    const auditRows = async (w: World) => (await raw.query(`SELECT action, actor_id, reason, old_value, new_value FROM hw_admin_audit WHERE entity = 'tenant' AND entity_id = $1 ORDER BY at`, [w.org])).rows
+
+    it('only the platform owner may change or read it', async () => {
+      const w = await makeWorld()
+      const nobody = { userId: 'x', isSuperAdmin: false, rater: null }
+      await expect(tenants.listTenants(nobody)).rejects.toThrow(/Only the platform owner/)
+      await expect(tenants.setTenant(nobody, { organizationId: w.org, enabled: true, monthlyBudgetPaise: 0, scopeRestricted: false, scope: [], reason: 'try' })).rejects.toThrow(/Only the platform owner/)
+      await expect(tenants.tenantHistory(nobody, w.org)).rejects.toThrow(/Only the platform owner/)
+    })
+
+    it('a change is saved with an audit row (old, new, who, why); an unchanged save writes nothing; the history lists it', async () => {
+      const w = await makeWorld()
+      expect(await edit(w, { monthlyBudgetPaise: 50_000, reason: 'ten-rupee pilot budget' })).toEqual({ changed: true })
+      expect(await edit(w, { monthlyBudgetPaise: 50_000, reason: 'same again' })).toEqual({ changed: false })
+      const rows = await auditRows(w)
+      expect(rows).toHaveLength(1)
+      expect(rows[0]).toMatchObject({ action: 'tenant_changed', actor_id: owner.userId, reason: 'ten-rupee pilot budget' })
+      expect(rows[0].old_value).toMatchObject({ enabled: true, monthlyBudgetPaise: 0, scopeRestricted: false })
+      expect(rows[0].new_value).toMatchObject({ enabled: true, monthlyBudgetPaise: 50_000 })
+      await edit(w, { enabled: false, monthlyBudgetPaise: 50_000, reason: 'paused for the holidays' })
+      const hist = await tenants.tenantHistory(owner, w.org)
+      expect(hist.map((h) => h.reason)).toEqual(['paused for the holidays', 'ten-rupee pilot budget']) // newest first
+    })
+
+    it('it needs a reason, a sane budget, and a real class list; classes of another institution are refused', async () => {
+      const w = await makeWorld()
+      const other = await makeWorld()
+      await expect(edit(w, { reason: ' x ' })).rejects.toThrow(/Say why/)
+      await expect(edit(w, { monthlyBudgetPaise: -1 })).rejects.toThrow(/between/)
+      await expect(edit(w, { monthlyBudgetPaise: 1.5 })).rejects.toThrow(/between/)
+      await expect(edit(w, { scopeRestricted: true, scope: [] })).rejects.toThrow(/at least one class/)
+      await expect(edit(w, { scopeRestricted: true, scope: [{ classId: other.classId, sectionId: null }] })).rejects.toThrow(/does not belong/)
+      await expect(tenants.setTenant(owner, { organizationId: 'no-such-org', enabled: true, monthlyBudgetPaise: 0, scopeRestricted: false, scope: [], reason: 'try' })).rejects.toThrow(/not found/)
+      expect(await auditRows(w)).toHaveLength(0) // every refusal left nothing behind
+    })
+
+    it('the audit table refuses updates and deletes at the database', async () => {
+      const w = await makeWorld()
+      await edit(w, { monthlyBudgetPaise: 100 })
+      await expect(raw.query(`UPDATE hw_admin_audit SET reason = 'edited' WHERE entity = 'tenant' AND entity_id = $1`, [w.org])).rejects.toThrow()
+      await expect(raw.query(`DELETE FROM hw_admin_audit WHERE entity = 'tenant' AND entity_id = $1`, [w.org])).rejects.toThrow()
+      expect(await auditRows(w)).toHaveLength(1)
+    })
+
+    it('class limit: assignments can be made, listed and seen only for the listed classes — admins too', async () => {
+      const w = await makeWorld()
+      const c8 = `${w.org}-c8`
+      await raw.query(`INSERT INTO institution_classes (id, organization_id, name, level) VALUES ($1, $2, 'Class 8', 8)`, [c8, w.org])
+      await raw.query(`INSERT INTO hw_class_teacher (id, organization_id, class_id, teacher_id, subject) VALUES ($1, $2, $3, $4, 'Science')`, [`l8-${w.org}`, w.org, c8, w.teacher.userId])
+      const a = await publishedAssignment(w) // class 9, made while unrestricted
+      const mk = (actor: HwActor, classId: string) => svc.assignments.createAssignment(actor, { classId, sectionId: null, subject: 'Science', title: 'T', allowedModes: ['typed'] })
+
+      await edit(w, { scopeRestricted: true, scope: [{ classId: c8, sectionId: null }] })
+      await expect(mk(w.teacher, w.classId)).rejects.toThrow(/not switched on for this class/)
+      await expect(mk(w.admin, w.classId)).rejects.toThrow(/not switched on for this class/)
+      await expect(mk(w.teacher, c8)).resolves.toBeDefined()
+      expect((await svc.assignments.assignmentTargets(w.admin)).classes.map((c) => c.id)).toEqual([c8])
+      expect((await svc.assignments.assignmentTargets(w.teacher)).classes.map((c) => c.id)).toEqual([c8])
+      // The class-9 assignment made earlier is no longer visible to its students.
+      expect(await svc.submissions.myAssignments(w.s1)).toEqual([])
+      await expect(svc.guards.assignmentForStudent(w.s1, a.id)).rejects.toThrow(/not found/i)
+
+      await edit(w, { scopeRestricted: true, scope: [{ classId: w.classId, sectionId: null }, { classId: c8, sectionId: null }], reason: 'both classes now' })
+      expect((await svc.submissions.myAssignments(w.s1)).map((x) => x.id)).toContain(a.id)
+      await edit(w, { scopeRestricted: false, scope: [], reason: 'whole school' })
+      await expect(mk(w.teacher, w.classId)).resolves.toBeDefined()
+    })
+
+    it('a rupee budget: AI runs below it, and at 100% answers wait for the teacher with "AI quota reached"', async () => {
+      const w = await makeWorld(0) // the older answer quota is 0, so only the budget can let AI run
+      await edit(w, { monthlyBudgetPaise: 1_000 })
+      const a = await publishedAssignment(w)
+      const h = await studentHandsIn(w, a)
+      gem.read.set(h.a2, { text: 'plants make food from sun light', confidence: 'high' })
+      await drainAll()
+      expect(gem.calls.length).toBeGreaterThan(0)
+
+      await spend(w, 1_000)
+      gem.calls = []
+      const h2 = await studentHandsIn(w, a, w.s2)
+      await drainAll()
+      expect(gem.calls).toHaveLength(0)
+      const ans = (await raw.query(`SELECT transcript_status, failure_reason FROM hw_answer WHERE id = $1`, [h2.a2])).rows[0]
+      expect(ans.transcript_status).toBe('needs_review')
+      expect(ans.failure_reason).toMatch(/AI quota reached \(₹10\.00 of ₹10\.00 this month\)/)
+    })
+
+    it('the 80% warning shows on the Tenants tab and on the institution admin card, with the same numbers', async () => {
+      const w = await makeWorld()
+      await edit(w, { monthlyBudgetPaise: 1_000 })
+      await spend(w, 799)
+      let card = (await svc.marking.usageThisMonth(w.admin)).thisMonth
+      expect(card).toMatchObject({ warn: false, exhausted: false })
+      await spend(w, 800)
+      card = (await svc.marking.usageThisMonth(w.admin)).thisMonth
+      const tab = (await tenants.listTenants(owner, { organizationId: w.org }))[0].usage
+      expect(card).toEqual(tab)
+      expect(card).toMatchObject({ pagesRead: 4, answersGraded: 3, costPaise: 800, budgetPaise: 1_000, warn: true, exhausted: false })
+      expect(card.fraction).toBeCloseTo(0.8)
+      await spend(w, 1_000)
+      expect((await svc.marking.usageThisMonth(w.admin)).thisMonth).toMatchObject({ warn: true, exhausted: true })
+    })
+
+    it('the older quota endpoint audits too', async () => {
+      const w = await makeWorld()
+      const staff: HwActor = { userId: 'staff-itest', orgId: w.org, role: 'admin', isPlatformStaff: true }
+      await svc.marking.setQuota(staff, w.org, { enabled: true, monthlyAnswerQuota: 77 })
+      const rows = await auditRows(w)
+      expect(rows.at(-1)).toMatchObject({ action: 'quota_changed', actor_id: 'staff-itest' })
+      expect(rows.at(-1)?.new_value).toMatchObject({ monthlyAnswerQuota: 77 })
+    })
+  })
 })

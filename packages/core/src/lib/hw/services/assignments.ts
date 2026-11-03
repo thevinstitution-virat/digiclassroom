@@ -9,6 +9,7 @@ import { canCreateFor, linkCovers, roleFromMember, type HwActor } from '../acces
 import { requireModel } from '../config';
 import { HwError } from '../errors';
 import { db, newId, num, type Exec } from '../db';
+import { loadScope, requireScope } from '../tenant-scope';
 import { quotaAllows, quotaRefusal, quotaState } from '../cost/quota';
 import { recordUsage } from '../cost/usage';
 import { generate, providerFor, routed, textPart, usageFromError } from '../ai';
@@ -93,6 +94,8 @@ export async function createAssignment(actor: HwActor, input: AssignmentInput) {
   requireRole(actor, 'admin', 'teacher');
   await requireHwEnabled(actor);
   await checkClass(actor, input.classId, input.sectionId);
+  // Roadmap 5.1: for every role, an institution restricted to some classes cannot make an assignment outside them.
+  await requireScope(db, actor.orgId, input.classId, input.sectionId);
   if (!canCreateFor(actor, input, await teacherLinks(actor))) throw new HwError('FORBIDDEN', 'You do not teach this class and subject.');
   const id = newId();
   await db.insert(hwAssignment).values({
@@ -406,10 +409,15 @@ export async function assignmentTargets(actor: HwActor) {
     .from(institutionClasses).where(eq(institutionClasses.organizationId, actor.orgId)).orderBy(asc(institutionClasses.level), asc(institutionClasses.name));
   const sections = await db.select({ id: institutionSections.id, classId: institutionSections.classId, name: institutionSections.name })
     .from(institutionSections).where(eq(institutionSections.organizationId, actor.orgId)).orderBy(asc(institutionSections.name));
+  // Only the classes and sections the institution has the feature switched on for (all of them unless it is restricted).
+  const scope = await loadScope(db, actor.orgId);
+  const inScope = (classId: string, sectionId: string | null) => !scope.restricted || scope.entries.some((e) => e.classId === classId && (e.sectionId === null || e.sectionId === sectionId));
+  const okClasses = classes.filter((c) => !scope.restricted || scope.entries.some((e) => e.classId === c.id));
+  const okSections = sections.filter((s) => inScope(s.classId, s.id));
   if (actor.role === 'admin') {
-    return { classes, sections, links: classes.map((c) => ({ classId: c.id, sectionId: null, subject: null })) };
+    return { classes: okClasses, sections: okSections, links: okClasses.map((c) => ({ classId: c.id, sectionId: null, subject: null })) };
   }
   const links = await teacherLinks(actor);
   const allowed = new Set(links.map((l) => l.classId));
-  return { classes: classes.filter((c) => allowed.has(c.id)), sections: sections.filter((s) => allowed.has(s.classId)), links };
+  return { classes: okClasses.filter((c) => allowed.has(c.id)), sections: okSections.filter((s) => allowed.has(s.classId)), links };
 }

@@ -9,6 +9,7 @@ import { studentCanSeeResult, type HwActor } from '../access/policy';
 import { getHwConfig } from '../config';
 import { HwError } from '../errors';
 import { db, newId, num } from '../db';
+import { loadScope, scopeAllows } from '../tenant-scope';
 import { checkRender } from '../ink/png';
 import { inkSummary, validateEncodedInk } from '../ink/stroke-format';
 import { queueSubmissionRead } from '../jobs/read-handler';
@@ -34,8 +35,10 @@ export async function myAssignments(actor: HwActor) {
     .leftJoin(hwSubmission, and(eq(hwSubmission.assignmentId, hwAssignment.id), eq(hwSubmission.studentId, actor.userId)))
     .where(and(eq(hwAssignment.organizationId, actor.orgId), inArray(hwAssignment.classId, classIds), inArray(hwAssignment.status, ['published', 'closed'])))
     .orderBy(asc(hwAssignment.dueAt));
+  const scope = await loadScope(db, actor.orgId);
   return rows
     .filter(({ a }) => enrollments.some((e) => e.classId === a.classId && (a.sectionId === null || e.sectionId === a.sectionId)))
+    .filter(({ a }) => scopeAllows(scope, a.classId, a.sectionId))
     .map(({ a, s }) => ({
       id: a.id, title: a.title, subject: a.subject, dueAt: a.dueAt, totalMarks: num(a.totalMarks), status: a.status,
       allowedModes: a.allowedModes,

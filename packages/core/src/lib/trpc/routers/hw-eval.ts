@@ -13,6 +13,7 @@ import * as admin from '@/lib/hw/eval-tools/admin';
 import * as invites from '@/lib/hw/eval-tools/invites';
 import * as consent from '@/lib/hw/eval-tools/consent';
 import * as work from '@/lib/hw/eval-tools/work';
+import * as tenants from '@/lib/hw/tenants';
 import { copyDatasets, copyQueue } from '@/lib/hw/eval-tools/copies';
 import { getHwConfig } from '@/lib/hw/config';
 
@@ -90,6 +91,20 @@ export const hwEvalRouter = createTRPCRouter({
       .mutation(({ ctx, input }) => run(ctx, (a) => invites.cancelInvite(a, input.inviteId, input.reason))),
     updateRater: protectedProcedure.input(z.object({ raterId: id, skills: z.array(z.string().max(80)).max(30).optional(), active: z.boolean().optional() }))
       .mutation(({ ctx, input }) => run(ctx, (a) => admin.updateRater(a, input))),
+    // Tenants tab (roadmap 5.1)
+    tenants: protectedProcedure.query(({ ctx }) => run(ctx, (a) => tenants.listTenants(a))),
+    setTenant: protectedProcedure
+      .input(z.object({
+        organizationId: z.string().min(1).max(255),
+        enabled: z.boolean(),
+        monthlyBudgetPaise: z.number().int().min(0).max(tenants.MAX_BUDGET_PAISE),
+        scopeRestricted: z.boolean(),
+        scope: z.array(z.object({ classId: id, sectionId: id.nullable() })).max(500),
+        reason: z.string().trim().min(3).max(500),
+      }))
+      .mutation(({ ctx, input }) => run(ctx, (a) => tenants.setTenant(a, input))),
+    tenantHistory: protectedProcedure.input(z.object({ organizationId: z.string().min(1).max(255) }))
+      .query(({ ctx, input }) => run(ctx, (a) => tenants.tenantHistory(a, input.organizationId))),
     datasets: protectedProcedure.query(({ ctx }) => run(ctx, (a) => admin.datasetsWithTasks(a))),
     progress: protectedProcedure.input(z.object({ datasetRef })).query(({ ctx, input }) => run(ctx, (a) => admin.progress(a, input))),
     createTasks: protectedProcedure.input(z.object({ datasetRef, kind })).mutation(({ ctx, input }) => run(ctx, (a) => admin.createTasks(a, input))),

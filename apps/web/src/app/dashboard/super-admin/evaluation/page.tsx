@@ -12,6 +12,8 @@ import { Input } from '@/components/ui/input'
 import { HwError, HwLoading, HwMessage } from '@/components/hw/HwShell'
 import { Field } from '@/components/hw/fields'
 import { EvalShell, KIND_LABEL } from '@/components/hw-eval/EvalShell'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { TenantsTab } from '@/components/hw-eval/admin/TenantsTab'
 
 const KINDS = ['transcribe', 'blind_mark', 'key_audit', 'deidentify'] as const
 const skillsOf = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean)
@@ -300,12 +302,20 @@ function Dataset() {
 export default function EvaluationAdminPage() {
   return (
     <EvalShell title="Evaluation" subtitle="Raters, human transcription and marking tasks, and reference data for the Virat Evaluator." needs="superAdmin">
-      <div className="space-y-5">
-        <Raters />
-        <Invites />
-        <Consents />
-        <Dataset />
-      </div>
+      <Tabs defaultValue="raters" className="space-y-4">
+        <TabsList className="h-auto flex-wrap justify-start">
+          <TabsTrigger value="raters">Raters</TabsTrigger>
+          <TabsTrigger value="consent">Consent</TabsTrigger>
+          <TabsTrigger value="tenants">Tenants</TabsTrigger>
+        </TabsList>
+        <TabsContent value="raters" className="space-y-5">
+          <Raters />
+          <Invites />
+          <Dataset />
+        </TabsContent>
+        <TabsContent value="consent"><Consents /></TabsContent>
+        <TabsContent value="tenants"><TenantsTab /></TabsContent>
+      </Tabs>
     </EvalShell>
   )
 }

@@ -28,7 +28,9 @@ export default function InstitutionAssignmentsPage() {
   const o = options.data
   const sections = useMemo(() => (o?.sections ?? []).filter((s) => s.classId === classId), [o, classId])
   const name = (list: { id: string; name: string }[] | undefined, id: string | null) => (id ? list?.find((x) => x.id === id)?.name ?? '?' : null)
-  const month = usage.data?.months[0]
+  // This month, from the same function the platform owner's Tenants tab uses (hw/tenants.ts tenantUsage).
+  const month = usage.data?.thisMonth
+  const pct = month?.fraction == null ? 0 : Math.round(month.fraction * 100)
 
   return (
     <HwShell roles={['admin']} titleKey="ad.title" subtitle={t('app.subtitle')}>
@@ -39,7 +41,12 @@ export default function InstitutionAssignmentsPage() {
             {usage.isLoading ? <HwLoading /> : usage.error ? <HwError message={usage.error.message} onRetry={() => usage.refetch()} /> : (
               <>
                 <p>{t('ad.usageLine', { pages: month?.pagesRead ?? 0, graded: month?.answersGraded ?? 0, cost: ((month?.costPaise ?? 0) / 100).toFixed(2) })}</p>
-                <p className="text-muted-foreground">{usage.data!.monthlyAnswerQuota ? t('ad.quota', { n: usage.data!.monthlyAnswerQuota }) : t('ad.quotaOff')}</p>
+                {month && month.budgetPaise > 0
+                  ? <p className="text-muted-foreground">{t('ad.budget', { budget: (month.budgetPaise / 100).toFixed(2), used: (month.costPaise / 100).toFixed(2), pct })}</p>
+                  : <p className="text-muted-foreground">{usage.data!.monthlyAnswerQuota ? t('ad.quota', { n: usage.data!.monthlyAnswerQuota }) : t('ad.quotaOff')}</p>}
+                {month?.exhausted
+                  ? <p role="alert" className="rounded border border-red-300 bg-red-50 p-2 text-red-800">{t('ad.budgetFull')}</p>
+                  : month?.warn && <p role="status" className="rounded border border-amber-300 bg-amber-50 p-2 text-amber-900">{t('ad.budgetWarn', { pct })}</p>}
               </>
             )}
           </CardContent>
