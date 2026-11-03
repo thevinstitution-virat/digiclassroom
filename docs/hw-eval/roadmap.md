@@ -43,6 +43,7 @@ Version 1, 3 Nov 2026. This file lives at `docs/hw-eval/roadmap.md`.
 - Don't write to the shared Qdrant collection or the `trio` content schema unless the phase says so.
 - Never print or log a secret.
 - Never set or change a production env var, quota or flag unless the phase says so and the owner approved it in that session.
+- Until Phase 5.3 ships, never create a `hw_tenant_quota` row in production. A quota row is the only gate before AI marking, and the product checks no eligibility.
 
 ### Feature principles (from guide §1; never weaken one)
 - **Marks:** the AI only suggests. Only `services/marking.ts` writes `hw_grade`.
@@ -106,17 +107,17 @@ These are tabs on the existing `/dashboard/super-admin/evaluation` page (*Insigh
 
 ### 3.3 Gaps found while planning
 
-Phase 1 verifies each of these; the named phase fixes it.
+Phase 1 verified each of these on 4 Nov 2026 (file and line for each are in `roadmap-phase1-report.md`); the named phase fixes it.
 
-1. **The product may not read gate results.** Verify in Phase 1; build in Phase 5.
-2. **Raters may not be able to get accounts.** DCP sign-up was disabled in August, so volunteers would need invitations. Verify in Phase 1; build in Phase 3.
+1. **The product does not read gate results. VERIFIED.** Nothing checks eligibility before an AI suggestion is created or shown; the only gate is the quota (`grade-handler.ts:91-98`, `read-handler.ts:58-66`). Build in Phase 5.
+2. **Raters need an invitation flow, not accounts. VERIFIED, and corrected.** Self sign-up has been open since 16 Aug (`auth/index.ts:150-157`, email verification required), so volunteers can already create accounts. What is missing is an invitation flow: today a super admin can add a rater only for an existing account (`eval-tools/admin.ts:47-50`), and a rater has no isolation from product pages. Phase 3.
 3. **No consent screen.** Step 1 needs volunteer consent, and sources C and D need parents' consent. Phase 3.
 4. **The rater tools are English only.** Hindi-medium teachers will be raters. Phase 3.
-5. **The key service is used only by evaluation scripts, and questions have no source field.** Phase 5, after decisions D2 and D3.
-6. **"Draft with AI" may break the no-key-from-memory principle.** It proposes rubric points (`rubric-draft.v1`), while principle 3 says a model never writes a key from memory. Phase 1 checks what it draws on; Phase 5 fixes it if needed.
+5. **The key service is used only by evaluation scripts, and questions have no source field. VERIFIED.** Phase 5, after decisions D2 and D3.
+6. **"Draft with AI" can break the no-key-from-memory principle. VERIFIED.** It uses the teacher's model answer when there is one and the model's own knowledge when there is none (`rubric-draft.v1.ts:17, 40`), and publishing does not require a reviewed rubric (`assignments.ts:146-150`). Fixed in Phase 3, task 3.4.
 7. **No photo answers.** Most students have phones, not pen tablets. Step 4 needs either a school with tablets or photo capture. Decision D4; Phase 5P.
-8. **The feature switch is per institution.** A pilot needs to switch on single classes. Phase 5.
-9. **The quota's unit and month boundary are unknown.** Verify in Phase 1; migrate in Phase 5.
+8. **The feature switch is per institution. VERIFIED.** There is no class, section or teacher allow-list (`guards.ts:25-29`). A pilot can be confined indirectly by linking only pilot teachers and classes, except that an institution admin can create for any class. Phase 5.
+9. **The quota's unit and month boundary. VERIFIED.** It is an answer count shared by reading and marking (`quota.ts:1-5`), the month is the UTC month (`db.ts:17-20`, so it starts at 05:30 IST), and a missing quota row means quota 0. Cost is recorded in paise but is not what the quota compares. Migrate in Phase 5.1.
 
 ---
 
@@ -146,7 +147,7 @@ Phase 1 verifies each of these; the named phase fixes it.
 
 1.2 **Pending phase-1d runs.** If there is OpenRouter credit or a direct key, run the pending runs (about ₹84). If not, say so and skip.
 
-Report the leak rate first: how often a reversed fact gets the verdict `right_idea_wrong_detail` instead of `different_fact`. If it exceeds 5% of reversed-fact items, **STOP**. The verdict wording needs fixing before the teachers see the decision kit.
+Report the leak rate first: how often a reversed fact gets the verdict `right_idea_wrong_detail` instead of `different_fact`, for each candidate. A leak that appears for one model and not for another, under the same wording, points to that model's behaviour, not to the wording. The wording is suspect only if **every** candidate leaks, and then **STOP**: it needs fixing before the teachers see the decision kit. (Corrected 4 Nov 2026: the rule first said any leak over 5% stops the work.)
 
 1.3 **Direct batch probes.** If the keys are present, run the Gemini and OpenAI round trips. Report:
 - submit-to-complete time;
@@ -202,7 +203,7 @@ Production holds 0.50 today, uncalibrated. Changing it needs the owner's approva
 2.3 **CER line breaks (pilot 0.4).** Record decision D7. Claude Code then sets the reader prompt and the metric to match.
 
 2.4 **Partial credit and verdict definitions (pilot 0.6).**
-1. TEACHERS use `partial-credit-decision.md` and `verdicts.md`, only after task 1.2's leak check passes.
+1. TEACHERS use `partial-credit-decision.md` and `verdicts.md` (released to the teachers on 4 Nov 2026; see §8 for the leak decision). M0-strict stays a candidate only if the teachers choose `zero`, or if its leak on `heldout-1d@v1` is at most 5% (that check is blind to reversed facts, because those labels come from how the set was built).
 2. Claude Code then:
    - sets `HW_PARTIAL_CREDIT_RULE`, per subject if the teachers chose that, in the evaluation config;
    - updates the expected marks in the mutation rules;
@@ -252,15 +253,23 @@ Pilot 0.3 (numerical keys) was done in `6fc23e0`. Pilot 0.5 (freezing `regressio
 - **Forms:** draft the volunteer, parent and student-assent forms in English and Hindi. YOU get them legally reviewed; Claude Code isn't giving legal advice.
 
 3.2 **Rater access.**
-- **Invite by email** from the Raters tab. This creates or links an account with rater access only, sends a sign-in link through the existing email provider, and assigns a pseudonym.
+- **Invite by email** from the Raters tab. Self sign-up works, so the invitation email carries the sign-up link; once the person verifies their email, the rater role and the pseudonym are assigned automatically. "Add a rater by account email" stays as it is, for people who already have an account.
 - **Isolation:** a rater cannot open any product page.
 - **Menu:** an "Evaluate" entry for users with the rater role.
 - **Language:** Hindi strings and the language toggle for `/evaluate`, every task form, and adjudication.
 
 3.3 **Volunteer flow check.** Write a manual test script for the copy flow on a Samsung tablet with S Pen and on a phone, and confirm the printable copy sheets render in both languages.
 
+3.4 **"Draft with AI" (gap 6).**
+- **No model answer, no draft:** disable the button when the question has no model answer, with the hint "Add a model answer first".
+- **Source:** draft only from the teacher's model answer, never from the model's own knowledge.
+- **Label:** drafted points are labelled "AI draft" until the teacher saves the rubric.
+- **Publish:** block Publish while any unsaved AI-draft point exists.
+- **Tests:** one test for each of these four rules.
+
 **Acceptance:**
-- tests show the consent gate refusing, withdrawal excluding the person and the runner refusing, the invitation working, and raters blocked from product routes;
+- tests show the consent gate refusing, withdrawal excluding the person and the runner refusing, the invitation working (sign-up link, automatic rater role after verification), and raters blocked from product routes;
+- the four tests for task 3.4 pass;
 - the Hindi strings are complete;
 - the migration rehearsal passes.
 
@@ -319,7 +328,7 @@ This phase follows `pilot-plan.md` and uses the profiles in `pilot@v1` as update
 - **Quota behaviour:** a warning at 80%. At 100%, the existing rule applies: answers become `needs_review` with the reason "AI quota reached", shown to the teacher and admin.
 - **History:** every change writes an audit row with a reason, and the history is visible on the tab.
 - **Consistency:** the institution admin's existing usage card shows the same numbers (add a test).
-- **Migration:** move the quota from its current unit (found in 1.4b) using expand → migrate → contract.
+- **Migration:** the quota moves from an answer count shared by reading and marking, with a UTC month, to paise with an IST month, using expand → migrate → contract (verified in 1.4b: `quota.ts:1-5`, `db.ts:17-20`). A missing quota row stays "AI off".
 
 5.2 **Scheme source and keys in the product** (after D2 and D3).
 - **Source field:** each question gets a `source` of textbook exercise, board paper or custom, with the book and chapter for textbook questions.
@@ -352,6 +361,15 @@ This phase follows `pilot-plan.md` and uses the profiles in `pilot@v1` as update
   - quota burn per tenant.
 - **Alerts and demotion:** the owner sets thresholds in config. A breach, with at least the minimum number of answers, demotes the group to `not_yet` automatically, with the reason, an audit row, and an email to the super admin.
 - **Institution view:** the institution admin sees the same view scoped to their own institution, as aggregates only, with the minimum group size applied.
+- **Migration for the missing fields (verified in 1.4f):** `hw_eval_monitor_daily` today has only answers marked, AI suggested, overrides, override size, transcript fixes and misread flags, keyed by day, institution, subject and question type. Add, as an additive migration:
+  - language and scheme source in the key, and the configuration hash;
+  - suggestions shown (as against created);
+  - accepted unchanged, edited, and replaced by hand;
+  - large overrides;
+  - instruction flags and "not an instruction" taps (rolled up from `hw_instruction_flag`);
+  - failed jobs and batch fallbacks;
+  - batch turnaround (p50 and p90);
+  - ₹ per answer, in paise.
 
 5.5 **Runs & gates tab** (read-only).
 - **What it lists:**
@@ -446,15 +464,15 @@ Real figures come from Phase 4.
 
 | # | Decision | Owner | Recommendation | Status |
 |---|---|---|---|---|
-| D1 | Merge `perf/hw-cost` | YOU | Yes, once task 1.5's checks pass | Open |
+| D1 | Merge `perf/hw-cost` | YOU | Yes, once task 1.5's checks pass | **Approved 4 Nov 2026**, with three conditions (production-schema rehearsal, ownership and grants, backup and rollback). Migrations 019 and 020 applied 4 Nov; the push waits for GitHub credentials |
 | D2 | How keys enter the product | YOU | Option A, with C as the backstop | Open |
 | D3 | Custom, teacher-written questions in the pilot | YOU | Hand-marked during the pilot; measure teacher-rubric marking later as its own group | Open |
 | D4 | Answer mode in pilot step 4 | YOU | Build photo answers (5P). Most students will write on paper, so a tablet-only pilot wouldn't test the mode most schools will use | Open |
-| D5 | Partial-credit rule | TEACHERS | Decide after the leak check in task 1.2 | Open |
-| D6 | Verdict definitions | TEACHERS | Start from the draft in `verdicts.md` | Open |
+| D5 | Partial-credit rule | TEACHERS | Decide now; the kit is released (4 Nov). Leak decision: the verdict wording is not the cause (the same definitions gave 0 leaks in 69 judgements on M1-strict); M0-strict's 3 of 15 is model behaviour. M0-strict stays a candidate only if the teachers choose `zero`, or its leak on `heldout-1d@v1` is at most 5% (a blind check: the reversed-fact labels there come from how the set was built) | Open, kit released |
+| D6 | Verdict definitions | TEACHERS | Start from the draft in `verdicts.md`; the leak result gives no reason to change the wording | Open, kit released |
 | D7 | How line breaks count in CER | YOU | Count a line break read as a space as correct, and keep raw CER as a second figure | Open |
 | D8 | Quota unit | YOU | Rupees, stored as paise, with IST months | Open |
-| D9 | Batching escalation (E0 or E1) | YOU | E0, until the Gemini probe shows image batches finishing fast | Open |
+| D9 | Batching escalation (E0 or E1) | YOU | E0, until the Gemini probe shows image batches finishing fast | **Decided 4 Nov 2026: stays E0** |
 | D10 | Parent access | YOU | After the pilot, policy first | Open |
 
 ---
@@ -463,9 +481,9 @@ Real figures come from Phase 4.
 
 | Phase | Status | Branch / commit | Updated |
 |---|---|---|---|
-| 1 | Stopped at 1.5: 1.4 and 1.5 done, 1.2 and 1.3 skipped (no credit or keys); M0-strict leak 3/15 is over 5%; waiting for the owner's merge go-ahead | `perf/hw-cost` | 4 Nov 2026 |
-| 2 | Not started | n/a | 3 Nov 2026 |
-| 3 | Not started | `feat/hw-pilot-a` | 3 Nov 2026 |
+| 1 | Merge approved (D1). Migrations 019 and 020 applied on production 4 Nov (rehearsed on the production schema; backup and restore point recorded). **Push to `main` not done: no GitHub credential for `thevinstitution-virat` in this session.** Post-deploy checks and the tag wait for the push. 1.2 and 1.3 skipped (no credit, no keys) | `perf/hw-cost` | 4 Nov 2026 |
+| 2 | Support prepared (teacher pack, R_min labelling sheet, trio check); the people's work has not started. Findings in `phase2-support.md` | n/a | 4 Nov 2026 |
+| 3 | Not started: waits for the push in Phase 1 | `feat/hw-pilot-a` | 4 Nov 2026 |
 | 4 | Not started | n/a | 3 Nov 2026 |
 | 5 | Not started | `feat/hw-pilot-b` | 3 Nov 2026 |
 | 5P | Waiting for D4 | n/a | 3 Nov 2026 |
@@ -503,3 +521,5 @@ Your part this week:
 The one result to read first is the leak rate in task 1.2. If it’s high, the verdict wording needs fixing before the teachers see the partial-credit kit.
 
 4 Nov 2026, Phase 1: no credit or keys, so 1.2 runs and 1.3 probes skipped; leak rate from stored runs is M0-strict 3/15 (20%, over the 5% line) and M1-strict 0/69; gaps a-g verified (docs/hw-eval/roadmap-phase1-report.md); merge runbook written (docs/hw-eval/merge-hw-cost-runbook.md); stopped at 1.5 for the owner's go-ahead.
+
+4 Nov 2026, Phase 1 close-out: D1 approved with three conditions; production schema rehearsed (no dependency differs from dev), roles and grants checked (app role `digiclassroom_app` owns everything and has full privileges on the 3 new tables), fresh backup at restore point 2026-11-03 18:45 UTC; 019 and 020 applied on production; push to `main` blocked by a missing GitHub credential for `thevinstitution-virat` (nothing pushed, deployed code does not use the new tables). Roadmap updated (§2 quota rule, §3.3 gaps verified, tasks 1.2, 3.2, 3.4, 5.1, 5.4, §8). Phase 2 support prepared (`phase2-support.md`): teacher pack (4-page A4, English and Hindi), R_min labelling sheet (60 questions, git-ignored in `hw-evals/rmin-labelling/`; the only book in the shared library is NCERT Science IX English, so SST, Class 10 and Hindi need books first). Part D skipped (OpenRouter -$0.045, no Gemini key, OpenAI key is a placeholder). Phase 3 not started.

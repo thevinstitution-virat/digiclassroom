@@ -25,7 +25,8 @@
     "hw:eval:rules": "npx tsx --tsconfig tsconfig.json ../../scripts/hw-eval-rules.ts",
     "hw:eval:nearmiss": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-eval-nearmiss.ts",
     "hw:eval:grouping": "npx tsx --tsconfig tsconfig.json ../../scripts/hw-eval-grouping.ts",
-    "hw:eval:sheet": "npx tsx --tsconfig tsconfig.json ../../scripts/hw-eval-sheet.ts"
+    "hw:eval:sheet": "npx tsx --tsconfig tsconfig.json ../../scripts/hw-eval-sheet.ts",
+    "hw:key:labelsheet": "npx tsx --tsconfig tsconfig.json ../../scripts/hw-key-labelsheet.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

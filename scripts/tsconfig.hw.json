@@ -1,5 +1,5 @@
 {
   "extends": "../apps/api/tsconfig.json",
   "compilerOptions": { "noEmit": true },
-  "include": ["hw-eval.ts", "hw-smoke.ts", "hw-key-calibrate.ts", "hw-eval-run.ts", "hw-eval-mutate.ts", "hw-eval-reference.ts", "hw-eval-report.ts", "hw-eval-regression.ts", "hw-eval-live-report.ts", "hw-eval-synthetic.ts", "hw-eval-heldout.ts", "hw-eval-inject.ts", "hw-eval-screen.ts", "hw-eval-nearmiss.ts", "hw-eval-sheet.ts", "hw-eval-rules.ts", "hw-eval-grouping.ts", "hw-cost-probe.ts", "hw-cost-project.ts", "hw-cost-1b-report.ts", "hw-cost-1c-misses.ts", "../apps/api/next-env.d.ts"]
+  "include": ["hw-eval.ts", "hw-smoke.ts", "hw-key-calibrate.ts", "hw-key-labelsheet.ts", "hw-eval-run.ts", "hw-eval-mutate.ts", "hw-eval-reference.ts", "hw-eval-report.ts", "hw-eval-regression.ts", "hw-eval-live-report.ts", "hw-eval-synthetic.ts", "hw-eval-heldout.ts", "hw-eval-inject.ts", "hw-eval-screen.ts", "hw-eval-nearmiss.ts", "hw-eval-sheet.ts", "hw-eval-rules.ts", "hw-eval-grouping.ts", "hw-cost-probe.ts", "hw-cost-project.ts", "hw-cost-1b-report.ts", "hw-cost-1c-misses.ts", "../apps/api/next-env.d.ts"]
 }

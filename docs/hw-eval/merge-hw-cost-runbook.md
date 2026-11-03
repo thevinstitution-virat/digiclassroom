@@ -79,3 +79,18 @@ Suggestions in `hw_ai_grade` are untouched; they lose only the record of how the
 
 ## After the merge, still not switched on
 Each flag, `HW_PARTIAL_CREDIT_RULE`, any quota row and `HW_FEATURE_DEFAULT_ENABLED` stay as they are until the owner decides (roadmap Phases 5 and 6).
+
+## Executed on 4 Nov 2026 (owner approved D1 with three conditions)
+
+| Step | Result |
+|---|---|
+| Fresh backup (VPS, `/root/backups/digiclassroom/`, root-only) | `schema-before-019-020-20261103T184515Z.sql` (216,082 bytes, sha256 `3a5789bd…1b1559`) and `full-before-019-020-20261103T184515Z.dump` (344,398 bytes, sha256 `5820c47c…425d3f`, custom format, 106 tables of data, readable by `pg_restore -l`) |
+| Restore point | 2026-11-03 18:45 UTC (00:15 IST on 4 Nov), transaction snapshot 44302. Every `hw_` table was empty (0 rows in assignments, submissions, answers, suggestions, grades, jobs and quota) |
+| Production schema rehearsal | Schema-only dump of the production `digiclassroom` (6,403 lines) restored into a scratch Postgres 16 with the same 12 roles, database owner `digiclassroom_app`. 019 and 020 applied **as `digiclassroom_app`**, rolled back, re-applied: schema after rollback identical to production (only the pg_dump version header differs) |
+| Diff, production against the dev schema used in the earlier rehearsal | After normalising the owner (`postgres` in dev, `digiclassroom_app` in production): production has two tables dev lacks, `user_learning_goal` (016) and `tutor_token_usage` (018), plus an owner difference on `protect_super_admin()`. No `hw_` object, no table 019/020 reference (`hw_ai_grade`, `hw_answer`, both with a unique `(id, organization_id)`), no trigger function (`hw_forbid_update`, owned by `digiclassroom_app`) and no role differs. No STOP |
+| Owner and grants (production) | Existing 24 `hw_` tables and all 106 tables: owner `digiclassroom_app`. The app connects as `digiclassroom_app` (its `DATABASE_URL` user; the password was not displayed). It owns the database (so it may create in `public`) |
+| Applied on production | 019 then 020, each as `digiclassroom_app` with `ON_ERROR_STOP`, exit 0. Owner of `hw_ai_grade_source`, `hw_shared_key`, `hw_instruction_flag`: `digiclassroom_app`. `has_table_privilege` for the app role: SELECT, INSERT, UPDATE, DELETE all true on each. Sequences owned by the new tables: 0 (so no `has_sequence_privilege` to grant). Indexes 4, 2 and 2; the append-only trigger is on `hw_ai_grade_source`. Production now has 109 tables |
+| **Push to `main`** | **Not done.** `git push` asked for a password: the remote is `thevinstitution-virat@github.com` and no credential for that account is available to this session (`gh` holds only `pdlms2` and `pdlmspro`). A check of those accounts' access was refused by the safety classifier as credential exploration and was not retried. `origin/main` still has no commit the branch lacks (re-checked). The deployed code does not use the new tables, so nothing is affected until the push |
+| Post-deploy checks, tag | Not run (no deploy yet). Baseline before the deploy: backend, frontend and database containers all `RestartCount` 0 since 2026-11-03 13:24 UTC; `hw_tenant_quota` has 0 rows |
+
+To finish: run `git push origin perf/hw-cost:main` as `thevinstitution-virat` (or give this session a credential helper for it), then the checks in "Checks after the deploy" above, then tag `hw-cost-merged-2026-11-04` (the IST date).
