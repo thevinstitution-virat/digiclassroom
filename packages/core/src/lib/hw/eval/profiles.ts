@@ -213,6 +213,15 @@ export const PILOT_V1 = {
     R2: 'one resolution up; run only if R0 reads real handwriting poorly',
     'M0-single': 'M0 model and prompt, one answer per call: cannot be reached by a neighbour by construction, but costs 61% more per answer and detected no better (91.4% against 94.3%).',
   },
+  /**
+   * Phase 1d, task 4: do an answer's marks depend on which answers share its call? Three random groupings x two runs on the smoke set,
+   * against one-answer-per-call M1-strict as the noise reference; the rule (more moved answers than the reference, one-sided Fisher p <= 0.10)
+   * was fixed before the runs (eval/grouping.ts). Recorded against a grouped profile only when the rule says so.
+   */
+  grouping: {
+    'M0-guarded': 'measured: 2 of 39 answers moved across groupings (one by +0.5, one by -1) against 0 of 39 for M1-strict; Fisher p = 0.25. Not shown at this sample size; the test has little power.',
+    'M0-strict': 'NOT RUN: the OpenRouter account ran out of credit (docs/hw-eval/cost-phase1d.md). Treat as unknown, not as clear.',
+  },
   pending: { E1: 'the E0 request at batch price: decided on measured batch turnaround on Gemini direct, which needs a key (phase 1b task 4.4)' },
   dropped: ['E-gemini', 'M2', 'K1', 'M0', 'M1', 'M1-medium', 'M1-high'],
 } as const;

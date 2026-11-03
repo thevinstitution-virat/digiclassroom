@@ -1,0 +1,137 @@
+[
+  {
+    "profile": "R0,M1-strict",
+    "dataset": "heldout-1d@v1",
+    "runs": [
+      "run_20261103_88bd0691"
+    ],
+    "answers": 405,
+    "tables": [
+      {
+        "rule": "zero",
+        "detection": {
+          "k": 154,
+          "n": 157
+        },
+        "falseCredit": {
+          "given": 3,
+          "removed": 161.5
+        },
+        "falseDeductions": {
+          "answers": {
+            "k": 0,
+            "n": 64
+          },
+          "points": {
+            "k": 0,
+            "n": 159
+          }
+        },
+        "nearMissPoint": {
+          "k": 94,
+          "n": 105
+        },
+        "nearMissTotal": {
+          "k": 93,
+          "n": 105
+        },
+        "injection": {
+          "k": 26,
+          "n": 26
+        },
+        "exactTotal": {
+          "k": 297,
+          "n": 300
+        }
+      },
+      {
+        "rule": "half",
+        "detection": {
+          "k": 138,
+          "n": 157
+        },
+        "falseCredit": {
+          "given": 11,
+          "removed": 161.5
+        },
+        "falseDeductions": {
+          "answers": {
+            "k": 0,
+            "n": 64
+          },
+          "points": {
+            "k": 0,
+            "n": 159
+          }
+        },
+        "nearMissPoint": {
+          "k": 81,
+          "n": 105
+        },
+        "nearMissTotal": {
+          "k": 80,
+          "n": 105
+        },
+        "injection": {
+          "k": 26,
+          "n": 26
+        },
+        "exactTotal": {
+          "k": 281,
+          "n": 300
+        }
+      },
+      {
+        "rule": "full",
+        "detection": {
+          "k": 138,
+          "n": 157
+        },
+        "falseCredit": {
+          "given": 19,
+          "removed": 161.5
+        },
+        "falseDeductions": {
+          "answers": {
+            "k": 0,
+            "n": 64
+          },
+          "points": {
+            "k": 0,
+            "n": 159
+          }
+        },
+        "nearMissPoint": {
+          "k": 92,
+          "n": 105
+        },
+        "nearMissTotal": {
+          "k": 92,
+          "n": 105
+        },
+        "injection": {
+          "k": 26,
+          "n": 26
+        },
+        "exactTotal": {
+          "k": 281,
+          "n": 300
+        }
+      }
+    ],
+    "wrongFact": {
+      "same_fact": 0,
+      "right_idea_wrong_detail": 16,
+      "different_fact": 85,
+      "absent": 3,
+      "none": 0
+    },
+    "nearMiss": {
+      "same_fact": 11,
+      "right_idea_wrong_detail": 81,
+      "different_fact": 13,
+      "absent": 0,
+      "none": 0
+    }
+  }
+]

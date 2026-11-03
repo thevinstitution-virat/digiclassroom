@@ -1,0 +1,1753 @@
+{
+  "M0-guarded": {
+    "n": 39,
+    "moved": 2,
+    "sizes": {
+      "1 to 1.5": 1,
+      "0.5 to 1": 1
+    },
+    "highNearer": 1,
+    "lowNearer": 1,
+    "splitOnExpected": 2,
+    "incomplete": 0,
+    "answers": [
+      {
+        "itemId": "evitem_7tveqr7yjjnhwp26fmlu",
+        "marks": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 3,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_eydyvxkm6n5i6fvzia62",
+        "marks": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 3,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_74f2nffkt4im37iautt7",
+        "marks": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 3,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_3zwrntevupbeigo2y4n7",
+        "marks": [
+          [
+            2.5,
+            2.5
+          ],
+          [
+            2.5,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0.5,
+        "across": 0.5,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": false
+      },
+      {
+        "itemId": "evitem_vewmfqoeu2oelc6pc3lf",
+        "marks": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 3,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_avar4y5m6xid6ww3eztm",
+        "marks": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 3,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_kz3dos6pl7e7dvyzc5ld",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_65cjbbgxrzl45wgi7u6d",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_h26odbswpysl6lruhhjp",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_ndbpdzemp5vrzsinjtnu",
+        "marks": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 3,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_vdlktns2u6bichp4gfyb",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_dmb5qxczoib4k6smdxp5",
+        "marks": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 3,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_7ptft525c2xst4dtutxc",
+        "marks": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 3,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_d5qqsnaurprb54mdxim3",
+        "marks": [
+          [
+            2,
+            2.5
+          ],
+          [
+            2.5,
+            2.5
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0.5,
+        "across": 0.5,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": false
+      },
+      {
+        "itemId": "evitem_te6xemy53nmi4wchdr54",
+        "marks": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 1,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_acxjychq65bqvflvzflr",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_jiaxjllsxpmkmlk6yl4x",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_bg7olokofbwnb4feuspw",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_bhhxukvjcitk33moujtm",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_kuv3c5eeqrhhaugxp25g",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_crf32jng3urbi5fxv2v4",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_d4ulfwdngk36awssadzb",
+        "marks": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 1,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_ddsmm6sbzhnff6if5uza",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_22sd4hbmfldozuu3s2qi",
+        "marks": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 1,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_enpa3hfjho5s65osyp3i",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_b4sfc5rs4abea3dnyopo",
+        "marks": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 1,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_v4pbqf5tgt7d3ryiuqup",
+        "marks": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 1,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_yiwswhzjnvmahes7i4ik",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_bbrc3m4f7uhpj2jppxrs",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_klzfacwcutqdbcz7jxje",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_mc65et2kfmlsursohzm3",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_fiwxyqrfnn423uq7s4pj",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "within": 0,
+        "across": 1,
+        "moved": true,
+        "expected": 2,
+        "highIsCloser": true
+      },
+      {
+        "itemId": "evitem_wbxyiuonj5xejlqqcqcg",
+        "marks": [
+          [
+            1,
+            1
+          ],
+          [
+            1.5,
+            1.5
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "within": 0,
+        "across": 0.5,
+        "moved": true,
+        "expected": 1,
+        "highIsCloser": false
+      },
+      {
+        "itemId": "evitem_kgxcfjfkhthdbtea536z",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_zckkib4awzskjo74chse",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_qty23toqemtfrwghcemv",
+        "marks": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 1,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_ektoe6tzu7tlke2ns4wj",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_cmy2y34uey5kiykddxqe",
+        "marks": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 1,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_d2tvdsabujw5g7uhbwfg",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      }
+    ]
+  },
+  "M0-strict": {
+    "n": 0,
+    "moved": 0,
+    "sizes": {},
+    "highNearer": 0,
+    "lowNearer": 0,
+    "splitOnExpected": 0,
+    "incomplete": 39,
+    "answers": []
+  },
+  "M1-strict": {
+    "n": 39,
+    "moved": 0,
+    "sizes": {},
+    "highNearer": 0,
+    "lowNearer": 0,
+    "splitOnExpected": 0,
+    "incomplete": 0,
+    "answers": [
+      {
+        "itemId": "evitem_vewmfqoeu2oelc6pc3lf",
+        "marks": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 3,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_kz3dos6pl7e7dvyzc5ld",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_65cjbbgxrzl45wgi7u6d",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_h26odbswpysl6lruhhjp",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_avar4y5m6xid6ww3eztm",
+        "marks": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 3,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_vdlktns2u6bichp4gfyb",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_ndbpdzemp5vrzsinjtnu",
+        "marks": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 3,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_dmb5qxczoib4k6smdxp5",
+        "marks": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 3,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_d5qqsnaurprb54mdxim3",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_7tveqr7yjjnhwp26fmlu",
+        "marks": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 3,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_eydyvxkm6n5i6fvzia62",
+        "marks": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 3,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_74f2nffkt4im37iautt7",
+        "marks": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 3,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_7ptft525c2xst4dtutxc",
+        "marks": [
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            3
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 3,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_jiaxjllsxpmkmlk6yl4x",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_bg7olokofbwnb4feuspw",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_bhhxukvjcitk33moujtm",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_kuv3c5eeqrhhaugxp25g",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_3zwrntevupbeigo2y4n7",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_crf32jng3urbi5fxv2v4",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_d4ulfwdngk36awssadzb",
+        "marks": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 1,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_ddsmm6sbzhnff6if5uza",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_enpa3hfjho5s65osyp3i",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_22sd4hbmfldozuu3s2qi",
+        "marks": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 1,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_b4sfc5rs4abea3dnyopo",
+        "marks": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 1,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_te6xemy53nmi4wchdr54",
+        "marks": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 1,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_acxjychq65bqvflvzflr",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_klzfacwcutqdbcz7jxje",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_fiwxyqrfnn423uq7s4pj",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_mc65et2kfmlsursohzm3",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_kgxcfjfkhthdbtea536z",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_wbxyiuonj5xejlqqcqcg",
+        "marks": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 1,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_zckkib4awzskjo74chse",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_qty23toqemtfrwghcemv",
+        "marks": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 1,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_ektoe6tzu7tlke2ns4wj",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_cmy2y34uey5kiykddxqe",
+        "marks": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 1,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_d2tvdsabujw5g7uhbwfg",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_v4pbqf5tgt7d3ryiuqup",
+        "marks": [
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            1
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 1,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_yiwswhzjnvmahes7i4ik",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      },
+      {
+        "itemId": "evitem_bbrc3m4f7uhpj2jppxrs",
+        "marks": [
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            2
+          ]
+        ],
+        "within": 0,
+        "across": 0,
+        "moved": false,
+        "expected": 2,
+        "highIsCloser": null
+      }
+    ]
+  }
+}

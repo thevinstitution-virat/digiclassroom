@@ -1,0 +1,272 @@
+[
+  {
+    "profile": "R0,M0-strict",
+    "dataset": "smallrun-b@v1",
+    "runs": [
+      "run_20261103_e9b61f93"
+    ],
+    "answers": 195,
+    "tables": [
+      {
+        "rule": "zero",
+        "detection": {
+          "k": 70,
+          "n": 70
+        },
+        "falseCredit": {
+          "given": 0,
+          "removed": 70
+        },
+        "falseDeductions": {
+          "answers": {
+            "k": 0,
+            "n": 35
+          },
+          "points": {
+            "k": 0,
+            "n": 80
+          }
+        },
+        "nearMissPoint": {
+          "k": 0,
+          "n": 0
+        },
+        "nearMissTotal": {
+          "k": 0,
+          "n": 0
+        },
+        "injection": {
+          "k": 15,
+          "n": 15
+        },
+        "exactTotal": {
+          "k": 195,
+          "n": 195
+        }
+      },
+      {
+        "rule": "half",
+        "detection": {
+          "k": 54,
+          "n": 70
+        },
+        "falseCredit": {
+          "given": 8,
+          "removed": 70
+        },
+        "falseDeductions": {
+          "answers": {
+            "k": 0,
+            "n": 35
+          },
+          "points": {
+            "k": 0,
+            "n": 80
+          }
+        },
+        "nearMissPoint": {
+          "k": 0,
+          "n": 0
+        },
+        "nearMissTotal": {
+          "k": 0,
+          "n": 0
+        },
+        "injection": {
+          "k": 15,
+          "n": 15
+        },
+        "exactTotal": {
+          "k": 179,
+          "n": 195
+        }
+      },
+      {
+        "rule": "full",
+        "detection": {
+          "k": 54,
+          "n": 70
+        },
+        "falseCredit": {
+          "given": 16,
+          "removed": 70
+        },
+        "falseDeductions": {
+          "answers": {
+            "k": 0,
+            "n": 35
+          },
+          "points": {
+            "k": 0,
+            "n": 80
+          }
+        },
+        "nearMissPoint": {
+          "k": 0,
+          "n": 0
+        },
+        "nearMissTotal": {
+          "k": 0,
+          "n": 0
+        },
+        "injection": {
+          "k": 15,
+          "n": 15
+        },
+        "exactTotal": {
+          "k": 179,
+          "n": 195
+        }
+      }
+    ],
+    "wrongFact": {
+      "same_fact": 0,
+      "right_idea_wrong_detail": 16,
+      "different_fact": 19,
+      "absent": 0,
+      "none": 0
+    },
+    "nearMiss": {
+      "same_fact": 0,
+      "right_idea_wrong_detail": 0,
+      "different_fact": 0,
+      "absent": 0,
+      "none": 0
+    }
+  },
+  {
+    "profile": "R0,M1-strict",
+    "dataset": "smallrun-b@v1",
+    "runs": [
+      "run_20261103_c22e0202"
+    ],
+    "answers": 195,
+    "tables": [
+      {
+        "rule": "zero",
+        "detection": {
+          "k": 70,
+          "n": 70
+        },
+        "falseCredit": {
+          "given": 0,
+          "removed": 70
+        },
+        "falseDeductions": {
+          "answers": {
+            "k": 0,
+            "n": 35
+          },
+          "points": {
+            "k": 0,
+            "n": 80
+          }
+        },
+        "nearMissPoint": {
+          "k": 0,
+          "n": 0
+        },
+        "nearMissTotal": {
+          "k": 0,
+          "n": 0
+        },
+        "injection": {
+          "k": 15,
+          "n": 15
+        },
+        "exactTotal": {
+          "k": 195,
+          "n": 195
+        }
+      },
+      {
+        "rule": "half",
+        "detection": {
+          "k": 65,
+          "n": 70
+        },
+        "falseCredit": {
+          "given": 2.5,
+          "removed": 70
+        },
+        "falseDeductions": {
+          "answers": {
+            "k": 0,
+            "n": 35
+          },
+          "points": {
+            "k": 0,
+            "n": 80
+          }
+        },
+        "nearMissPoint": {
+          "k": 0,
+          "n": 0
+        },
+        "nearMissTotal": {
+          "k": 0,
+          "n": 0
+        },
+        "injection": {
+          "k": 15,
+          "n": 15
+        },
+        "exactTotal": {
+          "k": 190,
+          "n": 195
+        }
+      },
+      {
+        "rule": "full",
+        "detection": {
+          "k": 65,
+          "n": 70
+        },
+        "falseCredit": {
+          "given": 5,
+          "removed": 70
+        },
+        "falseDeductions": {
+          "answers": {
+            "k": 0,
+            "n": 35
+          },
+          "points": {
+            "k": 0,
+            "n": 80
+          }
+        },
+        "nearMissPoint": {
+          "k": 0,
+          "n": 0
+        },
+        "nearMissTotal": {
+          "k": 0,
+          "n": 0
+        },
+        "injection": {
+          "k": 15,
+          "n": 15
+        },
+        "exactTotal": {
+          "k": 190,
+          "n": 195
+        }
+      }
+    ],
+    "wrongFact": {
+      "same_fact": 0,
+      "right_idea_wrong_detail": 5,
+      "different_fact": 30,
+      "absent": 0,
+      "none": 0
+    },
+    "nearMiss": {
+      "same_fact": 0,
+      "right_idea_wrong_detail": 0,
+      "different_fact": 0,
+      "absent": 0,
+      "none": 0
+    }
+  }
+]

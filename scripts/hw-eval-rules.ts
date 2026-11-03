@@ -34,7 +34,7 @@ async function main() {
   const runs = readdirSync(runsRoot).filter((d) => existsSync(join(runsRoot, d, 'run.json'))).filter((d) => !only || only.includes(d)).map((d) => {
     const rec = JSON.parse(readFileSync(join(runsRoot, d, 'run.json'), 'utf8')) as Rec;
     return { d, rec, rows: latestRows(readRows(join(runsRoot, d, 'items.jsonl'))) };
-  }).filter((r) => r.rec.mode === 'mark' && (!wantDataset || r.rec.dataset.ref === wantDataset) && (r.rec.meta.label ?? '').includes(label) && r.rec.status === 'completed');
+  }).filter((r) => r.rec.mode === 'mark' && (!wantDataset || r.rec.dataset.ref === wantDataset) && (r.rec.meta.label ?? '').includes(label) && ['completed', 'budget_reached'].includes(r.rec.status));
   if (!runs.length) throw new Error('no completed mark-mode run matches');
 
   const groups = new Map<string, typeof runs>();

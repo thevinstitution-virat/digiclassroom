@@ -194,5 +194,8 @@ describe('profiles of phase 1c', () => {
     expect(loadPilotSet().marking[0].id).toBe('M0-guarded')
     expect(Object.keys(PILOT_V1.reserve)).toContain('M0-single')
     expect(PILOT_V1.marking as readonly string[]).not.toContain('M0-single')
+    // the grouping-effect record names only grouped marking profiles of the pilot
+    for (const id of Object.keys(PILOT_V1.grouping)) expect(PILOT_V1.marking as readonly string[]).toContain(id)
+    expect(PILOT_V1.dropped as readonly string[]).toContain('M1')
   })
 })
