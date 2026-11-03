@@ -104,6 +104,8 @@ const EnvSchema = z.object({
   HW_CODE_MARKING_ENABLED: bool(false),
   /** Answers with the same normalised transcript for the same question and key version are marked once. */
   HW_DEDUPE_MARKING_ENABLED: bool(false),
+  /** Instruction guard: an answer addressed to the marker is marked alone, flagged to the teacher and left out of bulk accept; a point whose evidence is not in the answer lowers the answer's confidence. */
+  HW_INSTRUCTION_GUARD_ENABLED: bool(false),
   /** OpenAI GPT-5.6+ models: caching in explicit mode, so nothing is written to a cache that is never read. */
   HW_OPENAI_EXPLICIT_CACHE_ENABLED: bool(false),
   OPENAI_API_KEY: str(),

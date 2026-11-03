@@ -7,6 +7,8 @@ import { getHwConfig } from '../config';
 import { estimateCost, parsePriceTable } from '../cost/pricing';
 import { generate, withStep, type CallOptions } from '../ai';
 import { AiGrader } from '../grader/ai-grader';
+import { StrictGrader } from '../grader/strict';
+import { groupForMarking } from '../grader/instruction-screen';
 import { gradeWithoutAi } from '../grader/exact-match';
 import type { GradeResult } from '../grader/types';
 import { GeminiReader, readCall } from '../reader/gemini-reader';
@@ -52,7 +54,7 @@ export interface LiveSettings {
     /** Price this tier at the batch rate from the measured tokens. */
     batchPricing?: { tier1?: boolean; tier2?: boolean };
   };
-  grader: { model: string; options?: CallOptions; valuePointsOnly?: boolean; batchPricing?: boolean };
+  grader: { model: string; options?: CallOptions; valuePointsOnly?: boolean; batchPricing?: boolean; strict?: boolean; guards?: boolean };
   keys?: KeySettings;
   keyBatchPricing?: boolean;
   /** Measure how many of a read call's input tokens are the image: one text-only twin call per model and shape (its cost is recorded as a measurement). */
@@ -163,9 +165,12 @@ export function liveDeps(ds: Dataset, s: LiveSettings): RunnerDeps {
       }
       const calls: CallCost[] = [];
       if (toAi.length) {
-        const g = new AiGrader(s.grader.model, s.grader.options);
-        results.push(...(await withStep('grade', () => withRetry(() => g.grade({ question: q, answers: toAi }), stats))));
-        if (g.lastCall) calls.push(call('grade', g.lastCall, { answers: toAi.length, batchPricing: s.grader.batchPricing }));
+        // With the guards, an answer addressed to the marker is marked alone: the rest of the chunk goes in one call.
+        for (const group of groupForMarking(toAi, Math.max(1, toAi.length), Boolean(s.grader.guards))) {
+          const g = s.grader.strict ? new StrictGrader(s.grader.model, s.grader.options) : new AiGrader(s.grader.model, s.grader.options);
+          results.push(...(await withStep('grade', () => withRetry(() => g.grade({ question: q, answers: group }), stats))));
+          if (g.lastCall) calls.push(call('grade', g.lastCall, { answers: group.length, batchPricing: s.grader.batchPricing }));
+        }
       }
       return { results, calls };
     },

@@ -14,6 +14,7 @@ import { defaultGradeOptions, gradeCall, gradeResultsFrom } from '../grader/ai-g
 import type { GradeInput, GradeQuestion } from '../grader/types';
 import { answersNeedingSuggestion, findPriorSuggestions, gradeByRules, insertAiGrades, loadGradeQuestion, reusedSuggestion } from '../pipeline';
 import { keyVersionHash, planDuplicates, transcriptHash } from '../grader/dedupe';
+import { groupForMarking } from '../grader/instruction-screen';
 import type { GradeResult } from '../grader/types';
 import { claim, claimBatchPending, complete, enqueueGrade, fail, markBatchPending, payloadOf, type GradePayload, type JobRow } from './queue';
 import { shadowAfterGrade } from '../shadow/shadow';
@@ -95,7 +96,11 @@ async function plan(job: JobRow): Promise<Plan | null> {
     });
     return null;
   }
-  return { q, chunks: chunk(pending.map((p) => p.answerId), getHwConfig().HW_GRADE_BATCH_SIZE), followers, keyHash };
+  // With the instruction guard, an answer addressed to the marker is marked alone, so nothing it says can reach a neighbour.
+  const chunks = getHwConfig().HW_INSTRUCTION_GUARD_ENABLED
+    ? groupForMarking(pending, getHwConfig().HW_GRADE_BATCH_SIZE, true).map((g) => g.map((p) => p.answerId))
+    : chunk(pending.map((p) => p.answerId), getHwConfig().HW_GRADE_BATCH_SIZE);
+  return { q, chunks, followers, keyHash };
 }
 
 /**

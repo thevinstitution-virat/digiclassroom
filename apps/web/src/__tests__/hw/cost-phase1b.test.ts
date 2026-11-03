@@ -230,7 +230,7 @@ describe('pilot@v1', () => {
     expect(set.id).toBe('pilot@v1')
     expect(set.reading.map((p) => p.id)).toEqual(['R0', 'R1', 'R-luna'])
     expect(set.escalation.map((p) => p.id)).toEqual(['E0', 'E-sarvam'])
-    expect(set.marking.map((p) => p.id)).toEqual(['M0-single', 'M1'])
+    expect(set.marking.map((p) => p.id)).toEqual(['M0-guarded', 'M1', 'M0-strict', 'M1-strict'])
     expect(set.keys.map((p) => p.id)).toEqual(['K0'])
   })
 
@@ -241,9 +241,9 @@ describe('pilot@v1', () => {
     expect(() => loadPilotSet('openai/gpt-5.4-mini')).toThrow(/mutation generator/)
   })
 
-  it('the pilot control marks one answer per call, and the English-only and Hindi-only profiles say so', () => {
+  it('the pilot control is M0 with the guards (ten to a call), and the English-only and Hindi-only profiles say so', () => {
     const set = loadPilotSet()
-    expect(set.marking[0]).toMatchObject({ id: 'M0-single', answersPerCall: 1 })
+    expect(set.marking[0]).toMatchObject({ id: 'M0-guarded', answersPerCall: 10, guards: true })
     expect(set.reading.find((p) => p.id === 'R-luna')).toMatchObject({ onlyLanguage: 'en' })
     expect(set.escalation.find((p) => p.id === 'E-sarvam')).toMatchObject({ onlyLanguage: 'hi' })
   })

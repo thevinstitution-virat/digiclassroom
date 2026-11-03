@@ -12,6 +12,7 @@ import { HwError } from '../errors';
 import { db, num, type Exec } from '../db';
 import { countUnclear } from '../text/normalise';
 import { aiWorkStatus } from '../jobs/homework-batch';
+import { screenInstructions } from '../grader/instruction-screen';
 import { gradeRulesThenQueue, setTranscript, suggestionSources, type SuggestionSource } from '../pipeline';
 import { signedReadUrl } from '../storage/r2';
 
@@ -152,7 +153,7 @@ async function highConfidenceCandidates(actor: HwActor, questionId: string, minC
   if (!q) throw new HwError('NOT_FOUND', 'Question not found.');
   await assignmentForManage(actor, q.assignmentId);
   const rows = await db.execute<{ answer_id: string; ai_grade_id: string }>(sql`
-    SELECT DISTINCT ON (a.id) a.id AS answer_id, ag.id AS ai_grade_id, ag.confidence, ag.rubric_version, ag.created_at
+    SELECT DISTINCT ON (a.id) a.id AS answer_id, a.transcript, ag.id AS ai_grade_id, ag.confidence, ag.rubric_version, ag.created_at
       FROM hw_answer a
       JOIN hw_submission s ON s.id = a.submission_id AND s.status IN ('ready_for_review', 'graded')
       JOIN hw_ai_grade ag ON ag.answer_id = a.id
@@ -163,8 +164,11 @@ async function highConfidenceCandidates(actor: HwActor, questionId: string, minC
      ORDER BY a.id, ag.created_at DESC`);
   // Re-check each candidate with the same rule the single accept uses.
   const out: { answerId: string; aiGradeId: string }[] = [];
-  for (const r of rows.rows as unknown as { answer_id: string; ai_grade_id: string; confidence: string; rubric_version: number; created_at: Date }[]) {
+  const guard = getHwConfig().HW_INSTRUCTION_GUARD_ENABLED;
+  for (const r of rows.rows as unknown as { answer_id: string; transcript: string | null; ai_grade_id: string; confidence: string; rubric_version: number; created_at: Date }[]) {
     if (num(r.confidence) < minConfidence || r.rubric_version !== q.rubricVersion) continue;
+    // An answer that addresses the marker is never accepted in bulk: the teacher reads it.
+    if (guard && screenInstructions(r.transcript ?? '').flagged) continue;
     const [rev] = await db.select({ at: hwTranscriptRevision.createdAt }).from(hwTranscriptRevision)
       .where(eq(hwTranscriptRevision.answerId, r.answer_id)).orderBy(desc(hwTranscriptRevision.createdAt)).limit(1);
     if (rev && new Date(r.created_at) < rev.at) continue;
@@ -301,6 +305,8 @@ export async function questionQueue(actor: HwActor, questionId: string, filter: 
       transcript: r.a.transcript,
       transcriptStatus: r.a.transcriptStatus,
       transcriptConfidence: r.a.transcriptConfidence === null ? null : num(r.a.transcriptConfidence),
+      // Only while the instruction guard is on: the answer contains text addressed to the marker.
+      ...(getHwConfig().HW_INSTRUCTION_GUARD_ENABLED ? (() => { const s = screenInstructions(r.a.transcript ?? ''); return s.flagged ? { instructionFlag: s.hits.map((h) => h.note) } : {}; })() : {}),
       unclearCount: r.a.unclearCount,
       studentFlags: r.a.studentFlags,
       failureReason: r.a.failureReason,

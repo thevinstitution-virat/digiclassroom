@@ -52,6 +52,10 @@ export interface MarkingProfile extends Base {
   answersPerCall: number;
   /** Mark from the key's value points only (no reference-answer paragraph). */
   valuePointsOnly: boolean;
+  /** Phase 1c guards: an answer addressed to the marker is marked alone and flagged; evidence must be in the answer's own text. */
+  guards?: boolean;
+  /** Strict marking (grade-strict.v1): the model returns verdict and quote per key point; code computes the marks. */
+  strict?: boolean;
 }
 export interface KeyProfile extends Base {
   stage: 'keys';
@@ -107,6 +111,15 @@ export const PROFILES: readonly Profile[] = [
   { id: 'M1', stage: 'marking', label: 'gpt-6-luna, low effort, one answer per call', batch: false,
     call: { provider: 'openrouter', model: LUNA, reasoningEffort: 'low' }, answersPerCall: 1, valuePointsOnly: true,
     notes: 'One answer per call so an injection line in one answer cannot reach another student\'s mark.' },
+  { id: 'M0-guarded', stage: 'marking', label: 'M0 with the instruction guards', batch: false,
+    call: { provider: 'openrouter', model: FLASH_LITE, thinkingLevel: 'MINIMAL' }, answersPerCall: 10, valuePointsOnly: false, guards: true,
+    notes: 'M0 (ten answers to a call) with the two guards of phase 1c: an answer addressed to the marker is marked alone, flagged and kept out of bulk accept; every credited point needs evidence from that answer\'s own text.' },
+  { id: 'M0-strict', stage: 'marking', label: 'M0 model, strict verdicts, with the guards', batch: false,
+    call: { provider: 'openrouter', model: FLASH_LITE, thinkingLevel: 'MINIMAL' }, answersPerCall: 10, valuePointsOnly: true, guards: true, strict: true,
+    notes: 'grade-strict.v1: per key point the model gives a verdict (same fact, different fact, absent) and the verbatim words; code computes the marks. Grouped, with the guards. Not in the pilot unless it passes the held-out verdicts.' },
+  { id: 'M1-strict', stage: 'marking', label: 'gpt-6-luna low, strict verdicts, one answer per call', batch: false,
+    call: { provider: 'openrouter', model: LUNA, reasoningEffort: 'low' }, answersPerCall: 1, valuePointsOnly: true, guards: true, strict: true,
+    notes: 'grade-strict.v1 on gpt-6-luna at low effort, one answer per call. Not in the pilot unless it passes the held-out verdicts.' },
   { id: 'M2', stage: 'marking', label: 'M1 with effort none', batch: false,
     call: { provider: 'openrouter', model: LUNA, reasoningEffort: 'none' }, answersPerCall: 1, valuePointsOnly: true,
     notes: 'As M1, reasoning off.' },
@@ -184,19 +197,24 @@ export const PILOT_V1 = {
   reading: ['R0', 'R1', 'R-luna'],
   escalation: ['E0', 'E-sarvam'],
   /**
-   * M0-single is the control: M0 marks ten students' answers in one call, and phase 1b task 3 saw a neighbour's mark
-   * move the way an injected line asked (5 of 162 comparisons), so the control marks one answer per call.
+   * M0-guarded is the control: M0 (ten answers to a call) with the two guards of phase 1c, the instruction screen (an
+   * answer addressed to the marker is marked alone, flagged, and kept out of bulk accept) and the evidence rule (a credited
+   * point needs a quote from that answer's own text). Phase 1b's M0-single swap came from a too-blunt rule; the cross-student
+   * movement looked like noise (see docs/hw-eval/cost-phase1c.md).
    * M1-medium did not pass its smoke run (detection 74.3%, 52/70; the bar was 95%), so it is not carried.
+   * M0-strict and M1-strict passed all four held-out bars (detection >= 95%, false credit <= 5%, no more false deductions than M0,
+   * every injection resisted) on a set that is NOT person-checked, so they enter the pilot to be tested on real writing.
+   * M1 stays because it was decided; M1-strict does the same job better on the held-out set.
    */
-  marking: ['M0-single', 'M1'],
+  marking: ['M0-guarded', 'M1', 'M0-strict', 'M1-strict'],
   keys: ['K0'],
   /** Held back, with the reason. */
   reserve: {
     R2: 'one resolution up; run only if R0 reads real handwriting poorly',
-    M0: 'the original control. Replaced by M0-single under the phase 1b rule, but the evidence was mixed (a second sample found no neighbour moving the way the line asked), and M0-single costs 61% more per answer; the owner can put M0 back.',
+    'M0-single': 'M0 model and prompt, one answer per call: cannot be reached by a neighbour by construction, but costs 61% more per answer and detected no better (91.4% against 94.3%).',
   },
   pending: { E1: 'the E0 request at batch price: decided on measured batch turnaround on Gemini direct, which needs a key (phase 1b task 4.4)' },
-  dropped: ['E-gemini', 'M2', 'K1', 'M1-medium', 'M1-high'],
+  dropped: ['E-gemini', 'M2', 'K1', 'M0', 'M1-medium', 'M1-high'],
 } as const;
 
 export interface PilotSet {

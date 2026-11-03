@@ -18,7 +18,10 @@
     "hw:cost:probe": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-cost-probe.ts",
     "hw:cost:project": "npx tsx --tsconfig tsconfig.json ../../scripts/hw-cost-project.ts",
     "hw:eval:inject": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-eval-inject.ts",
-    "hw:cost:1b": "npx tsx --tsconfig tsconfig.json ../../scripts/hw-cost-1b-report.ts"
+    "hw:cost:1b": "npx tsx --tsconfig tsconfig.json ../../scripts/hw-cost-1b-report.ts",
+    "hw:cost:1c": "npx tsx --tsconfig tsconfig.json ../../scripts/hw-cost-1c-misses.ts",
+    "hw:eval:screen": "npx tsx --tsconfig tsconfig.json ../../scripts/hw-eval-screen.ts",
+    "hw:eval:heldout": "npx tsx --tsconfig tsconfig.json ../../scripts/hw-eval-heldout.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",

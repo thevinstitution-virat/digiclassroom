@@ -22,7 +22,7 @@ async function main() {
   const { readRows, latestRows } = await import('@/lib/hw/eval/runner');
   const { summariseRun } = await import('@/lib/hw/eval/summary');
   const { stepTable } = await import('@/lib/hw/eval/cost-table');
-  const { markingCounts, confidentlyWrong, pct } = await import('@/lib/hw/eval/marking-report');
+  const { markingCounts, confidentlyWrong, falseDeductions, evidenceRemovals, pct } = await import('@/lib/hw/eval/marking-report');
   const { estimateCost, parsePriceTable } = await import('@/lib/hw/cost/pricing');
   const rawTable = JSON.parse(readFileSync(arg('price-table', '../../docs/hw-eval/price-table.json')!, 'utf8')) as Record<string, unknown>;
   delete rawTable._comment;
@@ -50,6 +50,13 @@ async function main() {
       console.log(`- false credit: ${c.falseCredit.given.toFixed(1)} marks given back of ${c.falseCredit.removed.toFixed(1)} removed (${c.falseCredit.removed ? ((100 * c.falseCredit.given) / c.falseCredit.removed).toFixed(1) : 'n/a'}%)`);
       console.log(`- injection resistance: ${pct(c.injection, 1)} (a success is an injected variant marked above its original)`);
       console.log(`- agreement with expected marks: exact total ${pct(c.exactTotal, 1)}; QWK ${sum.marking?.qwkByMax.map((q) => `${q.maxMarks}-mark ${q.qwk.toFixed(3)} (n=${q.n})`).join(', ')}; large errors ${sum.marking ? (sum.marking.largeErrorRate * 100).toFixed(1) : '?'}%`);
+      // The spread between runs of the SAME profile: how many of the 14 mark-removing variants each of the five runs detected.
+      const perRun = [...new Set(rows.map((r) => r.repeat))].sort((a, b) => a - b).map((rep) => markingCounts(rows.filter((r) => r.repeat === rep), ds.items).detection);
+      console.log(`- detection in each run: ${perRun.map((c) => `${c.k}/${c.n}`).join(', ')}`);
+      const fd = falseDeductions(rows, ds.items, ['paraphrase', 'spelling', 'hindi_spelling_variant']);
+      const ev = evidenceRemovals(rows);
+      console.log(`- false deductions on paraphrase and spelling items: ${pct(fd.answers, 1)} of answers lost marks; ${pct(fd.points, 1)} of their points`);
+      console.log(`- points removed by the evidence rule (quote not in the answer's own text): ${ev.k} over ${ev.n} marked answers`);
       console.log(`- repeatability across runs: all identical for ${pct(c.identicalAcrossRuns, 1)} of answers; ICC ${sum.repeatability?.icc.toFixed(3) ?? 'n/a'}`);
       if (g) console.log(`- tokens per call: ${(g.inputTokens.total / g.calls).toFixed(0)} in, ${(g.output / g.calls).toFixed(0)} out of which reasoning ${g.thinking === null ? 'n/r' : (g.thinking / g.calls).toFixed(0)} (visible ${g.thinking === null ? 'n/r' : ((g.output - g.thinking) / g.calls).toFixed(0)}); ${g.calls} calls; ₹${g.inrPerAnswer.toFixed(4)} per answer`);
     }

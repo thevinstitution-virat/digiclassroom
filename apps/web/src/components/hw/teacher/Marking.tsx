@@ -128,6 +128,7 @@ function Panel({ q, row, onDone }: { q: Queue; row: Row; onDone: () => void }) {
           </div>
         ) : <Transcript row={row} quotes={sugItems.filter((x) => x.verdict !== 'missing').map((x) => x.quote)} />}
         {row.failureReason && <p className="mt-2 text-sm text-amber-700 dark:text-amber-400">{t('mk.failure')}: {row.failureReason}</p>}
+        {'instructionFlag' in row && row.instructionFlag && <p className="mt-2 rounded border border-amber-300 p-2 text-sm text-amber-800 dark:border-amber-700 dark:text-amber-300">{t('mk.instructionFlag')}</p>}
       </div>
 
       <div className="space-y-2">

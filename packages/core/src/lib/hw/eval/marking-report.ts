@@ -71,6 +71,35 @@ export function markingCounts(rows: readonly ItemRow[], items: readonly EvalItem
   return out;
 }
 
+/**
+ * Marks lost on answers that should keep them: for mutation types whose expected marks equal the original's (paraphrase,
+ * spelling, Hindi spelling variants), a key point the AI credited below its expected marks is a false deduction.
+ */
+export function falseDeductions(rows: readonly ItemRow[], items: readonly EvalItem[], types: readonly string[]): { points: Count; answers: Count } {
+  const byId = new Map(items.map((i) => [i.id, i]));
+  const out = { points: { k: 0, n: 0 }, answers: { k: 0, n: 0 } };
+  for (const r of rows) {
+    const it = byId.get(r.itemId);
+    if (r.status !== 'ok' || !r.mark || !it?.mutation || !types.includes(it.mutation.type) || !it.key || !it.referenceMarks) continue;
+    let any = false;
+    for (const kp of it.key.points) {
+      const exp = it.referenceMarks.byPoint[kp.id];
+      if (exp === undefined || exp <= 0) continue;
+      out.points.n++;
+      if (pointMarks(r.mark, kp.id) < exp) { out.points.k++; any = true; }
+    }
+    out.answers.n++;
+    if (any) out.answers.k++;
+  }
+  return out;
+}
+
+/** Points the evidence rule removed (the quote was not in that answer's own text), from the validator's notes. */
+export function evidenceRemovals(rows: readonly ItemRow[]): Count {
+  const done = rows.filter((r) => r.status === 'ok' && r.mark);
+  return { k: done.reduce((s, r) => s + r.mark!.notes.filter((n) => /quote not found/.test(n)).length, 0), n: done.length };
+}
+
 /** Reads that were wrong and sure of themselves: confidence at or above `minConfidence` and CER at or above `minCer`. */
 export function confidentlyWrong(rows: readonly ItemRow[], minConfidence = 0.8, minCer = 0.2): Count {
   const read = rows.filter((r) => r.status === 'ok' && r.reading && r.readConfidence !== undefined);

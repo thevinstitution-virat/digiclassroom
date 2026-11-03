@@ -27,7 +27,7 @@ export function gradeCall(model: string, input: GradeInput, options?: CallOption
 }
 
 export function gradeResultsFrom(res: GeminiResult, input: GradeInput): GradeResult[] {
-  return validateGradeOutput(res.json, input, { model: res.model, promptVersion: GRADE_PROMPT_VERSION });
+  return validateGradeOutput(res.json, input, { model: res.model, promptVersion: GRADE_PROMPT_VERSION }, { evidenceLowersConfidence: getHwConfig().HW_INSTRUCTION_GUARD_ENABLED });
 }
 
 /** Per-call options the environment asks for (HW_GRADE_REASONING_EFFORT); none when it is unset, so requests stay as they were. */

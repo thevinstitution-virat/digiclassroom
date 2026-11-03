@@ -74,6 +74,8 @@ async function main() {
   let batchPricing = { tier1: false, tier2: false, grade: false, keys: false };
   let onlyLanguage: 'en' | undefined;
   let valuePointsOnly = false;
+  let strictMarking = false;
+  let guards = false;
   if (profileArg) {
     const ids = profileArg.split(',').map((x) => x.trim()).filter(Boolean);
     const stageOf = (id: string) => PROFILES.find((p) => p.id === id)?.stage;
@@ -95,6 +97,10 @@ async function main() {
     batchPricing = { tier1: rd.batch, tier2: esc?.batch ?? false, grade: profileSet.marking.batch, keys: profileSet.keys?.batch ?? false };
     onlyLanguage = rd.onlyLanguage;
     valuePointsOnly = profileSet.marking.valuePointsOnly;
+    strictMarking = Boolean(profileSet.marking.strict);
+    guards = Boolean(profileSet.marking.guards);
+    // The guards also apply inside the library (evidence failures lower confidence): switch them on before the config is read.
+    if (guards) process.env.HW_INSTRUCTION_GUARD_ENABLED = 'true';
   } else {
     config = Config.parse(JSON.parse(readFileSync(need('config'), 'utf8')));
   }
@@ -137,7 +143,7 @@ async function main() {
   const effective = {
     provider: cfg.HW_AI_PROVIDER, thinkingLevel: cfg.HW_THINKING_LEVEL, mediaResolution: cfg.HW_READ_MEDIA_RESOLUTION,
     reader: config.reader, grader: config.grader, prompts: { read: READ_PROMPT_VERSION, grade: GRADE_PROMPT_VERSION },
-    ...(profileSet ? { profiles: { ids: profileArg, tier1Options, tier2Options, gradeOptions, batchPricing, valuePointsOnly, onlyLanguage: onlyLanguage ?? null, keyWriter: profileSet.keys?.writer ?? null, keyVerifier: profileSet.keys?.verifier ?? null } } : {}),
+    ...(profileSet ? { profiles: { ids: profileArg, tier1Options, tier2Options, gradeOptions, batchPricing, valuePointsOnly, onlyLanguage: onlyLanguage ?? null, strictMarking, guards, keyWriter: profileSet.keys?.writer ?? null, keyVerifier: profileSet.keys?.verifier ?? null } } : {}),
     forceEscalation: flag('force-escalation'), readGroup: Number(arg('read-group', '1')), languageFilter: langFilter ?? null,
     keyConfigHash: keys ? keyConfigHash(keys, `${cfg.QDRANT_COLLECTION_NAME}|${cfg.HW_KEY_EMBED_MODEL}`) : null,
   };
@@ -163,7 +169,7 @@ async function main() {
       model: config.reader.model, escalateModel: config.reader.escalateModel, policy: { escalateBelow: config.reader.escalateBelow, unclearAbove: config.reader.unclearAbove },
       tier1Options, tier2Options, forceEscalation: flag('force-escalation'), batchPricing: { tier1: batchPricing.tier1, tier2: batchPricing.tier2 },
     },
-    grader: { model: config.grader.model, options: gradeOptions, valuePointsOnly, batchPricing: batchPricing.grade },
+    grader: { model: config.grader.model, options: gradeOptions, valuePointsOnly, batchPricing: batchPricing.grade, strict: strictMarking, guards },
     keyBatchPricing: batchPricing.keys,
     splitImageTokens: flag('split-image-tokens'),
     keys,

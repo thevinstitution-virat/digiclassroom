@@ -2,8 +2,10 @@
 //
 // What it enforces, and records in validation_notes whenever it corrects something:
 // - the output covers every answer and every current rubric item, exactly once;
-// - every quote is really in that student's transcript, or the item becomes "missing" with
-//   0 marks (this stops invented evidence);
+// - every quote is really in that student's own transcript (not a neighbour's: each answer is checked against
+//   its own text, however many answers share a call), or the item becomes "missing" with 0 marks (this stops
+//   invented evidence). With evidenceLowersConfidence the item's confidence also drops to low, so the answer
+//   is flagged for the teacher and left out of bulk accept;
 // - "missing" gives 0; item marks stay within 0..item marks, in half-mark steps;
 // - the total is recomputed from the items (the model's arithmetic is never used) and
 //   capped at the question's marks.
@@ -34,6 +36,7 @@ export function validateGradeOutput(
   json: unknown,
   input: GradeInput,
   meta: { model: string; promptVersion: string },
+  opts: { evidenceLowersConfidence?: boolean } = {},
 ): GradeResult[] {
   const parsed = GradeOutput.safeParse(json);
   if (!parsed.success) {
@@ -81,12 +84,13 @@ export function validateGradeOutput(
         return { rubric_item_id: r.id, verdict: 'missing', quote: '', marks: 0, confidence: CONFIDENCE_VALUE.low };
       }
       let { verdict, quote, marks } = it;
-      const confidence = CONFIDENCE_VALUE[it.confidence];
+      let confidence = CONFIDENCE_VALUE[it.confidence];
 
       if (verdict !== 'missing' && !quoteIsInTranscript(quote, transcript)) {
         notes.push(`item ${r.id}: quote not found in the answer; downgraded from ${verdict} to missing`);
         verdict = 'missing';
         quote = '';
+        if (opts.evidenceLowersConfidence) confidence = CONFIDENCE_VALUE.low;
       }
       if (verdict === 'missing') {
         if (marks !== 0) notes.push(`item ${r.id}: missing must score 0 (model gave ${marks})`);
