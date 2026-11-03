@@ -15,6 +15,8 @@ import { aiWorkStatus } from '../jobs/homework-batch';
 import { screenInstructions } from '../grader/instruction-screen';
 import { dismissedFlags, dismissInstructionFlag } from '../instruction-flags';
 import { gradeRulesThenQueue, setTranscript, suggestionSources, type SuggestionSource } from '../pipeline';
+import { aiOffMessage, isRuleModel } from '../eligibility/decision';
+import { eligibilityOfQuestion } from '../eligibility/registry';
 import { signedReadUrl } from '../storage/r2';
 
 type AnswerRow = typeof hwAnswer.$inferSelect;
@@ -44,6 +46,11 @@ async function currentRubric(questionId: string) {
 async function usableAiGrade(answer: AnswerRow, rubricVersion: number, aiGradeId: string): Promise<AiGradeRow> {
   const [g] = await db.select().from(hwAiGrade).where(and(eq(hwAiGrade.id, aiGradeId), eq(hwAiGrade.answerId, answer.id))).limit(1);
   if (!g) throw new HwError('NOT_FOUND', 'Suggestion not found.');
+  // An AI suggestion is usable only while its group is eligible for the marking setup running now (roadmap 5.3). A rule's mark in code is not an AI suggestion.
+  if (!isRuleModel(g.model)) {
+    const elig = await eligibilityOfQuestion(db, answer.questionId);
+    if (!elig.eligible) throw new HwError('CONFLICT', aiOffMessage(elig.reason));
+  }
   const [latest] = await db.select({ id: hwAiGrade.id }).from(hwAiGrade).where(eq(hwAiGrade.answerId, answer.id)).orderBy(desc(hwAiGrade.createdAt)).limit(1);
   const [rev] = await db.select({ at: hwTranscriptRevision.createdAt }).from(hwTranscriptRevision)
     .where(eq(hwTranscriptRevision.answerId, answer.id)).orderBy(desc(hwTranscriptRevision.createdAt)).limit(1);
@@ -164,7 +171,7 @@ async function highConfidenceCandidates(actor: HwActor, questionId: string, minC
   if (!q) throw new HwError('NOT_FOUND', 'Question not found.');
   await assignmentForManage(actor, q.assignmentId);
   const rows = await db.execute<{ answer_id: string; ai_grade_id: string }>(sql`
-    SELECT DISTINCT ON (a.id) a.id AS answer_id, a.transcript, ag.id AS ai_grade_id, ag.confidence, ag.rubric_version, ag.created_at
+    SELECT DISTINCT ON (a.id) a.id AS answer_id, a.transcript, ag.id AS ai_grade_id, ag.confidence, ag.rubric_version, ag.created_at, ag.model
       FROM hw_answer a
       JOIN hw_submission s ON s.id = a.submission_id AND s.status IN ('ready_for_review', 'graded')
       JOIN hw_ai_grade ag ON ag.answer_id = a.id
@@ -173,14 +180,17 @@ async function highConfidenceCandidates(actor: HwActor, questionId: string, minC
        AND jsonb_array_length(a.student_flags) = 0
        AND NOT EXISTS (SELECT 1 FROM hw_grade g WHERE g.answer_id = a.id)
      ORDER BY a.id, ag.created_at DESC`);
+  const elig = await eligibilityOfQuestion(db, q.id);
   // Re-check each candidate with the same rule the single accept uses.
   const out: { answerId: string; aiGradeId: string }[] = [];
   const guard = getHwConfig().HW_INSTRUCTION_GUARD_ENABLED;
-  const candidates = rows.rows as unknown as { answer_id: string; transcript: string | null; ai_grade_id: string; confidence: string; rubric_version: number; created_at: Date }[];
+  const candidates = rows.rows as unknown as { answer_id: string; transcript: string | null; ai_grade_id: string; confidence: string; rubric_version: number; created_at: Date; model: string }[];
   // A teacher's "not an instruction" on the answer's current text lifts the flag.
   const dismissed = guard ? await dismissedFlags(actor.orgId, candidates.map((c) => ({ id: c.answer_id, transcript: c.transcript }))) : new Set<string>();
   for (const r of candidates) {
     if (num(r.confidence) < minConfidence || r.rubric_version !== q.rubricVersion) continue;
+    // No AI suggestion is accepted in bulk for a group that is not eligible.
+    if (!elig.eligible && !isRuleModel(r.model)) continue;
     // An answer that addresses the marker is never accepted in bulk: the teacher reads it.
     if (guard && !dismissed.has(r.answer_id) && screenInstructions(r.transcript ?? '').flagged) continue;
     const [rev] = await db.select({ at: hwTranscriptRevision.createdAt }).from(hwTranscriptRevision)
@@ -309,8 +319,11 @@ export async function questionQueue(actor: HwActor, questionId: string, filter: 
     : new Map<string, SuggestionSource>();
   const guarded = getHwConfig().HW_INSTRUCTION_GUARD_ENABLED;
   const dismissed = guarded ? await dismissedFlags(actor.orgId, rows.map((r) => ({ id: r.a.id, transcript: r.a.transcript }))) : new Set<string>();
+  // Roadmap 5.3: AI suggestions are shown only while this kind of question is eligible for the marking setup running now.
+  const elig = await eligibilityOfQuestion(db, q.id);
   const items = rows.map((r) => {
-    const suggestion = (ai.rows as unknown as Record<string, unknown>[]).find((x) => x.answer_id === r.a.id) ?? null;
+    const found = (ai.rows as unknown as Record<string, unknown>[]).find((x) => x.answer_id === r.a.id) ?? null;
+    const suggestion = found && (elig.eligible || isRuleModel(found.model as string)) ? found : null;
     const src = suggestion ? sources.get(suggestion.id as string) : undefined;
     return {
       answerId: r.a.id,
@@ -352,6 +365,8 @@ export async function questionQueue(actor: HwActor, questionId: string, filter: 
     question: { id: q.id, position: q.position, type: q.type, prompt: q.prompt, marks: num(q.marks), modelAnswer: q.modelAnswer, rubricVersion: q.rubricVersion },
     rubric: (await currentRubric(q.id)).map((r) => ({ id: r.id, kind: r.kind, description: r.description, marks: num(r.marks) })),
     answers: items.filter(keep),
+    // Present only when AI suggestions are off for this kind of question: why, in words for the teacher.
+    ...(elig.eligible ? {} : { aiOff: { reason: elig.reason, message: aiOffMessage(elig.reason) } }),
   };
 }
 

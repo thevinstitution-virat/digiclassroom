@@ -123,6 +123,12 @@ const EnvSchema = z.object({
   }),
   /** OpenAI GPT-5.6+ models: caching in explicit mode, so nothing is written to a cache that is never read. */
   HW_OPENAI_EXPLICIT_CACHE_ENABLED: bool(false),
+  /**
+   * Eligibility registry (roadmap 5.3). On (the default): AI marking suggestions are created and shown only for a group the registry says
+   * is eligible for the marking configuration running now; every other group is marked by hand. Off: no check (tests, and the owner's
+   * emergency switch). Leave it unset in production.
+   */
+  HW_ELIGIBILITY_ENFORCED: bool(true),
   OPENAI_API_KEY: str(),
   QDRANT_URL: str(),
   QDRANT_API_KEY: str(),

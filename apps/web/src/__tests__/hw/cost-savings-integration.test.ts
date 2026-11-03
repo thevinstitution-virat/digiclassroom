@@ -96,6 +96,7 @@ Object.assign(process.env, {
   HW_GRADE_MODEL: 'gemini-3.5-flash-lite',
   HW_RUBRIC_MODEL: 'gemini-3.5-flash-lite',
   HW_BATCH_ENABLED: 'false',
+  HW_ELIGIBILITY_ENFORCED: 'false', // these suites exercise marking itself; the registry has its own tests (eligibility.test.ts)
   HW_GRADE_DEBOUNCE_SECONDS: '0',
   HW_BATCH_POLL_SECONDS: '10',
   HW_PRICE_TABLE_JSON: JSON.stringify({ inr_per_usd: 88, models: { 'gemini-3.5-flash-lite': { input: 0.3, cached: 0.03, output: 2.5, batch_input: 0.15, batch_output: 1.25 }, 'gemini-3.6-flash': { input: 0.75, cached: 0.075, output: 3.75 } } }),

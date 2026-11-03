@@ -175,6 +175,8 @@ function Panel({ q, row, onDone }: { q: Queue; row: Row; onDone: () => void }) {
         )}
         {s ? (
           <p className="text-sm">{t('st.result.total', { got: changed ? itemTotal : s.suggestedMarks, of: q.question.marks })}</p>
+        ) : 'aiOff' in q && q.aiOff ? (
+          <p className="text-sm text-amber-700 dark:text-amber-400">{t(q.aiOff.reason === 'config_changed' ? 'mk.aiOff.paused' : 'mk.aiOff.default')}</p>
         ) : <p className="text-sm text-muted-foreground">{t('mk.noSuggestion')}</p>}
         {s && Array.isArray(s.validationNotes) && s.validationNotes.length > 0 && (
           <details className="text-xs text-muted-foreground">

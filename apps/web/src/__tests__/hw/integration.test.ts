@@ -118,6 +118,7 @@ Object.assign(process.env, {
   HW_GRADE_MODEL: 'gemini-3.5-flash-lite',
   HW_RUBRIC_MODEL: 'gemini-3.5-flash-lite',
   HW_BATCH_ENABLED: 'false',
+  HW_ELIGIBILITY_ENFORCED: 'false', // these suites exercise marking itself; the registry has its own tests (eligibility.test.ts)
   HW_GRADE_DEBOUNCE_SECONDS: '0',
   HW_BATCH_POLL_SECONDS: '10',
   HW_PRICE_TABLE_JSON: JSON.stringify({ inr_per_usd: 84, models: { 'gemini-3.5-flash-lite': { input: 0.3, cached: 0.03, output: 2.5, batch_input: 0.15, batch_output: 1.25 }, 'gemini-3.6-flash': { input: 0.75, cached: 0.075, output: 3.75 } } }),
@@ -548,6 +549,112 @@ suite('handwritten assignments — integration', () => {
       const { w, id, qid } = await draftWorld(null)
       await svc.assignments.setRubric(w.teacher, qid, [{ kind: 'key_point', description: 'Carbon dioxide', marks: 1 }])
       await expect(svc.assignments.publishAssignment(w.teacher, id)).resolves.toMatchObject({ totalMarks: 1 })
+    })
+  })
+
+  // ── Roadmap 5.3: eligibility is enforced in marking ───────────────────────────────────────────────────
+  describe('Eligibility (roadmap 5.3)', () => {
+    const KEY = 'science|short|en|custom'
+    const enforce = (on: boolean) => { process.env.HW_ELIGIBILITY_ENFORCED = on ? 'true' : 'false'; svc.config._resetHwConfig() }
+    afterEach(() => { process.env.HW_GRADE_MODEL = 'gemini-3.5-flash-lite'; enforce(false) })
+
+    async function promoteNow() {
+      const reg = await import('@/lib/hw/eligibility/registry')
+      const group = await import('@/lib/hw/eligibility/group')
+      const p = group.parseGroupKey(KEY)!
+      const id = randomUUID()
+      await raw.query(
+        `INSERT INTO hw_eval_gate_result (id, group_key, subject, question_type, language, scheme_source, verdict, checks, run_ids, dataset_versions, production_fingerprint, report_sha256, imported_by)
+         VALUES ($1, $2, $3, $4, $5, $6, 'eligible', '[]'::jsonb, ARRAY['run_x'], ARRAY['heldout-1d@v1'], $7, $8, 'itest')`,
+        [id, KEY, p.subject, p.questionType, p.language, p.schemeSource, reg.runningConfig().hash, randomUUID().replace(/-/g, '').padEnd(64, '0')],
+      )
+      return reg.promote({ userId: 'itest-owner', isSuperAdmin: true, rater: null }, { groupKey: KEY, gateResultId: id, reason: 'Passed every gate on heldout-1d@v1.', confirm: true })
+    }
+    const unregister = () => raw.query(`DELETE FROM hw_eligibility WHERE group_key = $1`, [KEY])
+
+    it('a group that is not eligible gets no AI call: answers wait for the teacher with the reason, rules in code still mark, the queue says why', async () => {
+      await unregister()
+      enforce(true)
+      const w = await makeWorld()
+      const a = await publishedAssignment(w)
+      const h = await studentHandsIn(w, a)
+      gem.read.set(h.a2, { text: 'plants make food from sun lite', confidence: 'high' })
+      await drainAll()
+
+      expect(gem.calls.filter((c) => c.kind === 'grade')).toHaveLength(0) // no model was asked to mark
+      const sugg = (await raw.query(`SELECT answer_id, model FROM hw_ai_grade WHERE answer_id = ANY($1)`, [[h.a1, h.a2]])).rows
+      expect(sugg).toEqual([{ answer_id: h.a1, model: 'exact_match' }]) // the exact-match rule is code, not AI
+      const wait = (await raw.query(`SELECT failure_reason FROM hw_answer WHERE id = $1`, [h.a2])).rows[0].failure_reason as string
+      expect(wait).toMatch(/^AI suggestions are not switched on for this kind of question yet/)
+
+      const q2 = await svc.marking.questionQueue(w.teacher, a.q2, 'all')
+      expect(q2.answers[0].suggestion).toBeNull()
+      expect(q2).toMatchObject({ aiOff: { reason: 'no_record' } })
+      const q1 = await svc.marking.questionQueue(w.teacher, a.q1, 'all')
+      expect(q1.answers[0].suggestion).toMatchObject({ model: 'exact_match' }) // a rule's mark stays visible
+      // the teacher can still mark by hand
+      await svc.marking.manualGrade(w.teacher, h.a2, { marks: 1.5, comment: 'by hand' })
+      expect((await raw.query(`SELECT source FROM hw_grade WHERE answer_id = $1`, [h.a2])).rows[0].source).toBe('manual')
+    })
+
+    it('a promotion marks the answers that were waiting, and shows their suggestions', async () => {
+      await unregister()
+      enforce(true)
+      const w = await makeWorld()
+      const a = await publishedAssignment(w)
+      const h = await studentHandsIn(w, a)
+      gem.read.set(h.a2, { text: 'plants make food from sun lite', confidence: 'high' })
+      await drainAll()
+      expect(gem.calls.filter((c) => c.kind === 'grade')).toHaveLength(0)
+
+      const r = await promoteNow()
+      expect(r.requeuedQuestions).toBeGreaterThanOrEqual(1)
+      await drainAll()
+      expect(gem.calls.filter((c) => c.kind === 'grade')).toHaveLength(1) // now the model is asked
+      expect((await raw.query(`SELECT failure_reason FROM hw_answer WHERE id = $1`, [h.a2])).rows[0].failure_reason).toBeNull()
+      const q2 = await svc.marking.questionQueue(w.teacher, a.q2, 'all')
+      expect(q2.answers[0].suggestion).not.toBeNull()
+      expect('aiOff' in q2).toBe(false)
+      const ai = q2.answers[0].suggestion!
+      await expect(svc.marking.acceptAiGrade(w.teacher, h.a2, ai.id)).resolves.toBeUndefined()
+    })
+
+    it('when the marking setup changes, existing AI suggestions are hidden and cannot be accepted, singly or in bulk; rules in code still can', async () => {
+      await unregister()
+      enforce(true)
+      await promoteNow()
+      const w = await makeWorld()
+      const a = await publishedAssignment(w)
+      const h = await studentHandsIn(w, a)
+      gem.read.set(h.a2, { text: 'plants make food from sun lite', confidence: 'high' })
+      await drainAll()
+      const before = await svc.marking.questionQueue(w.teacher, a.q2, 'all')
+      const sugg = before.answers[0].suggestion!
+      expect(sugg).not.toBeNull()
+      expect((await svc.marking.bulkAcceptPreview(w.teacher, a.q2)).count).toBe(1)
+
+      process.env.HW_GRADE_MODEL = 'gemini-3.6-flash' // the setup changes
+      svc.config._resetHwConfig()
+      const after = await svc.marking.questionQueue(w.teacher, a.q2, 'all')
+      expect(after.answers[0].suggestion).toBeNull()
+      expect(after).toMatchObject({ aiOff: { reason: 'config_changed' } })
+      await expect(svc.marking.acceptAiGrade(w.teacher, h.a2, sugg.id)).rejects.toThrow(/paused for this kind of question/)
+      expect((await svc.marking.bulkAcceptPreview(w.teacher, a.q2)).count).toBe(0)
+      const exact = await svc.marking.questionQueue(w.teacher, a.q1, 'all')
+      expect(exact.answers[0].suggestion).toMatchObject({ model: 'exact_match' }) // a rule is not an AI suggestion
+      expect((await svc.marking.bulkAcceptPreview(w.teacher, a.q1)).count).toBe(1)
+    })
+
+    it('with enforcement off (these suites\' setting) nothing is checked', async () => {
+      await unregister()
+      enforce(false)
+      const w = await makeWorld()
+      const a = await publishedAssignment(w)
+      const h = await studentHandsIn(w, a)
+      gem.read.set(h.a2, { text: 'plants make food from sun lite', confidence: 'high' })
+      await drainAll()
+      expect(gem.calls.filter((c) => c.kind === 'grade')).toHaveLength(1)
+      expect((await svc.marking.questionQueue(w.teacher, a.q2, 'all')).answers[0].suggestion).not.toBeNull()
     })
   })
 })

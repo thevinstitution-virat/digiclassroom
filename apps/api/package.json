@@ -26,6 +26,7 @@
     "hw:eval:nearmiss": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-eval-nearmiss.ts",
     "hw:eval:grouping": "npx tsx --tsconfig tsconfig.json ../../scripts/hw-eval-grouping.ts",
     "hw:eval:sheet": "npx tsx --tsconfig tsconfig.json ../../scripts/hw-eval-sheet.ts",
+    "hw:eval:gates": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-eval-gates.ts",
     "hw:eval:consent": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-eval-consent.ts",
     "hw:key:labelsheet": "npx tsx --tsconfig tsconfig.json ../../scripts/hw-key-labelsheet.ts"
   },

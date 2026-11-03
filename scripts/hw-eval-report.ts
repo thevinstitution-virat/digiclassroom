@@ -3,7 +3,7 @@
 //   npm run hw:eval:report -w apps/api -- --dataset demo@v2 --runs run_a,run_b [--out hw-evals/reports/demo-v2] \
 //     [--title "…"] [--reference export.json] [--datasets-root …] [--runs-root …]
 //
-// Writes report.md, report.html, groups.csv and public-summary.md. The teacher baseline comes
+// Writes report.md, report.html, groups.csv, public-summary.md and report.json (the whole model, which `hw:eval:gates import` stores). The teacher baseline comes
 // from the dataset version's reference/raters.json; key audits and support from --reference
 // (the evaluation page's export) and the key run, when given.
 
@@ -52,6 +52,7 @@ async function main() {
   const out = arg('out', join('hw-evals', 'reports', `${ds.name}-${ds.version}`))!;
   mkdirSync(out, { recursive: true });
   writeFileSync(join(out, 'report.md'), renderMarkdown(model));
+  writeFileSync(join(out, 'report.json'), JSON.stringify(model, null, 2));
   writeFileSync(join(out, 'report.html'), renderHtml(model));
   writeFileSync(join(out, 'groups.csv'), renderCsv(model));
   writeFileSync(join(out, 'public-summary.md'), renderPublicSummary(model));

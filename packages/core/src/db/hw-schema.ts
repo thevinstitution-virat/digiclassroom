@@ -35,6 +35,8 @@ export type HwJobKind = 'read' | 'grade' | 'rubric_draft';
 export type HwJobStatus = 'queued' | 'running' | 'batch_pending' | 'done' | 'failed';
 export type HwGradeSource = 'accepted_ai' | 'edited_ai' | 'manual';
 export type HwVerdict = 'met' | 'partial' | 'missing';
+/** Where a question's marking scheme came from (migration 024). 'custom' is a teacher's own scheme, the only kind built so far. */
+export type HwQuestionSchemeSource = 'textbook' | 'board_paper' | 'custom';
 
 /** One rubric item's judgement inside hw_ai_grade.items. */
 export interface HwAiGradeItem {
@@ -111,6 +113,7 @@ export const hwQuestion = pgTable('hw_question', {
   languageHint: text('language_hint').$type<HwLanguage>().notNull().default('en'),
   answerLines: integer('answer_lines').notNull().default(4),
   rubricVersion: integer('rubric_version').notNull().default(1),
+  schemeSource: text('scheme_source').$type<HwQuestionSchemeSource>().notNull().default('custom'),
   createdAt: ts('created_at').notNull().defaultNow(),
   updatedAt: ts('updated_at').notNull().defaultNow(),
 });

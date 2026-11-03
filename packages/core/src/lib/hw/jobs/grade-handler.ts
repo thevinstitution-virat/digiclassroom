@@ -19,6 +19,8 @@ import { groupForMarking } from '../grader/instruction-screen';
 import type { GradeResult } from '../grader/types';
 import { claim, claimBatchPending, complete, enqueueGrade, fail, markBatchPending, payloadOf, type GradePayload, type JobRow } from './queue';
 import { shadowAfterGrade } from '../shadow/shadow';
+import { aiOffMessage } from '../eligibility/decision';
+import { eligibilityOfQuestion } from '../eligibility/registry';
 import { decideBatch, dueFor, fallbackNote, homeworkBatchSettings, isOverdue, readyBy, requeueStandard, saveStamp, stampPayload } from './homework-batch';
 
 const RUBRIC_CHANGED = 'rubric changed while marking; suggestions discarded and re-queued';
@@ -61,6 +63,17 @@ async function plan(job: JobRow): Promise<Plan | null> {
   let pending = await answersNeedingSuggestion(db, q);
   if (!pending.length) {
     await complete(db, job.id, undefined, 'nothing left to mark');
+    return null;
+  }
+
+  // Roadmap 5.3: AI marks only for a group the registry says is eligible for the setup running now. Rules in code (above) are not AI.
+  const elig = await eligibilityOfQuestion(db, q.id);
+  if (!elig.eligible) {
+    const reason = aiOffMessage(elig.reason);
+    await db.transaction(async (tx) => {
+      await tx.update(hwAnswer).set({ failureReason: reason }).where(inArray(hwAnswer.id, pending.map((p) => p.answerId)));
+      await complete(tx, job.id, undefined, `not marked: ${reason} (${elig.reason})`);
+    });
     return null;
   }
 
