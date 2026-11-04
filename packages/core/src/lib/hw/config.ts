@@ -129,6 +129,8 @@ const EnvSchema = z.object({
    * emergency switch). Leave it unset in production.
    */
   HW_ELIGIBILITY_ENFORCED: bool(true),
+  /** The parent view (roadmap-remaining.md, workstream A): off until the owner decides the policy. A parent sees only the returned work of a child an institution admin linked to them. */
+  HW_PARENT_VIEW_ENABLED: bool(false),
   /**
    * A worker that takes only the jobs of institutions whose id starts with this. Unset in production (every job). The integration suites set a
    * prefix of their own, so suites running at the same time in one database never claim, poll or fail each other's jobs (and never a leftover

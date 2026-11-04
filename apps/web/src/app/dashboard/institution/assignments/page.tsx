@@ -54,6 +54,59 @@ function MarkingQuality() {
   )
 }
 
+/** The institution admin links a parent account to a student, and ends a link. Shown only when the parent view is switched on. */
+function ParentAccess() {
+  const { t } = useHwT()
+  const on = api.hw.guardian.enabled.useQuery()
+  const enabled = on.data?.enabled === true
+  const opts = api.hw.guardian.options.useQuery(undefined, { enabled })
+  const links = api.hw.guardian.links.useQuery(undefined, { enabled })
+  const link = api.hw.guardian.link.useMutation({ onSuccess: () => { void links.refetch(); setParent(''); setStudent('') } })
+  const unlink = api.hw.guardian.unlink.useMutation({ onSuccess: () => links.refetch() })
+  const [parent, setParent] = useState('')
+  const [student, setStudent] = useState('')
+  if (!enabled) return null
+  return (
+    <Card>
+      <CardHeader><CardTitle>{t('pl.title')}</CardTitle></CardHeader>
+      <CardContent className="space-y-4 text-sm">
+        <p className="text-muted-foreground">{t('pl.hint')}</p>
+        {opts.isLoading || links.isLoading ? <HwLoading /> : opts.error ? <HwError message={opts.error.message} onRetry={() => opts.refetch()} /> : (
+          <>
+            {!opts.data!.parents.length && <p>{t('pl.none')}</p>}
+            <form className="grid gap-3 sm:grid-cols-3" onSubmit={(e) => { e.preventDefault(); if (parent && student) link.mutate({ guardianId: parent, studentId: student }) }}>
+              <Field label={t('pl.parent')}>
+                <NativeSelect value={parent} onChange={(e) => setParent(e.target.value)} required>
+                  <option value="" />
+                  {opts.data!.parents.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.email})</option>)}
+                </NativeSelect>
+              </Field>
+              <Field label={t('pl.student')}>
+                <NativeSelect value={student} onChange={(e) => setStudent(e.target.value)} required>
+                  <option value="" />
+                  {opts.data!.students.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.email})</option>)}
+                </NativeSelect>
+              </Field>
+              <div className="flex items-end"><Button type="submit" disabled={!parent || !student || link.isPending}>{t('pl.link')}</Button></div>
+            </form>
+            {link.error && <p className="text-red-600">{link.error.message}</p>}
+            {!links.data?.length ? <p className="text-muted-foreground">{t('pl.empty')}</p> : (
+              <ul className="divide-y">
+                {links.data.map((l) => (
+                  <li key={l.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                    <span><strong>{l.guardianName}</strong> → {l.studentName}{l.endedAt && <span className="ml-2 text-muted-foreground">({t('pl.ended')})</span>}</span>
+                    {!l.endedAt && <Button size="sm" variant="outline" disabled={unlink.isPending} onClick={() => window.confirm(t('pl.endConfirm')) && unlink.mutate({ linkId: l.id })}>{t('pl.end')}</Button>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function InstitutionAssignmentsPage() {
   const { t } = useHwT()
   const options = api.hw.classTeachers.options.useQuery()
@@ -95,6 +148,8 @@ export default function InstitutionAssignmentsPage() {
         </Card>
 
         <MarkingQuality />
+
+        <ParentAccess />
 
         <Card>
           <CardHeader><CardTitle>{t('ad.link')}</CardTitle></CardHeader>

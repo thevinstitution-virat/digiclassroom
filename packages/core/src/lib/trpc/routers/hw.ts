@@ -14,6 +14,8 @@ import { QUESTION_PRESETS } from '@/lib/hw/presets';
 import * as assignments from '@/lib/hw/services/assignments';
 import * as submissions from '@/lib/hw/services/submissions';
 import * as marking from '@/lib/hw/services/marking';
+import * as guardian from '@/lib/hw/services/guardian';
+import { getHwConfig } from '@/lib/hw/config';
 import { institutionMonitor } from '@/lib/hw/monitoring/views';
 import { conceptFeedbackForSubmission } from '@/lib/hw/concept-feedback';
 import { libraryGraphEnabled } from '@/lib/library/graph-client';
@@ -213,6 +215,24 @@ export const hwRouter = createTRPCRouter({
       .mutation(({ ctx, input }) => run(ctx, (a) => marking.fixTranscript(a, input.answerId, input))),
     returnAssignment: protectedProcedure.input(z.object({ assignmentId: id }))
       .mutation(({ ctx, input }) => run(ctx, (a) => marking.returnAssignment(a, input.assignmentId))),
+  }),
+
+  // ── Parents and guardians (workstream A; off unless HW_PARENT_VIEW_ENABLED) ──
+  guardian: createTRPCRouter({
+    enabled: protectedProcedure.query(() => ({ enabled: getHwConfig().HW_PARENT_VIEW_ENABLED })),
+    // institution admin
+    options: protectedProcedure.query(({ ctx }) => run(ctx, (a) => guardian.linkOptions(a))),
+    links: protectedProcedure.query(({ ctx }) => run(ctx, (a) => guardian.listLinks(a))),
+    link: protectedProcedure.input(z.object({ guardianId: z.string().min(1).max(255), studentId: z.string().min(1).max(255) }))
+      .mutation(({ ctx, input }) => run(ctx, (a) => guardian.linkGuardian(a, input))),
+    unlink: protectedProcedure.input(z.object({ linkId: id }))
+      .mutation(({ ctx, input }) => run(ctx, (a) => guardian.unlinkGuardian(a, input.linkId))),
+    // parent
+    children: protectedProcedure.query(({ ctx }) => run(ctx, (a) => guardian.myChildren(a))),
+    assignments: protectedProcedure.input(z.object({ studentId: z.string().min(1).max(255) }))
+      .query(({ ctx, input }) => run(ctx, (a) => guardian.childAssignments(a, input.studentId))),
+    result: protectedProcedure.input(z.object({ studentId: z.string().min(1).max(255), submissionId: id }))
+      .query(({ ctx, input }) => run(ctx, (a) => guardian.childResult(a, input.studentId, input.submissionId))),
   }),
 
   // ── Institution admin / platform ──────────────────────────────────────────

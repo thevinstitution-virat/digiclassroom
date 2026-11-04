@@ -1259,4 +1259,96 @@ suite('handwritten assignments — integration', () => {
       expect(counts.writer).toBe(1)
     })
   })
+
+  // ── Parent view (roadmap-remaining.md workstream A) ───────────────────────────────────────────────────
+  describe('Parent view', () => {
+    let g: typeof import('@/lib/hw/services/guardian')
+    const flag = (on: boolean) => { process.env.HW_PARENT_VIEW_ENABLED = on ? 'true' : 'false'; svc.config._resetHwConfig() }
+    beforeAll(async () => { g = await import('@/lib/hw/services/guardian') })
+    beforeEach(() => flag(true))
+    afterEach(() => flag(false))
+
+    async function addParent(w: World, org = w.org) {
+      const id = `${org}-p${randomUUID().slice(0, 6)}`
+      await raw.query(`INSERT INTO "user" (id, name, email, role) VALUES ($1, 'Parent', $2, 'student')`, [id, `${id}@example.test`])
+      await raw.query(`INSERT INTO member (id, organization_id, user_id, role, created_at) VALUES ($1, $2, $3, 'parent', now())`, [`m-${id}`, org, id])
+      return { userId: id, orgId: org, role: 'parent', isPlatformStaff: false } as HwActor
+    }
+    async function returned(w: World) {
+      const a = await publishedAssignment(w)
+      const h = await studentHandsIn(w, a)
+      gem.read.set(h.a2, { text: 'plants make food from sun lite', confidence: 'high' })
+      await drainAll()
+      const q1 = await svc.marking.questionQueue(w.teacher, a.q1, 'all'); const q2 = await svc.marking.questionQueue(w.teacher, a.q2, 'all')
+      await svc.marking.acceptAiGrade(w.teacher, h.a1, q1.answers[0].suggestion!.id)
+      await svc.marking.acceptAiGrade(w.teacher, h.a2, q2.answers[0].suggestion!.id)
+      await svc.marking.setComment(w.teacher, h.a2, 'Good, say more about sunlight.')
+      return { a, h }
+    }
+
+    it('off by default: nothing works until the owner switches it on', async () => {
+      flag(false)
+      const w = await makeWorld(); const p = await addParent(w)
+      await expect(g.myChildren(p)).rejects.toThrow(/not switched on/)
+      await expect(g.linkGuardian(w.admin, { guardianId: p.userId, studentId: w.s1.userId })).rejects.toThrow(/not switched on/)
+    })
+
+    it('only an institution admin links, only inside the institution and in the right roles; every link is audited and can be ended', async () => {
+      const w = await makeWorld(); const other = await makeWorld(); const p = await addParent(w); const pOther = await addParent(other)
+      await expect(g.linkGuardian(w.teacher, { guardianId: p.userId, studentId: w.s1.userId })).rejects.toThrow()
+      await expect(g.linkGuardian(w.admin, { guardianId: pOther.userId, studentId: w.s1.userId })).rejects.toThrow(/not a parent or guardian of this institution/) // a parent of another institution
+      await expect(g.linkGuardian(w.admin, { guardianId: p.userId, studentId: other.s1.userId })).rejects.toThrow(/not a student of this institution/)
+      await expect(g.linkGuardian(w.admin, { guardianId: w.s2.userId, studentId: w.s1.userId })).rejects.toThrow(/not a parent/) // a student cannot be a guardian
+      const { id } = await g.linkGuardian(w.admin, { guardianId: p.userId, studentId: w.s1.userId })
+      await expect(g.linkGuardian(w.admin, { guardianId: p.userId, studentId: w.s1.userId })).rejects.toThrow(/already linked/)
+      expect((await raw.query(`SELECT action, actor_id FROM hw_admin_audit WHERE entity = 'guardian_link' AND entity_id = $1`, [id])).rows).toEqual([{ action: 'guardian_linked', actor_id: w.admin.userId }])
+      expect((await g.listLinks(w.admin)).map((l) => [l.id, l.endedAt])).toEqual([[id, null]])
+      expect(await g.myChildren(p)).toEqual([{ id: w.s1.userId, name: 'User s1' }])
+      await expect(g.unlinkGuardian(other.admin, id)).rejects.toThrow(/No active link/) // another institution's admin cannot end it
+      await g.unlinkGuardian(w.admin, id)
+      expect(await g.myChildren(p)).toEqual([]) // an ended link shows nothing
+      await expect(g.childAssignments(p, w.s1.userId)).rejects.toThrow(/Student not found/)
+      // the table refuses deletes and rewrites at the database
+      await expect(raw.query(`DELETE FROM hw_guardian_link WHERE id = $1`, [id])).rejects.toThrow()
+      await expect(raw.query(`UPDATE hw_guardian_link SET student_user_id = $2 WHERE id = $1`, [id, w.s2.userId])).rejects.toThrow()
+    })
+
+    it('a parent sees nothing of a child who is not linked: another child, or a child of another institution', async () => {
+      const w = await makeWorld(); const other = await makeWorld(); const p = await addParent(w)
+      await g.linkGuardian(w.admin, { guardianId: p.userId, studentId: w.s1.userId })
+      await expect(g.childAssignments(p, w.s2.userId)).rejects.toThrow(/Student not found/) // a sibling who is not linked
+      await expect(g.childAssignments(p, other.s1.userId)).rejects.toThrow(/Student not found/)
+      expect(await g.childAssignments(p, w.s1.userId)).toEqual([])
+      // students and teachers have no parent view
+      await expect(g.myChildren(w.s1)).rejects.toThrow()
+      await expect(g.myChildren(w.teacher)).rejects.toThrow()
+    })
+
+    it('a linked parent sees what was set, whether it was handed in, and the result only after the teacher returns it: marks and comment, never the transcript or any AI content', async () => {
+      const w = await makeWorld(); const p = await addParent(w)
+      await g.linkGuardian(w.admin, { guardianId: p.userId, studentId: w.s1.userId })
+      const a = await publishedAssignment(w)
+      expect((await g.childAssignments(p, w.s1.userId)).find((x) => x.id === a.id)).toMatchObject({ handedIn: false, returned: false, submissionId: null })
+
+      const h = (await returned(w)).h
+      let list = (await g.childAssignments(p, w.s1.userId)).find((x) => x.handedIn)!
+      expect(list).toMatchObject({ handedIn: true, returned: false, submissionId: null })
+      await expect(g.childResult(p, w.s1.userId, h.sid)).rejects.toThrow(/not returned/) // before the teacher returns it
+
+      const aid = (await raw.query(`SELECT assignment_id FROM hw_submission WHERE id = $1`, [h.sid])).rows[0].assignment_id
+      await svc.marking.returnAssignment(w.teacher, aid)
+      list = (await g.childAssignments(p, w.s1.userId)).find((x) => x.id === aid)!
+      expect(list).toMatchObject({ handedIn: true, returned: true, submissionId: h.sid })
+      const res = await g.childResult(p, w.s1.userId, h.sid)
+      expect(res.total).toBeGreaterThan(0)
+      expect(res.questions.find((q) => q.comment)?.comment).toBe('Good, say more about sunlight.')
+      const text = JSON.stringify(res)
+      for (const secret of ['plants make food from sun lite', 'transcript', 'suggest', 'accepted', 'modelAnswer', 'Plants make food using sunlight.', 'confidence']) expect(text).not.toContain(secret)
+      // another parent, linked to someone else, cannot ask for this submission
+      const stranger = await addParent(w)
+      await g.linkGuardian(w.admin, { guardianId: stranger.userId, studentId: w.s2.userId })
+      await expect(g.childResult(stranger, w.s1.userId, h.sid)).rejects.toThrow(/Student not found/)
+      await expect(g.childResult(stranger, w.s2.userId, h.sid)).rejects.toThrow() // her own child's id, someone else's submission
+    })
+  })
 })

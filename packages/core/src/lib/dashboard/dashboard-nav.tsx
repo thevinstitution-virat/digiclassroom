@@ -155,6 +155,7 @@ export const STUDENT_NAV: DashboardNavItem[] = [
 export const PARENT_NAV: DashboardNavItem[] = [
   { name: 'Dashboard', href: '/dashboard/parent', icon: Home, description: "Your child's overview" },
   { name: 'Child Progress', href: '/dashboard/parent/progress', icon: LineChart, description: 'Learning progress & scores', featured: true, gradient: 'from-green-500 to-emerald-500' },
+  { name: 'Assignments', href: '/dashboard/parent/assignments', icon: FileText, description: "Your child's written assignments and results" },
   { name: 'Reports', href: '/dashboard/parent/reports', icon: FileText, description: 'ParentPulse reports', featured: true, gradient: 'from-blue-500 to-indigo-500' },
   { name: 'Attendance', href: '/dashboard/parent/attendance', icon: CalendarCheck, description: 'Engagement & attendance' },
   { name: 'Messages', href: '/dashboard/parent/messages', icon: MessageSquare, description: 'School communication' },

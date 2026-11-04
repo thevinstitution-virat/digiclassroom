@@ -59,7 +59,7 @@ interface HwShellProps {
   subtitle?: string
   actions?: ReactNode
   /** Roles that may use this page; others see a message instead of the page. */
-  roles: ('admin' | 'teacher' | 'student')[]
+  roles: ('admin' | 'teacher' | 'student' | 'parent')[]
   children: ReactNode
 }
 
