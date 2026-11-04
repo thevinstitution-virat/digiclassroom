@@ -11,6 +11,7 @@ import { hwAiJob, type HwJobKind } from '@/db/hw-schema';
 import { describeError, isHwError } from '../errors';
 import { db, newId, type Exec } from '../db';
 import { currentProvider, providerFor } from '../ai';
+import { getHwConfig } from '../config';
 
 export type JobRow = typeof hwAiJob.$inferSelect;
 
@@ -89,13 +90,19 @@ export async function enqueueGrade(x: Exec, orgId: string, questionId: string, d
 }
 
 /** Claim up to `limit` ready jobs of one kind. */
+/** Only this worker's institutions when HW_JOB_ORG_PREFIX is set (tests); every job otherwise. */
+function ownJobs() {
+  const p = getHwConfig().HW_JOB_ORG_PREFIX;
+  return p ? sql`starts_with(organization_id, ${p}::text)` : sql`true`;
+}
+
 export async function claim(kind: HwJobKind, limit: number, workerId: string, filter?: (j: JobRow) => boolean): Promise<JobRow[]> {
   const rows = await db.execute<{ id: string }>(sql`
     UPDATE hw_ai_job SET status = 'running', locked_at = now(), locked_by = ${workerId},
            attempts = attempts + 1, started_at = COALESCE(started_at, now())
      WHERE id IN (
        SELECT id FROM hw_ai_job
-        WHERE status = 'queued' AND kind = ${kind} AND run_after <= now()
+        WHERE status = 'queued' AND kind = ${kind} AND run_after <= now() AND ${ownJobs()}
         ORDER BY created_at
         LIMIT ${limit}
         FOR UPDATE SKIP LOCKED)
@@ -113,7 +120,7 @@ export async function claimBatchPending(kind: HwJobKind, limit: number, workerId
            run_after = now() + make_interval(secs => ${pollSeconds})
      WHERE id IN (
        SELECT id FROM hw_ai_job
-        WHERE status = 'batch_pending' AND kind = ${kind} AND run_after <= now()
+        WHERE status = 'batch_pending' AND kind = ${kind} AND run_after <= now() AND ${ownJobs()}
         ORDER BY created_at
         LIMIT ${limit}
         FOR UPDATE SKIP LOCKED)

@@ -86,7 +86,10 @@ const fakeClient = {
   },
 }
 
+// This suite's own namespace: its jobs are claimed and polled only by this suite, so suites can run in parallel in one database.
+const NS = `it-${randomUUID().slice(0, 6)}-`
 Object.assign(process.env, {
+  HW_JOB_ORG_PREFIX: NS,
   DATABASE_URL: DB_URL ?? '',
   HW_FEATURE_DEFAULT_ENABLED: 'false',
   GEMINI_API_KEY: 'fake-key-for-tests',
@@ -137,7 +140,7 @@ async function drainAll(passes = 3) {
 interface World { org: string; teacher: HwActor; s1: HwActor; s2: HwActor; classId: string }
 
 async function makeWorld(): Promise<World> {
-  const org = `it-${randomUUID().slice(0, 8)}`
+  const org = `${NS}${randomUUID().slice(0, 8)}`
   const u = (k: string) => `${org}-${k}`
   for (const [k, role] of [['t', 'teacher'], ['a', 'owner'], ['s1', 'student'], ['s2', 'student']] as const) {
     await raw.query(`INSERT INTO "user" (id, name, email, role) VALUES ($1, $2, $3, $4)`, [u(k), `User ${k}`, `${u(k)}@example.test`, role === 'teacher' ? 'teacher' : 'student'])

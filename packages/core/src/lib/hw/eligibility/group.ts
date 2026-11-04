@@ -3,7 +3,7 @@
 
 export const GROUP_QUESTION_TYPES = ['very_short', 'short', 'long', 'essay'] as const;
 export const GROUP_LANGUAGES = ['en', 'hi', 'mixed'] as const;
-export const GROUP_SCHEME_SOURCES = ['textbook', 'board_paper', 'custom'] as const;
+export const GROUP_SCHEME_SOURCES = ['board_scheme_key', 'passage_key', 'textbook_key', 'teacher_rubric'] as const;
 export type GroupQuestionType = (typeof GROUP_QUESTION_TYPES)[number];
 export type GroupLanguage = (typeof GROUP_LANGUAGES)[number];
 export type GroupSchemeSource = (typeof GROUP_SCHEME_SOURCES)[number];
@@ -26,7 +26,7 @@ export function groupKey(p: GroupParts): string {
 
 export function parseGroupKey(key: string): GroupParts | null {
   // The database requires a lower-case key (hw_eligibility_group_key_check); so does this.
-  const m = key === key.toLowerCase() ? /^([^|]+)\|(very_short|short|long|essay)\|(en|hi|mixed)\|(textbook|board_paper|custom)$/.exec(key) : null;
+  const m = key === key.toLowerCase() ? /^([^|]+)\|(very_short|short|long|essay)\|(en|hi|mixed)\|(board_scheme_key|passage_key|textbook_key|teacher_rubric)$/.exec(key) : null;
   return m ? { subject: m[1], questionType: m[2] as GroupQuestionType, language: m[3] as GroupLanguage, schemeSource: m[4] as GroupSchemeSource } : null;
 }
 

@@ -81,3 +81,20 @@ describe('minimum group size, dates, settings', () => {
     expect(parseProjection('{"short": 12, "long": -1, "essay": "x", "other": 3}')).toEqual({ short: 12 })
   })
 })
+
+describe('the default thresholds (the owner’s, provisional until Phase 4)', () => {
+  it('60 suggestions in 7 days; demote above 5% large changes or 30% changed at all; the rest only warn', async () => {
+    const { getHwConfig, _resetHwConfig } = await import('@/lib/hw/config')
+    const keep = { ...process.env }
+    for (const k of ['HW_MONITOR_MIN_ANSWERS', 'HW_MONITOR_MAX_OVERRIDE_RATE', 'HW_MONITOR_MAX_LARGE_OVERRIDE_RATE']) delete process.env[k]
+    _resetHwConfig()
+    const c = getHwConfig()
+    expect([c.HW_MONITOR_MIN_ANSWERS, c.HW_MONITOR_MAX_OVERRIDE_RATE, c.HW_MONITOR_MAX_LARGE_OVERRIDE_RATE]).toEqual([60, 0.3, 0.05])
+    Object.assign(process.env, keep)
+    _resetHwConfig()
+    const th: Thresholds = { minAnswers: 60, maxOverrideRate: 0.3, maxLargeOverrideRate: 0.05, maxTranscriptFixRate: 0.25, maxFailedJobRate: 0.1, maxCostRatio: 1.5 }
+    expect(findAlerts(counts({ answers: 59, shown: 59, overrides: 59, large: 59 }), th)).toEqual([]) // under 60 suggestions: nothing
+    expect(findAlerts(counts({ answers: 60, shown: 60, overrides: 18, large: 3 }), th)).toEqual([]) // exactly 30% and 5%: not over
+    expect(findAlerts(counts({ answers: 60, shown: 60, overrides: 19, large: 4 }), th).map((f) => [f.code, f.severity])).toEqual([['override_rate', 'demote'], ['large_override_rate', 'demote']])
+  })
+})

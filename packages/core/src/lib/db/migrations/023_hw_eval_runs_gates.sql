@@ -4,7 +4,7 @@
 -- outputs so the screens show exactly what `npm run hw:eval:report` produced, never a second calculation. The "expand" step: two new
 -- tables, nothing existing is altered. Rollback: 023_hw_eval_runs_gates.down.sql.
 --
--- Imported by `npm run hw:eval:gates -- import --report <report.json> --scheme-source <textbook|board_paper|custom>`. Rows are
+-- Imported by `npm run hw:eval:gates -- import --report <report.json> --scheme-source <board_scheme_key|passage_key|textbook_key|teacher_rubric>`. Rows are
 -- append-only: a new report is a new row, an old one is never rewritten. hw_eval_gate_result is what a promotion (024) rests on.
 --
 -- Apply as a superuser or the owning role; the last block hands the new tables to digiclassroom_app, as 014, 015, 019 to 022 do.
@@ -35,7 +35,7 @@ CREATE TABLE hw_eval_gate_result (
   subject                 VARCHAR(100) NOT NULL,
   question_type           TEXT         NOT NULL CHECK (question_type IN ('very_short', 'short', 'long', 'essay')),
   language                TEXT         NOT NULL CHECK (language IN ('en', 'hi', 'mixed')),
-  scheme_source           TEXT         NOT NULL CHECK (scheme_source IN ('textbook', 'board_paper', 'custom')),
+  scheme_source           TEXT         NOT NULL CHECK (scheme_source IN ('board_scheme_key', 'passage_key', 'textbook_key', 'teacher_rubric')),
   verdict                 TEXT         NOT NULL CHECK (verdict IN ('eligible', 'not_yet', 'insufficient_data')),
   checks                  JSONB        NOT NULL CHECK (jsonb_typeof(checks) = 'array'),
   run_ids                 TEXT[]       NOT NULL,

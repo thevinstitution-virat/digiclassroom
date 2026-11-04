@@ -12,19 +12,19 @@
 -- why, and whether the monitor did it automatically).
 --
 -- hw_question.scheme_source: where a question's marking scheme came from. Every existing question is 'custom' (a teacher's own scheme,
--- the only kind that exists today). 'textbook' and 'board_paper' are set by the key service integration (roadmap 5.2, not built).
+-- the only kind that existed before 027). Migration 027 sets it from the answer key a question uses: 'board_scheme_key', 'passage_key' or 'textbook_key'.
 
 BEGIN;
 
 ALTER TABLE hw_question
-  ADD COLUMN scheme_source TEXT NOT NULL DEFAULT 'custom' CHECK (scheme_source IN ('textbook', 'board_paper', 'custom'));
+  ADD COLUMN scheme_source TEXT NOT NULL DEFAULT 'teacher_rubric' CHECK (scheme_source IN ('board_scheme_key', 'passage_key', 'textbook_key', 'teacher_rubric'));
 
 CREATE TABLE hw_eligibility (
-  group_key         TEXT         PRIMARY KEY CHECK (group_key = lower(group_key) AND group_key ~ '^[^|]+\|(very_short|short|long|essay)\|(en|hi|mixed)\|(textbook|board_paper|custom)$'),
+  group_key         TEXT         PRIMARY KEY CHECK (group_key = lower(group_key) AND group_key ~ '^[^|]+\|(very_short|short|long|essay)\|(en|hi|mixed)\|(board_scheme_key|passage_key|textbook_key|teacher_rubric)$'),
   subject           VARCHAR(100) NOT NULL,
   question_type     TEXT         NOT NULL CHECK (question_type IN ('very_short', 'short', 'long', 'essay')),
   language          TEXT         NOT NULL CHECK (language IN ('en', 'hi', 'mixed')),
-  scheme_source     TEXT         NOT NULL CHECK (scheme_source IN ('textbook', 'board_paper', 'custom')),
+  scheme_source     TEXT         NOT NULL CHECK (scheme_source IN ('board_scheme_key', 'passage_key', 'textbook_key', 'teacher_rubric')),
   status            TEXT         NOT NULL CHECK (status IN ('insufficient_data', 'not_yet', 'eligible')),
   config_hash       CHAR(64)     CHECK (config_hash IS NULL OR config_hash ~ '^[0-9a-f]{64}$'),
   gate_result_id    VARCHAR(36),

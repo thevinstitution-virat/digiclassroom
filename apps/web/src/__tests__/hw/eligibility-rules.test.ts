@@ -11,15 +11,15 @@ const base: FingerprintParts = runningParts(prod, 'gemini-3.5-flash-lite', 'grad
 
 describe('groups', () => {
   it('a group key is subject, type, language and scheme source, lower case, and parses back', () => {
-    expect(groupKey({ subject: '  Social   Science ', questionType: 'short', language: 'hi', schemeSource: 'custom' })).toBe('social science|short|hi|custom')
-    expect(parseGroupKey('social science|short|hi|custom')).toEqual({ subject: 'social science', questionType: 'short', language: 'hi', schemeSource: 'custom' })
-    expect(parseGroupKey('Science|short|en|custom')).toBeNull() // not lower case
-    expect(parseGroupKey('science|mcq|en|custom')).toBeNull() // not a product type
+    expect(groupKey({ subject: '  Social   Science ', questionType: 'short', language: 'hi', schemeSource: 'teacher_rubric' })).toBe('social science|short|hi|teacher_rubric')
+    expect(parseGroupKey('social science|short|hi|teacher_rubric')).toEqual({ subject: 'social science', questionType: 'short', language: 'hi', schemeSource: 'teacher_rubric' })
+    expect(parseGroupKey('Science|short|en|teacher_rubric')).toBeNull() // not lower case
+    expect(parseGroupKey('science|mcq|en|teacher_rubric')).toBeNull() // not a product type
     expect(parseGroupKey('science|short|en|invented')).toBeNull()
   })
   it('a "|" cannot be smuggled into a subject', () => {
     expect(normaliseSubject('Sci|ence')).toBe('sci ence')
-    expect(() => groupKey({ subject: ' | ', questionType: 'short', language: 'en', schemeSource: 'custom' })).toThrow(/needs a subject/)
+    expect(() => groupKey({ subject: ' | ', questionType: 'short', language: 'en', schemeSource: 'teacher_rubric' })).toThrow(/needs a subject/)
   })
   it('evaluation question types fall into the product\'s four', () => {
     expect(['mcq', 'assertion_reason', 'very_short'].map(productQuestionType)).toEqual(['very_short', 'very_short', 'very_short'])
@@ -98,22 +98,22 @@ describe('a gate report becomes stored rows, unchanged', () => {
     gates: [row('short', 'Eligible'), row('case_based', 'Not yet'), row('very_short', 'Eligible'), row('mcq', 'Insufficient data'), row('short', 'Eligible', 'hi')],
   }
   it('lands each evaluation type in its product group, with the worst verdict where several fall into one', () => {
-    const out = resultsFromReport(report, { schemeSource: 'textbook', parts: base })
+    const out = resultsFromReport(report, { schemeSource: 'textbook_key', parts: base })
     const by = Object.fromEntries(out.map((r) => [r.groupKey, r]))
-    expect(Object.keys(by).sort()).toEqual(['science|short|en|textbook', 'science|short|hi|textbook', 'science|very_short|en|textbook'])
-    expect(by['science|short|en|textbook'].verdict).toBe('not_yet') // short is eligible, case_based is not yet
-    expect(by['science|short|en|textbook'].checks.map((c) => c.gate)).toEqual(['short: QWK', 'case_based: QWK']) // which evaluation type each check was about
-    expect(by['science|very_short|en|textbook'].verdict).toBe('insufficient_data') // very_short eligible, mcq insufficient
-    expect(by['science|short|hi|textbook'].verdict).toBe('eligible')
-    expect(by['science|short|hi|textbook'].checks[0].gate).toBe('QWK') // a single type keeps the report's own name
+    expect(Object.keys(by).sort()).toEqual(['science|short|en|textbook_key', 'science|short|hi|textbook_key', 'science|very_short|en|textbook_key'])
+    expect(by['science|short|en|textbook_key'].verdict).toBe('not_yet') // short is eligible, case_based is not yet
+    expect(by['science|short|en|textbook_key'].checks.map((c) => c.gate)).toEqual(['short: QWK', 'case_based: QWK']) // which evaluation type each check was about
+    expect(by['science|very_short|en|textbook_key'].verdict).toBe('insufficient_data') // very_short eligible, mcq insufficient
+    expect(by['science|short|hi|textbook_key'].verdict).toBe('eligible')
+    expect(by['science|short|hi|textbook_key'].checks[0].gate).toBe('QWK') // a single type keeps the report's own name
     expect(out.every((r) => r.productionFingerprint === fingerprint(base) && r.datasetVersions[0] === 'heldout-1d@v1' && r.runIds[0] === 'run_20261104_aaaaaaaa')).toBe(true)
   })
   it('without a recorded setup there is no fingerprint (stored, cannot be promoted)', () => {
-    expect(resultsFromReport(report, { schemeSource: 'custom', parts: null }).every((r) => r.productionFingerprint === null)).toBe(true)
+    expect(resultsFromReport(report, { schemeSource: 'teacher_rubric', parts: null }).every((r) => r.productionFingerprint === null)).toBe(true)
   })
   it('an unknown language or verdict refuses the whole report instead of guessing', () => {
-    expect(() => resultsFromReport({ ...report, gates: [row('short', 'Eligible', 'fr')] }, { schemeSource: 'custom', parts: null })).toThrow(/unknown language "fr"/)
-    expect(() => resultsFromReport({ ...report, gates: [{ ...row('short', 'Eligible'), verdict: 'Maybe' as never }] }, { schemeSource: 'custom', parts: null })).toThrow(/unknown verdict "Maybe"/)
+    expect(() => resultsFromReport({ ...report, gates: [row('short', 'Eligible', 'fr')] }, { schemeSource: 'teacher_rubric', parts: null })).toThrow(/unknown language "fr"/)
+    expect(() => resultsFromReport({ ...report, gates: [{ ...row('short', 'Eligible'), verdict: 'Maybe' as never }] }, { schemeSource: 'teacher_rubric', parts: null })).toThrow(/unknown verdict "Maybe"/)
   })
   it('runs are stored with their cost in paise', () => {
     expect(runRowsFromReport(report)[0]).toMatchObject({ runId: 'run_20261104_aaaaaaaa', datasetRef: 'heldout-1d@v1', costPaise: 1235, repeat: 5, counts: { ok: 195 } })

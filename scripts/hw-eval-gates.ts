@@ -2,7 +2,8 @@
 //
 //   import: read the report.json that `npm run hw:eval:report` wrote and store its runs and gate rows, unchanged, in the database. The
 //           screens then show exactly these numbers. A report cannot know two things, so they are given here:
-//             --scheme-source textbook|board_paper|custom   what the dataset's questions' marking schemes were
+//             --scheme-source board_scheme_key|passage_key|textbook_key|teacher_rubric   what the dataset's questions' marking schemes were
+//                             (the older names textbook, board_paper and custom still work)
 //             --prompt-version / --code-marking             the marking prompt and the code-marking flag the runs stand for
 //           and one is read from the runs themselves (--runs-root): the marking setup, as a fingerprint. A run that used strict marking, or
 //           marked key points only, is not the product's marking: it is stored, and cannot be promoted.
@@ -27,7 +28,9 @@ async function importReport() {
   const file = arg('report');
   const source = arg('scheme-source');
   if (!file) throw new Error('--report <report.json> is required');
-  if (!source || !['textbook', 'board_paper', 'custom'].includes(source)) throw new Error('--scheme-source textbook|board_paper|custom is required: a report cannot know it');
+  const ALIAS: Record<string, string> = { textbook: 'textbook_key', board_paper: 'board_scheme_key', custom: 'teacher_rubric' };
+  const scheme = source ? (ALIAS[source] ?? source) : undefined;
+  if (!scheme || !['board_scheme_key', 'passage_key', 'textbook_key', 'teacher_rubric'].includes(scheme)) throw new Error('--scheme-source board_scheme_key|passage_key|textbook_key|teacher_rubric is required: a report cannot know it');
   const text = readFileSync(file, 'utf8');
   const sha = createHash('sha256').update(text).digest('hex');
   const report = JSON.parse(text) as import('@/lib/hw/eligibility/gate-import').ReportJson;
@@ -49,7 +52,7 @@ async function importReport() {
   }
   if (!parts) console.warn(`! no production fingerprint: ${why}. The results are stored for reading but cannot be promoted.`);
 
-  const results = resultsFromReport(report, { schemeSource: source as 'textbook' | 'board_paper' | 'custom', parts });
+  const results = resultsFromReport(report, { schemeSource: scheme as import('@/lib/hw/eligibility/group').GroupSchemeSource, parts });
   const out = await importGateReport(report, results, { importedBy: arg('imported-by') ?? `cli:${userInfo().username}`, reportSha256: sha });
   console.log(`report ${sha.slice(0, 12)}: ${out.runsAdded} run(s) added, ${out.resultsAdded} gate result(s) added, ${out.resultsAlreadyThere} already there.`);
   for (const r of results) console.log(`  ${r.groupKey}: ${r.verdict}`);

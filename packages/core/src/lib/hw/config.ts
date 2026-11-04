@@ -130,17 +130,30 @@ const EnvSchema = z.object({
    */
   HW_ELIGIBILITY_ENFORCED: bool(true),
   /**
+   * A worker that takes only the jobs of institutions whose id starts with this. Unset in production (every job). The integration suites set a
+   * prefix of their own, so suites running at the same time in one database never claim, poll or fail each other's jobs (and never a leftover
+   * from an earlier run).
+   */
+  HW_JOB_ORG_PREFIX: str(),
+  /**
+   * Roadmap 5.2 (decision D3): a question marked with the teacher's own rubric gets no AI suggestion during the pilot, whatever the registry says.
+   * Turn this on only when teacher-rubric marking has become its own measured, eligible group. Ignored while HW_ELIGIBILITY_ENFORCED is off.
+   */
+  HW_TEACHER_RUBRIC_AI_ENABLED: bool(false),
+  /**
    * Monitoring and alerts (roadmap 5.4). Rates are over the last 7 Indian-time days, for one group, on the marking setup that was promoted.
    * A rate over its limit raises an alert only when the sample is at least HW_MONITOR_MIN_ANSWERS. Only the two marking-quality alerts
    * (override rate, large override rate) take a group out of 'eligible' automatically, and only while HW_MONITOR_AUTODEMOTE is on; the
    * others (transcript fixes, failed jobs, cost) alert and email but never demote. HW_MONITOR_MIN_GROUP_SIZE hides a group's figures from an
-   * institution admin until it has that many answers. These defaults are the author's; the owner sets the real ones.
+   * institution admin until it has that many answers.
+   * Owner's thresholds, PROVISIONAL until Phase 4 has measured real teachers: over 7 days with at least 60 suggestions in the group, demote when more than 5%
+   * are changed by a large amount (the large-error gate's own definition of large) or more than 30% are changed at all. Every other alert only warns.
    */
   HW_MONITOR_AUTODEMOTE: bool(true),
-  HW_MONITOR_MIN_ANSWERS: num(30, 1, 100000),
+  HW_MONITOR_MIN_ANSWERS: num(60, 1, 100000),
   HW_MONITOR_MIN_GROUP_SIZE: num(10, 1, 10000),
-  HW_MONITOR_MAX_OVERRIDE_RATE: num(0.5, 0, 1),
-  HW_MONITOR_MAX_LARGE_OVERRIDE_RATE: num(0.1, 0, 1),
+  HW_MONITOR_MAX_OVERRIDE_RATE: num(0.3, 0, 1),
+  HW_MONITOR_MAX_LARGE_OVERRIDE_RATE: num(0.05, 0, 1),
   HW_MONITOR_MAX_TRANSCRIPT_FIX_RATE: num(0.25, 0, 1),
   HW_MONITOR_MAX_FAILED_JOB_RATE: num(0.1, 0, 1),
   /** Actual cost per answer over this multiple of the projection raises a cost alert. */

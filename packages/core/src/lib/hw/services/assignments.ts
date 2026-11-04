@@ -3,7 +3,7 @@
 
 import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { institutionClasses, institutionSections, member, user } from '@/db/schema';
-import { hwAiJob, hwAssignment, hwClassTeacher, hwQuestion, hwRubricItem, type HwAnswerMode, type HwLanguage, type HwQuestionType, type HwRubricKind } from '@/db/hw-schema';
+import { hwAiJob, hwAssignment, hwClassTeacher, hwQuestion, hwRubricItem, type HwAnswerMode, type HwLanguage, type HwQuestionOrigin, type HwQuestionType, type HwRubricKind } from '@/db/hw-schema';
 import { assignmentForManage, requireHwEnabled, requireRole, teacherLinks } from '../access/guards';
 import { canCreateFor, linkCovers, roleFromMember, type HwActor } from '../access/policy';
 import { requireModel } from '../config';
@@ -11,6 +11,10 @@ import { HwError } from '../errors';
 import { db, newId, num, type Exec } from '../db';
 import { loadScope, requireScope } from '../tenant-scope';
 import { quotaAllows, quotaRefusal, quotaState } from '../cost/quota';
+import { replaceRubric } from './rubric-store';
+import { currentKeys, keyViewOf, queueKey, switchToTeacher } from '../keys/product';
+import { aiOffMessage } from '../eligibility/decision';
+import { eligibilityOfQuestion } from '../eligibility/registry';
 import { recordUsage } from '../cost/usage';
 import { generate, providerFor, routed, textPart, usageFromError } from '../ai';
 import { complete, fail } from '../jobs/queue';
@@ -36,6 +40,12 @@ export interface QuestionInput {
   acceptedAnswers?: string[];
   languageHint?: HwLanguage;
   answerLines?: number;
+  /** Where the question comes from; a textbook exercise or a board paper is public, a custom question is the teacher's own (default). */
+  origin?: HwQuestionOrigin;
+  /** textbook_exercise: {book, chapter, exercise}; board_paper: {paper, year, questionNo}. */
+  originRef?: Record<string, string>;
+  /** The passage the question is about (a case, a source, a reading text); a key may be built from it. */
+  passage?: string | null;
 }
 
 export interface RubricItemInput {
@@ -82,9 +92,10 @@ export async function getForManage(actor: HwActor, assignmentId: string) {
       .where(and(inArray(hwRubricItem.questionId, questions.map((q) => q.id)), isNull(hwRubricItem.retiredAt)))
       .orderBy(asc(hwRubricItem.position))
     : [];
+  const keys = await currentKeys(db, questions.map((q) => q.id));
   return {
     assignment,
-    questions: questions.map((q) => ({ ...q, rubric: rubric.filter((r) => r.questionId === q.id) })),
+    questions: questions.map((q) => ({ ...q, rubric: rubric.filter((r) => r.questionId === q.id), key: keyViewOf(q, keys.get(q.id)) })),
   };
 }
 
@@ -143,7 +154,7 @@ export async function deleteAssignment(actor: HwActor, assignmentId: string) {
 
 export async function publishAssignment(actor: HwActor, assignmentId: string) {
   const a = await assignmentForManage(actor, assignmentId);
-  if (a.status === 'published') return { totalMarks: num(a.totalMarks), warnings: [] as string[] };
+  if (a.status === 'published') return { totalMarks: num(a.totalMarks), warnings: [] as string[], handMarked: [] as HandMarked[] };
   const { questions } = await getForManage(actor, assignmentId);
   const blank = questions.filter((q) => !q.prompt.trim()).map((q) => q.position + 1);
   if (blank.length) throw new HwError('BAD_REQUEST', `Write the question text for question ${blank.join(', ')} before publishing.`);
@@ -156,9 +167,11 @@ export async function publishAssignment(actor: HwActor, assignmentId: string) {
     const sum = q.rubric.reduce((s, r) => s + num(r.marks), 0);
     if (q.rubric.length && sum < num(q.marks)) warnings.push(`Question ${q.position + 1}: the marking scheme adds up to ${sum} of ${num(q.marks)} marks.`);
   }
+  // Key status never blocks publishing; the teacher is told which questions will be marked by hand, and why.
+  const handMarked = await handMarkedList(questions.map((q) => ({ id: q.id, position: q.position })));
   try {
     const [row] = await db.update(hwAssignment).set({ status: 'published' }).where(eq(hwAssignment.id, a.id)).returning({ totalMarks: hwAssignment.totalMarks });
-    return { totalMarks: num(row.totalMarks), warnings };
+    return { totalMarks: num(row.totalMarks), warnings, handMarked };
   } catch (e) {
     // The database trigger checks the same rules; turn its message into a clear refusal.
     throw new HwError('BAD_REQUEST', `Cannot publish: ${(e as Error).message}`);
@@ -200,7 +213,14 @@ export async function addQuestion(actor: HwActor, assignmentId: string, input: Q
       acceptedAnswers: input.acceptedAnswers ?? [],
       languageHint: input.languageHint ?? 'en',
       answerLines: input.answerLines ?? 4,
+      origin: input.origin ?? 'custom',
+      originRef: input.originRef ?? {},
+      passage: input.passage?.trim() || null,
+      // A new question is marked against an answer key built for it; "use my own rubric" switches it to the teacher's.
+      rubricMode: 'key',
     });
+    const [row] = await tx.select().from(hwQuestion).where(eq(hwQuestion.id, id)).limit(1);
+    await queueKey(tx, row, actor.userId);
   });
   return { id };
 }
@@ -219,7 +239,16 @@ export async function updateQuestion(actor: HwActor, questionId: string, patch: 
       ...(patch.acceptedAnswers !== undefined ? { acceptedAnswers: patch.acceptedAnswers } : {}),
       ...(patch.languageHint !== undefined ? { languageHint: patch.languageHint } : {}),
       ...(patch.answerLines !== undefined ? { answerLines: patch.answerLines } : {}),
+      ...(patch.origin !== undefined ? { origin: patch.origin } : {}),
+      ...(patch.originRef !== undefined ? { originRef: patch.originRef } : {}),
+      ...(patch.passage !== undefined ? { passage: patch.passage?.trim() || null } : {}),
     }).where(eq(hwQuestion.id, q.id));
+    // A change to anything the key was built from makes the key stale: build a new one.
+    const changesKey = ['prompt', 'type', 'marks', 'languageHint', 'origin', 'originRef', 'passage'].some((k) => (patch as Record<string, unknown>)[k] !== undefined);
+    if (changesKey) {
+      const [row] = await db.select().from(hwQuestion).where(eq(hwQuestion.id, q.id)).limit(1);
+      await db.transaction((tx) => queueKey(tx, row, actor.userId));
+    }
   } catch (e) {
     throw new HwError('BAD_REQUEST', `Cannot change the question: ${(e as Error).message}`);
   }
@@ -267,23 +296,9 @@ export async function setRubric(actor: HwActor, questionId: string, items: Rubri
     if (!it.description.trim()) throw new HwError('BAD_REQUEST', 'Every key point needs a description.');
   }
   const run = async (tx: Exec) => {
-    const [{ version }] = await tx.update(hwQuestion).set({ rubricVersion: sql`${hwQuestion.rubricVersion} + 1` })
-      .where(eq(hwQuestion.id, q.id)).returning({ version: hwQuestion.rubricVersion });
-    await tx.update(hwRubricItem).set({ retiredAt: new Date() }).where(and(eq(hwRubricItem.questionId, q.id), isNull(hwRubricItem.retiredAt)));
-    if (items.length) {
-      await tx.insert(hwRubricItem).values(items.map((it, i) => ({
-        id: newId(),
-        organizationId: actor.orgId,
-        questionId: q.id,
-        position: i,
-        kind: it.kind,
-        description: it.description.trim(),
-        marks: String(it.marks),
-        version,
-        source,
-      })));
-    }
-    return version;
+    // Writing a rubric by hand (or having the AI draft one) is choosing the teacher's own rubric over the answer key.
+    await switchToTeacher(tx, q.id);
+    return replaceRubric(tx, actor.orgId, q.id, items, source);
   };
   const version = x ? await run(x) : await db.transaction(run);
   const sum = items.reduce((s, i) => s + i.marks, 0);
@@ -306,6 +321,8 @@ const RubricDraft = z.object({
 export async function draftRubric(actor: HwActor, questionId: string, opts: { replace: boolean }) {
   const { q, a } = await questionForManage(actor, questionId);
   requireDraft(a, 'The marking scheme');
+  // "Draft with AI" is for the teacher's own rubric only; a question with an answer key shows the key instead (roadmap 5.2).
+  if (q.rubricMode === 'key') throw new HwError('CONFLICT', 'This question uses an answer key. Choose "Use my own rubric instead" first if you want to write or draft key points yourself.');
   // The draft comes only from the teacher's model answer (prompt rubric-draft.v2); without one there is nothing to draft from.
   const blocked = draftBlockedReason(q);
   if (blocked) throw new HwError('BAD_REQUEST', blocked);
@@ -350,6 +367,60 @@ export async function draftRubric(actor: HwActor, questionId: string, opts: { re
     });
     throw e;
   }
+}
+
+// ── Answer keys (roadmap 5.2) ────────────────────────────────────────────────
+
+export interface HandMarked { questionId: string; position: number; reason: string; message: string }
+
+/** Which of these questions will have no AI suggestion right now, and why (the registry and the key, as marking will see them). */
+async function handMarkedList(qs: { id: string; position: number }[]): Promise<HandMarked[]> {
+  const out: HandMarked[] = [];
+  for (const q of qs) {
+    const d = await eligibilityOfQuestion(db, q.id);
+    if (!d.eligible) out.push({ questionId: q.id, position: q.position, reason: d.reason, message: aiOffMessage(d.reason) });
+  }
+  return out;
+}
+
+/** The builder lists, before publishing, the questions that will be hand-marked and why. Never blocks publishing. */
+export async function publishPreview(actor: HwActor, assignmentId: string) {
+  await requireHwEnabled(actor);
+  await assignmentForManage(actor, assignmentId);
+  const qs = await db.select({ id: hwQuestion.id, position: hwQuestion.position }).from(hwQuestion).where(eq(hwQuestion.assignmentId, assignmentId)).orderBy(asc(hwQuestion.position));
+  return { handMarked: await handMarkedList(qs) };
+}
+
+/** "Use my own rubric instead": the key is dropped for this question, and during the pilot the question is marked by hand. */
+export async function useOwnRubric(actor: HwActor, questionId: string) {
+  const { q, a } = await questionForManage(actor, questionId);
+  requireDraft(a, 'The marking scheme');
+  await db.transaction((tx) => switchToTeacher(tx, q.id));
+}
+
+/** Back to an answer key: a new one is built (the teacher's rubric stays until it is ready). */
+export async function useAnswerKey(actor: HwActor, questionId: string) {
+  const { q, a } = await questionForManage(actor, questionId);
+  requireDraft(a, 'The marking scheme');
+  await db.transaction(async (tx) => {
+    await tx.update(hwQuestion).set({ rubricMode: 'key' }).where(eq(hwQuestion.id, q.id));
+    const [row] = await tx.select().from(hwQuestion).where(eq(hwQuestion.id, q.id)).limit(1);
+    await queueKey(tx, row, actor.userId);
+  });
+}
+
+/** Build the key again (after a failure, a refusal, or when the teacher wants a fresh one). Not on a closed assignment. */
+export async function retryKey(actor: HwActor, questionId: string) {
+  const { q, a } = await questionForManage(actor, questionId);
+  if (a.status === 'closed') throw new HwError('CONFLICT', 'A closed assignment cannot be edited.');
+  if (q.rubricMode !== 'key') throw new HwError('CONFLICT', 'This question uses your own rubric, not an answer key.');
+  await db.transaction(async (tx) => {
+    // A fresh build even when one is "already on its way" for the same question text is pointless; only a settled key is rebuilt.
+    const cur = (await currentKeys(tx, [q.id])).get(q.id);
+    if (cur?.status === 'building') return;
+    if (cur) await tx.execute(sql`UPDATE hw_question_key SET superseded_at = now() WHERE id = ${cur.id}`);
+    await queueKey(tx, q, actor.userId);
+  });
 }
 
 // ── Teacher <-> class links (institution admin) ──────────────────────────────

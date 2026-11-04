@@ -21,7 +21,8 @@ const MAX_TYPED_CHARS = 50_000;
 
 /** What a student may see of a question. */
 function studentQuestion(q: typeof hwQuestion.$inferSelect) {
-  return { id: q.id, position: q.position, type: q.type, prompt: q.prompt, marks: num(q.marks), languageHint: q.languageHint, answerLines: q.answerLines };
+  // The passage is part of the question and is shown; the answer key, the rubric and the model answer never are.
+  return { id: q.id, position: q.position, type: q.type, prompt: q.prompt, passage: q.passage, marks: num(q.marks), languageHint: q.languageHint, answerLines: q.answerLines };
 }
 
 export async function myAssignments(actor: HwActor) {

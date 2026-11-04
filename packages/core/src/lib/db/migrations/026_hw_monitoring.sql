@@ -27,7 +27,7 @@ CREATE TABLE hw_monitor_group_daily (
   subject                VARCHAR(100)  NOT NULL,
   question_type          TEXT          NOT NULL CHECK (question_type IN ('very_short', 'short', 'long', 'essay')),
   language               TEXT          NOT NULL CHECK (language IN ('en', 'hi', 'mixed')),
-  scheme_source          TEXT          NOT NULL CHECK (scheme_source IN ('textbook', 'board_paper', 'custom')),
+  scheme_source          TEXT          NOT NULL CHECK (scheme_source IN ('board_scheme_key', 'passage_key', 'textbook_key', 'teacher_rubric')),
   config_hash            CHAR(64)      CHECK (config_hash IS NULL OR config_hash ~ '^[0-9a-f]{64}$'),
   -- Answers given a final mark that day, and how the final mark was reached (what the teacher DID, from hw_grade.source): accepted the AI
   -- suggestion as it was, accepted it after changing it, or marked by hand; or a rule in code marked it (an exact match or a blank).

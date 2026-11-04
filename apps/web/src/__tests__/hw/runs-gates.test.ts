@@ -54,7 +54,7 @@ suite('runs & gates — the screen matches hw:eval:report', () => {
     return { model, report: JSON.parse(text) as ReportJson, sha: createHash('sha256').update(text).digest('hex') }
   }
   async function importIt(r: ReturnType<typeof reportFile>) {
-    const results = resultsFromReport(r.report, { schemeSource: 'custom', parts: m.reg.runningConfig().parts })
+    const results = resultsFromReport(r.report, { schemeSource: 'teacher_rubric', parts: m.reg.runningConfig().parts })
     return m.store.importGateReport(r.report, results, { importedBy: 'cli:test', reportSha256: r.sha })
   }
   const VERDICT = { Eligible: 'eligible', 'Not yet': 'not_yet', 'Insufficient data': 'insufficient_data' } as const
@@ -65,7 +65,7 @@ suite('runs & gates — the screen matches hw:eval:report', () => {
     m = { reg: await import('@/lib/hw/eligibility/registry'), store: await import('@/lib/hw/eligibility/gate-store'), view: await import('@/lib/hw/eligibility/runs-view'), pool: db.getPool() }
   })
   afterAll(async () => {
-    await raw.query(`DELETE FROM hw_eligibility WHERE group_key = 'science|short|en|custom' AND decided_by = 'system:gate-import'`)
+    await raw.query(`DELETE FROM hw_eligibility WHERE group_key = 'science|short|en|teacher_rubric' AND decided_by = 'system:gate-import'`)
     await raw.end()
     await m?.pool.end()
   })
@@ -93,7 +93,7 @@ suite('runs & gates — the screen matches hw:eval:report', () => {
     // Gate tables: the stored verdict and every check (name, state, wording) are the report's
     const md = renderMarkdown(r.model)
     for (const g of r.model.gates) {
-      const key = `${g.subject.toLowerCase()}|${g.questionType}|${g.language}|custom`
+      const key = `${g.subject.toLowerCase()}|${g.questionType}|${g.language}|teacher_rubric`
       const s = screen.gates.find((x) => x.groupKey === key)!
       expect(s).toBeDefined()
       expect(s.verdict).toBe(VERDICT[g.verdict])
@@ -108,7 +108,7 @@ suite('runs & gates — the screen matches hw:eval:report', () => {
   it('it shows what the report says even if that differs from what would be recomputed: nothing is recalculated', async () => {
     const r = reportFile((model) => { model.gates[0].checks[0].detail = `edited in the file ${tag}`; model.gates[0].verdict = 'Not yet' })
     await importIt(r)
-    const s = (await m.view.runsAndGates(owner)).gates.find((x) => x.groupKey === 'science|short|en|custom')!
+    const s = (await m.view.runsAndGates(owner)).gates.find((x) => x.groupKey === 'science|short|en|teacher_rubric')!
     expect(s.verdict).toBe('not_yet')
     expect(s.checks[0].detail).toBe(`edited in the file ${tag}`)
   })
@@ -119,11 +119,11 @@ suite('runs & gates — the screen matches hw:eval:report', () => {
     const again = await importIt(r)
     expect(first.resultsAdded).toBe(1)
     expect(again).toMatchObject({ runsAdded: 0, resultsAdded: 0, resultsAlreadyThere: 1 })
-    const n = (await raw.query(`SELECT count(*)::int AS n FROM hw_eval_gate_result WHERE group_key = 'science|short|en|custom'`)).rows[0].n
+    const n = (await raw.query(`SELECT count(*)::int AS n FROM hw_eval_gate_result WHERE group_key = 'science|short|en|teacher_rubric'`)).rows[0].n
     const screen = await m.view.runsAndGates(owner)
-    expect(screen.gates.filter((x) => x.groupKey === 'science|short|en|custom')).toHaveLength(1) // the newest, once
-    expect(screen.gates.find((x) => x.groupKey === 'science|short|en|custom')!.earlier).toBe(n - 1)
-    await expect(raw.query(`UPDATE hw_eval_gate_result SET verdict = 'eligible' WHERE group_key = 'science|short|en|custom'`)).rejects.toThrow()
+    expect(screen.gates.filter((x) => x.groupKey === 'science|short|en|teacher_rubric')).toHaveLength(1) // the newest, once
+    expect(screen.gates.find((x) => x.groupKey === 'science|short|en|teacher_rubric')!.earlier).toBe(n - 1)
+    await expect(raw.query(`UPDATE hw_eval_gate_result SET verdict = 'eligible' WHERE group_key = 'science|short|en|teacher_rubric'`)).rejects.toThrow()
     await expect(raw.query(`DELETE FROM hw_eval_run WHERE run_id = $1`, [r.model.runs[0].runId])).rejects.toThrow()
   })
 })

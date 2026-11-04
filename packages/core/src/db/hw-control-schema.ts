@@ -6,7 +6,7 @@ import { pgTable, varchar, text, smallint, bigint, boolean, jsonb, timestamp, ch
 const ts = (name: string) => timestamp(name, { withTimezone: true, mode: 'date' });
 const id = () => varchar('id', { length: 36 }).primaryKey();
 
-export type HwSchemeSource = 'textbook' | 'board_paper' | 'custom';
+export type HwSchemeSource = 'board_scheme_key' | 'passage_key' | 'textbook_key' | 'teacher_rubric';
 export type HwEligibilityStatus = 'insufficient_data' | 'not_yet' | 'eligible';
 export type HwGateQuestionType = 'very_short' | 'short' | 'long' | 'essay';
 export type HwGateLanguage = 'en' | 'hi' | 'mixed';

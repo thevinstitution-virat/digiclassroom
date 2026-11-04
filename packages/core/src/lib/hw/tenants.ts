@@ -24,6 +24,9 @@ export interface TenantUsage {
   pagesRead: number;
   answersGraded: number;
   costPaise: number;
+  /** Answer keys built this month and what they cost (already inside costPaise). */
+  keyBuilds: number;
+  keyCostPaise: number;
   budgetPaise: number;
   /** 0..n; null when no budget is set. */
   fraction: number | null;
@@ -33,14 +36,14 @@ export interface TenantUsage {
 
 export async function tenantUsage(x: Exec, orgId: string): Promise<TenantUsage> {
   const month = monthKey();
-  const [u] = await x.select({ pagesRead: hwAiUsageMonthly.pagesRead, answersGraded: hwAiUsageMonthly.answersGraded, costPaise: hwAiUsageMonthly.costPaise })
+  const [u] = await x.select({ pagesRead: hwAiUsageMonthly.pagesRead, answersGraded: hwAiUsageMonthly.answersGraded, costPaise: hwAiUsageMonthly.costPaise, keyBuilds: hwAiUsageMonthly.keyBuilds, keyCostPaise: hwAiUsageMonthly.keyCostPaise })
     .from(hwAiUsageMonthly).where(and(eq(hwAiUsageMonthly.organizationId, orgId), eq(hwAiUsageMonthly.month, month))).limit(1);
   const [q] = await x.select({ budget: hwTenantQuota.monthlyBudgetPaise }).from(hwTenantQuota).where(eq(hwTenantQuota.organizationId, orgId)).limit(1);
   const budgetPaise = Number(q?.budget ?? 0);
   const costPaise = Number(u?.costPaise ?? 0);
   const st = budgetStatus({ budgetPaise, usedPaise: costPaise });
   return {
-    month, pagesRead: u?.pagesRead ?? 0, answersGraded: u?.answersGraded ?? 0, costPaise, budgetPaise,
+    month, pagesRead: u?.pagesRead ?? 0, answersGraded: u?.answersGraded ?? 0, costPaise, keyBuilds: u?.keyBuilds ?? 0, keyCostPaise: Number(u?.keyCostPaise ?? 0), budgetPaise,
     fraction: st ? st.fraction : null, warn: st?.warn ?? false, exhausted: st?.exhausted ?? false,
   };
 }

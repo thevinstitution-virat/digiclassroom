@@ -9,7 +9,7 @@ import { gyankoshRetriever, type Retriever } from './retriever';
 import type { KeyDeps } from './service';
 import { trioReader, type TrioReader } from './trio';
 
-export { buildKey, keyConfigHash, keySettingsFromEnv, KEY_RETRIEVAL_VERSION, type KeyDeps, type KeySettings, type OfficialScheme } from './service';
+export { buildKey, currentKeyServiceVersion, keyConfigHash, keySettingsFromEnv, KEY_RETRIEVAL_VERSION, type KeyDeps, type KeySettings, type OfficialScheme } from './service';
 export { fileKeyCache, memoryKeyCache, type KeyCache } from './cache';
 export { memorySharedKeyStore, isPublicOrigin, type SharedKeyStore } from './shared';
 export type * from './types';

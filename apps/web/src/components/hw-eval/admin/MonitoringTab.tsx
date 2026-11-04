@@ -64,7 +64,7 @@ export function MonitoringTab() {
         <CardHeader className="pb-2"><CardTitle className="text-base">Alerts</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
           <p className="text-muted-foreground">
-            Over the last 7 days, on the marking setup running now, with at least {th.minAnswers} answers: more than {pct(th.maxOverrideRate)} of suggestions changed, or more than {pct(th.maxLargeOverrideRate)} changed by a lot, takes the
+            Thresholds are provisional until Phase 4 has measured real teachers. Over the last 7 days, on the marking setup running now, with at least {th.minAnswers} answers: more than {pct(th.maxOverrideRate)} of suggestions changed, or more than {pct(th.maxLargeOverrideRate)} changed by a lot, takes the
             group out of “eligible” {v.autoDemote ? 'automatically (and emails you)' : <strong>— automatic demotion is switched off, so you are only emailed</strong>}.
             More than {pct(th.maxTranscriptFixRate)} reading corrections, {pct(th.maxFailedJobRate)} failed jobs or {th.maxCostRatio}× the projected cost only warn.
           </p>

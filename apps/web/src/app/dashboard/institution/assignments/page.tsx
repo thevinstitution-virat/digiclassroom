@@ -85,6 +85,7 @@ export default function InstitutionAssignmentsPage() {
                 {month && month.budgetPaise > 0
                   ? <p className="text-muted-foreground">{t('ad.budget', { budget: (month.budgetPaise / 100).toFixed(2), used: (month.costPaise / 100).toFixed(2), pct })}</p>
                   : <p className="text-muted-foreground">{usage.data!.monthlyAnswerQuota ? t('ad.quota', { n: usage.data!.monthlyAnswerQuota }) : t('ad.quotaOff')}</p>}
+                {month && month.keyBuilds > 0 && <p className="text-muted-foreground">{t('ad.keys', { n: month.keyBuilds, cost: (month.keyCostPaise / 100).toFixed(2) })}</p>}
                 {month?.exhausted
                   ? <p role="alert" className="rounded border border-red-300 bg-red-50 p-2 text-red-800">{t('ad.budgetFull')}</p>
                   : month?.warn && <p role="status" className="rounded border border-amber-300 bg-amber-50 p-2 text-amber-900">{t('ad.budgetWarn', { pct })}</p>}

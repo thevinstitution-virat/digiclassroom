@@ -29,8 +29,8 @@ suite('eligibility registry — database', () => {
     db: unknown
   }
   const owner = { userId: `owner-${tag}`, isSuperAdmin: true, rater: null }
-  const key = (over: Partial<{ type: string; lang: string; src: string }> = {}) => `${subject}|${over.type ?? 'short'}|${over.lang ?? 'en'}|${over.src ?? 'custom'}`
-  const parts = (over: Partial<{ type: 'short' | 'long'; lang: 'en' | 'hi'; src: 'custom' | 'textbook' }> = {}) => ({ subject, questionType: over.type ?? 'short', language: over.lang ?? 'en', schemeSource: over.src ?? 'custom' }) as import('@/lib/hw/eligibility/group').GroupParts
+  const key = (over: Partial<{ type: string; lang: string; src: string }> = {}) => `${subject}|${over.type ?? 'short'}|${over.lang ?? 'en'}|${over.src ?? 'teacher_rubric'}`
+  const parts = (over: Partial<{ type: 'short' | 'long'; lang: 'en' | 'hi'; src: 'teacher_rubric' | 'textbook_key' }> = {}) => ({ subject, questionType: over.type ?? 'short', language: over.lang ?? 'en', schemeSource: over.src ?? 'teacher_rubric' }) as import('@/lib/hw/eligibility/group').GroupParts
   const setModel = (model: string) => { process.env.HW_GRADE_MODEL = model; m.config._resetHwConfig() }
 
   /** A stored gate result for the group, measured on the given setup (default: the one running now). */
@@ -102,7 +102,7 @@ suite('eligibility registry — database', () => {
     expect((await audit('eligibility_promoted', k))[0]).toMatchObject({ actor_id: owner.userId, reason: 'Passed every gate on both held-out sets.' })
     // another group is untouched
     expect(await m.reg.eligibilityOfGroup(m.db as never, parts({ lang: 'hi' }))).toEqual({ eligible: false, reason: 'no_record' })
-    expect(await m.reg.eligibilityOfGroup(m.db as never, parts({ src: 'textbook' }))).toEqual({ eligible: false, reason: 'no_record' })
+    expect(await m.reg.eligibilityOfGroup(m.db as never, parts({ src: 'textbook_key' }))).toEqual({ eligible: false, reason: 'no_record' })
   })
 
   it('a change of the marking setup pauses it ("configuration changed") until it is promoted again for the new setup', async () => {
@@ -160,19 +160,19 @@ suite('eligibility registry — database', () => {
       gates: [{ subject: `Subj${tag}`, questionType: 'essay', language: 'en', verdict, checks: [{ gate: 'QWK', state: verdict === 'Eligible' ? 'pass' : 'fail', detail: 'QWK 0.7' }] }],
     })
     const sha = () => randomUUID().replace(/-/g, '').padEnd(64, '1')
-    const key = `${subject}|essay|en|custom`
+    const key = `${subject}|essay|en|teacher_rubric`
 
     it('stores the report\'s own rows, once, and records a group it has not seen as not yet; a passing result promotes nothing', async () => {
       const fp = m.reg.runningConfig().parts
       const s1 = sha()
-      const out = await m.store.importGateReport(report('Not yet'), resultsFromReport(report('Not yet'), { schemeSource: 'custom', parts: fp }), { importedBy: 'cli:test', reportSha256: s1 })
+      const out = await m.store.importGateReport(report('Not yet'), resultsFromReport(report('Not yet'), { schemeSource: 'teacher_rubric', parts: fp }), { importedBy: 'cli:test', reportSha256: s1 })
       expect(out).toMatchObject({ runsAdded: 1, resultsAdded: 1, resultsAlreadyThere: 0, recorded: [key], demoted: [] })
-      const again = await m.store.importGateReport(report('Not yet'), resultsFromReport(report('Not yet'), { schemeSource: 'custom', parts: fp }), { importedBy: 'cli:test', reportSha256: s1 })
+      const again = await m.store.importGateReport(report('Not yet'), resultsFromReport(report('Not yet'), { schemeSource: 'teacher_rubric', parts: fp }), { importedBy: 'cli:test', reportSha256: s1 })
       expect(again).toMatchObject({ runsAdded: 0, resultsAdded: 0, resultsAlreadyThere: 1 })
       expect((await raw.query(`SELECT status, decided_by FROM hw_eligibility WHERE group_key = $1`, [key])).rows[0]).toMatchObject({ status: 'not_yet', decided_by: 'system:gate-import' })
       expect((await raw.query(`SELECT cost_paise, dataset_ref FROM hw_eval_run WHERE run_id = $1`, [run])).rows[0]).toMatchObject({ cost_paise: '350', dataset_ref: 'itest-set@v1' })
       // a passing report is stored but does not promote
-      await m.store.importGateReport(report('Eligible', 'itest-set@v2'), resultsFromReport(report('Eligible', 'itest-set@v2'), { schemeSource: 'custom', parts: fp }), { importedBy: 'cli:test', reportSha256: sha() })
+      await m.store.importGateReport(report('Eligible', 'itest-set@v2'), resultsFromReport(report('Eligible', 'itest-set@v2'), { schemeSource: 'teacher_rubric', parts: fp }), { importedBy: 'cli:test', reportSha256: sha() })
       expect((await raw.query(`SELECT status FROM hw_eligibility WHERE group_key = $1`, [key])).rows[0].status).toBe('not_yet')
     })
 
@@ -180,15 +180,15 @@ suite('eligibility registry — database', () => {
       const fp = m.reg.runningConfig().parts
       const passing = (await raw.query(`SELECT id FROM hw_eval_gate_result WHERE group_key = $1 AND verdict = 'eligible' LIMIT 1`, [key])).rows[0].id
       await m.reg.promote(owner, { groupKey: key, gateResultId: passing, reason: 'Passed every gate on itest-set@v2.', confirm: true })
-      expect((await m.reg.eligibilityOfGroup(m.db as never, { subject, questionType: 'essay', language: 'en', schemeSource: 'custom' })).eligible).toBe(true)
+      expect((await m.reg.eligibilityOfGroup(m.db as never, { subject, questionType: 'essay', language: 'en', schemeSource: 'teacher_rubric' })).eligible).toBe(true)
       // a failing result measured on a different setup: nothing happens
       const otherParts = { ...fp, chunkSize: fp.chunkSize + 5 }
       expect(fingerprint(otherParts)).not.toBe(fingerprint(fp))
-      const o1 = await m.store.importGateReport(report('Not yet', 'itest-set@v3'), resultsFromReport(report('Not yet', 'itest-set@v3'), { schemeSource: 'custom', parts: otherParts }), { importedBy: 'cli:test', reportSha256: sha() })
+      const o1 = await m.store.importGateReport(report('Not yet', 'itest-set@v3'), resultsFromReport(report('Not yet', 'itest-set@v3'), { schemeSource: 'teacher_rubric', parts: otherParts }), { importedBy: 'cli:test', reportSha256: sha() })
       expect(o1.demoted).toEqual([])
       expect((await raw.query(`SELECT status FROM hw_eligibility WHERE group_key = $1`, [key])).rows[0].status).toBe('eligible')
       // a failing result for the same setup: demoted, by the system, with the reason
-      const o2 = await m.store.importGateReport(report('Not yet', 'itest-set@v4'), resultsFromReport(report('Not yet', 'itest-set@v4'), { schemeSource: 'custom', parts: fp }), { importedBy: 'cli:test', reportSha256: sha() })
+      const o2 = await m.store.importGateReport(report('Not yet', 'itest-set@v4'), resultsFromReport(report('Not yet', 'itest-set@v4'), { schemeSource: 'teacher_rubric', parts: fp }), { importedBy: 'cli:test', reportSha256: sha() })
       expect(o2.demoted).toEqual([key])
       const last = (await events(key)).at(-1)!
       expect(last).toMatchObject({ to_status: 'not_yet', automatic: true, actor_id: 'system:gate-import' })
@@ -198,7 +198,7 @@ suite('eligibility registry — database', () => {
     it('a report with an unknown language is refused before anything is stored', async () => {
       const bad = report('Eligible')
       bad.gates[0].language = 'fr'
-      expect(() => resultsFromReport(bad, { schemeSource: 'custom', parts: null })).toThrow(/unknown language/)
+      expect(() => resultsFromReport(bad, { schemeSource: 'teacher_rubric', parts: null })).toThrow(/unknown language/)
     })
   })
 })

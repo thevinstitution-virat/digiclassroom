@@ -102,15 +102,62 @@ function RubricEditor({ q, onSaved }: { q: Question; onSaved: () => void }) {
   )
 }
 
+/** The answer key of a question that uses one (roadmap 5.2): its status, the read-only value points with citations, and the way out to the teacher's own rubric. */
+function KeyPanel({ q, onChanged }: { q: Question; onChanged: () => void }) {
+  const { t } = useHwT()
+  const own = api.hw.questions.useOwnRubric.useMutation({ onSuccess: onChanged })
+  const retry = api.hw.questions.retryKey.useMutation({ onSuccess: onChanged })
+  const k = q.key
+  const message = k.status === 'building' ? t('tc.key.building')
+    : k.status === 'ready' ? t('tc.key.ready', { source: t(`tc.key.src.${k.schemeSource}` as never) })
+    : k.status === 'failed' ? t('tc.key.failed', { reason: k.detail || k.reason || '' })
+    : k.status === 'partial' ? t('tc.key.partial')
+    : k.status === 'no_grounding' ? t('tc.key.no_grounding')
+    : t('tc.key.not_available')
+  const tone = k.status === 'ready' ? 'text-green-700 dark:text-green-400' : k.status === 'building' ? 'text-muted-foreground' : 'text-amber-700 dark:text-amber-400'
+  return (
+    <div className="space-y-3 rounded-md border p-3" data-testid="key-panel" data-key-status={k.status}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-medium">{t('tc.key.title')}</p>
+        <div className="flex gap-2">
+          {k.status !== 'building' && k.status !== 'not_available' && (
+            <Button size="sm" variant="outline" onClick={() => retry.mutate({ questionId: q.id })} disabled={retry.isPending}>{t('tc.key.retry')}</Button>
+          )}
+          <Button size="sm" variant="outline" onClick={() => window.confirm(t('tc.key.ownConfirm')) && own.mutate({ questionId: q.id })} disabled={own.isPending}>{t('tc.key.own')}</Button>
+        </div>
+      </div>
+      <p className={`text-sm ${tone}`} role="status">{message}</p>
+      {(k.status === 'ready' || k.status === 'partial') && k.valuePoints.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">{t('tc.key.points')}</p>
+          <ul className="space-y-2">
+            {k.valuePoints.map((p, i) => (
+              <li key={i} className="rounded border bg-muted/30 p-2 text-sm">
+                <div className="flex items-start justify-between gap-3"><span>{p.text}</span><Badge variant="outline">{marksLabel(t, p.marks)}</Badge></div>
+                {p.citations.map((c, j) => <p key={j} className="mt-1 text-xs text-muted-foreground">{c}</p>)}
+              </li>
+            ))}
+          </ul>
+          <p className="text-sm text-green-700 dark:text-green-400">{t('tc.key.total', { got: k.total ?? 0, of: n(q.marks) })}</p>
+          {k.fromShared && <p className="text-xs text-muted-foreground">{t('tc.key.shared')}</p>}
+        </div>
+      )}
+      {(own.error || retry.error) && <p className="text-sm text-red-600">{(own.error ?? retry.error)!.message}</p>}
+    </div>
+  )
+}
+
 function QuestionEditor({ q, index, count, onChanged, onMove }: { q: Question; index: number; count: number; onChanged: () => void; onMove: (d: -1 | 1) => void }) {
   const { t } = useHwT()
   const [form, setForm] = useState({
     prompt: q.prompt, marks: n(q.marks), modelAnswer: q.modelAnswer ?? '', accepted: (q.acceptedAnswers ?? []).join('\n'),
     languageHint: q.languageHint, answerLines: q.answerLines, type: q.type,
+    origin: q.origin, ref: (q.originRef ?? {}) as Record<string, string>, passage: q.passage ?? '',
   })
   const [dirty, setDirty] = useState(false)
   const update = api.hw.questions.update.useMutation({ onSuccess: () => { setDirty(false); onChanged() } })
   const remove = api.hw.questions.remove.useMutation({ onSuccess: onChanged })
+  const useKey = api.hw.questions.useAnswerKey.useMutation({ onSuccess: onChanged })
   const set = (patch: Partial<typeof form>) => { setDirty(true); setForm((f) => ({ ...f, ...patch })) }
 
   return (
@@ -147,6 +194,21 @@ function QuestionEditor({ q, index, count, onChanged, onMove }: { q: Question; i
             </NativeSelect>
           </Field>
         </div>
+        <div className="grid gap-4 sm:grid-cols-4">
+          <Field label={t('tc.b.origin')}>
+            <NativeSelect value={form.origin} onChange={(e) => set({ origin: e.target.value as typeof form.origin })}>
+              {(['custom', 'textbook_exercise', 'board_paper'] as const).map((o) => <option key={o} value={o}>{t(`tc.b.origin.${o}` as never)}</option>)}
+            </NativeSelect>
+          </Field>
+          {(form.origin === 'textbook_exercise' ? ['book', 'chapter', 'exercise'] : form.origin === 'board_paper' ? ['paper', 'year', 'questionNo'] : []).map((f) => (
+            <Field key={f} label={t(`tc.b.ref.${f}` as never)}>
+              <Input value={form.ref[f] ?? ''} maxLength={200} onChange={(e) => set({ ref: { ...form.ref, [f]: e.target.value } })} />
+            </Field>
+          ))}
+        </div>
+        <Field label={t('tc.b.passage')} hint={t('tc.b.passageHelp')}>
+          <Textarea value={form.passage} onChange={(e) => set({ passage: e.target.value })} rows={3} maxLength={20000} />
+        </Field>
         <Field label={t('tc.b.modelAnswer')}>
           <Textarea value={form.modelAnswer} onChange={(e) => set({ modelAnswer: e.target.value })} rows={3} maxLength={20000} />
         </Field>
@@ -162,6 +224,8 @@ function QuestionEditor({ q, index, count, onChanged, onMove }: { q: Question; i
               patch: {
                 prompt: form.prompt, marks: form.marks, modelAnswer: form.modelAnswer || null, languageHint: form.languageHint,
                 answerLines: form.answerLines, type: form.type,
+                origin: form.origin, passage: form.passage.trim() ? form.passage : null,
+                originRef: Object.fromEntries(Object.entries(form.ref).filter(([, v]) => v.trim())),
                 acceptedAnswers: form.accepted.split('\n').map((s) => s.trim()).filter(Boolean),
               },
             })}>
@@ -169,7 +233,13 @@ function QuestionEditor({ q, index, count, onChanged, onMove }: { q: Question; i
           </Button>
           {update.error && <span className="text-sm text-red-600">{update.error.message}</span>}
         </div>
-        {!dirty && <RubricEditor q={q} onSaved={onChanged} />}
+        {!dirty && (q.key.mode === 'key' ? <KeyPanel q={q} onChanged={onChanged} /> : (
+          <>
+            <p className="text-sm text-amber-700 dark:text-amber-400" data-testid="own-rubric-note">{t('tc.key.ownNote')}</p>
+            <RubricEditor q={q} onSaved={onChanged} />
+            <Button size="sm" variant="outline" onClick={() => useKey.mutate({ questionId: q.id })} disabled={useKey.isPending}>{t('tc.key.useKey')}</Button>
+          </>
+        ))}
       </CardContent>
     </Card>
   )
@@ -184,6 +254,14 @@ export function Builder({ detail, onChanged }: { detail: Detail; onChanged: () =
     onSuccess: (r) => { if (r.warnings.length) window.alert(r.warnings.join('\n')); onChanged() },
   })
   const qs = detail.questions
+  // A key is built in the background: look again until none is still building.
+  const building = qs.some((q) => q.key.status === 'building')
+  useEffect(() => {
+    if (!building) return
+    const id = setInterval(onChanged, 4000)
+    return () => clearInterval(id)
+  }, [building, onChanged])
+  const utils = api.useUtils()
   const total = qs.reduce((s, q) => s + n(q.marks), 0)
   // Publishing waits until the teacher has saved every AI-drafted key point (the server refuses it too).
   const unchecked = unsavedDraftQuestions(qs)
@@ -217,7 +295,12 @@ export function Builder({ detail, onChanged }: { detail: Detail; onChanged: () =
       </Card>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm font-medium">{t('tc.b.total', { n: total })}</span>
-        <Button disabled={!qs.length || publish.isPending || unchecked.length > 0} onClick={() => window.confirm(t('tc.b.publishConfirm')) && publish.mutate({ assignmentId: detail.assignment.id })}>
+        <Button disabled={!qs.length || publish.isPending || unchecked.length > 0} onClick={async () => {
+          // Never blocked by key status: the teacher is shown which questions will be hand-marked, and why, and decides.
+          const pre = await utils.hw.assignments.publishPreview.fetch({ assignmentId: detail.assignment.id }).catch(() => null)
+          const list = pre?.handMarked.length ? `\n\n${t('tc.b.handMarked')}\n${pre.handMarked.map((h) => `${t('mk.question', { i: h.position + 1 })}: ${h.message}`).join('\n')}\n\n${t('tc.b.handMarkedAsk')}` : ''
+          if (window.confirm(`${t('tc.b.publishConfirm')}${list}`)) publish.mutate({ assignmentId: detail.assignment.id })
+        }}>
           {publish.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{t('tc.b.publish')}
         </Button>
       </div>

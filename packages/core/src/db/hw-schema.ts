@@ -35,8 +35,12 @@ export type HwJobKind = 'read' | 'grade' | 'rubric_draft';
 export type HwJobStatus = 'queued' | 'running' | 'batch_pending' | 'done' | 'failed';
 export type HwGradeSource = 'accepted_ai' | 'edited_ai' | 'manual';
 export type HwVerdict = 'met' | 'partial' | 'missing';
-/** Where a question's marking scheme came from (migration 024). 'custom' is a teacher's own scheme, the only kind built so far. */
-export type HwQuestionSchemeSource = 'textbook' | 'board_paper' | 'custom';
+/** Where a question's marking scheme came from (migrations 024 and 027): a board's official scheme, a passage given in the question, the textbook, or the teacher's own rubric. */
+/** Where a question comes from (migration 027): a textbook exercise and a board paper are public, so their keys may be shared between institutions; a custom question never is. */
+export type HwQuestionOrigin = 'textbook_exercise' | 'board_paper' | 'custom';
+/** Whether the question is marked against an answer key built for it, or against the teacher's own rubric (migration 027). */
+export type HwRubricMode = 'key' | 'teacher';
+export type HwQuestionSchemeSource = 'board_scheme_key' | 'passage_key' | 'textbook_key' | 'teacher_rubric';
 
 /** One rubric item's judgement inside hw_ai_grade.items. */
 export interface HwAiGradeItem {
@@ -113,7 +117,12 @@ export const hwQuestion = pgTable('hw_question', {
   languageHint: text('language_hint').$type<HwLanguage>().notNull().default('en'),
   answerLines: integer('answer_lines').notNull().default(4),
   rubricVersion: integer('rubric_version').notNull().default(1),
-  schemeSource: text('scheme_source').$type<HwQuestionSchemeSource>().notNull().default('custom'),
+  schemeSource: text('scheme_source').$type<HwQuestionSchemeSource>().notNull().default('teacher_rubric'),
+  origin: text('origin').$type<HwQuestionOrigin>().notNull().default('custom'),
+  originRef: jsonb('origin_ref').$type<Record<string, string>>().notNull().default({}),
+  passage: text('passage'),
+  rubricMode: text('rubric_mode').$type<HwRubricMode>().notNull().default('teacher'),
+  activeKeyId: varchar('active_key_id', { length: 36 }),
   createdAt: ts('created_at').notNull().defaultNow(),
   updatedAt: ts('updated_at').notNull().defaultNow(),
 });
@@ -127,7 +136,7 @@ export const hwRubricItem = pgTable('hw_rubric_item', {
   description: text('description').notNull(),
   marks: numeric('marks', { precision: 6, scale: 2 }).notNull(),
   version: integer('version').notNull().default(1),
-  source: text('source').$type<'teacher' | 'ai_draft'>().notNull().default('teacher'),
+  source: text('source').$type<'teacher' | 'ai_draft' | 'key'>().notNull().default('teacher'),
   retiredAt: ts('retired_at'),
   createdAt: ts('created_at').notNull().defaultNow(),
 });
@@ -258,6 +267,9 @@ export const hwAiUsageMonthly = pgTable('hw_ai_usage_monthly', {
   tokensCached: bigint('tokens_cached', { mode: 'number' }).notNull().default(0),
   tokensOut: bigint('tokens_out', { mode: 'number' }).notNull().default(0),
   costPaise: numeric('cost_paise', { precision: 14, scale: 4 }).notNull().default('0'),
+  /** Migration 027: answer keys built this month, and what they cost (also inside cost_paise, so the budget counts them). */
+  keyBuilds: integer('key_builds').notNull().default(0),
+  keyCostPaise: numeric('key_cost_paise', { precision: 14, scale: 4 }).notNull().default('0'),
   updatedAt: ts('updated_at').notNull().defaultNow(),
 }, (t) => [primaryKey({ columns: [t.organizationId, t.month] })]);
 

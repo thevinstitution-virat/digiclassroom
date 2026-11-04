@@ -69,6 +69,10 @@ const questionInput = z.object({
   acceptedAnswers: z.array(z.string().trim().min(1).max(500)).max(20).optional(),
   languageHint: z.enum(['en', 'hi', 'mixed']).optional(),
   answerLines: z.number().int().min(1).max(200).optional(),
+  // Roadmap 5.2: where the question comes from, and the passage it is about. The answer key is built from these (and the textbook).
+  origin: z.enum(['textbook_exercise', 'board_paper', 'custom']).optional(),
+  originRef: z.record(z.string().trim().max(200)).refine((o) => Object.keys(o).length <= 8, 'too many fields').optional(),
+  passage: z.string().max(20_000).nullable().optional(),
 });
 
 const rubricItem = z.object({
@@ -105,6 +109,9 @@ export const hwRouter = createTRPCRouter({
       .mutation(({ ctx, input }) => run(ctx, (a) => assignments.updateAssignment(a, input.assignmentId, input.patch))),
     delete: protectedProcedure.input(z.object({ assignmentId: id }))
       .mutation(({ ctx, input }) => run(ctx, (a) => assignments.deleteAssignment(a, input.assignmentId))),
+    /** Before publishing: which questions will be hand-marked, and why. */
+    publishPreview: protectedProcedure.input(z.object({ assignmentId: id }))
+      .query(({ ctx, input }) => run(ctx, (a) => assignments.publishPreview(a, input.assignmentId))),
     publish: protectedProcedure.input(z.object({ assignmentId: id }))
       .mutation(({ ctx, input }) => run(ctx, (a) => assignments.publishAssignment(a, input.assignmentId))),
     close: protectedProcedure.input(z.object({ assignmentId: id }))
@@ -122,6 +129,13 @@ export const hwRouter = createTRPCRouter({
       .mutation(({ ctx, input }) => run(ctx, (a) => assignments.removeQuestion(a, input.questionId))),
     reorder: protectedProcedure.input(z.object({ assignmentId: id, orderedIds: z.array(id).max(200) }))
       .mutation(({ ctx, input }) => run(ctx, (a) => assignments.reorderQuestions(a, input.assignmentId, input.orderedIds))),
+    // Answer keys (roadmap 5.2)
+    useOwnRubric: protectedProcedure.input(z.object({ questionId: id }))
+      .mutation(({ ctx, input }) => run(ctx, (a) => assignments.useOwnRubric(a, input.questionId))),
+    useAnswerKey: protectedProcedure.input(z.object({ questionId: id }))
+      .mutation(({ ctx, input }) => run(ctx, (a) => assignments.useAnswerKey(a, input.questionId))),
+    retryKey: protectedProcedure.input(z.object({ questionId: id }))
+      .mutation(({ ctx, input }) => run(ctx, (a) => assignments.retryKey(a, input.questionId))),
   }),
 
   rubric: createTRPCRouter({

@@ -239,7 +239,7 @@ async function writeAndVerify(
   // teacher's own question (any origin but a textbook exercise or board paper) never gets here.
   let sharedId: SharedKeyId | null = null;
   if (source === 'textbook' && settings.sharedKeys && deps.shared && isPublicOrigin(req.questionOrigin)) {
-    sharedId = sharedKeyId(req, 'textbook', textbookSourceRef(citations, passages), SERVICE_VERSION(), meta().configHash);
+    sharedId = sharedKeyId(req, 'textbook', textbookSourceRef(citations, passages), currentKeyServiceVersion(), meta().configHash);
     const hit = await deps.shared.get(sharedId.cacheKey);
     if (hit && hit.status === 'grounded' && hit.source === 'textbook' && !hit.partial) {
       return { ...hit, notes: [...notes, 'key from the shared library'], calls, cacheKey, fromCache: true };
@@ -294,9 +294,10 @@ async function writeAndVerify(
   if (deps.cache) await deps.cache.set(cacheKey, result);
   // Only fully supported keys are shared: a partly supported one is usable only in runs that allow it.
   if (sharedId && deps.shared && source === 'textbook' && !result.partial && isPublicOrigin(req.questionOrigin)) {
-    await deps.shared.put({ id: sharedId, origin: req.questionOrigin, source: 'textbook', keyServiceVersion: SERVICE_VERSION(), configHash: meta().configHash, key: result });
+    await deps.shared.put({ id: sharedId, origin: req.questionOrigin, source: 'textbook', keyServiceVersion: currentKeyServiceVersion(), configHash: meta().configHash, key: result });
   }
   return result;
 }
 
-const SERVICE_VERSION = () => keyServiceVersion({ writerPrompt: KEY_WRITER_PROMPT_VERSION, verifierPrompt: KEY_VERIFIER_PROMPT_VERSION, retrieval: KEY_RETRIEVAL_VERSION });
+/** The key-service version stored with every key and every suggestion (prompts, code checks, retrieval). */
+export const currentKeyServiceVersion = () => keyServiceVersion({ writerPrompt: KEY_WRITER_PROMPT_VERSION, verifierPrompt: KEY_VERIFIER_PROMPT_VERSION, retrieval: KEY_RETRIEVAL_VERSION });

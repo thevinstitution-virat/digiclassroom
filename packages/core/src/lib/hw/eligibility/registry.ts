@@ -17,6 +17,7 @@ import { requireSuperAdmin, type EvalActor } from '../eval-tools/access';
 import { GRADE_PROMPT_VERSION } from '../prompts/grade.v1';
 import type { Exec } from '../db';
 import { enqueueGrade } from '../jobs/queue';
+import { checkKeyForMarking } from '../keys/product';
 import { AI_OFF_PREFIX, decide, type EligibilityDecision } from './decision';
 import { fingerprint, runningParts, type FingerprintParts } from './fingerprint';
 import { groupKey, parseGroupKey, type GroupParts } from './group';
@@ -47,8 +48,17 @@ export async function eligibilityOfGroup(x: Exec, parts: GroupParts): Promise<El
   return hash === null ? { eligible: false, reason: rec ? 'config_changed' : 'no_record' } : decide(rec ?? null, hash, true);
 }
 
-/** May AI suggestions be created or shown for this question? A question that cannot be found is not eligible. */
+/**
+ * May AI suggestions be created or shown for this question? Two things must hold (roadmap 5.2 and 5.3): the question's answer key must be usable now
+ * (keys/product.ts: the backstop), and its group must be eligible for the marking setup running now. A question that cannot be found is not eligible.
+ * With HW_ELIGIBILITY_ENFORCED off neither is checked (tests, and the owner's emergency switch).
+ */
 export async function eligibilityOfQuestion(x: Exec, questionId: string): Promise<EligibilityDecision> {
+  if (!getHwConfig().HW_ELIGIBILITY_ENFORCED) return decide(null, '', false);
+  const [q] = await x.select().from(hwQuestion).where(eq(hwQuestion.id, questionId)).limit(1);
+  if (!q) return { eligible: false, reason: 'no_record' };
+  const key = await checkKeyForMarking(x, q);
+  if (!key.ok) return { eligible: false, reason: key.reason };
   const parts = await groupOfQuestion(x, questionId);
   return parts ? eligibilityOfGroup(x, parts) : { eligible: false, reason: 'no_record' };
 }

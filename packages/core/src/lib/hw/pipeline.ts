@@ -10,6 +10,8 @@ import { newId, num, type Exec } from './db';
 import { gradeWithoutAi } from './grader/exact-match';
 import type { GradeQuestion, GradeResult } from './grader/types';
 import { enqueueGrade } from './jobs/queue';
+import { isRuleModel } from './eligibility/decision';
+import { schemeStampsForAnswers } from './keys/product';
 
 export type AnswerRow = typeof hwAnswer.$inferSelect;
 
@@ -48,6 +50,15 @@ export async function insertAiGrades(x: Exec, orgId: string, jobId: string | nul
     confidence: String(r.confidence),
     validationNotes: r.validationNotes,
   })));
+  // Where each model's suggestion got its marking scheme from, and which key (and key-service version) it used (migration 027). A rule in code is not an AI suggestion.
+  const byModel = rows.filter(({ r }) => !isRuleModel(r.model));
+  if (byModel.length) {
+    const stamps = await schemeStampsForAnswers(x, orgId, [...new Set(byModel.map(({ r }) => r.answerId))]);
+    await x.execute(sql`INSERT INTO hw_ai_grade_scheme (ai_grade_id, organization_id, scheme_source, question_key_id, key_service_version, config_hash) VALUES ${sql.join(byModel.map(({ id, r }) => {
+      const st = stamps.get(r.answerId) ?? { source: 'teacher_rubric' as const, keyId: null, keyServiceVersion: null, configHash: null };
+      return sql`(${id}, ${orgId}, ${st.source}, ${st.keyId}, ${st.keyServiceVersion}, ${st.configHash})`;
+    }), sql`, `)}`);
+  }
   // How each suggestion was produced, only while a cost flag that records it is on (migration 019).
   const sourced = rows.filter(({ r }) => r.markSource !== undefined);
   if (sourced.length) {

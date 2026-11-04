@@ -16,7 +16,8 @@ const suite = DB_URL ? describe : describe.skip
 if (!DB_URL) console.warn('[hw] monitoring DB tests SKIPPED: set HW_ITEST_DATABASE_URL to a throwaway Postgres with migrations 014, 015, 019 to 026.')
 Object.assign(process.env, {
   DATABASE_URL: DB_URL ?? '', GEMINI_API_KEY: 'fake-key', HW_GRADE_MODEL: 'gemini-3.5-flash-lite', HW_ELIGIBILITY_ENFORCED: 'true', HW_FEATURE_DEFAULT_ENABLED: 'false',
-  HW_MONITOR_AUTODEMOTE: 'true', HW_MONITOR_MIN_ANSWERS: '30', HW_MONITOR_MIN_GROUP_SIZE: '10',
+  // Explicit, so these tests do not depend on the defaults (which are the owner's provisional thresholds; see 'the defaults' below).
+  HW_MONITOR_AUTODEMOTE: 'true', HW_MONITOR_MIN_ANSWERS: '30', HW_MONITOR_MIN_GROUP_SIZE: '10', HW_MONITOR_MAX_OVERRIDE_RATE: '0.5', HW_MONITOR_MAX_LARGE_OVERRIDE_RATE: '0.1',
 })
 
 // A fixed "today" far from the real one. The older roll-up and the roll-up test in integration.test.ts rewrite the real days for every institution in
@@ -44,7 +45,7 @@ suite('monitoring — database', () => {
   const deps = () => ({ send: async (p: { to: string; subject: string; html: string }) => { sent.push(p); return { ok: true } }, now: () => new Date(), appUrl: () => 'https://app.test', recipients: async () => [ownerEmail] })
   const mine = () => sent.filter((s) => s.to === ownerEmail)
 
-  const newGroup = (type = 'short') => { const k = `mon${tag}${groups.length}|${type}|en|custom`; groups.push(k); return k }
+  const newGroup = (type = 'short') => { const k = `mon${tag}${groups.length}|${type}|en|teacher_rubric`; groups.push(k); return k }
   async function newOrg() {
     const id = `mon-${tag}-${orgs.length}`
     orgs.push(id)

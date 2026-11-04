@@ -7,6 +7,7 @@ import { pollGradeBatches, runGradeJobs } from './grade-handler';
 import { recoverStale } from './queue';
 import { pollReadBatches, runReadJobs } from './read-handler';
 import { monitorTick } from '../shadow/monitor';
+import { runKeyBuilds } from '../keys/product';
 
 export interface DrainSummary {
   recovered: number;
@@ -14,6 +15,8 @@ export interface DrainSummary {
   gradePolled: number;
   readTaken: number;
   gradeTaken: number;
+  /** Answer keys built or settled (roadmap 5.2). */
+  keysBuilt: number;
   /** Monitoring rows written (at most every 15 minutes). */
   monitored: number;
   errors: string[];
@@ -23,7 +26,7 @@ export interface DrainSummary {
 export async function drain(workerId: string, budgetMs: number): Promise<DrainSummary> {
   const started = Date.now();
   const deadline = started + budgetMs;
-  const s: DrainSummary = { recovered: 0, readPolled: 0, gradePolled: 0, readTaken: 0, gradeTaken: 0, monitored: 0, errors: [], ms: 0 };
+  const s: DrainSummary = { recovered: 0, readPolled: 0, gradePolled: 0, readTaken: 0, gradeTaken: 0, keysBuilt: 0, monitored: 0, errors: [], ms: 0 };
 
   // Each step is isolated: one failing step must not stop the others, and is reported.
   const step = async (name: string, fn: () => Promise<number>, into: keyof Omit<DrainSummary, 'errors' | 'ms'>) => {
@@ -42,6 +45,8 @@ export async function drain(workerId: string, budgetMs: number): Promise<DrainSu
   // Reading first: grading needs transcripts.
   await step('read', () => runReadJobs(workerId, deadline), 'readTaken');
   await step('grade', () => runGradeJobs(workerId, deadline), 'gradeTaken');
+  // Keys after reading and marking: a teacher waiting for a key is waiting on an authoring step, not on a student's work.
+  await step('keys', () => runKeyBuilds(workerId, deadline), 'keysBuilt');
   // Last, and only with time left: monitoring never delays reading or marking.
   await step('monitor', () => monitorTick(), 'monitored');
 

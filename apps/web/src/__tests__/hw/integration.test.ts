@@ -109,7 +109,10 @@ const fakeClient = {
 }
 
 // ── Environment (before any feature module loads) ────────────────────────────
+// This suite's own namespace: its jobs are claimed and polled only by this suite, so suites can run in parallel in one database.
+const NS = `it-${randomUUID().slice(0, 6)}-`
 Object.assign(process.env, {
+  HW_JOB_ORG_PREFIX: NS,
   DATABASE_URL: DB_URL ?? '',
   HW_FEATURE_DEFAULT_ENABLED: 'false',
   GEMINI_API_KEY: 'fake-key-for-tests',
@@ -121,7 +124,7 @@ Object.assign(process.env, {
   HW_ELIGIBILITY_ENFORCED: 'false', // these suites exercise marking itself; the registry has its own tests (eligibility.test.ts)
   HW_GRADE_DEBOUNCE_SECONDS: '0',
   HW_BATCH_POLL_SECONDS: '10',
-  HW_PRICE_TABLE_JSON: JSON.stringify({ inr_per_usd: 84, models: { 'gemini-3.5-flash-lite': { input: 0.3, cached: 0.03, output: 2.5, batch_input: 0.15, batch_output: 1.25 }, 'gemini-3.6-flash': { input: 0.75, cached: 0.075, output: 3.75 } } }),
+  HW_PRICE_TABLE_JSON: JSON.stringify({ inr_per_usd: 84, models: { 'gemini-3.5-flash-lite': { input: 0.3, cached: 0.03, output: 2.5, batch_input: 0.15, batch_output: 1.25 }, 'gemini-3.6-flash': { input: 0.75, cached: 0.075, output: 3.75 }, 'openai/gpt-5.4-mini': { input: 0.75, cached: 0.075, output: 4.5 }, 'text-embedding-3-small': { input: 0.02, cached: 0, output: 0 } } }),
 })
 
 // Loaded in beforeAll, after the environment is set.
@@ -149,7 +152,7 @@ interface World { org: string; teacher: HwActor; admin: HwActor; s1: HwActor; s2
 
 /** A fresh institution per test, so tests never see each other's rows. */
 async function makeWorld(quota = 1000): Promise<World> {
-  const org = `it-${randomUUID().slice(0, 8)}`
+  const org = `${NS}${randomUUID().slice(0, 8)}`
   const u = (k: string) => `${org}-${k}`
   for (const [k, role] of [['t', 'teacher'], ['a', 'owner'], ['s1', 'student'], ['s2', 'student']] as const) {
     await raw.query(`INSERT INTO "user" (id, name, email, role) VALUES ($1, $2, $3, $4)`, [u(k), `User ${k}`, `${u(k)}@example.test`, role === 'teacher' ? 'teacher' : 'student'])
@@ -497,6 +500,7 @@ suite('handwritten assignments — integration', () => {
       const w = await makeWorld()
       const { id } = await svc.assignments.createAssignment(w.teacher, { classId: w.classId, sectionId: null, subject: 'Science', title: 'Draft rules', allowedModes: ['typed'] })
       const q = await svc.assignments.addQuestion(w.teacher, id, { type: 'very_short', prompt: 'What do plants take in for photosynthesis?', marks: 1, ...(modelAnswer ? { modelAnswer } : {}) })
+      await svc.assignments.useOwnRubric(w.teacher, q.id) // "Draft with AI" applies only to the teacher's own rubric (roadmap 5.2)
       return { w, id, qid: q.id }
     }
     const sources = async (qid: string) => (await raw.query(`SELECT source FROM hw_rubric_item WHERE question_id = $1 AND retired_at IS NULL ORDER BY position`, [qid])).rows.map((r) => r.source as string)
@@ -554,8 +558,8 @@ suite('handwritten assignments — integration', () => {
 
   // ── Roadmap 5.3: eligibility is enforced in marking ───────────────────────────────────────────────────
   describe('Eligibility (roadmap 5.3)', () => {
-    const KEY = 'science|short|en|custom'
-    const enforce = (on: boolean) => { process.env.HW_ELIGIBILITY_ENFORCED = on ? 'true' : 'false'; svc.config._resetHwConfig() }
+    const KEY = 'science|short|en|teacher_rubric'
+    const enforce = (on: boolean) => { process.env.HW_ELIGIBILITY_ENFORCED = on ? 'true' : 'false'; process.env.HW_TEACHER_RUBRIC_AI_ENABLED = on ? 'true' : 'false'; svc.config._resetHwConfig() }
     afterEach(() => { process.env.HW_GRADE_MODEL = 'gemini-3.5-flash-lite'; enforce(false) })
 
     async function promoteNow() {
@@ -812,7 +816,7 @@ suite('handwritten assignments — integration', () => {
            FROM hw_monitor_group_daily WHERE organization_id = $1 AND day = $2::date ORDER BY group_key`, [w.org, today])).rows
       await rollupGroupDay(today)
       const rows = await read()
-      expect(rows.map((r) => r.group_key)).toEqual(['science|short|en|custom', 'science|very_short|en|custom'])
+      expect(rows.map((r) => r.group_key)).toEqual(['science|short|en|teacher_rubric', 'science|very_short|en|teacher_rubric'])
       const [short, veryShort] = rows
       expect(short).toMatchObject({ answers_marked: 2, suggestions_shown: 2, accepted_unchanged: 1, accepted_edited: 1, marked_by_hand: 0, marked_by_rule: 0, overrides: 1, large_overrides: 1, abs_sum: 1, jobs_failed: 0, projected_paise_per_answer: null })
       expect(short.jobs_total).toBeGreaterThanOrEqual(1)
@@ -835,9 +839,411 @@ suite('handwritten assignments — integration', () => {
       const { rollupGroupDay } = await import('@/lib/hw/monitoring/rollup')
       const { recentDays } = await import('@/lib/hw/shadow/monitor')
       await rollupGroupDay(recentDays()[1])
-      const r = (await raw.query(`SELECT instruction_flags, instruction_not_taps, transcript_fixes, misread_taps FROM hw_monitor_group_daily WHERE organization_id = $1 AND group_key = 'science|short|en|custom'`, [w.org])).rows[0]
+      const r = (await raw.query(`SELECT instruction_flags, instruction_not_taps, transcript_fixes, misread_taps FROM hw_monitor_group_daily WHERE organization_id = $1 AND group_key = 'science|short|en|teacher_rubric'`, [w.org])).rows[0]
       expect(r).toMatchObject({ instruction_flags: 1, instruction_not_taps: 1, transcript_fixes: 1, misread_taps: 1 })
       await drainAll() // the corrected transcript is marked again; leave nothing queued for the next test
+    })
+  })
+
+  // ── Roadmap 5.2: answer keys in the product ───────────────────────────────────────────────────────────
+  describe('Answer keys (roadmap 5.2)', () => {
+    type Hit = { id: string; score: number; contentItemId: string; chapter: string }
+    const CH3 = 'Chapter 3: Poverty as a Challenge'
+    const PROMPT = 'How is the poverty line estimated in India?'
+    const chunk = (id: string, text: string, p = 41) => ({ id, contentItemId: 'book-1', chapter: CH3, pageStart: p, pageEnd: p, text, title: 'Understanding Society: India and Beyond', isbn: '978-93-0000-000-0', edition: '2026', lang: 'English' })
+    const FRESH_CHUNKS = () => ({
+      c1: chunk('c1', 'Poverty line is estimated on the basis of minimum calorie requirement: 2400 calories in rural areas and 2100 in urban areas.'),
+      c2: chunk('c2', 'Social exclusion and vulnerability are also seen as dimensions of poverty.', 42),
+    } as Record<string, ReturnType<typeof chunk>>)
+    const GOOD_KEY = {
+      reference_answer: 'It is based on calorie needs: 2400 in rural and 2100 in urban areas.',
+      value_points: [
+        { id: 'p1', text: 'Based on minimum calorie requirement', marks: 1, kind: 'key_point', cites: ['c1'], accepted_alternatives: [] },
+        { id: 'p2', text: '2400 calories rural, 2100 urban', marks: 1, kind: 'key_point', cites: ['c1'], accepted_alternatives: [] },
+      ],
+    }
+    const PASSAGE_KEY = { ...GOOD_KEY, value_points: GOOD_KEY.value_points.map((p) => ({ ...p, cites: ['given'] })) }
+    const SUPPORTED = { verdicts: [{ point_id: 'p1', support: 'supported', reason: 'c1' }, { point_id: 'p2', support: 'supported', reason: 'c1' }] }
+    const PARTIAL = { verdicts: [{ point_id: 'p1', support: 'supported', reason: 'c1' }, { point_id: 'p2', support: 'partial', reason: 'only the rural figure' }] }
+    const HITS: Hit[] = [{ id: 'c1', score: 0.71, contentItemId: 'book-1', chapter: CH3 }, { id: 'c2', score: 0.52, contentItemId: 'book-1', chapter: CH3 }]
+    const OFFICIAL = { label: 'CBSE SQP 2025-26, 086, Q14', key: { referenceAnswer: 'Calorie norm.', valuePoints: [
+      { id: 'o1', text: 'Minimum calorie requirement', marks: 1, kind: 'key_point' as const, cites: [], acceptedAlternatives: [] },
+      { id: 'o2', text: '2400 rural and 2100 urban', marks: 1, kind: 'key_point' as const, cites: [], acceptedAlternatives: [] },
+    ] } }
+
+    // The key service's providers, faked. State is reset before every test.
+    let writerOut: unknown, verifierOut: unknown, hits: Hit[], chunks: Record<string, ReturnType<typeof chunk>>, rMin: number | undefined, unavailable: boolean
+    let sharedOn: boolean, official: boolean, counts: { writer: number; verifier: number; embed: number }
+    let shared: ReturnType<typeof import('@/lib/hw/keys').memorySharedKeyStore>
+    let keys: typeof import('@/lib/hw/keys/product')
+    let reg: typeof import('@/lib/hw/eligibility/registry')
+    let keysMod: typeof import('@/lib/hw/keys')
+    let HwErr: typeof import('@/lib/hw/errors').HwError
+    let appDb: unknown
+
+    const runtime = () => {
+      if (unavailable) throw new HwErr('NOT_CONFIGURED', 'Answer keys are not configured.', 'test')
+      return {
+        settings: { writer: { provider: 'gemini' as const, model: 'gemini-3.6-flash' }, verifier: { provider: 'openrouter' as const, model: 'openai/gpt-5.4-mini' }, rMin, theta: 0.35, topK: 30, maxPassages: 6, pagesVerified: new Set(['book-1']), ...(sharedOn ? { sharedKeys: true } : {}) },
+        deps: {
+          ...(sharedOn ? { shared } : {}),
+          ...(official ? { official: async () => OFFICIAL } : {}),
+          retriever: {
+            indexId: 'test-index|embed',
+            embed: async () => { counts.embed++; return { vector: [0.1], call: { role: 'embed' as const, provider: 'openai' as const, model: 'text-embedding-3-small', usage: { input: 12, cached: 0, output: 0 } } } },
+            search: async () => hits,
+          },
+          trio: { practiceRows: async () => [], chunks: async (ids: readonly string[]) => ids.map((i) => chunks[i]).filter(Boolean) },
+          generate: async (_p: string, call: { model: string; systemInstruction: string }) => {
+            const writer = call.systemInstruction.startsWith('You write')
+            if (writer) counts.writer++; else counts.verifier++
+            return { json: writer ? writerOut : verifierOut, usage: { input: 1000, cached: 0, output: 200 }, rawUsage: {}, model: call.model }
+          },
+        },
+      } as never
+    }
+
+    const enforce = (on: boolean) => { process.env.HW_ELIGIBILITY_ENFORCED = on ? 'true' : 'false'; svc.config._resetHwConfig() }
+    beforeAll(async () => {
+      keys = await import('@/lib/hw/keys/product'); reg = await import('@/lib/hw/eligibility/registry'); keysMod = await import('@/lib/hw/keys')
+      HwErr = (await import('@/lib/hw/errors')).HwError; appDb = (await import('@/db')).db
+    })
+    beforeEach(() => {
+      writerOut = GOOD_KEY; verifierOut = SUPPORTED; hits = HITS; chunks = FRESH_CHUNKS(); rMin = 0.45; unavailable = false; sharedOn = false; official = false
+      counts = { writer: 0, verifier: 0, embed: 0 }; shared = keysMod.memorySharedKeyStore()
+      keys._setKeyRuntime(runtime)
+    })
+    afterEach(() => { keys._setKeyRuntime(null); enforce(false) })
+
+    const qrow = async (qid: string) => (await raw.query(`SELECT rubric_mode, scheme_source, active_key_id, origin FROM hw_question WHERE id = $1`, [qid])).rows[0]
+    const currentKey = async (qid: string) => (await raw.query(`SELECT * FROM hw_question_key WHERE question_id = $1 AND superseded_at IS NULL`, [qid])).rows[0]
+    const rubricOf = async (qid: string) => (await raw.query(`SELECT description, marks::float AS marks, source FROM hw_rubric_item WHERE question_id = $1 AND retired_at IS NULL ORDER BY position`, [qid])).rows
+    const viewOf = async (w: World, id: string, qid: string) => (await svc.assignments.getForManage(w.teacher, id)).questions.find((q) => q.id === qid)!.key
+    async function keyed(w: World, over: Record<string, unknown> = {}) {
+      const { id } = await svc.assignments.createAssignment(w.teacher, { classId: w.classId, sectionId: null, subject: 'Science', title: 'Keys', allowedModes: ['typed'] })
+      const q = await svc.assignments.addQuestion(w.teacher, id, { type: 'short', prompt: PROMPT, marks: 2, ...over } as never)
+      return { id, qid: q.id }
+    }
+    async function submitTyped(w: World, a: { id: string; qid: string }, text = 'It is based on the minimum calorie requirement, 2400 rural and 2100 urban.', student = w.s1) {
+      const started = await svc.submissions.startSubmission(student, a.id)
+      const sid = started.submission.id
+      await svc.submissions.saveAnswer(student, sid, a.qid, { mode: 'typed', typedText: text, timeSpentMs: 1000 })
+      await svc.submissions.submit(student, sid)
+      return (await raw.query(`SELECT id FROM hw_answer WHERE submission_id = $1`, [sid])).rows[0].id as string
+    }
+    const KEYG = 'science|short|en|textbook_key'
+    async function promoteGroup(key: string) {
+      const p = (await import('@/lib/hw/eligibility/group')).parseGroupKey(key)!
+      const id = randomUUID()
+      await raw.query(
+        `INSERT INTO hw_eval_gate_result (id, group_key, subject, question_type, language, scheme_source, verdict, checks, run_ids, dataset_versions, production_fingerprint, report_sha256, imported_by)
+         VALUES ($1, $2, $3, $4, $5, $6, 'eligible', '[]'::jsonb, ARRAY['run_x'], ARRAY['heldout-1d@v1'], $7, $8, 'itest')`,
+        [id, key, p.subject, p.questionType, p.language, p.schemeSource, reg.runningConfig().hash, randomUUID().replace(/-/g, '').padEnd(64, '0')])
+      await reg.promote({ userId: 'itest-owner', isSuperAdmin: true, rater: null }, { groupKey: key, gateResultId: id, reason: 'Passed every gate on heldout-1d@v1.', confirm: true })
+    }
+    const unregister = (key: string) => raw.query(`DELETE FROM hw_eligibility WHERE group_key = $1`, [key])
+    const decision = (qid: string) => reg.eligibilityOfQuestion(appDb as never, qid)
+
+    // ── every status ──
+    it('building → ready: the key becomes the rubric, with citations; it is paid for and shown as a "keys" line', async () => {
+      const w = await makeWorld(); const a = await keyed(w)
+      expect(await viewOf(w, a.id, a.qid)).toMatchObject({ mode: 'key', status: 'building', handMarked: 'key_pending' })
+      expect(await rubricOf(a.qid)).toEqual([]) // nothing is marked against a key that is not ready
+
+      await drainAll()
+      const view = await viewOf(w, a.id, a.qid)
+      expect(view).toMatchObject({ mode: 'key', status: 'ready', schemeSource: 'textbook_key', handMarked: null, total: 2, fromShared: false })
+      expect(view.valuePoints.map((p) => p.text)).toEqual(['Based on minimum calorie requirement', '2400 calories rural, 2100 urban'])
+      expect(view.valuePoints[0].citations[0]).toMatch(/Understanding Society.*p\. 41/) // book and page
+      expect(await rubricOf(a.qid)).toEqual([{ description: 'Based on minimum calorie requirement', marks: 1, source: 'key' }, { description: '2400 calories rural, 2100 urban', marks: 1, source: 'key' }])
+      expect(await qrow(a.qid)).toMatchObject({ rubric_mode: 'key', scheme_source: 'textbook_key', active_key_id: (await currentKey(a.qid)).id })
+      const k = await currentKey(a.qid)
+      expect(k).toMatchObject({ status: 'ready', scheme_source: 'textbook_key', from_shared: false })
+      expect(Number(k.cost_paise)).toBeGreaterThan(0)
+
+      const u = await svc.marking.usageThisMonth(w.admin)
+      expect(u.thisMonth.keyBuilds).toBe(1)
+      expect(u.thisMonth.keyCostPaise).toBeCloseTo(Number(k.cost_paise), 3)
+      expect(u.thisMonth.costPaise).toBeGreaterThanOrEqual(u.thisMonth.keyCostPaise) // counted in the month's cost, so the budget sees it
+    })
+
+    it('partial: never used for marking, and the teacher is told why', async () => {
+      verifierOut = PARTIAL
+      const w = await makeWorld(); const a = await keyed(w)
+      await drainAll()
+      expect(await viewOf(w, a.id, a.qid)).toMatchObject({ status: 'partial', handMarked: 'key_partial' })
+      expect(await rubricOf(a.qid)).toEqual([])
+      expect((await qrow(a.qid)).active_key_id).toBeNull()
+      enforce(true)
+      expect(await decision(a.qid)).toEqual({ eligible: false, reason: 'key_partial' })
+    })
+
+    it('no_grounding: nothing in the book supports a key, so the teacher marks by hand', async () => {
+      hits = []
+      const w = await makeWorld(); const a = await keyed(w)
+      await drainAll()
+      expect(await viewOf(w, a.id, a.qid)).toMatchObject({ status: 'no_grounding', reason: 'no_book', handMarked: 'key_no_grounding' })
+      enforce(true)
+      expect(await decision(a.qid)).toEqual({ eligible: false, reason: 'key_no_grounding' })
+    })
+
+    it('failed: with a visible reason, and "try again" builds a new key', async () => {
+      writerOut = { nonsense: true }
+      const w = await makeWorld(); const a = await keyed(w)
+      await drainAll()
+      const v = await viewOf(w, a.id, a.qid)
+      expect(v).toMatchObject({ status: 'failed', reason: 'writer_output', handMarked: 'key_failed' })
+      expect(v.detail).toBeTruthy()
+      writerOut = GOOD_KEY
+      await svc.assignments.retryKey(w.teacher, a.qid)
+      expect(await viewOf(w, a.id, a.qid)).toMatchObject({ status: 'building' })
+      await drainAll()
+      expect(await viewOf(w, a.id, a.qid)).toMatchObject({ status: 'ready' })
+      expect((await raw.query(`SELECT count(*)::int AS n FROM hw_question_key WHERE question_id = $1`, [a.qid])).rows[0].n).toBe(2) // the failed one is kept, superseded
+    })
+
+    it('not_available: the key service is not switched on (no models, or R_min not calibrated); never an error for the teacher', async () => {
+      unavailable = true
+      const w = await makeWorld(); const a = await keyed(w)
+      await drainAll()
+      expect(await viewOf(w, a.id, a.qid)).toMatchObject({ status: 'not_available', handMarked: 'key_not_available' })
+      unavailable = false; rMin = undefined // the service is set up, but R_min was never calibrated
+      const b = await keyed(w)
+      await drainAll()
+      expect(await viewOf(w, b.id, b.qid)).toMatchObject({ status: 'not_available', handMarked: 'key_not_available' })
+      expect(counts.writer).toBe(0) // no model was asked for a key without a calibrated threshold
+    })
+
+    // ── the teacher's own rubric ──
+    it('"Use my own rubric instead": the key is dropped, the question is hand-marked during the pilot, and Draft with AI applies only now', async () => {
+      const w = await makeWorld(); const a = await keyed(w, { modelAnswer: 'Calorie norm: 2400 rural, 2100 urban.' })
+      await drainAll()
+      await expect(svc.assignments.draftRubric(w.teacher, a.qid, { replace: false })).rejects.toThrow(/uses an answer key/) // key mode: no draft
+      await svc.assignments.useOwnRubric(w.teacher, a.qid)
+      expect(await qrow(a.qid)).toMatchObject({ rubric_mode: 'teacher', scheme_source: 'teacher_rubric', active_key_id: null })
+      expect(await currentKey(a.qid)).toBeUndefined() // the key is superseded
+      expect(await viewOf(w, a.id, a.qid)).toMatchObject({ mode: 'teacher', status: 'teacher', handMarked: 'teacher_rubric' })
+      enforce(true)
+      await promoteGroup('science|short|en|teacher_rubric')
+      expect(await decision(a.qid)).toEqual({ eligible: false, reason: 'teacher_rubric' }) // even though the group is eligible
+      process.env.HW_TEACHER_RUBRIC_AI_ENABLED = 'true'; svc.config._resetHwConfig()
+      expect((await decision(a.qid)).eligible).toBe(true) // the switch for when teacher-rubric marking has been measured
+      process.env.HW_TEACHER_RUBRIC_AI_ENABLED = 'false'; svc.config._resetHwConfig()
+      await unregister('science|short|en|teacher_rubric')
+      enforce(false)
+      await expect(svc.assignments.draftRubric(w.teacher, a.qid, { replace: true })).resolves.toBeDefined() // now it applies (the key's points were the starting point; replacing them is confirmed)
+      // and back
+      await svc.assignments.useAnswerKey(w.teacher, a.qid)
+      expect(await viewOf(w, a.id, a.qid)).toMatchObject({ mode: 'key', status: 'building' })
+    })
+
+    it('writing a rubric by hand is choosing the teacher’s own rubric', async () => {
+      const w = await makeWorld(); const a = await keyed(w)
+      await drainAll()
+      await svc.assignments.setRubric(w.teacher, a.qid, [{ kind: 'key_point', description: 'My point', marks: 2 }])
+      expect(await qrow(a.qid)).toMatchObject({ rubric_mode: 'teacher', scheme_source: 'teacher_rubric', active_key_id: null })
+      expect((await rubricOf(a.qid)).map((r) => r.source)).toEqual(['teacher'])
+    })
+
+    // ── scheme source ──
+    it('the scheme source is recorded on the question and is part of the eligibility group', async () => {
+      official = true
+      const w = await makeWorld()
+      const gk = async (qid: string) => { const g = await reg.groupOfQuestion(appDb as never, qid); return (await import('@/lib/hw/eligibility/group')).groupKey(g!) }
+      const textbook = await keyed(w)
+      const passage = await keyed(w, { passage: 'The poverty line is the money needed for a minimum calorie intake.' })
+      const board = await keyed(w, { origin: 'board_paper', originRef: { kind: 'sqp', session: '2025-26', subjectCode: '086', questionNo: '14' } })
+      const own = await keyed(w); await svc.assignments.useOwnRubric(w.teacher, own.qid)
+      writerOut = PASSAGE_KEY // the passage question's writer cites the passage
+      await drainAll()
+      expect((await qrow(passage.qid)).scheme_source).toBe('passage_key')
+      expect(await gk(passage.qid)).toBe('science|short|en|passage_key')
+      expect(await gk(board.qid)).toBe('science|short|en|board_scheme_key')
+      expect(await gk(own.qid)).toBe('science|short|en|teacher_rubric')
+      // the plain question went through the textbook path with the passage writer output: its points cite 'given', which no textbook passage has
+      expect((await viewOf(w, textbook.id, textbook.qid)).status).toBe('failed')
+      writerOut = GOOD_KEY
+      await svc.assignments.retryKey(w.teacher, textbook.qid)
+      await drainAll()
+      expect(await gk(textbook.qid)).toBe('science|short|en|textbook_key')
+    })
+
+    // ── the backstop at marking time ──
+    async function readyPublished(opts: { student?: boolean } = {}) {
+      enforce(true)
+      await unregister(KEYG)
+      const w = await makeWorld(); const a = await keyed(w)
+      await drainAll()
+      expect((await viewOf(w, a.id, a.qid)).status).toBe('ready')
+      await svc.assignments.publishAssignment(w.teacher, a.id)
+      await promoteGroup(KEYG)
+      const answerId = opts.student === false ? '' : await submitTyped(w, a)
+      return { w, a, answerId }
+    }
+    const gradeCalls = () => gem.calls.filter((c) => c.kind === 'grade').length
+
+    it('a ready key and an eligible group: the model marks, and the suggestion records the key and the key-service version it used', async () => {
+      const { a, answerId } = await readyPublished()
+      await drainAll()
+      expect(gradeCalls()).toBe(1)
+      const key = await currentKey(a.qid)
+      const row = (await raw.query(`SELECT s.scheme_source, s.question_key_id, s.key_service_version, s.config_hash FROM hw_ai_grade g JOIN hw_ai_grade_scheme s ON s.ai_grade_id = g.id WHERE g.answer_id = $1`, [answerId])).rows
+      expect(row).toEqual([{ scheme_source: 'textbook_key', question_key_id: key.id, key_service_version: key.key_service_version, config_hash: key.config_hash }])
+      expect(key.key_service_version).toMatch(/key-checks\.v1/)
+    })
+
+    it('R_min changed: no suggestion, the reason says so, a rebuild is queued; when the rebuilt key matches it is used again', async () => {
+      const { w, a, answerId } = await readyPublished({ student: false })
+      const oldKey = await currentKey(a.qid)
+      rMin = 0.5 // the threshold is recalibrated
+      expect(await decision(a.qid)).toEqual({ eligible: false, reason: 'key_stale_config' })
+      expect((await currentKey(a.qid)).status).toBe('building') // rebuild queued, once
+      await decision(a.qid)
+      expect((await raw.query(`SELECT count(*)::int AS n FROM hw_question_key WHERE question_id = $1 AND status = 'building' AND superseded_at IS NULL`, [a.qid])).rows[0].n).toBe(1)
+
+      const ans = await submitTyped(w, a)
+      await drainAll() // marking first finds no usable key (paused), the rebuilt key then matches the published rubric and the answer is marked against it
+      void answerId
+      const newKey = await currentKey(a.qid)
+      expect(newKey.id).not.toBe(oldKey.id)
+      expect(newKey.config_hash).not.toBe(oldKey.config_hash)
+      expect(gradeCalls()).toBe(1)
+      const s = (await raw.query(`SELECT s.question_key_id FROM hw_ai_grade g JOIN hw_ai_grade_scheme s ON s.ai_grade_id = g.id WHERE g.answer_id = $1`, [ans])).rows
+      expect(s).toEqual([{ question_key_id: newKey.id }])
+    })
+
+    it('the book text changed (a new edition or reprint): no suggestion, rebuild queued', async () => {
+      const { w, a } = await readyPublished({ student: false })
+      chunks.c1 = chunk('c1', 'Poverty line is now estimated using a consumption basket (2026 revision).')
+      expect(await decision(a.qid)).toEqual({ eligible: false, reason: 'key_stale_book' })
+      expect((await currentKey(a.qid)).status).toBe('building')
+      const ans = await submitTyped(w, a)
+      expect((await raw.query(`SELECT failure_reason FROM hw_answer WHERE id = $1`, [ans])).rows[0].failure_reason).toBeNull() // not yet looked at
+      await drainAll() // the key is rebuilt from the new text; its points are the published ones, so it is used again and the answer is marked
+      expect(gradeCalls()).toBe(1)
+      expect((await currentKey(a.qid)).passage_hashes.c1).not.toBe((await raw.query(`SELECT passage_hashes FROM hw_question_key WHERE question_id = $1 AND superseded_at IS NOT NULL ORDER BY created_at LIMIT 1`, [a.qid])).rows[0].passage_hashes.c1)
+    })
+
+    it('the key-service version changed, or the question changed after its key was built: no suggestion', async () => {
+      const { a } = await readyPublished({ student: false })
+      await raw.query(`UPDATE hw_question_key SET key_service_version = 'old-prompts+old-checks' WHERE id = $1`, [(await currentKey(a.qid)).id])
+      expect(await decision(a.qid)).toEqual({ eligible: false, reason: 'key_stale_version' })
+      await drainAll() // rebuilt with the current version, same points: active again
+      expect(await decision(a.qid)).toEqual({ eligible: true, reason: 'eligible' })
+    })
+
+    it('a published question edited after its key was built is stale until its key is rebuilt', async () => {
+      const { w, a } = await readyPublished({ student: false })
+      await svc.assignments.updateQuestion(w.teacher, a.qid, { prompt: `${PROMPT} (Answer with the figures.)` })
+      expect(await decision(a.qid)).toEqual({ eligible: false, reason: 'key_stale_question' })
+    })
+
+    it('a key rebuilt with different points never replaces a published rubric: no suggestion until the teacher decides', async () => {
+      const { a } = await readyPublished({ student: false })
+      rMin = 0.5
+      await decision(a.qid) // queues the rebuild
+      writerOut = { ...GOOD_KEY, value_points: [{ ...GOOD_KEY.value_points[0], text: 'A different first point', marks: 2 }] }
+      verifierOut = { verdicts: [{ point_id: 'p1', support: 'supported', reason: 'c1' }] }
+      await drainAll()
+      expect((await currentKey(a.qid)).status).toBe('ready')
+      expect((await rubricOf(a.qid)).map((r) => r.description)).toEqual(['Based on minimum calorie requirement', '2400 calories rural, 2100 urban']) // frozen
+      expect(await decision(a.qid)).toEqual({ eligible: false, reason: 'key_changed' })
+    })
+
+    // ── publishing, students, sharing, money ──
+    it('publishing is never blocked by key status; the builder lists what will be hand-marked, and why', async () => {
+      enforce(true)
+      writerOut = { nonsense: true }
+      const w = await makeWorld(); const a = await keyed(w)
+      await drainAll() // failed
+      const b = await svc.assignments.addQuestion(w.teacher, a.id, { type: 'short', prompt: 'Name two causes of poverty.', marks: 2 })
+      const pre = await svc.assignments.publishPreview(w.teacher, a.id)
+      expect(pre.handMarked.map((h) => [h.questionId, h.reason]).sort()).toEqual([[a.qid, 'key_failed'], [b.id, 'key_pending']].sort())
+      expect(pre.handMarked.every((h) => /^AI suggestions are/.test(h.message))).toBe(true)
+      const pub = await svc.assignments.publishAssignment(w.teacher, a.id)
+      expect(pub.handMarked).toHaveLength(2)
+      expect((await raw.query(`SELECT status FROM hw_assignment WHERE id = $1`, [a.id])).rows[0].status).toBe('published')
+    })
+
+    it('students never receive key content; they do see the passage that is part of the question', async () => {
+      writerOut = PASSAGE_KEY
+      const w = await makeWorld(); const a = await keyed(w, { passage: 'The poverty line is the money needed for a minimum calorie intake.', modelAnswer: 'SECRET model answer text.' })
+      await drainAll()
+      await svc.assignments.publishAssignment(w.teacher, a.id)
+      const started = await svc.submissions.startSubmission(w.s1, a.id)
+      const mine = await svc.submissions.myAssignments(w.s1)
+      const payload = JSON.stringify({ started, mine })
+      expect(payload).toContain('minimum calorie intake') // the passage is part of the question
+      for (const secret of ['Based on minimum calorie requirement', '2400 calories rural', 'It is based on calorie needs', 'SECRET model answer', 'value_points', 'valuePoints', 'referenceAnswer', 'question_key', 'rubric']) {
+        expect(payload).not.toContain(secret)
+      }
+    })
+
+    it('a custom question’s key is never shared across institutions; a public question’s key is, and costs the second institution nothing', async () => {
+      sharedOn = true
+      const wa = await makeWorld(); const wb = await makeWorld()
+      // custom, same text in two institutions: each builds its own key and the library stays empty
+      const ca = await keyed(wa); const cb = await keyed(wb)
+      await drainAll()
+      expect(counts.writer).toBe(2)
+      expect(shared.rows.size).toBe(0)
+      expect((await currentKey(ca.qid)).from_shared).toBe(false)
+      expect((await currentKey(cb.qid)).from_shared).toBe(false)
+      // a textbook exercise: built once, then served from the library
+      const pa = await keyed(wa, { origin: 'textbook_exercise', originRef: { book: 'Understanding Society', chapter: CH3, exercise: 'Q2' } })
+      await drainAll()
+      expect(counts.writer).toBe(3)
+      expect(shared.rows.size).toBe(1)
+      const pb = await keyed(wb, { origin: 'textbook_exercise', originRef: { book: 'Understanding Society', chapter: CH3, exercise: 'Q2' } })
+      await drainAll()
+      expect(counts.writer).toBe(3) // no model call for the second institution
+      const kb = await currentKey(pb.qid)
+      expect(kb).toMatchObject({ status: 'ready', from_shared: true })
+      expect(Number(kb.cost_paise)).toBe(0)
+      void pa
+    })
+
+    it('the quota is checked before every key call: an institution over its budget gets no call; a library hit for one with budget left is free', async () => {
+      sharedOn = true
+      const wa = await makeWorld()
+      const pub = { origin: 'textbook_exercise', originRef: { book: 'Understanding Society', chapter: CH3, exercise: 'Q2' } }
+      await keyed(wa, pub)
+      await drainAll() // fills the library
+      expect(counts.writer).toBe(1)
+
+      // an institution with its monthly budget used up
+      const wb = await makeWorld(0)
+      await raw.query(`UPDATE hw_tenant_quota SET monthly_budget_paise = 1000 WHERE organization_id = $1`, [wb.org])
+      await raw.query(`INSERT INTO hw_ai_usage_monthly (organization_id, month, cost_paise) VALUES ($1, $2, 1000) ON CONFLICT (organization_id, month) DO UPDATE SET cost_paise = 1000`, [wb.org, (await import('@/lib/hw/db')).monthKey()])
+      const custom = await keyed(wb)
+      await drainAll()
+      expect(counts.writer).toBe(1) // unchanged: no call was made
+      expect(counts.embed).toBe(1) // only the first institution's retrieval: nothing was embedded for the refused one
+      expect(await viewOf(wb, custom.id, custom.qid)).toMatchObject({ status: 'failed', reason: 'quota', handMarked: 'key_failed' })
+      expect((await viewOf(wb, custom.id, custom.qid)).detail).toMatch(/AI quota reached/)
+
+      // the quota is checked before the first call of any build, a library hit included, so an exhausted institution gets nothing until its budget resets
+      const refused = await keyed(wb, pub)
+      await drainAll()
+      expect(await viewOf(wb, refused.id, refused.qid)).toMatchObject({ status: 'failed', reason: 'quota' })
+      expect(counts.writer).toBe(1)
+
+      // an institution with budget left: the library hit makes no key call and records no cost and no build
+      const wd = await makeWorld(0)
+      await raw.query(`UPDATE hw_tenant_quota SET monthly_budget_paise = 100000 WHERE organization_id = $1`, [wd.org])
+      const hit = await keyed(wd, pub)
+      await drainAll()
+      expect(counts.writer).toBe(1)
+      expect(await viewOf(wd, hit.id, hit.qid)).toMatchObject({ status: 'ready', fromShared: true })
+      expect(Number((await currentKey(hit.qid)).cost_paise)).toBe(0)
+      expect((await svc.marking.usageThisMonth(wd.admin)).thisMonth).toMatchObject({ keyBuilds: 0, keyCostPaise: 0, costPaise: 0 })
+
+      // the older answer-count quota refuses the same way
+      const wc = await makeWorld(0)
+      const c2 = await keyed(wc)
+      await drainAll()
+      expect(await viewOf(wc, c2.id, c2.qid)).toMatchObject({ status: 'failed', reason: 'quota' })
+      expect(counts.writer).toBe(1)
     })
   })
 })
