@@ -217,16 +217,9 @@ export const hwRouter = createTRPCRouter({
       .mutation(({ ctx, input }) => run(ctx, (a) => marking.returnAssignment(a, input.assignmentId))),
   }),
 
-  // ── Parents and guardians (workstream A; off unless HW_PARENT_VIEW_ENABLED) ──
+  // ── A parent's view of a linked child's returned work (off unless HW_PARENT_VIEW_ENABLED). Links are made through guardian invitations (guardian router). ──
   guardian: createTRPCRouter({
     enabled: protectedProcedure.query(() => ({ enabled: getHwConfig().HW_PARENT_VIEW_ENABLED })),
-    // institution admin
-    options: protectedProcedure.query(({ ctx }) => run(ctx, (a) => guardian.linkOptions(a))),
-    links: protectedProcedure.query(({ ctx }) => run(ctx, (a) => guardian.listLinks(a))),
-    link: protectedProcedure.input(z.object({ guardianId: z.string().min(1).max(255), studentId: z.string().min(1).max(255) }))
-      .mutation(({ ctx, input }) => run(ctx, (a) => guardian.linkGuardian(a, input))),
-    unlink: protectedProcedure.input(z.object({ linkId: id }))
-      .mutation(({ ctx, input }) => run(ctx, (a) => guardian.unlinkGuardian(a, input.linkId))),
     // parent
     children: protectedProcedure.query(({ ctx }) => run(ctx, (a) => guardian.myChildren(a))),
     assignments: protectedProcedure.input(z.object({ studentId: z.string().min(1).max(255) }))

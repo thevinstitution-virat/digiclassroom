@@ -131,6 +131,8 @@ const EnvSchema = z.object({
   HW_ELIGIBILITY_ENFORCED: bool(true),
   /** The parent view (roadmap-remaining.md, workstream A): off until the owner decides the policy. A parent sees only the returned work of a child an institution admin linked to them. */
   HW_PARENT_VIEW_ENABLED: bool(false),
+  /** Guardian onboarding (migration 030): invitations from an institution admin (B2B) and from the super admin (B2C), and the link they create. Off until the owner switches it on. */
+  GUARDIAN_INVITES_ENABLED: bool(false),
   /**
    * A worker that takes only the jobs of institutions whose id starts with this. Unset in production (every job). The integration suites set a
    * prefix of their own, so suites running at the same time in one database never claim, poll or fail each other's jobs (and never a leftover

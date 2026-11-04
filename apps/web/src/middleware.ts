@@ -36,6 +36,7 @@ const PUBLIC_PREFIXES = [
   '/api/webhooks/razorpay',
   '/api/health',          // TODO Phase 2b: consider adding auth here too
   '/accept-invitation',      // B2B2C joining link — page handles its own auth gating
+  '/accept-guardian',        // guardian invitation link — same: signed-out visitors are sent to sign up / sign in and back
   '/_next',
   '/favicon.ico',
   '/manifest.json',

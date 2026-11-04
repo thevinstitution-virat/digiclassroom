@@ -27,6 +27,7 @@ import { superAdminAnalyticsRouter } from './superAdminAnalytics'
 import { superAdminRouter } from './superAdmin'
 import { hwRouter } from './hw'
 import { hwEvalRouter } from './hw-eval'
+import { guardianRouter } from './guardian'
 
 /**
  * This is the primary router for your server.
@@ -55,6 +56,7 @@ export const appRouter = createTRPCRouter({
   superAdmin: superAdminRouter,
   hw: hwRouter,
   hwEval: hwEvalRouter,
+  guardian: guardianRouter,
 })
 
 // Export type definition of API

@@ -59,6 +59,7 @@ export const PLATFORM_NAV: DashboardNavItem[] = [
   { section: 'People & Access', name: 'Users', href: '/dashboard/super-admin/users', icon: Users, description: 'All users & role assignment' },
   { section: 'People & Access', name: 'Teacher Approvals', href: '/dashboard/super-admin/teacher-verification', icon: CheckCircle, description: 'Direct (B2C) teacher applications' },
   { section: 'People & Access', name: 'Join Requests', href: '/dashboard/super-admin/join-requests', icon: ClipboardCheck, description: 'Student requests to join institutions' },
+  { section: 'People & Access', name: 'Guardians', href: '/dashboard/super-admin/guardians', icon: Heart, description: 'Invite the guardian of an independent learner' },
 
   // Content & Knowledge — global content management
   { section: 'Content & Knowledge', name: 'Content', href: '/dashboard/super-admin/content', icon: FileText, description: 'NCERT content & ingestion' },
@@ -98,6 +99,7 @@ export const INSTITUTION_NAV: DashboardNavItem[] = [
   { section: 'People', name: 'Teachers', href: '/dashboard/institution/teachers', icon: GraduationCap, description: 'Invite & manage teachers' },
   { section: 'People', name: 'Students', href: '/dashboard/institution/students', icon: Users, description: 'Enroll & manage students' },
   { section: 'People', name: 'Join Requests', href: '/dashboard/institution/join-requests', icon: ClipboardCheck, description: 'Approve students requesting to join' },
+  { section: 'People', name: 'Guardians', href: '/dashboard/institution/guardians', icon: Heart, description: "Invite a student's parent or guardian" },
 
   // Academics — structure, materials & the modules students get
   { section: 'Academics', name: 'Batches', href: '/dashboard/institution/batches', icon: GraduationCap, description: 'Course batches & enrollments' },
@@ -154,6 +156,7 @@ export const STUDENT_NAV: DashboardNavItem[] = [
 // ── Parent dashboard (DCP-specific tier) ────────────────────────────────────
 export const PARENT_NAV: DashboardNavItem[] = [
   { name: 'Dashboard', href: '/dashboard/parent', icon: Home, description: "Your child's overview" },
+  { name: 'My Wards', href: '/dashboard/parent/wards', icon: Users, description: 'The children linked to your account' },
   { name: 'Child Progress', href: '/dashboard/parent/progress', icon: LineChart, description: 'Learning progress & scores', featured: true, gradient: 'from-green-500 to-emerald-500' },
   { name: 'Assignments', href: '/dashboard/parent/assignments', icon: FileText, description: "Your child's written assignments and results" },
   { name: 'Reports', href: '/dashboard/parent/reports', icon: FileText, description: 'ParentPulse reports', featured: true, gradient: 'from-blue-500 to-indigo-500' },
