@@ -90,7 +90,7 @@ async function main() {
     ds.items,
   );
   const ok = regressionPasses(checks);
-  writeFileSync(join(runsRoot, runId, 'regression.json'), JSON.stringify({ baseline, candidate: runId, ok, checks }, null, 2));
+  writeFileSync(join(runsRoot, runId, 'regression.json'), JSON.stringify({ baseline, candidate: runId, dataset: ref, ok, checks }, null, 2));
   console.log(`\nregression gate: ${ok ? 'PASS' : 'FAIL'} (candidate ${runId} vs baseline ${baseline})`);
   const f4 = (x: number) => (Number.isFinite(x) ? x.toFixed(4) : '—');
   for (const c of checks) console.log(`  ${c.ok ? '✓' : '✗'} ${c.metric.padEnd(22)} ${f4(c.baseline)} -> ${Number.isFinite(c.candidate) ? f4(c.candidate) : 'not measured'}  change ${f4(c.delta.estimate)} [${f4(c.delta.lower)}, ${f4(c.delta.upper)}], n=${c.n}`);

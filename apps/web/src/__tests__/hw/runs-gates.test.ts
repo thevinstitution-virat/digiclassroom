@@ -13,7 +13,8 @@ import { Pool } from 'pg'
 import { buildReport, renderMarkdown } from '@/lib/hw/eval/report'
 import type { RunRecord } from '@/lib/hw/eval/runner'
 import { resultsFromReport, type ReportJson } from '@/lib/hw/eligibility/gate-import'
-import { world } from '@/test-support/hw/eval-world'
+import { pairedRegressionChecks, regressionPasses } from '@/lib/hw/eval/regression'
+import { row, world } from '@/test-support/hw/eval-world'
 
 const DB_URL = process.env.HW_ITEST_DATABASE_URL
 const suite = DB_URL ? describe : describe.skip
@@ -125,5 +126,35 @@ suite('runs & gates — the screen matches hw:eval:report', () => {
     expect(screen.gates.find((x) => x.groupKey === 'science|short|en|teacher_rubric')!.earlier).toBe(n - 1)
     await expect(raw.query(`UPDATE hw_eval_gate_result SET verdict = 'eligible' WHERE group_key = 'science|short|en|teacher_rubric'`)).rejects.toThrow()
     await expect(raw.query(`DELETE FROM hw_eval_run WHERE run_id = $1`, [r.model.runs[0].runId])).rejects.toThrow()
+  })
+
+  it('regression results: the screen shows the command’s own regression.json, a pass and a fail, once each, and never rewritten', async () => {
+    const w = world()
+    const real = w.items.filter((i) => i.source === 'D')
+    const worse = w.rows.map((r) => (real.some((i) => i.id === r.itemId) ? row(real.find((i) => i.id === r.itemId)!, 0) : r)) // the candidate marks every real answer 0
+    const make = (cand: typeof w.rows, candidate: string) => {
+      const checks = pairedRegressionChecks(w.rows, cand, w.items)
+      // what the command writes, then read back from the file as the importer does
+      return JSON.parse(JSON.stringify({ baseline: `run_rg${tag}_base`, candidate, dataset: datasetRef, ok: regressionPasses(checks), checks }))
+    }
+    const pass = make(w.rows, `run_rg${tag}_same`)
+    const fail = make(worse, `run_rg${tag}_worse`)
+    expect(pass.ok).toBe(true)
+    expect(fail.ok).toBe(false)
+    for (const r of [pass, fail]) {
+      const text = JSON.stringify(r, null, 2)
+      const sha = createHash('sha256').update(text).digest('hex')
+      expect((await m.store.importRegression(r, { importedBy: 'cli:test', sourceSha256: sha })).added).toBe(true)
+      expect((await m.store.importRegression(r, { importedBy: 'cli:test', sourceSha256: sha })).added).toBe(false) // the same file is stored once
+    }
+    const screen = await m.view.runsAndGates(owner)
+    for (const r of [pass, fail]) {
+      const s = screen.regressions.find((x) => x.candidateRunId === r.candidate)!
+      expect(s).toMatchObject({ baselineRunId: r.baseline, datasetRef: datasetRef, ok: r.ok })
+      expect(s.checks).toEqual(r.checks) // every check, unchanged: nothing recomputed
+    }
+    await expect(m.store.importRegression({ ...pass, ok: undefined as never }, { importedBy: 'cli:test', sourceSha256: 'a'.repeat(64) })).rejects.toThrow(/not a regression.json/)
+    await expect(raw.query(`UPDATE hw_eval_regression SET ok = true WHERE candidate_run_id = $1`, [fail.candidate])).rejects.toThrow()
+    await expect(raw.query(`DELETE FROM hw_eval_regression WHERE candidate_run_id = $1`, [pass.candidate])).rejects.toThrow()
   })
 })

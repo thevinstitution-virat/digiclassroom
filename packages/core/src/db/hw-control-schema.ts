@@ -30,6 +30,19 @@ export const hwEvalRun = pgTable('hw_eval_run', {
 
 export interface HwGateCheck { gate: string; state: 'pass' | 'fail' | 'insufficient' | 'not_applicable'; detail: string }
 
+/** The regression gate's result as the command wrote it (migration 029). */
+export const hwEvalRegression = pgTable('hw_eval_regression', {
+  id: id(),
+  baselineRunId: text('baseline_run_id').notNull(),
+  candidateRunId: text('candidate_run_id').notNull(),
+  datasetRef: text('dataset_ref').notNull(),
+  ok: boolean('ok').notNull(),
+  checks: jsonb('checks').$type<unknown[]>().notNull(),
+  sourceSha256: char('source_sha256', { length: 64 }).notNull(),
+  importedBy: varchar('imported_by', { length: 255 }).notNull(),
+  importedAt: ts('imported_at').notNull().defaultNow(),
+});
+
 export const hwEvalGateResult = pgTable('hw_eval_gate_result', {
   id: id(),
   groupKey: text('group_key').notNull(),

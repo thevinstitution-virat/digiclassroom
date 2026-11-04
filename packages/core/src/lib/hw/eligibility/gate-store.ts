@@ -6,11 +6,28 @@
 import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
-import { hwEligibility, hwEligibilityEvent, hwEvalGateResult, hwEvalRun } from '@/db/hw-control-schema';
+import { hwEligibility, hwEligibilityEvent, hwEvalGateResult, hwEvalRegression, hwEvalRun } from '@/db/hw-control-schema';
 import { writeAudit } from '../admin-audit';
 import { groupKey } from './group';
 import { runRowsFromReport, type GateResultDraft, type ReportJson } from './gate-import';
 import { autoDemote } from './registry';
+
+/** What `npm run hw:eval:regression` writes to regression.json. */
+export interface RegressionJson { baseline: string; candidate: string; dataset?: string; ok: boolean; checks: unknown[] }
+
+/** Stores the regression gate's result, unchanged. The same file imported twice is stored once. Returns whether a row was added. */
+export async function importRegression(r: RegressionJson, meta: { importedBy: string; sourceSha256: string; dataset?: string }): Promise<{ added: boolean }> {
+  const dataset = r.dataset ?? meta.dataset;
+  if (!dataset) throw new Error('the dataset is not in regression.json: pass --dataset name@vN');
+  if (typeof r.ok !== 'boolean' || !Array.isArray(r.checks)) throw new Error('that is not a regression.json (needs ok and checks)');
+  return db.transaction(async (tx) => {
+    const rows = await tx.insert(hwEvalRegression).values({
+      id: randomUUID(), baselineRunId: r.baseline, candidateRunId: r.candidate, datasetRef: dataset, ok: r.ok, checks: r.checks, sourceSha256: meta.sourceSha256, importedBy: meta.importedBy,
+    }).onConflictDoNothing().returning({ id: hwEvalRegression.id });
+    if (rows.length) await writeAudit(tx, { actorId: meta.importedBy, action: 'regression_imported', entity: 'regression', entityId: rows[0].id, newValue: { baseline: r.baseline, candidate: r.candidate, dataset, ok: r.ok } });
+    return { added: rows.length > 0 };
+  });
+}
 
 export interface ImportOutcome { runsAdded: number; resultsAdded: number; resultsAlreadyThere: number; recorded: string[]; demoted: string[] }
 

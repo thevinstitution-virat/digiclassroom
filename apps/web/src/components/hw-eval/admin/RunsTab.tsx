@@ -58,6 +58,25 @@ export function RunsTab() {
       </Card>
 
       <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-base">Regression gate</CardTitle></CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <p className="text-muted-foreground">The result of <code>npm run hw:eval:regression</code> for a candidate run against its baseline, as the command wrote it. A change to a reader or marking setup needs a passing result before it is promoted.</p>
+          {v.regressions.map((r) => {
+            const checks = r.checks as Array<{ metric: string; baseline: number; candidate: number; ok: boolean; limit?: string; n?: number; delta?: { estimate: number; lower: number; upper: number } }>
+            return (
+              <div key={r.id} className="rounded border p-2">
+                <div className="flex flex-wrap items-center gap-2"><Badge variant={r.ok ? 'default' : 'outline'}>{r.ok ? 'Pass' : 'Fail'}</Badge><span className="font-mono text-xs">{r.candidateRunId}</span><span className="text-muted-foreground">against</span><span className="font-mono text-xs">{r.baselineRunId}</span><span className="text-xs text-muted-foreground">{r.datasetRef} · {ist(r.importedAt)}</span></div>
+                <table className="mt-1 w-full text-left text-xs"><tbody>
+                  {checks.map((c, i) => <tr key={i} className="border-t"><td className="py-0.5 pr-3">{c.ok ? '✓' : '✗'} {c.metric}</td><td className="pr-3">{Number.isFinite(c.baseline) ? c.baseline.toFixed(4) : '–'} → {Number.isFinite(c.candidate) ? c.candidate.toFixed(4) : 'not measured'}</td><td>{c.delta ? `change ${c.delta.estimate.toFixed(4)} [${c.delta.lower.toFixed(4)}, ${c.delta.upper.toFixed(4)}], n=${c.n ?? ''}` : c.limit ?? ''}</td></tr>)}
+                </tbody></table>
+              </div>
+            )
+          })}
+          {!v.regressions.length && <p className="text-muted-foreground">None imported yet. After <code>npm run hw:eval:regression</code>, run <code>npm run hw:eval:gates -- import-regression --file …/regression.json</code>.</p>}
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader className="pb-2"><CardTitle className="text-base">Dataset versions</CardTitle></CardHeader>
         <CardContent className="text-sm">
           <table className="w-full text-left">
@@ -89,7 +108,7 @@ export function RunsTab() {
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">Regression-gate and shadow-mode results are not imported into this screen yet; they are still read from the command line (<code>npm run hw:eval:regression</code>, <code>hw:eval:live</code>).</p>
+          <p className="mt-3 text-xs text-muted-foreground">Shadow-mode results stay on the command line (<code>npm run hw:eval:live</code>) by design: they hold real students' predicted text.</p>
         </CardContent>
       </Card>
     </div>

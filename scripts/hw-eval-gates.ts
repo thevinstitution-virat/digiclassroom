@@ -10,6 +10,9 @@
 //     npm run hw:eval:gates -- import --report hw-evals/reports/heldout-1d-v1/report.json --scheme-source custom \
 //          [--runs-root hw-evals/runs] [--prompt-version grade.v1] [--code-marking] [--imported-by <name>]
 //
+//   import-regression: store the regression gate's own result (regression.json), unchanged, for the Runs & gates tab.
+//     npm run hw:eval:gates -- import-regression --file hw-evals/runs/<candidateRunId>/regression.json [--dataset regression@v1]
+//
 // Needs DATABASE_URL. Importing changes no one's eligibility except in one direction: a group that is eligible for exactly the setup
 // a new, failing result measured is demoted. Promotion is a person's decision, on the control-room screen.
 
@@ -61,6 +64,17 @@ async function importReport() {
   process.exit(0);
 }
 
+async function importRegressionFile() {
+  const file = arg('file');
+  if (!file) throw new Error('--file <regression.json> is required (the file `npm run hw:eval:regression` writes next to the candidate run)');
+  const text = readFileSync(file, 'utf8');
+  const sha = createHash('sha256').update(text).digest('hex');
+  const { importRegression } = await import('@/lib/hw/eligibility/gate-store');
+  const out = await importRegression(JSON.parse(text), { importedBy: arg('imported-by') ?? `cli:${userInfo().username}`, sourceSha256: sha, dataset: arg('dataset') });
+  console.log(out.added ? `regression result ${sha.slice(0, 12)} stored` : `regression result ${sha.slice(0, 12)} was already stored`);
+  process.exit(0);
+}
+
 const cmd = process.argv[2];
-(cmd === 'import' ? importReport() : Promise.reject(new Error('usage: hw-eval-gates.ts import --report <report.json> --scheme-source <…>')))
+(cmd === 'import' ? importReport() : cmd === 'import-regression' ? importRegressionFile() : Promise.reject(new Error('usage: hw-eval-gates.ts import --report <report.json> --scheme-source <…> | import-regression --file <regression.json> [--dataset name@vN]')))
   .catch((e) => { console.error(e instanceof Error ? e.message : e); process.exit(1); });
