@@ -16,7 +16,7 @@ async function login(browser, email, lang) {
   const page = await ctx.newPage();
   const r = await page.request.post(`${BASE}/api/auth/sign-in/email`, { data: { email, password: PASSWORD }, headers: { origin: BASE } });
   if (!r.ok()) throw new Error(`sign-in ${email}: ${r.status()} ${(await r.text()).slice(0, 200)}`);
-  if (/wt-(ia|tc|st)@/.test(email)) await ctx.addCookies([{ name: 'better-auth.active_organization', value: 'wt-org', url: BASE }]);
+  if (/wt-(ia|tc|st|pa)@/.test(email)) await ctx.addCookies([{ name: 'better-auth.active_organization', value: 'wt-org', url: BASE }]);
   await page.goto(BASE + '/manifest.json').catch(() => {});
   return { ctx, page };
 }
@@ -113,6 +113,26 @@ function watch(page, label) {
       if (await sel.count()) { await sel.selectOption({ index: i }); await page.waitForTimeout(1500); await shot(page, `marking-${key}-${lang}`, { hindi: lang === 'hi' }); }
       else findings.push({ screen: `marking-${lang}`, problem: `no question selector for question ${i + 1}` });
     }
+  }
+
+  // ── student, parent, and the parent-link card ──
+  for (const lang of ['en', 'hi']) {
+    const st = await loginCached(browser, 'wt-st@walkthrough.test', lang); watch(st.page, `student-${lang}`);
+    await st.page.goto(`${BASE}/dashboard/student/assignments`, { waitUntil: 'networkidle' });
+    await shot(st.page, `student-list-${lang}`, { hindi: lang === 'hi' });
+    await st.page.goto(`${BASE}/dashboard/student/assignments/wt-a-todo`, { waitUntil: 'networkidle' });
+    await shot(st.page, `student-passage-question-${lang}`, { hindi: lang === 'hi', expect: 'The poverty line is the money' });
+    await st.page.goto(`${BASE}/dashboard/student/assignments/wt-a-ret`, { waitUntil: 'networkidle' });
+    await shot(st.page, `student-returned-result-${lang}`, { hindi: lang === 'hi' });
+    const pa = await loginCached(browser, 'wt-pa@walkthrough.test', lang); watch(pa.page, `parent-${lang}`);
+    await pa.page.goto(`${BASE}/dashboard/parent/assignments`, { waitUntil: 'networkidle' });
+    await pa.page.waitForTimeout(1500);
+    const sees = pa.page.getByRole('button', { name: lang === 'en' ? 'See the result' : 'परिणाम देखें' }).first();
+    if (await sees.count()) { await sees.click(); await pa.page.waitForTimeout(1500); } else findings.push({ screen: `parent-${lang}`, problem: 'no See the result button for the returned assignment' });
+    await shot(pa.page, `parent-assignments-${lang}`, { hindi: lang === 'hi', expect: lang === 'en' ? ['Returned homework', 'Good start. Add one example'] : undefined });
+    const ia = await loginCached(browser, 'wt-ia@walkthrough.test', lang);
+    await ia.page.goto(`${BASE}/dashboard/institution/assignments`, { waitUntil: 'networkidle' });
+    await shot(ia.page, `institution-parent-access-${lang}`, { hindi: lang === 'hi', expect: lang === 'en' ? ['Parents’ access', 'Parent Priya'] : undefined });
   }
 
   // ── rater ──

@@ -7,7 +7,7 @@ const { hashPassword } = req('better-auth/crypto');
 const PASSWORD = 'Walkthrough#2026';
 const A = 'a'.repeat(64);
 const org = 'wt-org';
-const U = { sa: 'wt-sa', ia: 'wt-ia', tc: 'wt-tc', st: 'wt-st', rt: 'wt-rt' };
+const U = { sa: 'wt-sa', ia: 'wt-ia', tc: 'wt-tc', st: 'wt-st', rt: 'wt-rt', pa: 'wt-pa' };
 const day = (off) => new Date(Date.now() + off * 86400000).toISOString().slice(0, 10);
 
 (async () => {
@@ -26,16 +26,16 @@ const day = (off) => new Date(Date.now() + off * 86400000).toISOString().slice(0
   await q(`DELETE FROM "user" WHERE id = ANY($1)`, [Object.values(U)]);
 
   const hash = await hashPassword(PASSWORD);
-  const names = { sa: 'Super Admin', ia: 'Institution Admin', tc: 'Teacher Tara', st: 'Student Sam', rt: 'Rater Ravi' };
+  const names = { sa: 'Super Admin', ia: 'Institution Admin', tc: 'Teacher Tara', st: 'Student Sam', rt: 'Rater Ravi', pa: 'Parent Priya' };
   for (const k of Object.keys(U)) {
-    await q(`INSERT INTO "user" (id, name, email, email_verified, role) VALUES ($1, $2, $3, true, $4)`, [U[k], names[k], `${U[k]}@walkthrough.test`, k === 'tc' ? 'teacher' : 'student']);
+    await q(`INSERT INTO "user" (id, name, email, email_verified, role) VALUES ($1, $2, $3, true, $4)`, [U[k], names[k], `${U[k]}@walkthrough.test`, k === 'tc' ? 'teacher' : k === 'pa' ? 'parent' : 'student']);
     await q(`INSERT INTO account (id, account_id, provider_id, user_id, password, created_at, updated_at) VALUES ($1, $2, 'credential', $3, $4, now(), now())`, [`acc-${U[k]}`, U[k], U[k], hash]);
   }
   await q(`UPDATE "user" SET role = 'super_admin' WHERE id = $1`, [U.sa]);
   await q('ALTER TABLE "user" ENABLE TRIGGER trg_protect_super_admin');
 
   await q(`INSERT INTO organization (id, name, slug, created_at) VALUES ($1, 'Walkthrough School', 'walkthrough-school', now())`, [org]);
-  for (const [k, role] of [['ia', 'owner'], ['tc', 'teacher'], ['st', 'student']]) await q(`INSERT INTO member (id, organization_id, user_id, role, created_at) VALUES ($1, $2, $3, $4, now())`, [`m-${U[k]}`, org, U[k], role]);
+  for (const [k, role] of [['ia', 'owner'], ['tc', 'teacher'], ['st', 'student'], ['pa', 'parent']]) await q(`INSERT INTO member (id, organization_id, user_id, role, created_at) VALUES ($1, $2, $3, $4, now())`, [`m-${U[k]}`, org, U[k], role]);
   await q(`INSERT INTO institution_classes (id, organization_id, name, level) VALUES ('wt-c9', $1, 'Class 9', 9), ('wt-c8', $1, 'Class 8', 8)`, [org]);
   await q(`INSERT INTO institution_sections (id, organization_id, class_id, name) VALUES ('wt-c9a', $1, 'wt-c9', 'A'), ('wt-c9b', $1, 'wt-c9', 'B')`, [org]);
   await q(`INSERT INTO student_enrollments (id, organization_id, user_id, class_id, status) VALUES ('wt-e1', $1, $2, 'wt-c9', 'active')`, [org, U.st]);
@@ -88,6 +88,18 @@ const day = (off) => new Date(Date.now() + off * 86400000).toISOString().slice(0
     await q(`INSERT INTO hw_answer (id, organization_id, submission_id, question_id, mode, typed_text, transcript, transcript_status, failure_reason) VALUES ($1, $2, 'wt-s1', $3, 'typed', $4, $4, 'done', $5)`,
       [`wt-ans${i}`, org, id, 'Because unemployment and illiteracy keep people poor.', i === 2 ? fail : null]);
   }
+
+  // ── student and parent screens: one assignment to do (with a passage), one already returned ──
+  const passage = 'The poverty line is the money a family needs to buy a minimum amount of food, clothing and shelter. In 2011 it was about Rs 816 a month in villages.';
+  await q(`INSERT INTO hw_assignment (id, organization_id, class_id, subject, title, status, allowed_modes, created_by, due_at) VALUES ('wt-a-todo', $1, 'wt-c9', 'Science', 'Reading and answer (passage)', 'draft', ARRAY['typed'], $2, now() + interval '3 days'), ('wt-a-ret', $1, 'wt-c9', 'Science', 'Returned homework', 'draft', ARRAY['typed'], $2, now() - interval '2 days')`, [org, U.tc]);
+  await q(`INSERT INTO hw_question (id, organization_id, assignment_id, position, type, prompt, passage, marks, rubric_mode) VALUES ('wt-t1', $1, 'wt-a-todo', 0, 'short', 'According to the passage, what is the poverty line?', $2, 2, 'teacher'), ('wt-rq1', $1, 'wt-a-ret', 0, 'short', 'Name two causes of poverty.', NULL, 2, 'teacher')`, [org, passage]);
+  for (const [qid, i] of [['wt-t1', 0], ['wt-t1', 1], ['wt-rq1', 0], ['wt-rq1', 1]]) await q(`INSERT INTO hw_rubric_item (id, organization_id, question_id, position, kind, description, marks, source) VALUES ($1, $2, $3, $4, 'key_point', $5, 1, 'teacher')`, [`wt-ri-${qid}-${i}`, org, qid, i, `Key point ${i + 1}`]);
+  await q(`UPDATE hw_assignment SET status = 'published' WHERE id IN ('wt-a-todo', 'wt-a-ret')`);
+  await q(`INSERT INTO hw_submission (id, organization_id, assignment_id, student_id, status, submitted_at) VALUES ('wt-s2', $1, 'wt-a-ret', $2, 'graded', now() - interval '1 day')`, [org, U.st]);
+  await q(`INSERT INTO hw_answer (id, organization_id, submission_id, question_id, mode, typed_text, transcript, transcript_status) VALUES ('wt-ans-r1', $1, 'wt-s2', 'wt-rq1', 'typed', 'Unemployment and illiteracy', 'Unemployment and illiteracy', 'done')`, [org]);
+  await q(`INSERT INTO hw_grade (answer_id, organization_id, marks, item_marks, comment, source, graded_by) VALUES ('wt-ans-r1', $1, 1.5, $2::jsonb, 'Good start. Add one example for each cause.', 'manual', $3)`, [org, JSON.stringify([{ rubric_item_id: 'wt-ri-wt-rq1-0', marks: 1 }, { rubric_item_id: 'wt-ri-wt-rq1-1', marks: 0.5 }]), U.tc]);
+  await q(`UPDATE hw_submission SET status = 'returned' WHERE id = 'wt-s2'`);
+  await q(`INSERT INTO hw_guardian_link (id, organization_id, guardian_user_id, student_user_id, created_by) VALUES ('wt-gl1', $1, $2, $3, $4)`, [org, U.pa, U.st, U.ia]);
 
   // ── monitoring for the institution view (one group big enough to show, one too small) and for the owner ──
   const grp = (key, d, over) => {

@@ -9,8 +9,8 @@ This file lists everything still open after Phases 3 and 5 reached production (c
 | Super admin | Raters, invitations, Consent, Tenants (switch, class list, rupee budget, history), Eligibility (promote, demote, history), Monitoring (alerts, automatic demotion, quota burn), Runs & gates (imported reports) | Regression results are not imported. Shadow results stay command-line only (an owner rule, `eval-tools.test`). The tabs are English only. Never used on production data |
 | Institution admin | AI-use card (budget, 80% warning, answer-key spend), 7-day marking-quality view, teacher-class links | Cannot change the class limit or budget (the super admin does, by design) |
 | Teacher | Builder (origin, passage, answer-key states, own rubric), publish preview, marking view with stated reasons | The AI-suggestion workflow with a real suggestion was not walked through in a browser |
-| Student | Write, submit, results (existing); the question's passage (added 5 Nov, `17338ca`, not yet on `main`) | Student screens never walked through in a browser. Photo answers (D4) |
-| Parent / guardian | Nothing. The role exists in code and has no access; the parent dashboard has no handwritten-assignment page and no parent-child link exists in the database | Policy, link, endpoints, screens (workstream A) |
+| Student | Write, submit, results (existing); the question's passage; walked through in a browser (list, passage, returned result) in English and Hindi | Photo answers (D4). Fixes since the last push are not on `main` yet |
+| Parent / guardian | **Built 5 Nov (workstream A):** migration 028 (link table), a parent page (children, assignments, a returned result), the institution admin's link screen, English and Hindi, tests for every rule. Off unless `HW_PARENT_VIEW_ENABLED` | The policy (P1) is a proposal until you decide; migration 028 is not applied on production; the page lives in the parent portal's navigation |
 | Rater (evaluator) | Queue, menu, Hindi screens | The task page was never checked in a browser |
 
 ## 1. Decisions needed from YOU (nothing below the line moves without these)
@@ -25,7 +25,7 @@ This file lists everything still open after Phases 3 and 5 reached production (c
 
 ## 2. Workstreams
 
-### A. Parent view (Claude, builds now behind a flag)
+### A. Parent view (Claude) — BUILT 5 Nov, local, not pushed; migration 028 not applied
 **Proposal for P1 (a conservative default; change it by deciding differently):**
 - A parent sees **only their own linked child's returned work**: the assignment title, subject, due date, whether it was submitted and whether it was late, and, once the teacher has **returned** it, the marks per question, the teacher's comments and the total. Never an AI suggestion, a transcript, a student flag or another child's work. Nothing before the teacher returns it (the same rule as for students).
 - The link is made **by the institution admin** (parent account email to student), not by the parent, so an institution knows who may see a child's work. A link can be ended at any time by the institution admin; it records who made it and when.
@@ -33,7 +33,7 @@ This file lists everything still open after Phases 3 and 5 reached production (c
 
 Tasks: A1 migration 028 (`hw_guardian_link`, additive, rollback, rehearsal); A2 access rule and service (every function checks the link, the institution and that the work is returned); A3 institution admin screen to link and unlink; A4 parent screens (children, assignments, a returned result), English and Hindi; A5 tests for every rule (no link, ended link, wrong institution, unreturned work, another child's work, AI content never present); A6 walkthrough screenshots. **Acceptance:** a parent with no link sees nothing; a linked parent sees exactly the returned results; the tests prove it.
 
-### B. Finish checking the screens (Claude)
+### B. Finish checking the screens (Claude) — student, parent and parent-link screens DONE; the rater task page and the teacher's AI-suggestion workflow still to check
 B1 walkthrough of the student screens (start, write, submit, passage, result) in English and Hindi; B2 the rater task page with a seeded dataset; B3 the teacher marking view **with** an AI suggestion (accept, edit, bulk accept); B4 fix whatever it finds; B5 push the fixes. **Acceptance:** screenshots in `docs/hw-eval/screens/`, no errors, overflow or missing strings.
 
 ### C. Regression results on the Runs & gates tab (Claude)

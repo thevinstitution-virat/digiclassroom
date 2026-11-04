@@ -1,0 +1,167 @@
+{
+  "findings": [
+    {
+      "screen": "student-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "screen": "student-en",
+      "problem": "console error: Event"
+    },
+    {
+      "screen": "student-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "screen": "student-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "screen": "student-en",
+      "problem": "console error: Event"
+    },
+    {
+      "screen": "student-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "screen": "student-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "screen": "student-en",
+      "problem": "console error: Event"
+    },
+    {
+      "screen": "student-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "screen": "parent-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "screen": "parent-en",
+      "problem": "console error: Event"
+    },
+    {
+      "screen": "parent-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "screen": "student-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "screen": "student-en",
+      "problem": "console error: Event"
+    },
+    {
+      "screen": "student-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "screen": "student-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "screen": "student-en",
+      "problem": "console error: Event"
+    },
+    {
+      "screen": "student-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "screen": "student-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "screen": "student-en",
+      "problem": "console error: Event"
+    },
+    {
+      "screen": "student-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "screen": "parent-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "screen": "parent-en",
+      "problem": "console error: Event"
+    },
+    {
+      "screen": "parent-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "screen": "rater-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "screen": "rater-en",
+      "problem": "console error: Event"
+    },
+    {
+      "screen": "rater-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "screen": "rater-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    },
+    {
+      "screen": "rater-en",
+      "problem": "console error: Event"
+    },
+    {
+      "screen": "rater-en",
+      "problem": "console error: Failed to load resource: net::ERR_NAME_NOT_RESOLVED"
+    }
+  ],
+  "shots": [
+    "super-admin-consent.png",
+    "super-admin-tenants.png",
+    "super-admin-eligibility.png",
+    "super-admin-monitoring.png",
+    "super-admin-runs-gates.png",
+    "institution-monitoring-en.png",
+    "institution-monitoring-hi.png",
+    "builder-all-statuses-en.png",
+    "builder-key-building-en.png",
+    "builder-key-ready-en.png",
+    "builder-key-partial-en.png",
+    "builder-key-no_grounding-en.png",
+    "builder-key-failed-en.png",
+    "builder-key-not_available-en.png",
+    "builder-own-rubric-en.png",
+    "marking-q1-en.png",
+    "marking-key-not-supported-en.png",
+    "marking-quota-reached-en.png",
+    "builder-all-statuses-hi.png",
+    "builder-key-building-hi.png",
+    "builder-key-ready-hi.png",
+    "builder-key-partial-hi.png",
+    "builder-key-no_grounding-hi.png",
+    "builder-key-failed-hi.png",
+    "builder-key-not_available-hi.png",
+    "builder-own-rubric-hi.png",
+    "marking-q1-hi.png",
+    "marking-key-not-supported-hi.png",
+    "marking-quota-reached-hi.png",
+    "student-list-en.png",
+    "student-passage-question-en.png",
+    "student-returned-result-en.png",
+    "parent-assignments-en.png",
+    "institution-parent-access-en.png",
+    "student-list-hi.png",
+    "student-passage-question-hi.png",
+    "student-returned-result-hi.png",
+    "parent-assignments-hi.png",
+    "institution-parent-access-hi.png",
+    "rater-evaluate-en.png",
+    "rater-evaluate-hi.png"
+  ]
+}
