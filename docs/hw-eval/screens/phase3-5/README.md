@@ -1,6 +1,6 @@
 # Screen walkthrough, Phases 3 to 5 (5 Nov 2026)
 
-41 screenshots of the new screens, taken with headless Chrome driven by Playwright against the web and API apps running locally on a **scratch** PostgreSQL seeded with fake data (one institution, a super admin, an institution admin, a teacher, a student and a rater). Test credentials only; nothing touched a real service (mail and AI keys were blank or dummy). The seed (`walkthrough/seed.cjs`) and the script (`walkthrough/walk.cjs`) are kept so it can be repeated.
+44 screenshots of the new screens, taken with headless Chrome driven by Playwright against the web and API apps running locally on a **scratch** PostgreSQL seeded with fake data (one institution, a super admin, an institution admin, a teacher, a student and a rater). Test credentials only; nothing touched a real service (mail and AI keys were blank or dummy). The seed (`walkthrough/seed.cjs`) and the script (`walkthrough/walk.cjs`) are kept so it can be repeated.
 
 | Screen | Files |
 |---|---|
@@ -13,6 +13,7 @@
 | Student | `student-list-{en,hi}`, `student-passage-question-{en,hi}` (the passage is shown above the answer box), `student-returned-result-{en,hi}` |
 | Parent | `parent-assignments-{en,hi}` (a returned assignment with marks, key points and the teacher's comment; one waiting for the teacher; one not handed in) |
 | Institution admin, parents' access | `institution-parent-access-{en,hi}` (link a parent to a student; end a link) |
+| Teacher, marking with an AI suggestion | `marking-ai-suggestion-{en,hi}`, `marking-ai-suggestion-changed-en` (a mark changed: the button becomes "Accept with my changes"), `marking-ai-suggestion-accepted-en` ("Marked: 1/2 (edited AI)"). Run with eligibility not enforced so the seeded suggestion shows (`walkthrough/walk-suggestion.cjs`); the Hindi shot is taken after the English pass accepted it, so it shows the accepted state in Hindi |
 | Rater | `rater-evaluate-{en,hi}` (the `/evaluate` queue). **Not captured: an `/evaluate` task page**, which needs a dataset on disk and media; it was not seeded. |
 
 ## What the walkthrough checked, and found

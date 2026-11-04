@@ -89,6 +89,8 @@ const day = (off) => new Date(Date.now() + off * 86400000).toISOString().slice(0
       [`wt-ans${i}`, org, id, 'Because unemployment and illiteracy keep people poor.', i === 2 ? fail : null]);
   }
 
+  // an AI suggestion for the first marking answer (shown when eligibility is not enforced)
+  await q(`INSERT INTO hw_ai_grade (id, organization_id, answer_id, model, prompt_version, rubric_version, items, suggested_marks, confidence) VALUES ('wt-ag1', $1, 'wt-ans0', 'gemini-3.5-flash-lite', 'grade.v1', (SELECT rubric_version FROM hw_question WHERE id = 'wt-m1'), $2::jsonb, 2, 0.82)`, [org, JSON.stringify([{ rubric_item_id: 'wt-m1-r0', verdict: 'met', quote: 'unemployment', marks: 1, confidence: 0.9 }, { rubric_item_id: 'wt-m1-r1', verdict: 'met', quote: 'illiteracy', marks: 1, confidence: 0.75 }])]);
   // ── student and parent screens: one assignment to do (with a passage), one already returned ──
   const passage = 'The poverty line is the money a family needs to buy a minimum amount of food, clothing and shelter. In 2011 it was about Rs 816 a month in villages.';
   await q(`INSERT INTO hw_assignment (id, organization_id, class_id, subject, title, status, allowed_modes, created_by, due_at) VALUES ('wt-a-todo', $1, 'wt-c9', 'Science', 'Reading and answer (passage)', 'draft', ARRAY['typed'], $2, now() + interval '3 days'), ('wt-a-ret', $1, 'wt-c9', 'Science', 'Returned homework', 'draft', ARRAY['typed'], $2, now() - interval '2 days')`, [org, U.tc]);
