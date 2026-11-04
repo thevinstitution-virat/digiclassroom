@@ -116,6 +116,12 @@ function Result({ submissionId }: { submissionId: string }) {
               <Badge>{q.awarded ?? '–'} / {marksLabel(t, q.marks)}</Badge>
             </div>
             <CardTitle className="whitespace-pre-wrap text-base">{q.prompt}</CardTitle>
+            {q.passage && (
+            <div className="rounded-md border bg-muted/40 p-3" data-testid="question-passage">
+              <p className="mb-1 text-xs font-medium text-muted-foreground">{t('st.q.passage')}</p>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed">{q.passage}</p>
+            </div>
+          )}
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <p className="whitespace-pre-wrap rounded bg-muted p-3">{q.transcript || '—'}</p>

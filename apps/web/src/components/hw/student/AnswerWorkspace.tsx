@@ -242,6 +242,12 @@ export function AnswerWorkspace({ data, onSubmitted }: { data: Started; onSubmit
             <Badge>{marksLabel(t, question.marks)}</Badge>
           </div>
           <CardTitle className="whitespace-pre-wrap text-lg leading-relaxed">{question.prompt}</CardTitle>
+          {question.passage && (
+            <div className="rounded-md border bg-muted/40 p-3" data-testid="question-passage">
+              <p className="mb-1 text-xs font-medium text-muted-foreground">{t('st.q.passage')}</p>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed">{question.passage}</p>
+            </div>
+          )}
           {modes.length > 1 && (
             <div className="flex gap-1" role="radiogroup">
               {modes.map((m) => (
