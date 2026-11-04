@@ -306,7 +306,7 @@ const TEACHER_STAMP: SchemeStamp = { source: 'teacher_rubric', keyId: null, keyS
  * with the settings running now (R_min, models, index), for this very question, from book text that has not changed. If it fails, a rebuild is queued
  * (once). `rt` and `chunks` are injectable for tests.
  */
-export async function checkKeyForMarking(x: Exec, q: QuestionRow, opts: { rt?: KeyRuntime | null; enforceTeacherRubric?: boolean } = {}): Promise<KeyCheck> {
+export async function checkKeyForMarking(x: Exec, q: QuestionRow, opts: { rt?: KeyRuntime | null; enforceTeacherRubric?: boolean; /** false = look only, never queue a rebuild (previews and listings) */ rebuild?: boolean } = {}): Promise<KeyCheck> {
   if (q.rubricMode === 'teacher') {
     return opts.enforceTeacherRubric === false || getHwConfig().HW_TEACHER_RUBRIC_AI_ENABLED ? { ok: true, scheme: TEACHER_STAMP } : { ok: false, reason: 'teacher_rubric' };
   }
@@ -325,7 +325,7 @@ export async function checkKeyForMarking(x: Exec, q: QuestionRow, opts: { rt?: K
     // A rebuilt key that is ready but was not applied (its value points differ from the published rubric) waits for the teacher: nothing more to build.
     if (cur && cur.status === 'ready' && cur.id !== k.id) return { ok: false, reason: 'key_changed' };
     // Otherwise rebuild once; the rebuilt key re-activates itself when its value points are the published ones.
-    await queueKey(x, q, null).catch(() => undefined);
+    if (opts.rebuild !== false) await queueKey(x, q, null).catch(() => undefined);
     return { ok: false, reason };
   };
   if (k.key_service_version !== currentKeyServiceVersion()) return stale('key_stale_version');

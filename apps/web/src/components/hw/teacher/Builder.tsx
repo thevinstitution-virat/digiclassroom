@@ -188,7 +188,7 @@ function QuestionEditor({ q, index, count, onChanged, onMove }: { q: Question; i
           <Field label={t('tc.b.lines')}>
             <Input type="number" min={1} max={200} value={form.answerLines} onChange={(e) => set({ answerLines: Number(e.target.value) })} />
           </Field>
-          <Field label="Type">
+          <Field label={t('tc.b.type')}>
             <NativeSelect value={form.type} onChange={(e) => set({ type: e.target.value as QType })}>
               {(['very_short', 'short', 'long', 'essay'] as QType[]).map((ty) => <option key={ty} value={ty}>{t(`type.${ty}`)}</option>)}
             </NativeSelect>

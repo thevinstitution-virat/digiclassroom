@@ -53,11 +53,11 @@ export async function eligibilityOfGroup(x: Exec, parts: GroupParts): Promise<El
  * (keys/product.ts: the backstop), and its group must be eligible for the marking setup running now. A question that cannot be found is not eligible.
  * With HW_ELIGIBILITY_ENFORCED off neither is checked (tests, and the owner's emergency switch).
  */
-export async function eligibilityOfQuestion(x: Exec, questionId: string): Promise<EligibilityDecision> {
+export async function eligibilityOfQuestion(x: Exec, questionId: string, opts: { rebuild?: boolean } = {}): Promise<EligibilityDecision> {
   if (!getHwConfig().HW_ELIGIBILITY_ENFORCED) return decide(null, '', false);
   const [q] = await x.select().from(hwQuestion).where(eq(hwQuestion.id, questionId)).limit(1);
   if (!q) return { eligible: false, reason: 'no_record' };
-  const key = await checkKeyForMarking(x, q);
+  const key = await checkKeyForMarking(x, q, { rebuild: opts.rebuild });
   if (!key.ok) return { eligible: false, reason: key.reason };
   const parts = await groupOfQuestion(x, questionId);
   return parts ? eligibilityOfGroup(x, parts) : { eligible: false, reason: 'no_record' };

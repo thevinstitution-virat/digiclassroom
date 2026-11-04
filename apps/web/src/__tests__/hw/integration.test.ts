@@ -1165,6 +1165,19 @@ suite('handwritten assignments — integration', () => {
       expect((await raw.query(`SELECT status FROM hw_assignment WHERE id = $1`, [a.id])).rows[0].status).toBe('published')
     })
 
+    it('the publish preview only looks: it never queues a rebuild of a stale key', async () => {
+      const { a } = await readyPublished({ student: false })
+      rMin = 0.5 // the key is now stale
+      const before = (await raw.query(`SELECT count(*)::int AS n FROM hw_question_key WHERE question_id = $1`, [a.qid])).rows[0].n
+      const w = await makeWorld()
+      void w
+      const pre = await reg.eligibilityOfQuestion(appDb as never, a.qid, { rebuild: false })
+      expect(pre).toEqual({ eligible: false, reason: 'key_stale_config' })
+      expect((await raw.query(`SELECT count(*)::int AS n FROM hw_question_key WHERE question_id = $1`, [a.qid])).rows[0].n).toBe(before) // nothing queued
+      expect((await reg.eligibilityOfQuestion(appDb as never, a.qid)).reason).toBe('key_stale_config') // marking does queue it
+      expect((await raw.query(`SELECT count(*)::int AS n FROM hw_question_key WHERE question_id = $1`, [a.qid])).rows[0].n).toBe(before + 1)
+    })
+
     it('students never receive key content; they do see the passage that is part of the question', async () => {
       writerOut = PASSAGE_KEY
       const w = await makeWorld(); const a = await keyed(w, { passage: 'The poverty line is the money needed for a minimum calorie intake.', modelAnswer: 'SECRET model answer text.' })

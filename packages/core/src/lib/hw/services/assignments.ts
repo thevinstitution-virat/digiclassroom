@@ -377,7 +377,7 @@ export interface HandMarked { questionId: string; position: number; reason: stri
 async function handMarkedList(qs: { id: string; position: number }[]): Promise<HandMarked[]> {
   const out: HandMarked[] = [];
   for (const q of qs) {
-    const d = await eligibilityOfQuestion(db, q.id);
+    const d = await eligibilityOfQuestion(db, q.id, { rebuild: false }); // a preview only looks: it never queues a rebuild
     if (!d.eligible) out.push({ questionId: q.id, position: q.position, reason: d.reason, message: aiOffMessage(d.reason) });
   }
   return out;

@@ -1,0 +1,12 @@
+Publish to students? Questions and marks cannot change after this.
+
+These questions will be marked by hand:
+Question 1: AI suggestions are waiting for this question’s answer key to be built. Please mark by hand until it is ready.
+Question 2: AI suggestions are paused for this question: the answer-key service changed, so its key is being rebuilt. Please mark by hand for now.
+Question 3: AI suggestions are off for this question: its answer key is only partly supported by the book. Please mark by hand.
+Question 4: AI suggestions are off for this question: no book or passage supports an answer key for it. Please mark by hand.
+Question 5: AI suggestions are off for this question: its answer key could not be built. Please mark by hand.
+Question 6: AI suggestions are off for this question: answer keys are not switched on yet. Please mark by hand.
+Question 7: AI suggestions are not switched on for this kind of question yet. Please mark by hand.
+
+Publish anyway?
