@@ -53,9 +53,9 @@ describe('the configuration fingerprint', () => {
     }, { promptVersion: 'grade.v1', codeMarking: false })
     expect('parts' in run && fingerprint(run.parts)).toBe(fingerprint(base))
   })
-  it('a run with strict marking, or key points only, is not the product\'s marking and cannot stand for it', () => {
+  it('a run with a strict prompt other than the product\'s, or key points only, is not the product\'s marking and cannot stand for it', () => {
     const cfg = (profiles: object) => ({ grader: { model: 'x/y', chunkSize: 10 }, prompts: { grade: 'grade.v1' }, profiles })
-    expect(partsFromRunConfig(cfg({ strictMarking: true }), { promptVersion: 'grade.v1', codeMarking: false })).toMatchObject({ notProduction: expect.stringMatching(/strict marking/) })
+    expect(partsFromRunConfig(cfg({ strictMarking: true }), { promptVersion: 'grade.v1', codeMarking: false })).toMatchObject({ notProduction: expect.stringMatching(/strict marking prompt/) })
     expect(partsFromRunConfig(cfg({ valuePointsOnly: true }), { promptVersion: 'grade.v1', codeMarking: false })).toMatchObject({ notProduction: expect.stringMatching(/key points only/) })
     expect(partsFromRunConfig({}, { promptVersion: 'grade.v1', codeMarking: false })).toMatchObject({ notProduction: expect.stringMatching(/did not record/) })
   })

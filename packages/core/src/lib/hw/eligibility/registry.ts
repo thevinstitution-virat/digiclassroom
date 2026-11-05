@@ -14,7 +14,7 @@ import { writeAudit } from '../admin-audit';
 import { getHwConfig, requireModel } from '../config';
 import { HwError } from '../errors';
 import { requireSuperAdmin, type EvalActor } from '../eval-tools/access';
-import { GRADE_PROMPT_VERSION } from '../prompts/grade.v1';
+import { markPromptVersion } from '../grader/mark-mode';
 import type { Exec } from '../db';
 import { enqueueGrade } from '../jobs/queue';
 import { checkKeyForMarking } from '../keys/product';
@@ -24,7 +24,7 @@ import { groupKey, parseGroupKey, type GroupParts } from './group';
 
 /** The marking configuration in force now. Throws NOT_CONFIGURED when no grade model is set (then no AI marking runs at all). */
 export function runningConfig(): { parts: FingerprintParts; hash: string } {
-  const parts = runningParts(getHwConfig(), requireModel('grade'), GRADE_PROMPT_VERSION);
+  const parts = runningParts(getHwConfig(), requireModel('grade'), markPromptVersion());
   return { parts, hash: fingerprint(parts) };
 }
 

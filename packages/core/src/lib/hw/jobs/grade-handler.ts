@@ -10,7 +10,8 @@ import { db } from '../db';
 import { quotaAllows, quotaRefusal, quotaState } from '../cost/quota';
 import { recordUsage } from '../cost/usage';
 import { createBatch, generate, pollBatch, providerFor, routed, usageFromError, type AiResult } from '../ai';
-import { defaultGradeOptions, gradeCall, gradeResultsFrom } from '../grader/ai-grader';
+import { defaultGradeOptions } from '../grader/ai-grader';
+import { markCall, markChunkSize, markResultsFrom } from '../grader/mark-mode';
 import type { GradeInput, GradeQuestion } from '../grader/types';
 import { answersNeedingSuggestion, findPriorSuggestions, gradeByRules, insertAiGrades, loadGradeQuestion, reusedSuggestion } from '../pipeline';
 import { keyVersionHash, planDuplicates, transcriptHash } from '../grader/dedupe';
@@ -112,8 +113,8 @@ async function plan(job: JobRow): Promise<Plan | null> {
   }
   // With the instruction guard, an answer addressed to the marker is marked alone, so nothing it says can reach a neighbour.
   const chunks = getHwConfig().HW_INSTRUCTION_GUARD_ENABLED
-    ? groupForMarking(pending, getHwConfig().HW_GRADE_BATCH_SIZE, true).map((g) => g.map((p) => p.answerId))
-    : chunk(pending.map((p) => p.answerId), getHwConfig().HW_GRADE_BATCH_SIZE);
+    ? groupForMarking(pending, markChunkSize(), true).map((g) => g.map((p) => p.answerId))
+    : chunk(pending.map((p) => p.answerId), markChunkSize());
   return { q, chunks, followers, keyHash };
 }
 
@@ -129,7 +130,7 @@ async function applyChunk(job: JobRow, requestedVersion: number, input: GradeInp
       if (current) await enqueueGrade(tx, job.organizationId, current.id, 0);
       return RUBRIC_CHANGED;
     }
-    const results = gradeResultsFrom(res, input);
+    const results = markResultsFrom(res, input);
     const cfg = getHwConfig();
     // The screen's record of what it flagged when marking (the denominator of its false-positive rate). Never blocks marking.
     if (cfg.HW_INSTRUCTION_GUARD_ENABLED) await recordInstructionFlags(tx, job.organizationId, input.answers);
@@ -168,7 +169,7 @@ async function runSync(job: JobRow, q: GradeQuestion, chunks: string[][], dupOf?
     const input = await inputsFor(q, ids);
     if (!input.answers.length) continue;
     try {
-      const res = await generate(routed(gradeCall(model, input, defaultGradeOptions()), 'grade'));
+      const res = await generate(routed(markCall(model, input, defaultGradeOptions()), 'grade'));
       const note = await applyChunk(job, q.rubricVersion, input, res, false, dupOf);
       if (note) notes.push(note);
       // Production is committed; the candidate configuration may now mark the same answers.
@@ -215,7 +216,7 @@ export async function runGradeJobs(workerId: string, deadline: number): Promise<
         continue;
       }
       const model = requireModel('grade');
-      const items = await Promise.all(p.chunks.map(async (ids, i) => ({ key: `${job.id}:${i}`, call: routed(gradeCall(model, await inputsFor(p.q, ids), defaultGradeOptions()), 'grade') })));
+      const items = await Promise.all(p.chunks.map(async (ids, i) => ({ key: `${job.id}:${i}`, call: routed(markCall(model, await inputsFor(p.q, ids), defaultGradeOptions()), 'grade') })));
       let name: string;
       try {
         name = await createBatch(items, `hw-grade-${job.id}`);

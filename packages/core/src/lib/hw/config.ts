@@ -107,6 +107,12 @@ const EnvSchema = z.object({
   /** Instruction guard: an answer addressed to the marker is marked alone, flagged to the teacher and left out of bulk accept; a point whose evidence is not in the answer lowers the answer's confidence. */
   HW_INSTRUCTION_GUARD_ENABLED: bool(false),
   /**
+   * Strict marking (grade-strict.v2, docs/hw-eval/cost-phase1d.md): ONE answer per call; per key point the model gives a verdict and the
+   * verbatim words, and code computes the marks. Off = grade.v1 as before. Part of the eligibility fingerprint: switching it makes every
+   * group "configuration changed" until evaluation runs made under the same setting are imported.
+   */
+  HW_STRICT_MARKING_ENABLED: bool(false),
+  /**
    * Strict marking, "right idea, wrong detail" (docs/hw-eval/verdicts.md): the share of the key point's marks given.
    * zero (the default; phase 1c's behaviour), half (half the point's marks, rounded down to a half mark) or full.
    * The teachers decide this; the code only applies it.

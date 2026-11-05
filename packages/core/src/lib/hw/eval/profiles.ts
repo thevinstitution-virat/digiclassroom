@@ -91,7 +91,14 @@ export const PROFILES: readonly Profile[] = [
     onlyLanguage: 'en',
     notes: 'English items only; Hindi is not run on this profile.' },
 
+  { id: 'R-luna-all', stage: 'reading', label: 'gpt-6-luna, low effort, every language', batch: false,
+    call: { provider: 'openrouter', model: LUNA, reasoningEffort: 'low', mediaResolution: 'LOW' },
+    notes: 'R-luna without the English-only limit: the Hindi smoke (5 Nov) read 40 of 40 with no error, so it is run on every language.' },
+
   // ── Escalation (tier 2) ─────────────────────────────────────────────────────
+  { id: 'E-luna', stage: 'escalation', label: 'gpt-6-luna, low effort', batch: false,
+    call: { provider: 'openrouter', model: LUNA, reasoningEffort: 'low', mediaResolution: 'LOW' },
+    notes: 'Tier 2 on luna: the request E0 sends, to a different model. Measured against E0 on the stress set (docs/hw-eval/luna-reading.md).' },
   { id: 'E0', stage: 'escalation', label: "today's escalation model", batch: false,
     call: { provider: 'openrouter', model: FLASH_36, thinkingLevel: 'MINIMAL', mediaResolution: 'LOW' },
     notes: 'Baseline added for the comparison: production.json escalates to gemini-3.6-flash on the standard path.' },
