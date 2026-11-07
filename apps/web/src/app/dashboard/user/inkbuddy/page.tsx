@@ -1,6 +1,6 @@
 'use client'
 
-// Virat Evaluator for independent learners (docs/hw-eval/self-practice.md): start the free trial, find a textbook
+// InkBuddy: the Virat Evaluator for independent learners (docs/hw-eval/self-practice.md): start the free trial, find a textbook
 // question, practise it on the ordinary student answer screen, and see your own practice list.
 // The tab is shown only to people with no institution, or who already started a trial.
 
@@ -146,7 +146,7 @@ function Mine() {
   )
 }
 
-export default function EvaluatorPage() {
+export default function InkBuddyPage() {
   const { t, lang } = useHwT()
   const status = api.hw.practice.status.useQuery(undefined, { retry: false })
   const utils = api.useUtils()
@@ -161,6 +161,11 @@ export default function EvaluatorPage() {
         <HwMessage>{t('pr.off')}</HwMessage>
       ) : !s.eligible ? (
         <HwMessage>{t('pr.notEligible')}</HwMessage>
+      ) : !s.started && !s.ready ? (
+        <Card>
+          <CardHeader><CardTitle>{t('pr.soon.title')}</CardTitle></CardHeader>
+          <CardContent className="text-sm"><p>{t('pr.soon.body')}</p></CardContent>
+        </Card>
       ) : !s.started ? (
         <Card>
           <CardHeader><CardTitle>{t('pr.intro.title', { n: s.trialDays })}</CardTitle></CardHeader>

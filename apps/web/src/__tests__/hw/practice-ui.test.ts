@@ -40,7 +40,7 @@ describe('self-practice text', () => {
 
   it('every pr.* key a screen uses exists', () => {
     const files = [
-      'app/dashboard/user/evaluator/page.tsx',
+      'app/dashboard/user/inkbuddy/page.tsx',
       'app/dashboard/student/assignments/[assignmentId]/page.tsx',
       'components/hw/student/AfterSubmit.tsx',
     ]
@@ -64,7 +64,7 @@ describe('self-practice text', () => {
   it('the sidebar shows the tab only while self-practice is on and the person is eligible, and hides Assignments for them', () => {
     const side = read('components/user/profile/UserSidebar.tsx')
     expect(side).toContain('practice.data?.enabled && practice.data.eligible')
-    expect(side).toContain("'/dashboard/user/evaluator'")
+    expect(side).toContain("'/dashboard/user/inkbuddy'")
     expect(side).toContain('!hw.data.practice')
   })
 })

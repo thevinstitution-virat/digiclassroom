@@ -21,7 +21,7 @@ import { conceptFeedbackForSubmission } from '@/lib/hw/concept-feedback';
 import { libraryGraphEnabled } from '@/lib/library/graph-client';
 import { PRACTICE_ORG_ID } from '@/lib/hw/practice/rules';
 import { practiceOverview, startTrial } from '@/lib/hw/practice/trial';
-import { parseScope, searchPracticeQuestions } from '@/lib/hw/practice/catalog';
+import { parseScope, practiceLibraryReady, searchPracticeQuestions } from '@/lib/hw/practice/catalog';
 import { retryAttempt, startAttempt } from '@/lib/hw/practice/attempt';
 
 const TRPC_CODE: Record<HwErrorCode, TRPCError['code']> = {
@@ -124,7 +124,11 @@ export const hwRouter = createTRPCRouter({
   // ── Independent learners: self-practice (docs/hw-eval/self-practice.md) ───────
   practice: createTRPCRouter({
     /** For the tab and the sidebar: never throws for "off" or "not for you". */
-    status: protectedProcedure.query(({ ctx }) => runUser(ctx, (u) => practiceOverview(u))),
+    status: protectedProcedure.query(({ ctx }) => runUser(ctx, async (u) => {
+      const o = await practiceOverview(u);
+      // ready: the library and the answer keys are wired, so starting the trial is worth the learner's days.
+      return o.enabled ? { ...o, ready: practiceLibraryReady() } : o;
+    })),
     start: protectedProcedure.use(rateLimit(10, 60_000))
       .mutation(({ ctx }) => runUser(ctx, async (u) => { const r = await startTrial(u); return { started: r.started, endsAt: r.endsAt }; })),
     /** Book exercise questions about a topic, for the learner's class, subject and medium. */

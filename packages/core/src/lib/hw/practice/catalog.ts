@@ -9,6 +9,7 @@ import { HubError, type HubSearchRequest, type HubSearchResponse } from '../../l
 import { HwError } from '../errors';
 import { exerciseQuestions, jaccard, matchWords, shingles } from '../keys/exercise-match';
 import { subjectNodeCodes } from '../keys/hub-retrieval';
+import { keySettingsFromEnv } from '../keys/service';
 import { normaliseClass } from '../keys/scope';
 import { PRACTICE_TEXT, questionShape, type PracticeQuestionType } from './rules';
 
@@ -27,6 +28,15 @@ export interface CatalogQuestion {
 }
 
 export interface HubLike { search(req: HubSearchRequest): Promise<HubSearchResponse> }
+
+/**
+ * Can a learner start a trial and get something out of it? The library hub is on, and the answer-key service is configured (writer and verifier of
+ * different families, and a calibrated R_min). Until then the tab says "coming soon" and does not offer the trial, because starting it starts the clock.
+ */
+export function practiceLibraryReady(): boolean {
+  if (!libraryHubEnabled()) return false;
+  try { return keySettingsFromEnv().rMin !== undefined; } catch { return false; }
+}
 
 /** The real hub, or null while the library hub is off (then no textbook question can be offered or accepted). */
 export const defaultHub = (): HubLike | null => (libraryHubEnabled() ? { search: (req) => searchLibrary(req, { direct: null }) } : null);

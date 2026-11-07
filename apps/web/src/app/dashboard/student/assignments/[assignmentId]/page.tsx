@@ -40,7 +40,7 @@ export default function StudentAssignmentPage() {
       title={d?.assignment.title}
       subtitle={d ? `${d.assignment.subject}${d.assignment.instructions ? ` — ${d.assignment.instructions}` : ''}` : undefined}
       actions={d?.practice
-        ? <Button asChild variant="ghost" size="sm"><Link href="/dashboard/user/evaluator"><ChevronLeft className="mr-1 h-4 w-4" />{t('pr.back')}</Link></Button>
+        ? <Button asChild variant="ghost" size="sm"><Link href="/dashboard/user/inkbuddy"><ChevronLeft className="mr-1 h-4 w-4" />{t('pr.back')}</Link></Button>
         : <Button asChild variant="ghost" size="sm"><Link href="/dashboard/student/assignments"><ChevronLeft className="mr-1 h-4 w-4" />{t('common.back')}</Link></Button>}
     >
       {!loaded || (start.isPending && !d) ? <HwLoading /> : start.error && !d ? (

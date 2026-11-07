@@ -410,7 +410,7 @@ const en = {
   'ev.de.blank': 'Needs blanking ({label})',
 
   // Self-practice for independent learners
-  'pr.title': 'Virat Evaluator',
+  'pr.title': 'InkBuddy',
   'pr.subtitle': 'Practise textbook questions and get feedback on your own handwriting',
   'pr.off': 'Self-practice is not available yet.',
   'pr.notEligible': 'Self-practice is for learners who are not part of an institution. Your institution’s work is under Assignments.',
@@ -443,10 +443,12 @@ const en = {
   'pr.mine.empty': 'You have not started any question yet.',
   'pr.waiting': 'Handed in. We are marking your answer.',
   'pr.held': 'Your answer has been read, but there is no mark yet. This can happen while the answer key is being prepared, when the AI is not sure enough, or when your free trial has ended. Please check back in a little while.',
-  'pr.back': 'Back to Virat Evaluator',
+  'pr.back': 'Back to InkBuddy',
+  'pr.soon.title': 'Coming soon',
+  'pr.soon.body': 'InkBuddy is being set up. Your free trial starts only when you press the start button, so nothing is used up while you wait. Please check back soon.',
   'pr.retry': 'Write it again',
   'pr.retrying': 'Opening…',
-  'pr.nav': 'Virat Evaluator',
+  'pr.nav': 'InkBuddy',
   'pr.nav.desc': 'Practise textbook questions',
 } as const
 
@@ -849,7 +851,7 @@ const hi: Record<HwKey, string> = {
   'ev.de.blank': 'मिटाना ज़रूरी है ({label})',
 
   // Self-practice for independent learners
-  'pr.title': 'विराट इवैल्यूएटर',
+  'pr.title': 'इंकबडी',
   'pr.subtitle': 'पाठ्यपुस्तक के प्रश्नों का अभ्यास करें और अपनी लिखावट पर प्रतिक्रिया पाएँ',
   'pr.off': 'स्व-अभ्यास अभी उपलब्ध नहीं है।',
   'pr.notEligible': 'स्व-अभ्यास उन शिक्षार्थियों के लिए है जो किसी संस्थान से जुड़े नहीं हैं। आपके संस्थान का काम “असाइनमेंट” में है।',
@@ -882,10 +884,12 @@ const hi: Record<HwKey, string> = {
   'pr.mine.empty': 'आपने अभी कोई प्रश्न शुरू नहीं किया है।',
   'pr.waiting': 'जमा हो गया। हम आपका उत्तर जाँच रहे हैं।',
   'pr.held': 'आपका उत्तर पढ़ लिया गया है, पर अभी अंक नहीं मिला है। ऐसा तब हो सकता है जब उत्तर-कुंजी तैयार हो रही हो, एआई को पूरा भरोसा न हो, या आपका निःशुल्क ट्रायल समाप्त हो गया हो। कृपया थोड़ी देर बाद फिर देखें।',
-  'pr.back': 'विराट इवैल्यूएटर पर वापस',
+  'pr.back': 'इंकबडी पर वापस',
+  'pr.soon.title': 'जल्द आ रहा है',
+  'pr.soon.body': 'इंकबडी अभी तैयार हो रहा है। आपका निःशुल्क ट्रायल तभी शुरू होता है जब आप शुरू करने का बटन दबाते हैं, इसलिए इंतज़ार में कुछ खर्च नहीं होता। कृपया जल्द ही फिर देखें।',
   'pr.retry': 'फिर से लिखें',
   'pr.retrying': 'खुल रहा है…',
-  'pr.nav': 'विराट इवैल्यूएटर',
+  'pr.nav': 'इंकबडी',
   'pr.nav.desc': 'पाठ्यपुस्तक के प्रश्नों का अभ्यास',
 }
 

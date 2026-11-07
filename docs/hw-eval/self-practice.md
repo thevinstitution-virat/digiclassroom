@@ -1,4 +1,4 @@
-# Self-practice for independent learners, Virat Gyankosh trial (design, 7 Nov 2026)
+# Self-practice for independent learners: InkBuddy, the Virat Gyankosh trial (design, 7 Nov 2026)
 
 Owner decisions (7 Nov): an independent learner **practises textbook questions** (pick a chapter question, write the answer, get AI reading,
 marks and feedback; the model answer comes from the textbook). The **trial is up to ₹10 of AI cost within 7 days**. It opens **only after the
@@ -34,7 +34,7 @@ Read from the code on 7 Nov:
 6. **Budget.** Each AI job's cost is added to the learner's trial before the next step; a step that would pass ₹10 does not run and the learner
    sees a plain message. A platform-wide ceiling and an off switch (`HW_SELF_PRACTICE_ENABLED`, default false) sit above it.
 7. **After the trial** the tab shows an upgrade message. Plan and payment are the existing subscription system's job and are **not** built here.
-8. **The tab.** "Virat Evaluator" in the Virat Gyankosh section of the user sidebar, shown only when the flag is on and the user has no institution
+8. **The tab.** "InkBuddy" (the name of the independent-learner feature) in the AI & Research section of the user sidebar, shown only when the flag is on and the user has no institution
    (or has a trial). Every string has English and Hindi.
 
 ## What phase 1 built
@@ -60,7 +60,7 @@ Read from the code on 7 Nov:
 ## What phase 3 built (7 Nov)
 
 - **API** (`hw.practice` in the tRPC router): `status` (never throws for off or not-for-you), `start`, `search`, `startQuestion`. They work from the signed-in user, not from an institution, because an independent learner has none; errors map like the rest of `hw`. Search and start are rate limited. `hw.status` now also says `practice: true` for someone working in the practice space.
-- **The tab** `/dashboard/user/evaluator` ("Virat Evaluator", shown in the user sidebar only while self-practice is on and the person has no institution or already has a trial): the free-trial introduction and start button; days left and the share of the practice allowance left (never rupees); the finder (class, subject, medium, topic) and its results; "Your practice" list. When the trial has ended the finder is replaced by the plain two-language message and past work stays visible. English and Hindi, with the same language switch as the other hw screens.
+- **The tab** `/dashboard/user/inkbuddy` ("Virat Evaluator", shown in the user sidebar only while self-practice is on and the person has no institution or already has a trial): the free-trial introduction and start button; days left and the share of the practice allowance left (never rupees); the finder (class, subject, medium, topic) and its results; "Your practice" list. When the trial has ended the finder is replaced by the plain two-language message and past work stays visible. English and Hindi, with the same language switch as the other hw screens.
 - **The answer and result screens are the ordinary student ones** (ink or typed answer, hand in, reading, marks). For practice work they change: the back link returns to the Evaluator; the "tap misread words to send to your teacher" panel is hidden (there is no teacher); a returned result shows the "AI practice estimate" label and the "no teacher has checked it" note from the server in the learner's language; a handed-in answer with no mark yet says why it might be missing, and the page keeps checking while it waits. The sidebar's "Assignments" item is hidden for these learners.
 - Tests: `practice-api` (9, tRPC against Postgres with a fake session and hub), `practice-ui` (6: every pr.* string has Hindi with the same placeholders, every key the screens use exists, the sidebar rule). The whole hw suite passes: 715.
 

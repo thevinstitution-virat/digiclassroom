@@ -59,7 +59,7 @@ export default function UserSidebar({ user }: UserSidebarProps) {
       section: 'Learn',
     }),
     // Only for students of an institution with Handwritten Assignments switched on.
-    // (A self-practice learner's questions live under Virat Evaluator below, not here.)
+    // (A self-practice learner's questions live under InkBuddy below, not here.)
     ...(hw.data?.enabled && hw.data.role === 'student' && !hw.data.practice
       ? [createNavigationItem('Assignments', '/dashboard/student/assignments', PenLine, {
           description: 'Written answers for your teacher',
@@ -94,11 +94,11 @@ export default function UserSidebar({ user }: UserSidebarProps) {
       shortName: 'Tutor',
     }),
     ...(practice.data?.enabled && practice.data.eligible
-      ? [createNavigationItem('Virat Evaluator', '/dashboard/user/evaluator', PenLine, {
-          description: 'Practise textbook questions',
+      ? [createNavigationItem('InkBuddy', '/dashboard/user/inkbuddy', PenLine, {
+          description: 'Practise textbook questions by hand',
           featured: true,
           section: 'AI & Research',
-          shortName: 'Evaluator',
+          shortName: 'Ink',
         })]
       : []),
     createNavigationItem('Sarvagya', '/dashboard/sarvagya', Search, {

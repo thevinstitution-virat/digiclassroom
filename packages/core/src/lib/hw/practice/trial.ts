@@ -42,7 +42,7 @@ export async function getTrial(x: Exec, userId: string): Promise<TrialRow | null
 }
 
 /**
- * What the Virat Evaluator tab needs to decide what to show: is self-practice on, may this person use it (no institution, or already has a
+ * What the InkBuddy tab needs to decide what to show: is self-practice on, may this person use it (no institution, or already has a
  * trial), and where the trial stands. The refusal text is given in both languages; the screen picks one.
  */
 export async function practiceOverview(userId: string, now = new Date()) {
