@@ -184,6 +184,30 @@ describe('buildKey', () => {
     expect(r.partial).toBe(false)
   })
 
+  describe('writer and verifier from one model family', () => {
+    const oneFamily: KeySettings = { ...settings, writer: { provider: 'openai', model: 'gpt-6-luna' }, verifier: { provider: 'openai', model: 'gpt-5.4-mini' } }
+
+    it('is refused by default: the verifier must be another family, and no AI call is made', async () => {
+      const d = deps({ hits: hitsOk, writer: goodKey, verifier: allSupported })
+      await expect(buildKey(req(), d, oneFamily)).rejects.toMatchObject({ code: 'NOT_CONFIGURED' })
+      expect(d.fakes.ai).toHaveLength(0)
+    })
+
+    it('builds a key when the owner accepted one family (allowSameFamily), with both calls made', async () => {
+      const d = deps({ hits: hitsOk, writer: goodKey, verifier: allSupported })
+      const r = await buildKey(req(), d, { ...oneFamily, allowSameFamily: true })
+      expect(r.status).toBe('grounded')
+      expect(d.fakes.ai.map((x) => x.provider)).toEqual(['openai', 'openai'])
+    })
+
+    it('never lets a model verify its own output, even when one family is accepted', async () => {
+      const same: KeySettings = { ...oneFamily, verifier: { provider: 'openai', model: 'gpt-6-luna' }, allowSameFamily: true }
+      const d = deps({ hits: hitsOk, writer: goodKey, verifier: allSupported })
+      await expect(buildKey(req(), d, same)).rejects.toMatchObject({ code: 'NOT_CONFIGURED' })
+      expect(d.fakes.ai).toHaveLength(0)
+    })
+  })
+
   it('no book in scope -> no_grounding: no_book, and no AI call', async () => {
     const d = deps({ hits: [] })
     const r = await buildKey(req({ classLevel: '12', medium: 'Hindi' }), d, settings)

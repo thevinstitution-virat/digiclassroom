@@ -37,6 +37,8 @@ export interface KeySettings {
   pagesVerified: ReadonlySet<string>;
   /** HW_SHARED_KEYS_ENABLED: textbook keys for public questions are read from and written to the shared library. */
   sharedKeys?: boolean;
+  /** HW_KEY_ALLOW_SAME_FAMILY: the owner accepts a verifier of the writer's model family (the models must still differ). */
+  allowSameFamily?: boolean;
 }
 
 export interface OfficialScheme {
@@ -74,12 +76,19 @@ export function keySettingsFromEnv(): KeySettings {
     maxPassages: c.HW_KEY_MAX_PASSAGES,
     pagesVerified: c.HW_KEY_PAGES_VERIFIED,
     ...(c.HW_SHARED_KEYS_ENABLED ? { sharedKeys: true } : {}),
+    ...(c.HW_KEY_ALLOW_SAME_FAMILY ? { allowSameFamily: true } : {}),
   };
-  if (c.HW_KEY_ALLOW_SAME_FAMILY) {
-    // The owner accepted a weaker check (HW_KEY_ALLOW_SAME_FAMILY): one family, but never the same model checking itself.
-    if (s.writer.model.trim().toLowerCase() === s.verifier.model.trim().toLowerCase()) throw NC(`writer and verifier are the same model (${s.writer.model})`);
-  } else assertDifferentFamilies(s);
+  assertVerifierIndependent(s);
   return s;
+}
+
+/**
+ * The verifier is another model family from the writer. With HW_KEY_ALLOW_SAME_FAMILY (the owner accepted a weaker check) one family is allowed, but a model
+ * never checks its own output. Used when settings are read and again when a key is built.
+ */
+export function assertVerifierIndependent(s: Pick<KeySettings, 'writer' | 'verifier' | 'allowSameFamily'>): void {
+  if (!s.allowSameFamily) return assertDifferentFamilies(s);
+  if (s.writer.model.trim().toLowerCase() === s.verifier.model.trim().toLowerCase()) throw NC(`writer and verifier are the same model (${s.writer.model})`);
 }
 
 export function assertDifferentFamilies(s: Pick<KeySettings, 'writer' | 'verifier'>): void {
@@ -106,7 +115,7 @@ const callOf = (role: 'writer' | 'verifier', provider: AiProvider, r: AiResult):
 
 export async function buildKey(req: KeyRequest, deps: KeyDeps, settings: KeySettings): Promise<KeyResult> {
   validateRequest(req);
-  assertDifferentFamilies(settings);
+  assertVerifierIndependent(settings);
   const configHash = keyConfigHash(settings, deps.hub ? deps.hub.indexId : deps.retriever.indexId);
   const notes: string[] = [];
   const calls: KeyCallUsage[] = [];
