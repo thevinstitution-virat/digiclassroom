@@ -4,7 +4,7 @@ Owner decisions (7 Nov): an independent learner **practises textbook questions**
 marks and feedback; the model answer comes from the textbook). The **trial is up to ₹10 of AI cost within 7 days**. It opens **only after the
 strict-marking gates pass**, with marks shown as an **AI practice estimate**.
 
-Status (7 Nov): **phase 1 (backend) is built and tested locally; nothing is migrated on the server or switched on.** Phases 2 (question picker) and 3 (the tab, API and screens) are built and tested locally (below). Phase 4 is not started. **Phase 3 has not been looked at in a browser**: the checks are type checks, lint, API tests against Postgres and text tests.
+Status (7 Nov): **phase 1 (backend) is built and tested locally; nothing is migrated on the server or switched on.** Phases 2 (question picker), 3 (the tab, API and screens) and 4 (readiness command and pilot runbook, [self-practice-pilot.md](self-practice-pilot.md)) are done locally. **Phase 3 has not been looked at in a browser**: the checks are type checks, lint, API tests against Postgres and text tests.
 
 ## Why this is a new mode, not a switch
 
@@ -112,4 +112,4 @@ Read from the code on 7 Nov:
 1. **Backend (done 7 Nov, local):** migration 031 and down, trial service, actor change, per-learner budget check, automatic return with the label, tests.
 2. **Question picker (done 7 Nov, local):** search the hub for exercise questions, verify, create the attempt, queue the key.
 3. **Tab and pages (done 7 Nov, local, not checked in a browser):** the sidebar item, the picker, the answer page (reusing the student answer screen), the result with the label, trial status. English and Hindi.
-4. **Pilot checklist:** the blockers above cleared, then a trial with a few invited learners.
+4. **Pilot checklist (done 7 Nov):** `npm run hw:practice:readiness`, the runbook and monitoring queries in [self-practice-pilot.md](self-practice-pilot.md). Running the pilot is not done.
