@@ -9,6 +9,8 @@
 
 export type HwRole = 'admin' | 'teacher' | 'student' | 'parent' | 'none';
 
+import { PRACTICE_ORG_ID } from '../practice/rules';
+
 export interface HwActor {
   userId: string;
   orgId: string;
@@ -85,6 +87,8 @@ export function canCreateFor(actor: HwActor, target: Pick<AssignmentScope, 'clas
 /** A student sees an assignment when it is published or closed and they are enrolled in its class (and section). */
 export function studentCanSee(actor: HwActor, a: AssignmentScope, enrollments: Enrollment[]): boolean {
   if (actor.role !== 'student' || actor.orgId !== a.organizationId) return false;
+  // The practice institution holds every independent learner's own questions: whatever the enrollments say, only the owner sees one.
+  if (a.organizationId === PRACTICE_ORG_ID && a.createdBy !== actor.userId) return false;
   if (a.status === 'draft') return false;
   return enrollments.some((e) => e.classId === a.classId && (a.sectionId === null || e.sectionId === a.sectionId));
 }

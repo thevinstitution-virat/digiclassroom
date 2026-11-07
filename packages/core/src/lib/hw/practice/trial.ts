@@ -3,12 +3,12 @@
 
 import { eq, sql } from 'drizzle-orm';
 import { hwPracticeTrial, hwTenantQuota } from '@/db/hw-schema';
-import { institutionClasses, institutionSections, organization, studentEnrollments } from '@/db/schema';
+import { organization } from '@/db/schema';
 import { getHwConfig } from '../config';
 import { HwError } from '../errors';
 import { db, num, type Exec } from '../db';
 import {
-  PRACTICE_CLASS_ID, PRACTICE_ORG_ID, PRACTICE_SECTION_ID, PRACTICE_TEXT, refusalText, stateAfterSpend, trialSummary, trialVerdict,
+  PRACTICE_ORG_ID, PRACTICE_TEXT, refusalText, stateAfterSpend, trialSummary, trialVerdict,
   type PracticeLang, type TrialRow,
 } from './rules';
 
@@ -18,7 +18,7 @@ export const practiceEnabled = (): boolean => getHwConfig().HW_SELF_PRACTICE_ENA
 const both = (why: 'budget' | 'time' | 'no_trial'): string => `${refusalText(why, 'en')} / ${refusalText(why, 'hi')}`;
 
 /**
- * The practice institution, its one class and section, and its monthly ceiling. Safe to call repeatedly. The institution shows up in
+ * The practice institution and its monthly ceiling (classes and sections are made per learner when a question is started: attempt.ts). Safe to call repeatedly. The institution shows up in
  * the super admin's institution list like any other.
  */
 export async function ensurePracticeSpace(x: Exec): Promise<void> {
@@ -26,8 +26,6 @@ export async function ensurePracticeSpace(x: Exec): Promise<void> {
     id: PRACTICE_ORG_ID, name: 'Virat Gyankosh Practice', slug: PRACTICE_ORG_ID, createdAt: new Date(),
     settings: { system: true, purpose: 'independent-learner self-practice' },
   }).onConflictDoNothing();
-  await x.insert(institutionClasses).values({ id: PRACTICE_CLASS_ID, organizationId: PRACTICE_ORG_ID, name: 'Self-practice', level: null }).onConflictDoNothing();
-  await x.insert(institutionSections).values({ id: PRACTICE_SECTION_ID, organizationId: PRACTICE_ORG_ID, classId: PRACTICE_CLASS_ID, name: 'Self-practice' }).onConflictDoNothing();
   // The ceiling over all learners. Created once, from the setting; changing it afterwards is done on the Tenants tab like any institution.
   await x.insert(hwTenantQuota).values({
     organizationId: PRACTICE_ORG_ID, enabled: true, monthlyBudgetPaise: getHwConfig().HW_SELF_PRACTICE_PLATFORM_BUDGET_PAISE,
@@ -65,9 +63,6 @@ export async function startTrial(userId: string, now = new Date()): Promise<{ st
     const endsAt = new Date(now.getTime() + cfg.HW_SELF_PRACTICE_TRIAL_DAYS * 86_400_000);
     await tx.insert(hwPracticeTrial).values({
       userId, startedAt: now, endsAt, budgetPaise: cfg.HW_SELF_PRACTICE_TRIAL_BUDGET_PAISE,
-    });
-    await tx.insert(studentEnrollments).values({
-      organizationId: PRACTICE_ORG_ID, userId, classId: PRACTICE_CLASS_ID, sectionId: PRACTICE_SECTION_ID, status: 'active',
     });
     return { started: true, endsAt };
   });

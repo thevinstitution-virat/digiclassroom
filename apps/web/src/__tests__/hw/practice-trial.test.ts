@@ -24,7 +24,7 @@ Object.assign(process.env, {
 let mockSession: { user: { id: string; role: string }; session: { activeOrganizationId: string | null } } | null = null
 jest.mock('../../../../../packages/core/src/auth', () => ({ auth: { api: { getSession: async () => mockSession } } }))
 
-import { PRACTICE_CLASS_ID, PRACTICE_ORG_ID, PRACTICE_SECTION_ID } from '@/lib/hw/practice/rules'
+import { PRACTICE_ORG_ID } from '@/lib/hw/practice/rules'
 
 type Trial = typeof import('@/lib/hw/practice/trial')
 type Marking = typeof import('@/lib/hw/services/marking')
@@ -54,7 +54,9 @@ const one = async <T = Record<string, unknown>>(sql: string, args: unknown[] = [
 /** One practice attempt: assignment, question with one key point, a handed-in submission whose answer has been read. */
 async function attempt(userId: string, o: { org?: string; transcriptStatus?: string; transcriptConfidence?: number | null; suggestion?: { confidence: number; marks: number } | null; status?: string } = {}) {
   const org = o.org ?? PRACTICE_ORG_ID
-  const classId = org === PRACTICE_ORG_ID ? PRACTICE_CLASS_ID : (await one<{ id: string }>(`SELECT id FROM institution_classes WHERE organization_id = $1`, [org]))?.id
+  // The practice institution has a class per level, made when a learner starts a question; this fixture stands in for that.
+  if (org === PRACTICE_ORG_ID) await raw.query(`INSERT INTO institution_classes (id, organization_id, name, level) VALUES ('vgp-class-9', $1, 'Class 9', 9) ON CONFLICT DO NOTHING`, [org])
+  const classId = org === PRACTICE_ORG_ID ? 'vgp-class-9' : (await one<{ id: string }>(`SELECT id FROM institution_classes WHERE organization_id = $1`, [org]))?.id
   const a = randomUUID(), q = randomUUID(), r = randomUUID(), s = randomUUID(), ans = randomUUID()
   await raw.query(`INSERT INTO hw_assignment (id, organization_id, class_id, subject, title, status, allowed_modes, total_marks, created_by) VALUES ($1,$2,$3,'Science','Practice','draft',ARRAY['ink'],2,$4)`, [a, org, classId, userId])
   await raw.query(`INSERT INTO hw_question (id, organization_id, assignment_id, position, type, prompt, marks) VALUES ($1,$2,$3,0,'short','Name the gas plants take in.',2)`, [q, org, a])
@@ -88,13 +90,11 @@ suite('self-practice — integration', () => {
   afterAll(async () => { await raw?.end(); await dbMod?.getPool().end() })
 
   describe('starting a trial', () => {
-    it('creates the practice space, the trial and the enrollment', async () => {
+    it('creates the practice institution, its ceiling and the trial, and enrolls the learner nowhere yet', async () => {
       const u = await addUser('learner')
       const r = await trial.startTrial(u)
       expect(r.started).toBe(true)
       expect(await one(`SELECT id FROM organization WHERE id = $1`, [PRACTICE_ORG_ID])).toBeTruthy()
-      expect(await one(`SELECT id FROM institution_classes WHERE id = $1 AND organization_id = $2`, [PRACTICE_CLASS_ID, PRACTICE_ORG_ID])).toBeTruthy()
-      expect(await one(`SELECT id FROM institution_sections WHERE id = $1 AND class_id = $2`, [PRACTICE_SECTION_ID, PRACTICE_CLASS_ID])).toBeTruthy()
       const q = await one<{ enabled: boolean; monthly_budget_paise: string }>(`SELECT enabled, monthly_budget_paise FROM hw_tenant_quota WHERE organization_id = $1`, [PRACTICE_ORG_ID])
       expect(q.enabled).toBe(true)
       expect(Number(q.monthly_budget_paise)).toBe(200000)
@@ -102,8 +102,8 @@ suite('self-practice — integration', () => {
       expect(Number(t.budget_paise)).toBe(1000)
       expect(t.state).toBe('active')
       expect(Math.round((t.ends_at.getTime() - t.started_at.getTime()) / 86_400_000)).toBe(7)
-      const e = await one<{ organization_id: string; class_id: string; section_id: string; status: string }>(`SELECT * FROM student_enrollments WHERE user_id = $1`, [u])
-      expect(e).toMatchObject({ organization_id: PRACTICE_ORG_ID, class_id: PRACTICE_CLASS_ID, section_id: PRACTICE_SECTION_ID, status: 'active' })
+      // No shared class: a learner is enrolled only in their own section, when they start a question (attempt.ts).
+      expect(await one(`SELECT 1 FROM student_enrollments WHERE user_id = $1`, [u])).toBeUndefined()
       // The learner is not made a member of the practice institution.
       expect(await one(`SELECT 1 FROM member WHERE user_id = $1`, [u])).toBeUndefined()
     })
@@ -114,7 +114,7 @@ suite('self-practice — integration', () => {
       const b = await trial.startTrial(u)
       expect(b.started).toBe(false)
       expect(b.endsAt.getTime()).toBe(a.endsAt.getTime())
-      expect(Number((await one<{ n: string }>(`SELECT count(*) AS n FROM student_enrollments WHERE user_id = $1`, [u])).n)).toBe(1)
+      expect(Number((await one<{ n: string }>(`SELECT count(*) AS n FROM hw_practice_trial WHERE user_id = $1`, [u])).n)).toBe(1)
     })
 
     it('is refused for someone who belongs to an institution', async () => {

@@ -2,8 +2,6 @@
 
 /** The practice space: one platform-owned institution that holds every independent learner's practice work. */
 export const PRACTICE_ORG_ID = 'virat-gyankosh-practice';
-export const PRACTICE_CLASS_ID = 'vgp-class-practice';
-export const PRACTICE_SECTION_ID = 'vgp-section-practice';
 
 export type TrialState = 'active' | 'used_up' | 'ended';
 
@@ -59,6 +57,14 @@ export const PRACTICE_TEXT = {
     en: 'Start your free trial to practise.',
     hi: 'अभ्यास करने के लिए अपना निःशुल्क ट्रायल शुरू करें।',
   },
+  attemptLimit: {
+    en: 'You have started as many practice questions as the free trial allows. Upgrade to practise more.',
+    hi: 'आपने निःशुल्क ट्रायल में जितने अभ्यास प्रश्न मिलते हैं, उतने शुरू कर लिए हैं। और अभ्यास के लिए अपग्रेड करें।',
+  },
+  libraryOff: {
+    en: 'Textbook questions are not available yet.',
+    hi: 'पाठ्यपुस्तक के प्रश्न अभी उपलब्ध नहीं हैं।',
+  },
   off: {
     en: 'Self-practice is not available yet.',
     hi: 'स्व-अभ्यास अभी उपलब्ध नहीं है।',
@@ -80,4 +86,16 @@ export function trialSummary(t: TrialRow | null, now: Date, reservePaise: number
     remainingText: rupees(v.remainingPaise),
     message: v.ok ? null : refusalText(v.why, lang),
   };
+}
+
+export type PracticeQuestionType = 'very_short' | 'short' | 'long';
+
+/**
+ * A textbook exercise carries no marks, so the practice question is given a shape from its length: up to 10 words is one mark, up to 25 is
+ * three, longer is five. The answer key then splits those marks over the book's key points.
+ */
+export function questionShape(wordCount: number): { type: PracticeQuestionType; marks: number } {
+  if (wordCount <= 10) return { type: 'very_short', marks: 1 };
+  if (wordCount <= 25) return { type: 'short', marks: 3 };
+  return { type: 'long', marks: 5 };
 }

@@ -42,6 +42,8 @@ export async function myAssignments(actor: HwActor) {
   return rows
     .filter(({ a }) => enrollments.some((e) => e.classId === a.classId && (a.sectionId === null || e.sectionId === a.sectionId)))
     .filter(({ a }) => scopeAllows(scope, a.classId, a.sectionId))
+    // The practice institution: only the learner's own questions, whatever the enrollments say.
+    .filter(({ a }) => a.organizationId !== PRACTICE_ORG_ID || a.createdBy === actor.userId)
     .map(({ a, s }) => ({
       id: a.id, title: a.title, subject: a.subject, dueAt: a.dueAt, totalMarks: num(a.totalMarks), status: a.status,
       allowedModes: a.allowedModes,

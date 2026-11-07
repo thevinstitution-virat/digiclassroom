@@ -4,7 +4,7 @@ Owner decisions (7 Nov): an independent learner **practises textbook questions**
 marks and feedback; the model answer comes from the textbook). The **trial is up to ₹10 of AI cost within 7 days**. It opens **only after the
 strict-marking gates pass**, with marks shown as an **AI practice estimate**.
 
-Status (7 Nov): **phase 1 (backend) is built and tested locally; nothing is migrated on the server or switched on.** Phases 2 to 4 are not started.
+Status (7 Nov): **phase 1 (backend) is built and tested locally; nothing is migrated on the server or switched on.** Phase 2 (the question picker) is built and tested locally (below). Phases 3 and 4 are not started.
 
 ## Why this is a new mode, not a switch
 
@@ -47,6 +47,21 @@ Read from the code on 7 Nov:
 - Return without a teacher: `releasePracticeSubmissions` in `services/marking.ts` (the only file allowed to write a final mark), run by the job runner through `practice/release.ts`. It returns a submission only in the practice space, only when every answer has a suggestion for the current scheme, the reader and the AI were at least `HW_HIGH_CONFIDENCE` sure, and nothing is flagged as addressed to the marker. Anything doubtful is held, not released. `myResult` adds the "AI practice estimate" label and note, both languages.
 - Tests: `practice-rules` (pure, 20 including the narrowness of the exception) and `practice-trial` (24, against Postgres; no provider is called). The whole hw suite passes: 684.
 
+## What phase 2 built (7 Nov)
+
+- `practice/catalog.ts`: the learner picks class, subject and medium and types a topic; the library hub is asked (`includePractice`) for the book's own exercise rows, which are split into single questions and ranked by overlap with the topic (at most 30). It is a search, not a chapter browser: the hub has no "list a chapter's exercises" call. With the hub off the answer is "not available" in both languages; a hub outage is a plain error.
+- Every question is **verified by the server**: the browser sends the hub's passage id, the question number and the text, and the server asks the hub again and accepts only that very row and question. A learner cannot start an arbitrary question and have it keyed as a textbook exercise.
+- `practice/attempt.ts` `startAttempt`: needs an active trial; makes (once) a class per level and a section per learner and level, enrolls the learner in their own section only, creates a published one-question assignment (modes: ink and typed) owned by the learner, with `origin='textbook_exercise'`, `rubric_mode='key'` and the book, chapter and exercise reference, and queues its answer key. The same question twice opens the same attempt. A cap (`HW_SELF_PRACTICE_MAX_ATTEMPTS`, 25) bounds what the platform spends on keys per learner.
+- **Privacy, twice over.** Each learner has their own section, and the access rule `studentCanSee` (and `myAssignments`) also requires, in the practice institution, that the assignment was created by the viewer. A test enrolls a stranger into someone else's section and shows they still see nothing.
+- The shared practice class from phase 1 is gone: starting a trial now creates only the institution, its ceiling and the trial row.
+- A question's marks come from its length (up to 10 words: 1 mark, up to 25: 3, longer: 5), because a book exercise has none; the key splits them over the book's key points.
+- Tests: `practice-attempt` (16, with a fake hub and the key only queued); the whole hw suite passes: 700.
+
+### Limits to know
+
+- **Photo answers do not exist yet** (decision D4), so a learner answers on screen (ink) or by typing. Writing on paper and photographing it is not possible.
+- Whether a key can be built depends on the live blockers below; until then a started question shows no mark.
+
 ### Choices made in phase 1 that you may overrule
 
 - **graded_by is the learner's own id.** The column is a foreign key to a real user, and a system user row would show up in user lists. Source `accepted_ai` in the practice institution means no teacher. The same will apply to an attempt's `created_by` in phase 2.
@@ -75,6 +90,6 @@ Read from the code on 7 Nov:
 ## Build phases
 
 1. **Backend (done 7 Nov, local):** migration 031 and down, trial service, actor change, per-learner budget check, automatic return with the label, tests.
-2. **Question picker:** list chapter practice questions from the hub, create the attempt, queue the key.
-3. **Tab and pages:** the sidebar item, the picker, the answer page (reusing the student answer screen), the result with the label, trial status. English and Hindi.
+2. **Question picker (done 7 Nov, local):** search the hub for exercise questions, verify, create the attempt, queue the key.
+3. **Tab and pages (next):** the sidebar item, the picker, the answer page (reusing the student answer screen), the result with the label, trial status. English and Hindi.
 4. **Pilot checklist:** the blockers above cleared, then a trial with a few invited learners.

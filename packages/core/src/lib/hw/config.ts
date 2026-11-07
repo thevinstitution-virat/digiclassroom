@@ -122,6 +122,8 @@ const EnvSchema = z.object({
   HW_SELF_PRACTICE_TRIAL_BUDGET_PAISE: num(1000, 0, 100_000),
   HW_SELF_PRACTICE_STEP_RESERVE_PAISE: num(5, 0, 1000),
   HW_SELF_PRACTICE_PLATFORM_BUDGET_PAISE: num(200_000, 0, 100_000_000),
+  /** The most questions one learner may start during the trial (each one costs the platform an answer key). */
+  HW_SELF_PRACTICE_MAX_ATTEMPTS: num(25, 1, 1000),
   /**
    * Strict marking, "right idea, wrong detail" (docs/hw-eval/verdicts.md): the share of the key point's marks given.
    * zero (the default; phase 1c's behaviour), half (half the point's marks, rounded down to a half mark) or full.
