@@ -79,11 +79,12 @@ export async function importDraft(database: Database, file: ExpandedPaper, meta:
         ...paperCommon, importedBy: meta.actor,
       });
     } else {
-      // A paper whose rows changed is a new version; and if a revised row was checked, the paper as a whole is a draft again.
+      // A paper whose rows changed is a new version. Any new, updated or revised row is a draft, so a paper that was checked is a draft again
+      // (the database only lets a paper be checked when every row is).
       await tx.update(hwBankPaper).set({
         ...paperCommon, importedBy: meta.actor,
         ...(anyContentChange ? { version: sql`${hwBankPaper.version} + 1` } : {}),
-        ...(plan.counts.revise > 0 ? { status: 'draft' as const } : {}),
+        ...(anyContentChange && stored.paper.status !== 'draft' ? { status: 'draft' as const } : {}),
       }).where(eq(hwBankPaper.id, paperId));
     }
 

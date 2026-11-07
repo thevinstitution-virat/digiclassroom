@@ -91,6 +91,26 @@ export const hwBankFigure = pgTable('hw_bank_figure', {
   createdAt: ts('created_at').notNull().defaultNow(),
 });
 
+export type BankVerdict = 'ok' | 'fix' | 'reject';
+
+/** Migration 033: what a person decided about a row (append-only). Bound to the exact content they were shown (contentHash). */
+export const hwBankReview = pgTable('hw_bank_review', {
+  id: id(),
+  paperId: varchar('paper_id', { length: 36 }).references(() => hwBankPaper.id, { onDelete: 'set null' }),
+  questionId: varchar('question_id', { length: 36 }).references(() => hwBankQuestion.id, { onDelete: 'set null' }),
+  number: integer('number').notNull(),
+  alt: text('alt').$type<'A' | 'B' | 'C' | 'D'>(),
+  variant: text('variant').$type<'vi'>(),
+  questionVersion: integer('question_version').notNull(),
+  contentHash: char('content_hash', { length: 64 }).notNull(),
+  verdict: text('verdict').$type<BankVerdict>().notNull(),
+  confirmed: jsonb('confirmed').$type<string[]>().notNull().default([]),
+  note: text('note').notNull().default(''),
+  reviewer: text('reviewer').notNull(),
+  recordedBy: text('recorded_by').notNull(),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
 export const hwBankImport = pgTable('hw_bank_import', {
   id: id(),
   paperId: varchar('paper_id', { length: 36 }).references(() => hwBankPaper.id, { onDelete: 'set null' }),
