@@ -6,6 +6,7 @@
 
 import { libraryHubEnabled, searchLibrary } from '../../library/search';
 import { HubError, type HubSearchRequest, type HubSearchResponse } from '../../library/hub-client';
+import { getHwConfig } from '../config';
 import { HwError } from '../errors';
 import { exerciseQuestions, jaccard, matchWords, shingles } from '../keys/exercise-match';
 import { subjectNodeCodes } from '../keys/hub-retrieval';
@@ -31,11 +32,16 @@ export interface HubLike { search(req: HubSearchRequest): Promise<HubSearchRespo
 
 /**
  * Can a learner start a trial and get something out of it? The library hub is on, and the answer-key service is configured (writer and verifier of
- * different families, and a calibrated R_min). Until then the tab says "coming soon" and does not offer the trial, because starting it starts the clock.
+ * different families, a calibrated R_min, and an API key for the provider of each). Until then the tab says "coming soon" and does not offer the trial, because starting it starts the clock.
  */
 export function practiceLibraryReady(): boolean {
   if (!libraryHubEnabled()) return false;
-  try { return keySettingsFromEnv().rMin !== undefined; } catch { return false; }
+  try {
+    const k = keySettingsFromEnv();
+    const c = getHwConfig();
+    const keyFor = { gemini: c.GEMINI_API_KEY, openrouter: c.OPENROUTER_API_KEY, openai: c.OPENAI_API_KEY } as const;
+    return k.rMin !== undefined && Boolean(keyFor[k.writer.provider]) && Boolean(keyFor[k.verifier.provider]);
+  } catch { return false; }
 }
 
 /** The real hub, or null while the library hub is off (then no textbook question can be offered or accepted). */

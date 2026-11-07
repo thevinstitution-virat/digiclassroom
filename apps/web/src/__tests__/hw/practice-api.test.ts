@@ -77,7 +77,7 @@ suite('self-practice phase 3 — API', () => {
 
     it('says "not ready" until the library and the answer keys are wired, so the screen offers "coming soon" instead of the trial', async () => {
       const u = await addUser('s0')
-      const KEYS = { HW_KEY_WRITER_MODEL: 'google/gemini-3.6-flash', HW_KEY_VERIFIER_MODEL: 'openai/gpt-5.4-mini', HW_KEY_R_MIN: '0.5' }
+      const KEYS = { HW_KEY_WRITER_MODEL: 'google/gemini-3.6-flash', HW_KEY_VERIFIER_MODEL: 'openai/gpt-5.4-mini', HW_KEY_R_MIN: '0.5', OPENROUTER_API_KEY: 'test-key', HW_KEY_WRITER_PROVIDER: 'openrouter', HW_KEY_VERIFIER_PROVIDER: 'openrouter' }
       const saved = Object.fromEntries(Object.keys(KEYS).map((k) => [k, process.env[k]]))
       try {
         // Library on, keys not configured.
@@ -92,6 +92,9 @@ suite('self-practice phase 3 — API', () => {
         process.env.HW_KEY_VERIFIER_MODEL = 'google/gemini-3.5-flash-lite'; config._resetHwConfig()
         expect((await as(u).practice.status()) as { ready?: boolean }).toMatchObject({ ready: false })
         process.env.HW_KEY_VERIFIER_MODEL = KEYS.HW_KEY_VERIFIER_MODEL; delete process.env.HW_KEY_R_MIN; config._resetHwConfig()
+        expect((await as(u).practice.status()) as { ready?: boolean }).toMatchObject({ ready: false })
+        // Everything set but the provider has no API key (production today: keys routed through OpenRouter, no OpenRouter key).
+        process.env.HW_KEY_R_MIN = '0.5'; delete process.env.OPENROUTER_API_KEY; config._resetHwConfig()
         expect((await as(u).practice.status()) as { ready?: boolean }).toMatchObject({ ready: false })
       } finally {
         for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete process.env[k]; else process.env[k] = v }
