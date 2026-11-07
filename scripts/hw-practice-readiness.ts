@@ -88,7 +88,7 @@ async function main() {
       selfPracticeEnabled: c.HW_SELF_PRACTICE_ENABLED, trialDays: c.HW_SELF_PRACTICE_TRIAL_DAYS, trialBudgetPaise: c.HW_SELF_PRACTICE_TRIAL_BUDGET_PAISE,
       platformBudgetPaise: c.HW_SELF_PRACTICE_PLATFORM_BUDGET_PAISE, maxAttempts: c.HW_SELF_PRACTICE_MAX_ATTEMPTS,
       eligibilityEnforced: c.HW_ELIGIBILITY_ENFORCED, strictMarking: c.HW_STRICT_MARKING_ENABLED, instructionGuard: c.HW_INSTRUCTION_GUARD_ENABLED,
-      sharedKeys: c.HW_SHARED_KEYS_ENABLED, cronSecretLength: (process.env.HW_CRON_SECRET ?? '').length,
+      sharedKeys: c.HW_SHARED_KEYS_ENABLED, allowSameFamily: c.HW_KEY_ALLOW_SAME_FAMILY, cronSecretLength: (process.env.HW_CRON_SECRET ?? '').length,
       hubEnabled: process.env.LIBRARY_HUB_ENABLED === 'true', hubUrlSet: Boolean(process.env.LIBRARY_HUB_URL), hubSecretSet: Boolean(process.env.LIBRARY_HUB_SECRET),
     },
     routes, keys, tables, eligibility: { runningHash, groups }, hub,

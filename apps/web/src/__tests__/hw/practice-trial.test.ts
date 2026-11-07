@@ -229,6 +229,16 @@ suite('self-practice — integration', () => {
       expect(g.ai_grade_id).toBeTruthy()
     })
 
+    it('is not starved by held-back work: many unmarkable submissions do not stop a fresh one being returned', async () => {
+      const u = await addUser('r0'); await trial.startTrial(u)
+      // 120 submissions that will never be released (no suggestion yet, and a low-confidence one), all older than the fresh one.
+      for (let i = 0; i < 100; i++) await attempt(u, { suggestion: null })
+      for (let i = 0; i < 20; i++) await attempt(u, { suggestion: { confidence: 0.3, marks: 2 } })
+      const fresh = await attempt(u)
+      await marking.releasePracticeSubmissions()
+      expect(await statusOf(fresh.submissionId)).toBe('returned')
+    })
+
     it('holds work back when the AI is not confident', async () => {
       const u = await addUser('r2'); await trial.startTrial(u)
       const at = await attempt(u, { suggestion: { confidence: 0.5, marks: 2 } })

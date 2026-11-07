@@ -441,14 +441,27 @@ async function releasePracticeSubmission(submissionId: string): Promise<boolean>
   });
 }
 
-/** Release what is ready, oldest first. Returns how many submissions were returned. A no-op unless self-practice is on. */
-export async function releasePracticeSubmissions(limit = 50): Promise<number> {
+/**
+ * Release what is ready. Returns how many submissions were returned. A no-op unless self-practice is on.
+ *
+ * Only submissions whose every answer already has a suggestion for the current scheme are looked at, and the ones with the NEWEST suggestions first.
+ * Work that is held back for good (an unsure reading, a low-confidence suggestion, no suggestion because the key never came) stays "ready for review"
+ * for ever; taking the oldest first would let such work fill the batch and starve everything behind it.
+ */
+export async function releasePracticeSubmissions(limit = 100): Promise<number> {
   if (!getHwConfig().HW_SELF_PRACTICE_ENABLED) return 0;
-  const subs = await db.select({ id: hwSubmission.id }).from(hwSubmission)
-    .where(and(eq(hwSubmission.organizationId, PRACTICE_ORG_ID), inArray(hwSubmission.status, ['ready_for_review', 'graded'])))
-    .orderBy(asc(hwSubmission.updatedAt)).limit(limit);
+  const subs = await db.execute<{ id: string }>(sql`
+    SELECT s.id FROM hw_submission s
+     WHERE s.organization_id = ${PRACTICE_ORG_ID} AND s.status IN ('ready_for_review', 'graded')
+       AND EXISTS (SELECT 1 FROM hw_answer a WHERE a.submission_id = s.id)
+       AND NOT EXISTS (
+         SELECT 1 FROM hw_answer a JOIN hw_question q ON q.id = a.question_id
+          WHERE a.submission_id = s.id
+            AND NOT EXISTS (SELECT 1 FROM hw_ai_grade g WHERE g.answer_id = a.id AND g.rubric_version = q.rubric_version))
+     ORDER BY (SELECT max(g.created_at) FROM hw_ai_grade g JOIN hw_answer a ON a.id = g.answer_id WHERE a.submission_id = s.id) DESC
+     LIMIT ${limit}`);
   let n = 0;
-  for (const s of subs) if (await releasePracticeSubmission(s.id)) n++;
+  for (const s of subs.rows) if (await releasePracticeSubmission(s.id)) n++;
   return n;
 }
 

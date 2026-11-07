@@ -100,6 +100,11 @@ const EnvSchema = z.object({
   HW_HOMEWORK_URGENT_HOURS: num(3, 0, 720),
   /** A key built from the official scheme or the textbook for a public question is reused across tenants. */
   HW_SHARED_KEYS_ENABLED: bool(false),
+  /**
+   * The answer-key verifier is meant to be another model FAMILY from the writer, so it does not share the writer's blind spots. With only one provider's key
+   * (say OpenAI for both) that cannot be met: set this true to accept one family. The two models must still differ. A weaker check, chosen by the owner.
+   */
+  HW_KEY_ALLOW_SAME_FAMILY: bool(false),
   /** One-mark answers equal to an accepted answer (after normalisation) are marked in code. */
   HW_CODE_MARKING_ENABLED: bool(false),
   /** Answers with the same normalised transcript for the same question and key version are marked once. */
@@ -124,6 +129,11 @@ const EnvSchema = z.object({
   HW_SELF_PRACTICE_PLATFORM_BUDGET_PAISE: num(200_000, 0, 100_000_000),
   /** The most questions one learner may start during the trial (each one costs the platform an answer key). */
   HW_SELF_PRACTICE_MAX_ATTEMPTS: num(25, 1, 1000),
+  /**
+   * InkBuddy offers the free trial only when marks are possible: at least one textbook-key group is eligible for the running marking setup. Set false to
+   * open it before any group is promoted (learners then get their handwriting read and no mark).
+   */
+  HW_SELF_PRACTICE_REQUIRE_ELIGIBLE_GROUP: bool(true),
   /**
    * Strict marking, "right idea, wrong detail" (docs/hw-eval/verdicts.md): the share of the key point's marks given.
    * zero (the default; phase 1c's behaviour), half (half the point's marks, rounded down to a half mark) or full.

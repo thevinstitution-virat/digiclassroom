@@ -75,7 +75,10 @@ export function keySettingsFromEnv(): KeySettings {
     pagesVerified: c.HW_KEY_PAGES_VERIFIED,
     ...(c.HW_SHARED_KEYS_ENABLED ? { sharedKeys: true } : {}),
   };
-  assertDifferentFamilies(s);
+  if (c.HW_KEY_ALLOW_SAME_FAMILY) {
+    // The owner accepted a weaker check (HW_KEY_ALLOW_SAME_FAMILY): one family, but never the same model checking itself.
+    if (s.writer.model.trim().toLowerCase() === s.verifier.model.trim().toLowerCase()) throw NC(`writer and verifier are the same model (${s.writer.model})`);
+  } else assertDifferentFamilies(s);
   return s;
 }
 

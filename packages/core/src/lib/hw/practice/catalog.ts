@@ -6,7 +6,11 @@
 
 import { libraryHubEnabled, searchLibrary } from '../../library/search';
 import { HubError, type HubSearchRequest, type HubSearchResponse } from '../../library/hub-client';
+import { and, eq, sql } from 'drizzle-orm';
+import { hwEligibility } from '@/db/hw-control-schema';
 import { getHwConfig } from '../config';
+import type { Exec } from '../db';
+import { runningConfig } from '../eligibility/registry';
 import { HwError } from '../errors';
 import { exerciseQuestions, jaccard, matchWords, shingles } from '../keys/exercise-match';
 import { subjectNodeCodes } from '../keys/hub-retrieval';
@@ -34,6 +38,24 @@ export interface HubLike { search(req: HubSearchRequest): Promise<HubSearchRespo
  * Can a learner start a trial and get something out of it? The library hub is on, and the answer-key service is configured (writer and verifier of
  * different families, a calibrated R_min, and an API key for the provider of each). Until then the tab says "coming soon" and does not offer the trial, because starting it starts the clock.
  */
+/**
+ * Is at least one textbook-key group eligible for AI marks under the marking setup running now? Without one a learner would get their handwriting read and
+ * no mark. Needs a grade model; false otherwise.
+ */
+export async function textbookGroupEligible(x: Exec): Promise<boolean> {
+  let hash: string;
+  try { hash = runningConfig().hash; } catch { return false; }
+  const rows = await x.select({ n: sql<number>`count(*)::int` }).from(hwEligibility)
+    .where(and(eq(hwEligibility.schemeSource, 'textbook_key'), eq(hwEligibility.status, 'eligible'), eq(hwEligibility.configHash, hash)));
+  return (rows[0]?.n ?? 0) > 0;
+}
+
+/** Ready for learners: the library and the answer keys are wired, and (unless the owner turned that off) a textbook-key group can be marked by AI. */
+export async function practiceReady(x: Exec): Promise<boolean> {
+  if (!practiceLibraryReady()) return false;
+  return getHwConfig().HW_SELF_PRACTICE_REQUIRE_ELIGIBLE_GROUP ? textbookGroupEligible(x) : true;
+}
+
 export function practiceLibraryReady(): boolean {
   if (!libraryHubEnabled()) return false;
   try {

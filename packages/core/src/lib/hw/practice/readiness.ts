@@ -16,6 +16,8 @@ export interface ReadinessFacts {
     selfPracticeEnabled: boolean; trialDays: number; trialBudgetPaise: number; platformBudgetPaise: number; maxAttempts: number;
     eligibilityEnforced: boolean; strictMarking: boolean; instructionGuard: boolean; sharedKeys: boolean;
     cronSecretLength: number; hubEnabled: boolean; hubUrlSet: boolean; hubSecretSet: boolean;
+    /** HW_KEY_ALLOW_SAME_FAMILY: the answer-key verifier may be the writer's model family. */
+    allowSameFamily?: boolean;
   };
   /** Reading, re-reading and marking. */
   routes: Route[];
@@ -72,6 +74,7 @@ export function evaluateReadiness(f: ReadinessFacts): Check[] {
   out.push(f.keys.rMin === undefined
     ? c('r-min', 'fail', 'Textbook retrieval threshold', 'HW_KEY_R_MIN is not set: textbook keys cannot be built.')
     : c('r-min', 'manual', 'Textbook retrieval threshold', `HW_KEY_R_MIN is ${f.keys.rMin}. The owner still has to confirm this value (roadmap).`));
+  if (f.env.allowSameFamily) out.push(c('key-family', 'warn', 'Answer-key verifier independence', 'HW_KEY_ALLOW_SAME_FAMILY is on: the verifier may be the same model family as the writer, so it can share the writer\'s blind spots. A choice the owner made; the key quality on this setup has not been measured.'));
   out.push(f.env.sharedKeys
     ? c('shared-keys', 'pass', 'Shared keys', 'HW_SHARED_KEYS_ENABLED is on: learners who pick the same question share one key, so each key is paid for once.')
     : c('shared-keys', 'warn', 'Shared keys', 'HW_SHARED_KEYS_ENABLED is off: every learner who picks a question has a key built for them, paid by the platform. Consider switching it on for the pilot.'));
