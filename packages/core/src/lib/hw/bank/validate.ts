@@ -3,6 +3,7 @@
 
 import type { BankFile, BankPartIn, BankQuestion, BankVariant } from './schema';
 import { planAnyN } from './anyn';
+import { equationProblems } from './equations';
 import { normForQuote } from './norm';
 
 const EPS = 1e-9;
@@ -134,6 +135,7 @@ export function validateBank(bank: BankFile): string[] {
     if (q.diagram_answer_required !== (q.diagram_answer_parts.length > 0)) out.push(`${label}: diagram_answer_required and diagram_answer_parts disagree`);
     if (q.diagram_answer_parts.length && !q.parts.some((p) => p.answer_kind === 'diagram')) out.push(`${label}: lists a diagram answer but no part has answer_kind diagram`);
 
+    out.push(...equationProblems(label, q.equations));
     if (q.variant_for_visually_impaired) checkVariant(`${label} (visually impaired)`, q, q.variant_for_visually_impaired, out);
   }
   return out;

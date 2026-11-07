@@ -62,8 +62,15 @@ async function generate() {
     formulaTakesLaterSteps: !flag('formula-step-only'), wordLimits: DEFAULT_WORD_LIMITS, seed: 20261026,
   };
   const keySettings = keySettingsFromEnv();
-  const keyDeps = defaultKeyDeps({ cache: fileKeyCache(join(draft, '..', '..', 'key-cache')) });
   const questions = JSON.parse(readFileSync(need('questions'), 'utf8')) as (import('@/lib/hw/keys').KeyRequest & { board?: string })[];
+  // A board-paper question (officialRef) is keyed from the person-checked bank, never from a model: the lookup reads the database, and only a row a person has checked is found.
+  const usesBank = questions.some((q) => q.officialRef);
+  const bankLookup = usesBank ? (await import('@/lib/hw/bank/official-store')).lookupOfficialScheme : null;
+  const bankDb = usesBank ? (await import('@/db')).db : null;
+  const keyDeps = defaultKeyDeps({
+    cache: fileKeyCache(join(draft, '..', '..', 'key-cache')),
+    ...(bankLookup && bankDb ? { official: (ref: NonNullable<import('@/lib/hw/keys').KeyRequest['officialRef']>) => bankLookup(bankDb, ref) } : {}),
+  });
 
   // Projected per question: key writer + verifier, then ~14 mutator calls.
   const projectOne = () => {
@@ -98,6 +105,8 @@ async function generate() {
       spent += spend(key.calls);
       if (key.status !== 'grounded') { report.push({ question: q.questionText, status: key.status, detail: `${key.reason}: ${key.detail}` }); continue; }
       if (key.partial) { report.push({ question: q.questionText, status: 'partial_key', detail: 'a point is only partly supported; no variants from partial keys' }); continue; }
+      // A question that names its official scheme is evaluated against that scheme or not at all: a textbook key under a board label would make the report say something it did not test.
+      if (q.officialRef && key.source !== 'official') { report.push({ question: q.questionText, status: 'official_not_used', detail: `${key.notes.find((n) => n.startsWith('official scheme not found')) ?? 'no official scheme'}: a person must have checked this question first` }); continue; }
       const m = await generateMutations({
         questionText: q.questionText, marks: q.marks, medium: q.medium, classLevel: q.classLevel, subject: q.subject, questionType: q.questionType, key: key.key,
       }, settings, generateWith);
@@ -112,7 +121,7 @@ async function generate() {
         media: {},
         truthTranscript: { text: v.text, how: 'known_text' },
         key: {
-          source: key.source, keyId: key.cacheKey ?? key.configHash, referenceAnswer: key.key.referenceAnswer,
+          source: key.source, keyId: key.officialSource ? `official:${key.officialSource.id}:${key.officialSource.contentHash.slice(0, 12)}` : key.cacheKey ?? key.configHash, referenceAnswer: key.key.referenceAnswer,
           points: key.key.valuePoints.map((p) => ({ id: p.id, marks: p.marks, cites: p.cites, text: p.text, kind: p.kind, acceptedAlternatives: p.acceptedAlternatives })),
         },
         referenceMarks: { byPoint: v.expectedByPoint, total: v.expectedTotal, how: 'by_construction' },
@@ -147,6 +156,7 @@ async function generate() {
   console.log(`draft ${draft}: ${items.length} items from ${report.filter((r) => r.status === 'ok').length}/${questions.length} questions; ₹${(budget.spent / 100).toFixed(2)} spent; tokens in ${tokensIn} out ${tokensOut}${unpriced ? `; ${unpriced} calls unpriced` : ''}`);
   for (const r of report.filter((x) => x.status !== 'ok')) console.log(`  ${r.status}: ${r.question.slice(0, 60)} — ${r.detail}`);
   console.log(`review ${[...sample.values()].reduce((s, x) => s + x.length, 0)} sampled items in ${join(draft, 'review-sample.csv')}, then freeze`);
+  if (usesBank) await (await import('@/lib/db/connection')).closePool();
 }
 
 async function freeze() {

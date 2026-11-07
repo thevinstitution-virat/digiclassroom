@@ -27,6 +27,7 @@
     "hw:eval:grouping": "npx tsx --tsconfig tsconfig.json ../../scripts/hw-eval-grouping.ts",
     "hw:eval:sheet": "npx tsx --tsconfig tsconfig.json ../../scripts/hw-eval-sheet.ts",
     "hw:paper:import": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-paper-import.ts",
+    "hw:paper:eval": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-paper-eval.ts",
     "hw:paper:figure": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-paper-figure.ts",
     "hw:paper:review": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-paper-review.ts",
     "hw:practice:readiness": "npx tsx --tsconfig tsconfig.json --env-file=.env.local ../../scripts/hw-practice-readiness.ts",

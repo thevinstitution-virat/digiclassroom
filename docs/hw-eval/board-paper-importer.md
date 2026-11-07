@@ -1,10 +1,10 @@
-# Board-paper bank: importer, person check, official key and practice (design, phases 1-4, 8 Nov 2026)
+# Board-paper bank: importer, person check, official key, practice and evaluation (design, phases 1-5, 8 Nov 2026)
 
 Why: the answer-key service has a place for an **official** key (`buildKey` tries official, then passage, then textbook; scheme source
 `board_scheme_key`), but nothing fills it. A board's sample paper and marking scheme are the best key there is: the marks and the value points are
 the board's own. This bank holds them, checked by a person, so that later phases can offer them to InkBuddy learners and use them as official keys.
 
-**Status: phases 1 to 4 are built and tested locally on branch `feat/board-paper-bank`. Nothing is applied to production, nothing reads the bank yet,
+**Status: phases 1 to 5 are built and tested locally on branch `feat/board-paper-bank`. Nothing is applied to production, nothing reads the bank yet,
 and nothing is pushed. No teacher has checked a row yet: the check sheet exists and works, and is waiting for a teacher.**
 
 | Phase | What | State |
@@ -13,7 +13,7 @@ and nothing is pushed. No teacher has checked a row yet: the check sheet exists 
 | 2 | Migration 033, the check sheet a teacher fills in, and the command that records the check ([phase 2](#phase-2-the-person-check)) | built; waiting for a teacher |
 | 3 | Official-key lookup in `keyRuntime()` (`deps.official`), exact-match plan for multiple choice, "any N" slots, drawings left out of AI marking ([phase 3](#phase-3-the-bank-as-the-official-key)) | built; nothing to find until a teacher has checked rows |
 | 4 | Figure pictures (private), publishing, InkBuddy "CBSE paper practice", the builder picker (EN/HI), multiple choice marked by code ([phase 4](#phase-4-practising-from-a-paper)) | built; nothing is offered until a paper is published |
-| 5 | Evaluation through `hw-eval-mutate` with official-reference questions; equation reading checks | not started |
+| 5 | Evaluation through `hw-eval-mutate` with official-reference questions; equation checks ([phase 5](#phase-5-evaluating-ai-marking-on-the-paper)) | built; **no live evaluation has been run** (needs a checked paper, provider keys and volunteers) |
 
 ## The bank file (`cbse-paper-bank/2`)
 
@@ -93,6 +93,8 @@ paper's 63 rows), `bank-official-db.test.ts` (10: the lookup and every miss, two
 Phase 4: `bank-practice.test.ts` (19: picture checks, which rows are offered, the question made from a row, multiple choice marked by code), `bank-practice-db.test.ts` (20: attaching,
 publishing, what is offered, starting a question, the grader), `bank-practice-ui.test.tsx` (18: the screens rendered, Hindi and English) and one more case in `integration.test.ts` (a teacher
 adds a question from the picker, it is keyed officially, and the student's payload carries the figure's signed link and nothing of the scheme).
+Phase 5: `bank-eval.test.ts` (47: equation pairs including the real 14, what folds and what never does, the evaluation export, and the whole copy-read-report loop through the real dataset
+and run-file code) and `bank-eval-db.test.ts` (3: every exported question, including all 28 of the real paper, finds its official key in the checked bank and the key adds up to its marks).
 The real Class X Science paper was dry-run and imported as draft on a scratch database (39 questions → 63 rows, 80 marks), twice (second run: nothing
 written), and migration 032 was rolled back with that data in place and re-applied with an identical schema.
 
@@ -165,7 +167,7 @@ the question has an internal choice and the number does not say which; the row i
 (`key_stale_book`, "the source text its key rests on changed") and a rebuild is queued. Checked again with the same content, the same key is good again. A rebuild
 with the row gone from the bank falls through to the other sources, as the service always did; those are different keys, in their own eligibility group.
 
-**Left for later:** AI marking of a `board_scheme_key` group still needs its eval gates (phase 5). The phase 4 section says how `choiceVerdict` is now used by the grader.
+**Left for later:** AI marking of a `board_scheme_key` group still needs its eval gates (phase 5 builds the way to get them; none has been run). The phase 4 section says how `choiceVerdict` is now used by the grader.
 
 ## Phase 4: practising from a paper
 
@@ -209,6 +211,49 @@ figures to attach: q2-fig1, q14-fig1, q16-figA, q16-figB, q21-figs, q22-fig1, q2
 **Limits to be honest about:** a picture is checked by a person only if they look at it on the sheet (the code shows it, it cannot make anyone look); a checked row's pictures are protected
 in code, not by a database guard; Hindi is the interface language only (the paper's own words are English); the screens were tested by rendering them, not driven in a browser.
 
+## Phase 5: evaluating AI marking on the paper
+
+A written board-paper question is marked by a model against the board's own scheme, and a model may mark a group of questions only after the evaluation gates say so (roadmap 5.3).
+Phase 5 builds everything that can be built before an evaluation is run. **No evaluation has been run**: it needs a checked paper in the database, provider keys and credit, and people.
+
+**The questions** (`hw:paper:eval questions`): the written rows a model would mark (28 questions, 89 marks in the CBSE Class X Science paper: 8 very short, 8 short, 12 long),
+each carrying its `officialRef`, the product's own question type (a case-based question is a long one, so the evaluation groups are the groups learners are marked in) and the marks the
+app can give (a drawing is not counted). Multiple choice is not exported: it is marked by code, there is no model to evaluate. The groups are `science|very_short|en|board_scheme_key`,
+`science|short|…`, `science|long|…`.
+
+**The keys** (`hw-eval-mutate generate --questions q.json …`): a question with an `officialRef` is keyed from the **person-checked bank** (the script reads the database; run it with the
+database the checked paper is in). It is never keyed by a model. A question whose row nobody has checked, or whose official key was not used, is reported as `official_not_used` and gets no
+variants: a textbook key under a board label would make the report say something it did not test. The dataset items record the key as `official:<bank row>:<content hash>`. Only
+`generate` changed; `run` marks against the key frozen in each item, which is the key the product reads.
+
+**Equations** (`bank/equations.ts`, pure):
+
+- *The bank's own pairs.* Every equation is written twice, `plain` and `latex`; the importer now flattens both to one canonical form and refuses a file where they differ. On the real paper this
+  found two mistakes of mine, both fixed in the (ignored) bank file: the Q26 ethanol-to-ethene equation named its 170 C condition in one form and not the other, and Q37's parallel-resistance
+  equation carried a "(parallel)" note in one form only. The other 12 agreed.
+- *A read-back from handwriting.* `compareEquation` says `exact`, `equivalent` (only a way of writing: `CO₂` for `CO2`, `→` for `->`, `I²` for `I^2`, `×`, a space or nothing for a
+  product, `−` for `-`, `°`, Greek letters by name) or `different`. It never folds what changes the science: case, coefficients, digits, signs, powers, the order of the equation.
+- *The loop.* `hw:paper:eval equations` writes every distinct equation (14 in the CBSE paper) as a known-text dataset to be copied by hand; `hw-eval-mutate sheets` prints the copy sheets;
+  `hw-eval-reference copies` brings the scanned pad copies in as ink items; a reading run reads them; `hw:paper:eval equation-report --run … --dataset …` says how many were read
+  right, and lists the misses with how far off they were. The report is a measurement, not a gate: nothing yet turns it into a pass or a fail.
+
+**The order of work for the CBSE Class X Science paper**
+
+1. A teacher checks the paper (phase 2) so the keys exist.
+2. `hw:paper:eval questions` -> `q.json`; `hw-eval-mutate generate` (with the checked database) -> a draft dataset and a review sample; a person reviews the sample; `freeze`.
+3. `hw-eval-run` marking runs, five of them (a group needs five), then `hw:eval:gates import … --scheme-source board_scheme_key`. A group still needs at least 60 answers, and at least 30 answers
+   **marked blind by two teachers** (the double-marking kit), before it can be eligible. Model-written variants alone can never make a group eligible.
+4. A person promotes the group in the control room. Only then do the written paper questions appear for learners (or the owner sets `HW_SELF_PRACTICE_REQUIRE_ELIGIBLE_GROUP=false`, which this
+   work does not recommend).
+5. The equation copy sheets and `equation-report`, any time after the paper is imported.
+
+**Cost, as an estimate from the textbook run** (₹12.48 for keys and variants for 16 questions, ₹0.0133 per marked answer): official keys need no writer or verifier call, so about ₹10 to ₹20 for
+the variants of 28 questions, and about ₹25 to ₹30 to mark roughly 400 items five times. Not measured on this paper.
+
+**Limits to be honest about:** the variants are written by a model and have expected marks by construction, not a teacher's marks; the real handwriting, real half-right answers and the Hindi
+medium are untested; the equation check cannot tell a misread from a different way of writing a different equation that happens to fold to the same string (none of the 14 do); a
+product written as ` x ` between two variables is read as a multiplication sign, so an equation whose variable is called `x` should be written `mx`, not `m x`, in the bank.
+
 ## Applying to production (later, and only on the owner's go)
 
 Phases 3 and 4 add no migration. Two scripts, in order, same method as 031: checks, backup, rehearsal on a throwaway copy, then `--apply`.
@@ -218,7 +263,7 @@ Phases 3 and 4 add no migration. Two scripts, in order, same method as 031: chec
 
 ## Decisions kept for later phases
 
-- Equations in the bank are text (`plain`/`latex`); the reader and checks come in phase 5.
+- Equations in the bank are text (`plain`/`latex`); phase 5 checks the pair and compares a read-back.
 - Done in phase 3: "any N of M" points are N slots, drawings are not AI-marked, multiple choice is an exact-match plan. Done in phase 4: a multiple-choice row becomes a one-mark
   very-short question with the accepted answers, marked by code (right and wrong both).
 - `hw_question.total_marks` is derived by trigger on publish, which is why a choice is stored per alternative and not as one question.

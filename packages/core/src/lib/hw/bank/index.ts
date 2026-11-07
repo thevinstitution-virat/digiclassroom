@@ -6,3 +6,5 @@ export { REVIEW_FORMAT, parseVerdictFile, planReview, renderReviewPlan, reviewSt
 export { renderReviewSheet, type ReviewSheetData } from './review-sheet';
 export { markingPlanOf, choiceVerdict, parseQuestionNo, questionNoOf, type MarkingPlan, type MarkingMode, type ChoiceVerdict } from './official';
 export { planAnyN } from './anyn';
+export { compareEquation, equationDisagreement, foldReading, flattenLatex, flattenPlain, summariseEquationReading } from './equations';
+export { evalQuestionsOf, equationItemsOf, type EvalQuestion } from './eval-export';
