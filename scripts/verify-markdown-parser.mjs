@@ -202,6 +202,105 @@ check(
 const fenced = '```\nC:\\Users\\x\n```';
 check('escaped: fenced code is left alone', normalizeEscapes(fenced).text === fenced);
 
+// ──────────────────────────────────────────────────────
+// 5. The ISBN is judged, not just counted.
+// ──────────────────────────────────────────────────────
+// A placeholder passes "is there an isbn?", names a work nothing can match again, and splits the book: the one failure
+// that ingests cleanly and is invisible afterwards. A wrong check digit is only a misprint, so it warns.
+const ISBN_LINE = 'isbn: "978-0-00-000000-2"';
+check('isbn fixture: the line the tests rewrite is present', clean.includes(ISBN_LINE));
+const withIsbn = (value) => parseEnrichedMarkdown(clean.replace(ISBN_LINE, value === null ? '' : `isbn: ${value}`));
+const isbnErrors = (r) => r.errors.filter((e) => /is not an ISBN/.test(e));
+const isbnWarnings = (r) => r.warnings.filter((w) => /check digit/.test(w));
+
+check('isbn: the well-formed fixture has no isbn error or warning', isbnErrors(base).length === 0 && isbnWarnings(base).length === 0);
+for (const bad of [
+  '[not printed on the provided chapter pages — please verify and fill in]',
+  '978-93-5292-XXX-X   # TODO REPLACE — do NOT ingest until real',
+  'TBD',
+  'unknown',
+  '12345',
+  '97800000000',
+]) {
+  const r = withIsbn(bad);
+  check(`isbn: placeholder/garbage is refused: ${JSON.stringify(bad.slice(0, 38))}`, isbnErrors(r).length === 1, r.errors.join(' | ') || '(parsed without error)');
+}
+for (const good of ['81-7450-518-0', '9788174505187', '978-93-5729-100-2', '"978 0 00 000000 2"']) {
+  const r = withIsbn(good);
+  check(`isbn: a valid ISBN is accepted: ${good}`, isbnErrors(r).length === 0 && isbnWarnings(r).length === 0, [...r.errors, ...r.warnings].join(' | '));
+}
+const misprint = withIsbn('978-0-00-000000-3');
+check('isbn: a wrong check digit is only a warning, and says which digit', misprint.errors.length === 0 && isbnWarnings(misprint).some((w) => /should be 2/.test(w)), [...misprint.errors, ...misprint.warnings].join(' | '));
+const noIsbn = withIsbn(null);
+check('isbn: leaving the line out is still only a warning (the caller may supply it)', noIsbn.errors.length === 0 && noIsbn.warnings.some((w) => /No isbn/.test(w)), noIsbn.errors.join(' | '));
+
+// ──────────────────────────────────────────────────────
+// 6. The page markers are trustworthy, or the file is refused.
+// ──────────────────────────────────────────────────────
+// A chunk's page is the marker above it, and the range check cannot tell page 130 from 131. These are the cases that
+// are wrong for certain (refused) and the ones that are only suspicious (reported).
+const pageErrors = (r) => r.errors.filter((e) => /PAGE/.test(e));
+const pageWarnings = (r) => r.warnings.filter((w) => /PAGE/.test(w));
+const marker = (n) => `<!-- PAGE ${n} -->`;
+check('pages: the well-formed fixture has no page error or warning', pageErrors(base).length === 0 && pageWarnings(base).length === 0, [...pageErrors(base), ...pageWarnings(base)].join(' | '));
+
+const backwards = parseEnrichedMarkdown(clean.replace(marker(204), marker(202)));
+check('pages: a marker that runs backwards is refused, naming both lines', backwards.errors.some((e) => /PAGE 202 \(line \d+\) comes after PAGE 203 \(line \d+\)/.test(e)), backwards.errors.join(' | ') || '(parsed without error)');
+
+const noFirst = parseEnrichedMarkdown(clean.replace(marker(201), ''));
+check('pages: text above the first marker is refused (it would be cited as page 1)', noFirst.errors.some((e) => /before the first <!-- PAGE N --> marker/.test(e)), noFirst.errors.join(' | ') || '(parsed without error)');
+
+const noMarkers = parseEnrichedMarkdown(clean.replace(/<!-- PAGE \d+ -->/g, '').replace(/^chapter_pages:.*$/m, ''));
+check('pages: a file with no markers is refused even when no range is declared', noMarkers.errors.some((e) => /No <!-- PAGE N --> marker anywhere/.test(e)), noMarkers.errors.join(' | ') || '(parsed without error)');
+
+const skipped203 = parseEnrichedMarkdown(clean.replace(marker(203), ''));
+check('pages: a skipped marker is reported, with the pages it jumps between', pageWarnings(skipped203).some((w) => /skip pages: 202 -> 204/.test(w)), skipped203.warnings.join(' | '));
+check('pages: a skipped marker is a warning, not a refusal', pageErrors(skipped203).length === 0, skipped203.errors.join(' | '));
+
+const twice = parseEnrichedMarkdown(clean.replace(marker(203), `${marker(203)}\n\n${marker(203)}`));
+check('pages: a marker repeated is a warning, not a refusal', pageWarnings(twice).some((w) => /PAGE 203 is marked twice/.test(w)) && pageErrors(twice).length === 0, [...twice.errors, ...twice.warnings].join(' | '));
+
+const widerRange = parseEnrichedMarkdown(clean.replace(/^chapter_pages:.*$/m, 'chapter_pages: 201-207'));
+check('pages: markers that stop short of chapter_pages are reported', widerRange.warnings.some((w) => /markers run 201-206, but chapter_pages says 201-207/.test(w)), widerRange.warnings.join(' | '));
+
+// The rewrite that exercises the new checks must not change what a CORRECT file produces.
+check('pages: the new checks do not change the chunks of the well-formed fixture', JSON.stringify(textOf(parseEnrichedMarkdown(clean))) === JSON.stringify(textOf(base)));
+
+// ──────────────────────────────────────────────────────
+// 7. A chapter's question set is practice whatever the heading's capitalisation or number.
+// ──────────────────────────────────────────────────────
+// "exercises" (plural, no other word) is how NCERT's Democratic Politics titles every chapter's question set. The rule
+// was /\b(exercise|…)\b/, which does not match the plural word, so those questions became answerable source text.
+const classOfHeading = (heading) => {
+  const doc = [
+    '---', 'book_title: T', 'isbn: 978-0-00-000000-2', 'class_level: "9"', 'subject: Political Science',
+    'chapter_number: 1', 'chapter_title: X', 'chapter_pages: 1-1', 'validation_status: PENDING', '---',
+    '<!-- PAGE 1 -->', '', `## ${heading}`, '',
+    '1. Which of the following is not an instance of an exercise of a democratic right? Parents send their children to school.',
+  ].join('\n');
+  return parseEnrichedMarkdown(doc).chunks[0]?.retrieval_class;
+};
+for (const h of ['exercises', 'Exercises', 'EXERCISES', 'Exercise', 'Exercise 1.1', 'Exercises and Activities', 'Questions', 'Let us enhance our learning']) {
+  check(`practice heading: "${h}" is practice`, classOfHeading(h) === 'practice', `got ${classOfHeading(h)}`);
+}
+for (const h of ['Summary', 'Overview', 'Why define democracy?', 'Broader meanings of democracy']) {
+  check(`ordinary heading: "${h}" stays reference`, classOfHeading(h) === 'reference', `got ${classOfHeading(h)}`);
+}
+
+// ──────────────────────────────────────────────────────
+// 8. Text the parser does not index is reported, never silent.
+// ──────────────────────────────────────────────────────
+// Prose under 40 characters is not indexed. When a PAGE marker cuts off the last words of a sentence they land alone on
+// the next page and used to vanish without a warning.
+const FRAG_HEAD = ['---', 'book_title: T', 'isbn: 978-0-00-000000-2', 'class_level: "9"', 'subject: Political Science', 'chapter_number: 1', 'chapter_title: X', 'chapter_pages: 1-2', 'validation_status: PENDING', '---'].join('\n');
+const longPara = 'This paragraph is comfortably longer than forty characters in total length, so it is kept.';
+const withFragment = parseEnrichedMarkdown(`${FRAG_HEAD}\n<!-- PAGE 1 -->\n\n${longPara} The sentence runs on and ends with just this\n\n<!-- PAGE 2 -->\nend.\n\n## A printed heading\n\n${longPara}\n`);
+check('dropped text: a cut-off tail is reported with its page and its words', withFragment.warnings.some((w) => /1 piece\(s\) of text under 40 characters were NOT indexed: p\.2 "end\."/.test(w)), withFragment.warnings.join(' | ') || '(no warning: the words vanished silently)');
+check('dropped text: the fragment is still not indexed (behaviour unchanged, only reported)', withFragment.chunks.every((c) => !/^end\.$/m.test(c.text)));
+const noFragment = parseEnrichedMarkdown(`${FRAG_HEAD}\n<!-- PAGE 1 -->\n\n${longPara}\n\n<!-- PAGE 2 -->\n\n${longPara}\n`);
+check('dropped text: ordinary chunks produce no such warning', !noFragment.warnings.some((w) => /NOT indexed/.test(w)), noFragment.warnings.join(' | '));
+check('dropped text: the well-formed fixture produces no such warning', !base.warnings.some((w) => /NOT indexed/.test(w)), base.warnings.join(' | '));
+
 function firstDiff(a, b) {
   if (a.length !== b.length) return `chunk count ${a.length} vs ${b.length}`;
   for (let i = 0; i < a.length; i++) {
