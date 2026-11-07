@@ -4,7 +4,7 @@ Owner decisions (7 Nov): an independent learner **practises textbook questions**
 marks and feedback; the model answer comes from the textbook). The **trial is up to ₹10 of AI cost within 7 days**. It opens **only after the
 strict-marking gates pass**, with marks shown as an **AI practice estimate**.
 
-Status: design only. Nothing below is built, migrated or switched on.
+Status (7 Nov): **phase 1 (backend) is built and tested locally; nothing is migrated on the server or switched on.** Phases 2 to 4 are not started.
 
 ## Why this is a new mode, not a switch
 
@@ -37,6 +37,24 @@ Read from the code on 7 Nov:
 8. **The tab.** "Virat Evaluator" in the Virat Gyankosh section of the user sidebar, shown only when the flag is on and the user has no institution
    (or has a trial). Every string has English and Hindi.
 
+## What phase 1 built
+
+- Migration 031 (`hw_practice_trial`, additive, with a down script) and its Drizzle table. **Applied only to a scratch database.**
+- `lib/hw/practice/rules.ts` (pure: the trial verdict, the English and Hindi texts) and `practice/trial.ts` (the practice space, start a trial, the per-learner budget).
+- Settings, all in `apps/api/.env.example`: `HW_SELF_PRACTICE_ENABLED` (default false), trial days (7), trial budget (1000 paise), step reserve (5 paise), platform ceiling.
+- `resolveHwActor`: a person in no institution who has started a trial works in the practice space as a student. Naming the space in a header does not let anyone in.
+- Reading, marking and handing in are refused with a plain English and Hindi message once the trial's days or rupees are used; the cost of each reading and marking job is added to the learner's own trial.
+- Return without a teacher: `releasePracticeSubmissions` in `services/marking.ts` (the only file allowed to write a final mark), run by the job runner through `practice/release.ts`. It returns a submission only in the practice space, only when every answer has a suggestion for the current scheme, the reader and the AI were at least `HW_HIGH_CONFIDENCE` sure, and nothing is flagged as addressed to the marker. Anything doubtful is held, not released. `myResult` adds the "AI practice estimate" label and note, both languages.
+- Tests: `practice-rules` (pure, 20 including the narrowness of the exception) and `practice-trial` (24, against Postgres; no provider is called). The whole hw suite passes: 684.
+
+### Choices made in phase 1 that you may overrule
+
+- **graded_by is the learner's own id.** The column is a foreign key to a real user, and a system user row would show up in user lists. Source `accepted_ai` in the practice institution means no teacher. The same will apply to an attempt's `created_by` in phase 2.
+- **Held work stays held.** A learner whose handwriting the reader was unsure of, or whose mark the AI was unsure of, sees the reading but no mark (phase 3 must explain this and offer "write it again"). There is no teacher to correct it.
+- **Key building is not charged to the learner** (the platform ceiling counts it). Charging it is a one-line change once you decide.
+- **A grade job's cost is shared equally** if one question ever covered several learners; in the practice space every attempt will have its own question, so it is one learner.
+- **The practice institution** appears in the super admin's institution list.
+
 ## Blockers on the live server (not code)
 
 | Blocker | Why it matters | Who |
@@ -44,7 +62,7 @@ Read from the code on 7 Nov:
 | No textbook is ingested, and Qdrant has no access key (roadmap D12) | No chapter questions to pick and nothing to build a key from; nearly every question is `no_grounding` | You: protect Qdrant, then ingest |
 | No OpenRouter key; answer keys are routed through it | A key cannot be built at all today | You: add a key, or decide to route keys to OpenAI |
 | Strict-marking results not imported through the gates | Nothing is eligible for AI marking; the learner would get reading but no marks | Claude (import) after the run is complete |
-| Migration 031 | New table | Needs your explicit go-ahead before it is applied |
+| Migration 031 | New table | Needs your explicit go-ahead before it is applied (written, rehearsed on a scratch database, down script included) |
 
 ## Open points for the owner
 
@@ -56,7 +74,7 @@ Read from the code on 7 Nov:
 
 ## Build phases
 
-1. **Backend:** migration 031 and down, trial service, actor change, per-learner budget check, automatic return with the label, tests with fake providers.
+1. **Backend (done 7 Nov, local):** migration 031 and down, trial service, actor change, per-learner budget check, automatic return with the label, tests.
 2. **Question picker:** list chapter practice questions from the hub, create the attempt, queue the key.
 3. **Tab and pages:** the sidebar item, the picker, the answer page (reusing the student answer screen), the result with the label, trial status. English and Hindi.
 4. **Pilot checklist:** the blockers above cleared, then a trial with a few invited learners.

@@ -113,6 +113,16 @@ const EnvSchema = z.object({
    */
   HW_STRICT_MARKING_ENABLED: bool(false),
   /**
+   * Self-practice for independent learners (docs/hw-eval/self-practice.md, migration 031). Off = people without an institution have no access.
+   * A trial is TRIAL_DAYS long and limited to TRIAL_BUDGET_PAISE of AI cost (reading and marking); a step is not started unless STEP_RESERVE_PAISE
+   * is still unspent, so the limit holds to within one step. PLATFORM_BUDGET_PAISE is the practice space's monthly ceiling over all learners.
+   */
+  HW_SELF_PRACTICE_ENABLED: bool(false),
+  HW_SELF_PRACTICE_TRIAL_DAYS: num(7, 1, 90),
+  HW_SELF_PRACTICE_TRIAL_BUDGET_PAISE: num(1000, 0, 100_000),
+  HW_SELF_PRACTICE_STEP_RESERVE_PAISE: num(5, 0, 1000),
+  HW_SELF_PRACTICE_PLATFORM_BUDGET_PAISE: num(200_000, 0, 100_000_000),
+  /**
    * Strict marking, "right idea, wrong detail" (docs/hw-eval/verdicts.md): the share of the key point's marks given.
    * zero (the default; phase 1c's behaviour), half (half the point's marks, rounded down to a half mark) or full.
    * The teachers decide this; the code only applies it.

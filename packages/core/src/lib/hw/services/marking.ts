@@ -20,6 +20,7 @@ import { eligibilityOfQuestion } from '../eligibility/registry';
 import { signedReadUrl } from '../storage/r2';
 import { tenantUsage } from '../tenants';
 import { writeAudit } from '../admin-audit';
+import { PRACTICE_ORG_ID } from '../practice/rules';
 
 type AnswerRow = typeof hwAnswer.$inferSelect;
 type AiGradeRow = typeof hwAiGrade.$inferSelect;
@@ -399,6 +400,56 @@ export async function returnAssignment(actor: HwActor, assignmentId: string) {
     if (returned.length) await tx.update(hwAssignment).set({ returnedAt: new Date() }).where(eq(hwAssignment.id, a.id));
     return { returned: returned.length, notYetGraded: Number(waiting) };
   });
+}
+
+// ── Self-practice: the one place a mark is written without a teacher ─────────
+
+/**
+ * Independent learners have no teacher (docs/hw-eval/self-practice.md). In the PRACTICE SPACE ONLY, a submission whose every answer has a
+ * suggestion for the current marking scheme is given those marks and returned, labelled "AI practice estimate" to the learner. graded_by must be a real user (foreign key), so it holds the learner's own id: source 'accepted_ai' in the practice institution means no teacher. It is held
+ * back (left for the learner to see the reading only) when anything is doubtful: an answer the reader was unsure of, a suggestion below
+ * HW_HIGH_CONFIDENCE, or text flagged as addressed to the marker. Run by the job runner; never from the AI paths.
+ */
+async function releasePracticeSubmission(submissionId: string): Promise<boolean> {
+  const cfg = getHwConfig();
+  return db.transaction(async (tx) => {
+    const [s] = await tx.select().from(hwSubmission).where(eq(hwSubmission.id, submissionId)).for('update');
+    if (!s || s.organizationId !== PRACTICE_ORG_ID || !['ready_for_review', 'graded'].includes(s.status)) return false;
+    const rows = await tx.select({ a: hwAnswer, rubricVersion: hwQuestion.rubricVersion }).from(hwAnswer)
+      .innerJoin(hwQuestion, eq(hwQuestion.id, hwAnswer.questionId))
+      .where(eq(hwAnswer.submissionId, s.id));
+    if (!rows.length) return false;
+    const grades: { answerId: string; marks: number; itemMarks: HwItemMark[]; aiGradeId: string }[] = [];
+    for (const { a, rubricVersion } of rows) {
+      if (!['done', 'not_needed'].includes(a.transcriptStatus)) return false;
+      if (a.transcriptConfidence !== null && num(a.transcriptConfidence) < cfg.HW_HIGH_CONFIDENCE) return false;
+      if (cfg.HW_INSTRUCTION_GUARD_ENABLED && screenInstructions(a.transcript ?? '').flagged) return false;
+      const [g] = await tx.select().from(hwAiGrade)
+        .where(and(eq(hwAiGrade.answerId, a.id), eq(hwAiGrade.rubricVersion, rubricVersion)))
+        .orderBy(desc(hwAiGrade.createdAt)).limit(1);
+      if (!g || num(g.confidence) < cfg.HW_HIGH_CONFIDENCE) return false;
+      grades.push({ answerId: a.id, marks: num(g.suggestedMarks), itemMarks: g.items.map((i) => ({ rubric_item_id: i.rubric_item_id, marks: i.marks })), aiGradeId: g.id });
+    }
+    for (const g of grades) {
+      await tx.insert(hwGrade).values({
+        answerId: g.answerId, organizationId: s.organizationId, marks: String(g.marks), itemMarks: g.itemMarks, comment: null,
+        source: 'accepted_ai', aiGradeId: g.aiGradeId, gradedBy: s.studentId, gradedAt: new Date(),
+      }).onConflictDoNothing();
+    }
+    await tx.update(hwSubmission).set({ status: 'returned' }).where(eq(hwSubmission.id, s.id));
+    return true;
+  });
+}
+
+/** Release what is ready, oldest first. Returns how many submissions were returned. A no-op unless self-practice is on. */
+export async function releasePracticeSubmissions(limit = 50): Promise<number> {
+  if (!getHwConfig().HW_SELF_PRACTICE_ENABLED) return 0;
+  const subs = await db.select({ id: hwSubmission.id }).from(hwSubmission)
+    .where(and(eq(hwSubmission.organizationId, PRACTICE_ORG_ID), inArray(hwSubmission.status, ['ready_for_review', 'graded'])))
+    .orderBy(asc(hwSubmission.updatedAt)).limit(limit);
+  let n = 0;
+  for (const s of subs) if (await releasePracticeSubmission(s.id)) n++;
+  return n;
 }
 
 // ── Usage and quota ──────────────────────────────────────────────────────────

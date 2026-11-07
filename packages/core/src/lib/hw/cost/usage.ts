@@ -6,6 +6,8 @@ import { hwAiJob, hwAiUsageMonthly } from '@/db/hw-schema';
 import { getHwConfig } from '../config';
 import { monthKey, type Exec } from '../db';
 import { estimateCost, parsePriceTable, type TokenUsage } from './pricing';
+import { PRACTICE_ORG_ID } from '../practice/rules';
+import { chargePracticeJob } from '../practice/trial';
 
 export interface UsageRecord {
   /** The job the call belongs to; null for shadow-mode calls, which count only in the monthly roll-up. */
@@ -41,6 +43,9 @@ export async function recordUsage(x: Exec, r: UsageRecord): Promise<string | und
       costEstimatePaise: sql`${hwAiJob.costEstimatePaise} + ${cost.paise}`,
     }).where(eq(hwAiJob.id, r.jobId));
   }
+
+  // Self-practice: the cost also counts against the learner's own trial (docs/hw-eval/self-practice.md).
+  if (r.jobId && r.orgId === PRACTICE_ORG_ID) await chargePracticeJob(x, r.jobId, cost.paise);
 
   await x.insert(hwAiUsageMonthly).values({
     organizationId: r.orgId,

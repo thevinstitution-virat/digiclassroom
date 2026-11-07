@@ -12,6 +12,8 @@ import { db } from '@/db';
 import { member } from '@/db/schema';
 import { HwError } from '../errors';
 import { roleFromMember, type HwActor } from './policy';
+import { PRACTICE_ORG_ID } from '../practice/rules';
+import { isPracticeLearner } from '../practice/trial';
 
 export async function resolveHwActor(headers: Headers): Promise<HwActor> {
   const session = await auth.api.getSession({ headers });
@@ -40,6 +42,10 @@ export async function resolveHwActor(headers: Headers): Promise<HwActor> {
   } else {
     // Nothing selected: someone in exactly one institution is in that one. Several -> they choose.
     const rows = await db.select({ orgId: member.organizationId, role: member.role }).from(member).where(eq(member.userId, userId)).limit(2);
+    // An independent learner (no institution) who has started a self-practice trial works in the practice space, as a student.
+    if (rows.length === 0 && (await isPracticeLearner(db, userId))) {
+      return { userId, orgId: PRACTICE_ORG_ID, role: 'student', isPlatformStaff: false };
+    }
     if (rows.length !== 1) {
       throw new HwError('FORBIDDEN', 'Handwritten assignments are available inside an institution. Choose your institution first.');
     }

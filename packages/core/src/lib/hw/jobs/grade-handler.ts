@@ -9,6 +9,7 @@ import { describeError, HwError } from '../errors';
 import { db } from '../db';
 import { quotaAllows, quotaRefusal, quotaState } from '../cost/quota';
 import { recordUsage } from '../cost/usage';
+import { practiceRefusals } from '../practice/trial';
 import { createBatch, generate, pollBatch, providerFor, routed, usageFromError, type AiResult } from '../ai';
 import { defaultGradeOptions } from '../grader/ai-grader';
 import { markCall, markChunkSize, markResultsFrom } from '../grader/mark-mode';
@@ -101,6 +102,18 @@ async function plan(job: JobRow): Promise<Plan | null> {
       await complete(db, job.id, undefined, `${reuse.length} reused from earlier identical answers; nothing left to mark`);
       return null;
     }
+  }
+  // Self-practice: a learner whose trial cannot pay for another step is not marked. Nothing is refused outside the practice space.
+  const trialRefused = await practiceRefusals(db, job.organizationId, pending.map((p) => p.answerId));
+  if (trialRefused.size) {
+    await db.transaction(async (tx) => {
+      for (const msg of new Set(trialRefused.values())) {
+        await tx.update(hwAnswer).set({ failureReason: msg }).where(inArray(hwAnswer.id, pending.filter((p) => trialRefused.get(p.answerId) === msg).map((p) => p.answerId)));
+      }
+      if (pending.every((p) => trialRefused.has(p.answerId))) await complete(tx, job.id, undefined, 'not marked: the free trial cannot pay for another step');
+    });
+    if (pending.every((p) => trialRefused.has(p.answerId))) return null;
+    pending = pending.filter((p) => !trialRefused.has(p.answerId));
   }
   const state = await quotaState(db, job.organizationId, 'grade');
   if (!quotaAllows(state, pending.length)) {

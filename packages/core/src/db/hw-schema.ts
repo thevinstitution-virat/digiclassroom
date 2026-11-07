@@ -313,6 +313,19 @@ export const hwAnswerGroup = pgTable('hw_answer_group', {
   createdAt: ts('created_at').notNull().defaultNow(),
 });
 
+/** Migration 031: an independent learner's self-practice trial, limited by days and by rupees of AI cost. */
+export type HwPracticeTrialState = 'active' | 'used_up' | 'ended';
+export const hwPracticeTrial = pgTable('hw_practice_trial', {
+  userId: varchar('user_id', { length: 255 }).primaryKey(),
+  startedAt: ts('started_at').notNull().defaultNow(),
+  endsAt: ts('ends_at').notNull(),
+  budgetPaise: bigint('budget_paise', { mode: 'number' }).notNull(),
+  spentPaise: numeric('spent_paise', { precision: 14, scale: 4 }).notNull().default('0'),
+  state: text('state').$type<HwPracticeTrialState>().notNull().default('active'),
+  createdAt: ts('created_at').notNull().defaultNow(),
+  updatedAt: ts('updated_at').notNull().defaultNow(),
+});
+
 export const hwAnswerGroupMember = pgTable('hw_answer_group_member', {
   groupId: varchar('group_id', { length: 36 }).notNull(),
   answerId: varchar('answer_id', { length: 36 }).notNull(),

@@ -11,6 +11,7 @@ import { describeError, HwError } from '../errors';
 import { db, type Exec } from '../db';
 import { quotaAllows, quotaRefusal, quotaState } from '../cost/quota';
 import { recordUsage } from '../cost/usage';
+import { practiceRefusals } from '../practice/trial';
 import { createBatch, pollBatch, providerFor, readBatchSupported, routed, usageFromError, type AiResult, type BatchItem } from '../ai';
 import { decideAfterRead, type EscalationPolicy } from '../reader/escalation';
 import { readCall, readerForTier } from '../reader/gemini-reader';
@@ -63,6 +64,22 @@ async function prepare(job: JobRow): Promise<PreparedRead | null> {
       await finishSubmissionIfRead(tx, job.submissionId!);
     });
     return null;
+  }
+
+  // Self-practice: a learner whose trial cannot pay for another step is not read. Nothing is refused outside the practice space.
+  const trialRefused = await practiceRefusals(db, job.organizationId, pending.map((p) => p.id));
+  if (trialRefused.size) {
+    await db.transaction(async (tx) => {
+      for (const msg of new Set(trialRefused.values())) {
+        await failAnswers(tx, pending.filter((p) => trialRefused.get(p.id) === msg).map((p) => p.id), msg, 'needs_review');
+      }
+      if (pending.every((p) => trialRefused.has(p.id))) {
+        await complete(tx, job.id, undefined, 'not read: the free trial cannot pay for another step');
+        await finishSubmissionIfRead(tx, job.submissionId!);
+      }
+    });
+    if (pending.every((p) => trialRefused.has(p.id))) return null;
+    pending.splice(0, pending.length, ...pending.filter((p) => !trialRefused.has(p.id)));
   }
 
   const noImage = pending.filter((p) => !(p.renderKey ?? p.imageKey));

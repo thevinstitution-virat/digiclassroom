@@ -16,6 +16,8 @@ import { queueSubmissionRead } from '../jobs/read-handler';
 import { finishSubmissionIfRead, setTranscript } from '../pipeline';
 import { answerFileKey, keyVersion } from '../storage/keys';
 import { putHwObject } from '../storage/r2';
+import { PRACTICE_ORG_ID, PRACTICE_TEXT } from '../practice/rules';
+import { requireUsableTrial } from '../practice/trial';
 
 const MAX_TYPED_CHARS = 50_000;
 
@@ -174,6 +176,8 @@ export async function storeInk(actor: HwActor, submissionId: string, questionId:
  */
 export async function submit(actor: HwActor, submissionId: string) {
   const { submission, assignment } = await draftOf(actor, submissionId);
+  // Self-practice: handing in is refused, with a plain message, once the free trial cannot pay for another step.
+  if (actor.orgId === PRACTICE_ORG_ID) await requireUsableTrial(db, actor.userId);
   const questions = await db.select().from(hwQuestion).where(eq(hwQuestion.assignmentId, assignment.id));
 
   return db.transaction(async (tx) => {
@@ -246,6 +250,8 @@ export async function myResult(actor: HwActor, submissionId: string) {
   const total = answers.reduce((s, { g }) => s + num(g?.marks), 0);
   return {
     assignment: { id: assignment.id, title: assignment.title, totalMarks: num(assignment.totalMarks) },
+    // Self-practice: no teacher checked these marks, and the screen must say so (English and Hindi).
+    ...(assignment.organizationId === PRACTICE_ORG_ID ? { practiceEstimate: { label: PRACTICE_TEXT.estimateLabel, note: PRACTICE_TEXT.estimateNote } } : {}),
     total,
     questions: questions.map((q) => {
       const row = answers.find(({ a }) => a.questionId === q.id);
