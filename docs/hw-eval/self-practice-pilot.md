@@ -110,3 +110,14 @@ fonts, so these are the first real readings: the open questions are luna's confi
 - **Parent consent and parent view for independent learners**: nothing is built.
 - **Hindi medium**: needs Hindi-medium books and a native-speaker review of every Hindi string.
 - **A chapter browser** for questions: the library only supports a topic search.
+
+## What the live library holds (checked read-only on 7 Nov, from the backend with its own hub credentials)
+
+The link already exists: DigiClassroom reads the PDLMS library hub (`LIBRARY_HUB_ENABLED=true`, the hub answers). The library holds **one published work, NCERT Class 9 Science, English
+medium (`sci9-en`): 12 chapters, 987 passages, of which about 320 are the book's own exercise and discussion questions (one per row), plus 58 printed answers.**
+Not there: any other class or subject, and any Hindi book (a Class 10 or a Hindi search returns nothing).
+
+- The work is **placed at Class 9 as a whole (`SCH.CBSE.C9`)**, so a Mathematics or Social Science search at Class 9 also returns the Science book. InkBuddy therefore offers only the books
+  in `HW_SELF_PRACTICE_SCOPES` (default `9:Science:en`) and refuses any other. Placing the work at the Science node in PDLMS's Shelves would fix the cause for every app.
+- Searching a bare topic often returns no exercise rows (the hub ranks them with the explanatory text, 20 at most). Adding the word "questions" brought them forward on the live book:
+  atoms and molecules 0 to 4 rows, photosynthesis 3 to 14, sound 3 to 7. InkBuddy now searches that way.

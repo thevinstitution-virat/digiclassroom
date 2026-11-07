@@ -142,6 +142,19 @@ suite('self-practice phase 3 — API', () => {
       }
     })
 
+    it('tells the screen which books are on offer, and refuses others', async () => {
+      const u = await addUser('s01')
+      expect((await as(u).practice.status()) as { scopes?: unknown }).toMatchObject({ scopes: [{ classLevel: 9, subject: 'Science', medium: 'en' }] })
+      await as(u).practice.start()
+      await expect(as(u).practice.search({ ...pickInput, subject: 'Mathematics', query: 'algebra' })).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+      const saved = process.env.HW_SELF_PRACTICE_SCOPES
+      try {
+        process.env.HW_SELF_PRACTICE_SCOPES = '9:Science:en,10:Mathematics:en'; config._resetHwConfig()
+        expect(((await as(u).practice.status()) as { scopes?: unknown[] }).scopes).toHaveLength(2)
+        await expect(as(u).practice.search({ ...pickInput, classLevel: '10', subject: 'Mathematics', query: 'algebra' })).resolves.toMatchObject({ available: true })
+      } finally { if (saved === undefined) delete process.env.HW_SELF_PRACTICE_SCOPES; else process.env.HW_SELF_PRACTICE_SCOPES = saved; config._resetHwConfig() }
+    })
+
     it('someone in an institution is not who this is for', async () => {
       const u = await addUser('s2')
       const org = uid('school')

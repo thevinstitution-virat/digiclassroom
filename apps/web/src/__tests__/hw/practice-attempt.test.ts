@@ -15,6 +15,7 @@ Object.assign(process.env, {
   HW_SELF_PRACTICE_ENABLED: 'true',
   HW_SELF_PRACTICE_TRIAL_BUDGET_PAISE: '1000',
   HW_SELF_PRACTICE_MAX_ATTEMPTS: '3',
+  HW_SELF_PRACTICE_SCOPES: '9:Science:en,10:Science:en',
 })
 
 import { PRACTICE_ORG_ID } from '@/lib/hw/practice/rules'
@@ -72,7 +73,7 @@ suite('self-practice phase 2 — integration', () => {
     it("asks the hub for the learner's class, subject and medium, with the book's exercises included", async () => {
       const hub = fakeHub([EX1, REF])
       await catalog.searchPracticeQuestions(catalog.parseScope(SCOPE), 'photosynthesis', hub)
-      expect(hub.calls[0]).toMatchObject({ query: 'photosynthesis', medium: 'en', includePractice: true, window: 0 })
+      expect(hub.calls[0]).toMatchObject({ query: 'photosynthesis questions', medium: 'en', includePractice: true, window: 0 })
       // Science covers its parts, as the answer-key service scopes it.
       expect(hub.calls[0].nodeCodes).toEqual(expect.arrayContaining(['SCH.CBSE.C9.SCIENCE', 'SCH.CBSE.C9.PHYSICS']))
       expect(hub.calls[0].nodeCodes!.every((c) => c.startsWith('SCH.CBSE.C9.'))).toBe(true)
@@ -103,6 +104,27 @@ suite('self-practice phase 2 — integration', () => {
       const { HubError } = await import('@/lib/library/hub-client')
       const down = { search: async (): Promise<HubSearchResponse> => { throw new HubError('boom', 'unreachable') } }
       await expect(catalog.searchPracticeQuestions(catalog.parseScope(SCOPE), 'photosynthesis', down)).rejects.toMatchObject({ code: 'PROVIDER_ERROR' })
+    })
+
+    it('parses the books on offer, and defaults to the one book in the library', () => {
+      expect(catalog.practiceScopes('')).toEqual([{ classLevel: 9, subject: 'Science', medium: 'en' }])
+      // With no argument it reads the setting (this file offers Class 9 and Class 10 Science).
+      expect(catalog.practiceScopes()).toHaveLength(2)
+      expect(catalog.practiceScopes('10:Social Science:hi, 9:Science:en ,bad,13:Maths:en,9:Maths:fr')).toEqual([
+        { classLevel: 10, subject: 'Social Science', medium: 'hi' }, { classLevel: 9, subject: 'Science', medium: 'en' },
+      ])
+    })
+
+    it('refuses a class, subject or medium that is not on offer, before the hub is asked (the book is placed at the class, not the subject)', async () => {
+      const hub = fakeHub([EX1])
+      for (const bad of [{ ...SCOPE, subject: 'Mathematics' }, { ...SCOPE, classLevel: '8' }, { ...SCOPE, medium: 'hi' }]) {
+        const err = await catalog.searchPracticeQuestions(catalog.parseScope(bad), 'photosynthesis', hub).catch((e) => e)
+        expect(err).toMatchObject({ code: 'BAD_REQUEST' })
+        expect(/[\u0900-\u097F]/.test(err.publicMessage)).toBe(true)
+      }
+      expect(hub.calls).toHaveLength(0)
+      // Case does not matter.
+      await expect(catalog.searchPracticeQuestions(catalog.parseScope({ ...SCOPE, subject: 'science' }), 'photosynthesis', hub)).resolves.toMatchObject({ available: true })
     })
 
     it('rejects a bad scope or query', async () => {
@@ -149,6 +171,12 @@ suite('self-practice phase 2 — integration', () => {
       const b = await attempt.startAttempt(u, pick(EX1, 1, q1), { hub: fakeHub([EX1]) })
       expect(b).toEqual({ assignmentId: a.assignmentId, reused: true })
       expect(Number((await one<{ n: string }>(`SELECT count(*) AS n FROM hw_assignment WHERE created_by = $1`, [u])).n)).toBe(1)
+    })
+
+    it('refuses to start a question from a book that is not on offer', async () => {
+      const u = await learner('a3b')
+      await expect(attempt.startAttempt(u, { ...pick(EX1, 1, q1), subject: 'Mathematics' }, { hub: fakeHub([EX1]) })).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+      expect(await one('SELECT 1 FROM hw_assignment WHERE created_by = $1', [u])).toBeUndefined()
     })
 
     it('refuses a question the hub does not return, and creates nothing', async () => {

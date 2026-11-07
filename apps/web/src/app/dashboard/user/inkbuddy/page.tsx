@@ -24,7 +24,7 @@ const SUBJECTS: { value: string; key: HwKey }[] = [
   { value: 'English', key: 'pr.sub.english' },
   { value: 'Hindi', key: 'pr.sub.hindi' },
 ]
-const CLASSES = Array.from({ length: 12 }, (_, i) => i + 1)
+type Scope = { classLevel: number; subject: string; medium: 'en' | 'hi' }
 
 function Frame({ children }: { children: React.ReactNode }) {
   const { t } = useHwT()
@@ -42,12 +42,15 @@ function Frame({ children }: { children: React.ReactNode }) {
   )
 }
 
-function Finder() {
+function Finder({ scopes }: { scopes: Scope[] }) {
   const { t, lang } = useHwT()
   const router = useRouter()
-  const [classLevel, setClassLevel] = useState('9')
-  const [subject, setSubject] = useState('Science')
-  const [medium, setMedium] = useState<'en' | 'hi'>('en')
+  const [book, setBook] = useState(0)
+  const chosen = scopes[Math.min(book, scopes.length - 1)]
+  const classLevel = String(chosen.classLevel)
+  const subject = chosen.subject
+  const medium = chosen.medium
+  const subjectName = (name: string) => { const s = SUBJECTS.find((x) => x.value.toLowerCase() === name.toLowerCase()); return s ? t(s.key) : name }
   const [topic, setTopic] = useState('')
   const [asked, setAsked] = useState<{ classLevel: string; subject: string; medium: 'en' | 'hi'; query: string } | null>(null)
 
@@ -61,29 +64,22 @@ function Finder() {
       <CardHeader><CardTitle>{t('pr.search.title')}</CardTitle></CardHeader>
       <CardContent className="space-y-4">
         <form
-          className="grid gap-3 sm:grid-cols-4"
+          className="grid gap-3 sm:grid-cols-2"
           onSubmit={(e) => { e.preventDefault(); if (topic.trim().length >= 2) setAsked({ classLevel, subject, medium, query: topic.trim() }) }}
         >
-          <Field label={t('pr.search.class')}>
-            <NativeSelect value={classLevel} onChange={(e) => setClassLevel(e.target.value)}>
-              {CLASSES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </NativeSelect>
-          </Field>
-          <Field label={t('pr.search.subject')}>
-            <NativeSelect value={subject} onChange={(e) => setSubject(e.target.value)}>
-              {SUBJECTS.map((s) => <option key={s.value} value={s.value}>{t(s.key)}</option>)}
-            </NativeSelect>
-          </Field>
-          <Field label={t('pr.search.medium')}>
-            <NativeSelect value={medium} onChange={(e) => setMedium(e.target.value as 'en' | 'hi')}>
-              <option value="en">{t('pr.medium.en')}</option>
-              <option value="hi">{t('pr.medium.hi')}</option>
+          <Field label={t('pr.search.book')}>
+            <NativeSelect value={String(book)} onChange={(e) => setBook(Number(e.target.value))}>
+              {scopes.map((s, i) => (
+                <option key={i} value={i}>
+                  {t('pr.search.bookLabel', { cls: s.classLevel, subject: subjectName(s.subject), medium: t(s.medium === 'hi' ? 'pr.medium.hi' : 'pr.medium.en') })}
+                </option>
+              ))}
             </NativeSelect>
           </Field>
           <Field label={t('pr.search.topic')}>
             <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder={t('pr.search.topicPh')} maxLength={200} />
           </Field>
-          <div className="sm:col-span-4">
+          <div className="sm:col-span-2">
             <Button type="submit" disabled={topic.trim().length < 2 || found.isFetching}>
               {found.isFetching && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {found.isFetching ? t('pr.search.searching') : t('pr.search.go')}
@@ -186,7 +182,7 @@ export default function InkBuddyPage() {
               <span>{t('pr.trial.allowance', { pct: s.allowanceLeftPct })}</span>
             </p>
           ) : s.message ? <HwMessage>{s.message[lang]}</HwMessage> : null}
-          {s.active && <Finder />}
+          {s.active && s.scopes.length > 0 && <Finder scopes={s.scopes} />}
           <Mine />
         </div>
       )}

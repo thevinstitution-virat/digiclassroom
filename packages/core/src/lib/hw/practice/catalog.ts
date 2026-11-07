@@ -81,6 +81,23 @@ export function parseScope(input: { classLevel: string | number; subject: string
 
 const MAX_LISTED = 30;
 
+/** The books on offer (HW_SELF_PRACTICE_SCOPES; default Class 9 Science, English). */
+export function practiceScopes(raw: string | undefined = getHwConfig().HW_SELF_PRACTICE_SCOPES): PracticeScope[] {
+  const out: PracticeScope[] = [];
+  for (const part of (raw && raw.trim() ? raw : '9:Science:en').split(',')) {
+    const [c, subject, m] = part.split(':').map((x) => x.trim());
+    const classLevel = Number(c);
+    if (Number.isInteger(classLevel) && classLevel >= 1 && classLevel <= 12 && subject && (m === 'en' || m === 'hi')) out.push({ classLevel, subject, medium: m });
+  }
+  return out;
+}
+
+/** Refuses a class, subject and medium the library has no book for on offer, so a question is never keyed from another subject's book. */
+export function requireOfferedScope(scope: PracticeScope): void {
+  const ok = practiceScopes().some((s) => s.classLevel === scope.classLevel && s.medium === scope.medium && s.subject.toLowerCase() === scope.subject.toLowerCase());
+  if (!ok) throw new HwError('BAD_REQUEST', `${PRACTICE_TEXT.scopeOff.en} / ${PRACTICE_TEXT.scopeOff.hi}`);
+}
+
 function requestOf(scope: PracticeScope, query: string): HubSearchRequest {
   return { query, nodeCodes: subjectNodeCodes(`Class ${scope.classLevel}`, scope.subject), medium: scope.medium, includePractice: true, limit: 20, window: 0 };
 }
@@ -112,7 +129,9 @@ export async function searchPracticeQuestions(scope: PracticeScope, rawQuery: st
   const query = rawQuery.trim().replace(/\s+/g, ' ');
   if (query.length < 2 || query.length > 200) throw new HwError('BAD_REQUEST', 'Type a topic of 2 to 200 characters.');
   if (!hub) return { available: false, questions: [], warnings: [], message: PRACTICE_TEXT.libraryOff };
-  const res = await searchHub(hub, requestOf(scope, query));
+  requireOfferedScope(scope);
+  // The word "questions" pulls the book's exercise rows forward: the hub ranks them with the explanatory text, and a topic alone often returns none (measured on the live book).
+  const res = await searchHub(hub, requestOf(scope, `${query} questions`));
   const q = shingles(query, 1);
   const ranked = questionsOf(res)
     .map((c, i) => ({ c, i, s: jaccard(q, shingles(c.text, 1)) }))

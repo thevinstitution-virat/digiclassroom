@@ -135,6 +135,11 @@ const EnvSchema = z.object({
    */
   HW_SELF_PRACTICE_REQUIRE_ELIGIBLE_GROUP: bool(true),
   /**
+   * The books InkBuddy offers, as "class:subject:medium" separated by commas (e.g. "9:Science:en,10:Science:en"). Only these can be searched or started:
+   * the library places a book at a class, so a scope outside the list could be answered from a book of another subject. Default: the one book in the library.
+   */
+  HW_SELF_PRACTICE_SCOPES: str(),
+  /**
    * Strict marking, "right idea, wrong detail" (docs/hw-eval/verdicts.md): the share of the key point's marks given.
    * zero (the default; phase 1c's behaviour), half (half the point's marks, rounded down to a half mark) or full.
    * The teachers decide this; the code only applies it.

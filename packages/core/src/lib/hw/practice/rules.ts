@@ -77,6 +77,10 @@ export const PRACTICE_TEXT = {
     en: 'The answer key for this question could not be built. Please choose another question.',
     hi: 'इस प्रश्न की उत्तर-कुंजी नहीं बन सकी। कृपया कोई दूसरा प्रश्न चुनें।',
   },
+  scopeOff: {
+    en: 'That class and subject are not available yet. Choose one from the list.',
+    hi: 'वह कक्षा और विषय अभी उपलब्ध नहीं हैं। सूची में से कोई चुनें।',
+  },
   libraryOff: {
     en: 'Textbook questions are not available yet.',
     hi: 'पाठ्यपुस्तक के प्रश्न अभी उपलब्ध नहीं हैं।',
