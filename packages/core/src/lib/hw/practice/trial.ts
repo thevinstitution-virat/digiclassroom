@@ -41,6 +41,29 @@ export async function getTrial(x: Exec, userId: string): Promise<TrialRow | null
   return r ? rowOf(r) : null;
 }
 
+/**
+ * What the Virat Evaluator tab needs to decide what to show: is self-practice on, may this person use it (no institution, or already has a
+ * trial), and where the trial stands. The refusal text is given in both languages; the screen picks one.
+ */
+export async function practiceOverview(userId: string, now = new Date()) {
+  const cfg = getHwConfig();
+  if (!cfg.HW_SELF_PRACTICE_ENABLED) return { enabled: false as const };
+  const t = await getTrial(db, userId);
+  const [m] = (await db.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM member WHERE user_id = ${userId}`)).rows;
+  const v = trialVerdict(t, now, cfg.HW_SELF_PRACTICE_STEP_RESERVE_PAISE);
+  return {
+    enabled: true as const,
+    /** Someone who belongs to an institution and has no trial is not who this is for. */
+    eligible: t !== null || (m?.n ?? 0) === 0,
+    started: t !== null,
+    active: v.ok,
+    trialDays: cfg.HW_SELF_PRACTICE_TRIAL_DAYS,
+    daysLeft: v.ok ? v.daysLeft : 0,
+    allowanceLeftPct: t && t.budgetPaise > 0 ? Math.round((100 * Math.max(0, t.budgetPaise - t.spentPaise)) / t.budgetPaise) : t ? 0 : 100,
+    message: v.ok || !t ? null : { en: refusalText(v.why, 'en'), hi: refusalText(v.why, 'hi') },
+  };
+}
+
 /** The learner's trial, as the screens show it. */
 export async function trialStatus(userId: string, lang: PracticeLang = 'en', now = new Date()) {
   const t = await getTrial(db, userId);

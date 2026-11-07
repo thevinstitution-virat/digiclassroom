@@ -26,10 +26,12 @@ export default function StudentAssignmentPage() {
 
   const status = start.data?.submission.status
   useEffect(() => {
-    if (status !== 'submitted' && status !== 'processing') return
+    // Self-practice has no teacher to wait for, so the result arrives on its own: keep checking while it is being marked too.
+    const waiting = status === 'submitted' || status === 'processing' || (start.data?.practice === true && (status === 'ready_for_review' || status === 'graded'))
+    if (!waiting) return
     const h = setInterval(load, POLL_MS)
     return () => clearInterval(h)
-  }, [status, load])
+  }, [status, load, start.data?.practice])
 
   const d = start.data
   return (
@@ -37,7 +39,9 @@ export default function StudentAssignmentPage() {
       roles={['student']}
       title={d?.assignment.title}
       subtitle={d ? `${d.assignment.subject}${d.assignment.instructions ? ` — ${d.assignment.instructions}` : ''}` : undefined}
-      actions={<Button asChild variant="ghost" size="sm"><Link href="/dashboard/student/assignments"><ChevronLeft className="mr-1 h-4 w-4" />{t('common.back')}</Link></Button>}
+      actions={d?.practice
+        ? <Button asChild variant="ghost" size="sm"><Link href="/dashboard/user/evaluator"><ChevronLeft className="mr-1 h-4 w-4" />{t('pr.back')}</Link></Button>
+        : <Button asChild variant="ghost" size="sm"><Link href="/dashboard/student/assignments"><ChevronLeft className="mr-1 h-4 w-4" />{t('common.back')}</Link></Button>}
     >
       {!loaded || (start.isPending && !d) ? <HwLoading /> : start.error && !d ? (
         <HwError message={start.error.message} onRetry={load} />

@@ -23,6 +23,7 @@ import {
   PenLine,
 } from 'lucide-react'
 import { useHwStatus } from '@/components/hw/HwShell'
+import { api } from '@/lib/trpc/client'
 import { EVALUATE_NAV, useIsRater } from '@/components/hw-eval/useEvaluateNav'
 
 interface UserSidebarProps {
@@ -37,6 +38,8 @@ interface UserSidebarProps {
 export default function UserSidebar({ user }: UserSidebarProps) {
   const persona = user?.persona || 'student'
   const hw = useHwStatus()
+  // Independent learners (no institution): the self-practice tab, while the feature is on for them.
+  const practice = api.hw.practice.status.useQuery(undefined, { staleTime: 60_000, retry: false })
   const isRater = useIsRater()
 
   // Grouped by use case (mirrors the section pattern already shipped on PDLMS's
@@ -56,7 +59,8 @@ export default function UserSidebar({ user }: UserSidebarProps) {
       section: 'Learn',
     }),
     // Only for students of an institution with Handwritten Assignments switched on.
-    ...(hw.data?.enabled && hw.data.role === 'student'
+    // (A self-practice learner's questions live under Virat Evaluator below, not here.)
+    ...(hw.data?.enabled && hw.data.role === 'student' && !hw.data.practice
       ? [createNavigationItem('Assignments', '/dashboard/student/assignments', PenLine, {
           description: 'Written answers for your teacher',
           featured: true,
@@ -89,6 +93,14 @@ export default function UserSidebar({ user }: UserSidebarProps) {
       primary: true,
       shortName: 'Tutor',
     }),
+    ...(practice.data?.enabled && practice.data.eligible
+      ? [createNavigationItem('Virat Evaluator', '/dashboard/user/evaluator', PenLine, {
+          description: 'Practise textbook questions',
+          featured: true,
+          section: 'AI & Research',
+          shortName: 'Evaluator',
+        })]
+      : []),
     createNavigationItem('Sarvagya', '/dashboard/sarvagya', Search, {
       description: 'AI Research Assistant',
       featured: true,

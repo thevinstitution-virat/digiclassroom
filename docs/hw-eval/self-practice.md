@@ -4,7 +4,7 @@ Owner decisions (7 Nov): an independent learner **practises textbook questions**
 marks and feedback; the model answer comes from the textbook). The **trial is up to ₹10 of AI cost within 7 days**. It opens **only after the
 strict-marking gates pass**, with marks shown as an **AI practice estimate**.
 
-Status (7 Nov): **phase 1 (backend) is built and tested locally; nothing is migrated on the server or switched on.** Phase 2 (the question picker) is built and tested locally (below). Phases 3 and 4 are not started.
+Status (7 Nov): **phase 1 (backend) is built and tested locally; nothing is migrated on the server or switched on.** Phases 2 (question picker) and 3 (the tab, API and screens) are built and tested locally (below). Phase 4 is not started. **Phase 3 has not been looked at in a browser**: the checks are type checks, lint, API tests against Postgres and text tests.
 
 ## Why this is a new mode, not a switch
 
@@ -57,6 +57,19 @@ Read from the code on 7 Nov:
 - A question's marks come from its length (up to 10 words: 1 mark, up to 25: 3, longer: 5), because a book exercise has none; the key splits them over the book's key points.
 - Tests: `practice-attempt` (16, with a fake hub and the key only queued); the whole hw suite passes: 700.
 
+## What phase 3 built (7 Nov)
+
+- **API** (`hw.practice` in the tRPC router): `status` (never throws for off or not-for-you), `start`, `search`, `startQuestion`. They work from the signed-in user, not from an institution, because an independent learner has none; errors map like the rest of `hw`. Search and start are rate limited. `hw.status` now also says `practice: true` for someone working in the practice space.
+- **The tab** `/dashboard/user/evaluator` ("Virat Evaluator", shown in the user sidebar only while self-practice is on and the person has no institution or already has a trial): the free-trial introduction and start button; days left and the share of the practice allowance left (never rupees); the finder (class, subject, medium, topic) and its results; "Your practice" list. When the trial has ended the finder is replaced by the plain two-language message and past work stays visible. English and Hindi, with the same language switch as the other hw screens.
+- **The answer and result screens are the ordinary student ones** (ink or typed answer, hand in, reading, marks). For practice work they change: the back link returns to the Evaluator; the "tap misread words to send to your teacher" panel is hidden (there is no teacher); a returned result shows the "AI practice estimate" label and the "no teacher has checked it" note from the server in the learner's language; a handed-in answer with no mark yet says why it might be missing, and the page keeps checking while it waits. The sidebar's "Assignments" item is hidden for these learners.
+- Tests: `practice-api` (9, tRPC against Postgres with a fake session and hub), `practice-ui` (6: every pr.* string has Hindi with the same placeholders, every key the screens use exists, the sidebar rule). The whole hw suite passes: 715.
+
+### What a learner cannot do yet
+
+- **Try a held question again.** If the reader or the AI was not sure, the answer has no mark and the same question opens the same attempt. A "write it again" needs a reset of the submission and its reading; it is the next thing to build.
+- **Write on paper and photograph it** (decision D4).
+- **See the amounts.** By design they see days left and a percentage of the allowance, not rupees.
+
 ### Limits to know
 
 - **Photo answers do not exist yet** (decision D4), so a learner answers on screen (ink) or by typing. Writing on paper and photographing it is not possible.
@@ -91,5 +104,5 @@ Read from the code on 7 Nov:
 
 1. **Backend (done 7 Nov, local):** migration 031 and down, trial service, actor change, per-learner budget check, automatic return with the label, tests.
 2. **Question picker (done 7 Nov, local):** search the hub for exercise questions, verify, create the attempt, queue the key.
-3. **Tab and pages (next):** the sidebar item, the picker, the answer page (reusing the student answer screen), the result with the label, trial status. English and Hindi.
+3. **Tab and pages (done 7 Nov, local, not checked in a browser):** the sidebar item, the picker, the answer page (reusing the student answer screen), the result with the label, trial status. English and Hindi.
 4. **Pilot checklist:** the blockers above cleared, then a trial with a few invited learners.

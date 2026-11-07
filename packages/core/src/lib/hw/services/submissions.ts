@@ -69,6 +69,8 @@ export async function startSubmission(actor: HwActor, assignmentId: string) {
   const answers = await db.select().from(hwAnswer).where(eq(hwAnswer.submissionId, s.id));
   return {
     assignment: { id: a.id, title: a.title, subject: a.subject, instructions: a.instructions, dueAt: a.dueAt, totalMarks: num(a.totalMarks), allowedModes: a.allowedModes, status: a.status },
+    // Self-practice: no teacher is involved, and the screens say so.
+    practice: a.organizationId === PRACTICE_ORG_ID,
     submission: { id: s.id, status: s.status, submittedAt: s.submittedAt, isLate: s.isLate },
     questions: questions.map(studentQuestion),
     answers: answers.map((x) => ({

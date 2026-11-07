@@ -5,7 +5,7 @@
 
 import { z } from 'zod';
 import { TRPCError, type inferRouterOutputs } from '@trpc/server';
-import { createTRPCRouter, protectedProcedure } from '../server';
+import { createTRPCRouter, protectedProcedure, rateLimit } from '../server';
 import { resolveHwActor } from '@/lib/hw/access/actor';
 import { isHwEnabled } from '@/lib/hw/access/guards';
 import type { HwActor } from '@/lib/hw/access/policy';
@@ -19,6 +19,10 @@ import { getHwConfig } from '@/lib/hw/config';
 import { institutionMonitor } from '@/lib/hw/monitoring/views';
 import { conceptFeedbackForSubmission } from '@/lib/hw/concept-feedback';
 import { libraryGraphEnabled } from '@/lib/library/graph-client';
+import { PRACTICE_ORG_ID } from '@/lib/hw/practice/rules';
+import { practiceOverview, startTrial } from '@/lib/hw/practice/trial';
+import { parseScope, searchPracticeQuestions } from '@/lib/hw/practice/catalog';
+import { startAttempt } from '@/lib/hw/practice/attempt';
 
 const TRPC_CODE: Record<HwErrorCode, TRPCError['code']> = {
   UNAUTHORIZED: 'UNAUTHORIZED',
@@ -47,7 +51,26 @@ async function run<T>(ctx: { req: Request }, fn: (actor: HwActor) => Promise<T>)
   }
 }
 
+/** The same error mapping as run(), for calls that belong to a person rather than to an institution (an independent learner has none). */
+async function runUser<T>(ctx: { userId: string | null }, fn: (userId: string) => Promise<T>): Promise<T> {
+  if (!ctx.userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
+  try {
+    return await fn(ctx.userId);
+  } catch (e) {
+    if (isHwError(e)) {
+      if (e.code === 'NOT_CONFIGURED' || e.code === 'PROVIDER_ERROR' || e.code === 'INVALID_PROVIDER_OUTPUT') console.error(`[hw] ${e.code}: ${e.message}`);
+      throw new TRPCError({ code: TRPC_CODE[e.code], message: e.publicMessage, cause: e });
+    }
+    throw e;
+  }
+}
+
 const id = z.string().min(1).max(64);
+const practiceScope = z.object({
+  classLevel: z.union([z.string().trim().min(1).max(20), z.number().int().min(1).max(12)]),
+  subject: z.string().trim().min(2).max(60),
+  medium: z.enum(['en', 'hi']),
+});
 const mode = z.enum(['typed', 'ink', 'photo']);
 const marks = z.number().positive().max(100).refine((n) => Math.round(n * 2) === n * 2, 'Marks must be whole or half marks');
 const itemMarks = z.array(z.object({ rubric_item_id: id, marks: z.number().min(0).max(100) })).max(20);
@@ -90,11 +113,31 @@ export const hwRouter = createTRPCRouter({
   status: protectedProcedure.query(async ({ ctx }) => {
     try {
       const actor = await resolveHwActor(ctx.req.headers);
-      return { enabled: await isHwEnabled(actor.orgId), role: actor.role, orgId: actor.orgId };
+      // practice: this person works in the self-practice institution (an independent learner), not a school.
+      return { enabled: await isHwEnabled(actor.orgId), role: actor.role, orgId: actor.orgId, practice: actor.orgId === PRACTICE_ORG_ID };
     } catch (e) {
-      if (isHwError(e) && (e.code === 'FORBIDDEN' || e.code === 'UNAUTHORIZED')) return { enabled: false, role: 'none' as const, orgId: null, reason: e.publicMessage };
+      if (isHwError(e) && (e.code === 'FORBIDDEN' || e.code === 'UNAUTHORIZED')) return { enabled: false, role: 'none' as const, orgId: null, practice: false, reason: e.publicMessage };
       throw e;
     }
+  }),
+
+  // ── Independent learners: self-practice (docs/hw-eval/self-practice.md) ───────
+  practice: createTRPCRouter({
+    /** For the tab and the sidebar: never throws for "off" or "not for you". */
+    status: protectedProcedure.query(({ ctx }) => runUser(ctx, (u) => practiceOverview(u))),
+    start: protectedProcedure.use(rateLimit(10, 60_000))
+      .mutation(({ ctx }) => runUser(ctx, async (u) => { const r = await startTrial(u); return { started: r.started, endsAt: r.endsAt }; })),
+    /** Book exercise questions about a topic, for the learner's class, subject and medium. */
+    search: protectedProcedure.use(rateLimit(20, 60_000))
+      .input(practiceScope.extend({ query: z.string().trim().min(2).max(200) }))
+      .query(({ ctx, input }) => runUser(ctx, async () => {
+        const { query, ...scope } = input;
+        return searchPracticeQuestions(parseScope(scope), query);
+      })),
+    /** Start one picked question; returns the assignment to open (the ordinary student answer screen). */
+    startQuestion: protectedProcedure.use(rateLimit(20, 60_000))
+      .input(practiceScope.extend({ passageId: z.string().min(1).max(200), index: z.number().int().min(0).max(99), text: z.string().trim().min(8).max(2000) }))
+      .mutation(({ ctx, input }) => runUser(ctx, (u) => startAttempt(u, input))),
   }),
 
   // ── Teacher: build ────────────────────────────────────────────────────────

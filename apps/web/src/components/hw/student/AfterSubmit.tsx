@@ -96,13 +96,19 @@ function ConceptPanel({ submissionId }: { submissionId: string }) {
 }
 
 function Result({ submissionId }: { submissionId: string }) {
-  const { t } = useHwT()
+  const { t, lang } = useHwT()
   const r = api.hw.student.result.useQuery({ submissionId })
   if (r.isLoading) return <HwLoading />
   if (r.error) return <HwError message={r.error.message} onRetry={() => r.refetch()} />
   const d = r.data!
   return (
     <div className="space-y-4">
+      {d.practiceEstimate && (
+        <HwMessage>
+          <p className="font-medium">{d.practiceEstimate.label[lang]}</p>
+          <p>{d.practiceEstimate.note[lang]}</p>
+        </HwMessage>
+      )}
       <Card>
         <CardHeader><CardTitle>{t('st.result.title')}</CardTitle></CardHeader>
         <CardContent className="text-2xl font-semibold">{t('st.result.total', { got: d.total, of: d.assignment.totalMarks })}</CardContent>
@@ -156,8 +162,8 @@ export function AfterSubmit({ data }: { data: Started }) {
   const hasInk = data.answers.some((a) => a.mode === 'ink')
   return (
     <div className="space-y-4">
-      <HwMessage>{reading ? t('st.processing') : t('st.result.waiting')}</HwMessage>
-      {hasInk && !reading && (
+      <HwMessage>{reading ? t('st.processing') : data.practice ? t('pr.held') : t('st.result.waiting')}</HwMessage>
+      {hasInk && !reading && !data.practice && (
         <Card>
           <CardHeader>
             <CardTitle>{t('st.check.title')}</CardTitle>
