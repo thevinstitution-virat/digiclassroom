@@ -1068,6 +1068,58 @@ suite('handwritten assignments — integration', () => {
       expect(await gk(textbook.qid)).toBe('science|short|en|textbook_key')
     })
 
+    // ── the board-paper bank as the official scheme (phase 3) ──
+    it('a board-paper question is keyed from the person-checked bank, and its key goes stale when the row is no longer checked', async () => {
+      const { cloneBank } = await import('@/test-support/hw/bank-fixture')
+      const { expandBank, sha256 } = await import('@/lib/hw/bank/expand')
+      const bankStore = await import('@/lib/hw/bank/store')
+      const reviewStore = await import('@/lib/hw/bank/review-store')
+      const { lookupOfficialScheme } = await import('@/lib/hw/bank/official-store')
+      const code = `IT-${randomUUID().slice(0, 8)}`
+      const b = cloneBank(); b.paper.code = code
+      await bankStore.importDraft(appDb as never, expandBank(b), { actor: 'itest', sourceSha256: sha256(JSON.stringify(b)) })
+      const hashOf = async () => (await raw.query(`SELECT q.content_hash FROM hw_bank_question q JOIN hw_bank_paper p ON p.id = q.paper_id WHERE p.subject_code = $1 AND q.number = 2 AND q.alt = 'B' AND q.variant IS NULL`, [code])).rows[0].content_hash as string
+      const verdict = async (v: 'ok' | 'fix', note = '') => reviewStore.applyReview(appDb as never, {
+        format: 'cbse-paper-check/1', paper: { board: 'TESTBOARD', klass: 10, code, year: '2099-00', kind: 'sqp' }, reviewer: 'Mrs Rao',
+        verdicts: [{ q: 2, alt: 'B', variant: null, content_hash: await hashOf(), verdict: v, confirmed: [], note }],
+      }, { recordedBy: 'itest' })
+      const ref = { kind: 'sqp', session: '2099-00', subjectCode: code, questionNo: '2B', board: 'TESTBOARD' }
+      const BOARDG = 'science|short|en|board_scheme_key'
+      try {
+        official = false
+        const w = await makeWorld()
+        // The real lookup, in place of the fake one.
+        keys._setKeyRuntime(() => { const rt = runtime() as { deps: Record<string, unknown> }; rt.deps.official = (r: never) => lookupOfficialScheme(appDb as never, r); return rt as never })
+        const a = await keyed(w, { origin: 'board_paper', originRef: ref, prompt: 'Name the organ that filters blood.', marks: 2 })
+
+        // Not checked yet: the bank is not a source, so no official key (the question falls through to the other sources).
+        expect(await lookupOfficialScheme(appDb as never, ref as never)).toBeNull()
+
+        await verdict('ok')
+        await drainAll()
+        const k = await currentKey(a.qid)
+        expect(k).toMatchObject({ status: 'ready', scheme_source: 'board_scheme_key' })
+        expect(k.source_ref).toMatch(/^official: bank row /)
+        expect(Object.keys(k.passage_hashes)).toEqual([expect.stringMatching(/^bank:/)])
+        expect(await rubricOf(a.qid)).toEqual([{ description: 'Kidney', marks: 1, source: 'key' }, { description: 'It filters the blood', marks: 1, source: 'key' }])
+        expect(await qrow(a.qid)).toMatchObject({ rubric_mode: 'key', scheme_source: 'board_scheme_key' })
+        expect(gem.calls.length).toBe(0)   // an official key is not written by a model
+
+        // The key is good while the row is checked...
+        enforce(true); await unregister(BOARDG); await promoteGroup(BOARDG)
+        expect(await decision(a.qid)).toEqual({ eligible: true, reason: 'eligible' })
+        // ...is withdrawn the moment a person says the row needs a correction...
+        await verdict('fix', 'The second point should say the blood is filtered in the nephron')
+        expect(await decision(a.qid)).toEqual({ eligible: false, reason: 'key_stale_book' })
+        // ...and good again when the row is checked again with the same content.
+        await verdict('ok')
+        expect(await decision(a.qid)).toEqual({ eligible: true, reason: 'eligible' })
+      } finally {
+        await unregister('science|short|en|board_scheme_key')
+        await raw.query(`DELETE FROM hw_bank_paper WHERE subject_code = $1`, [code])
+      }
+    })
+
     // ── the backstop at marking time ──
     async function readyPublished(opts: { student?: boolean } = {}) {
       enforce(true)

@@ -2,18 +2,12 @@
 // refuses a file with any problem, because a paper whose marks do not add up would put a wrong total in front of a learner.
 
 import type { BankFile, BankPartIn, BankQuestion, BankVariant } from './schema';
+import { planAnyN } from './anyn';
+import { normForQuote } from './norm';
 
 const EPS = 1e-9;
 
-/** Whitespace-, case- and quote-insensitive form, so a quote matches the scheme however the PDF broke its lines. */
-export function normForQuote(s: string): string {
-  return s
-    .normalize('NFKC')
-    .replace(/[’‘]/g, "'")
-    .replace(/[“”]/g, '"')
-    .replace(/\s+/g, '')
-    .toLowerCase();
-}
+export { normForQuote };
 
 const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 
@@ -47,6 +41,9 @@ function checkParts(label: string, parts: BankPartIn[], expected: number, scheme
     }
     if (p.official_answer_quote && !nScheme.includes(normForQuote(p.official_answer_quote))) out.push(`${where}: the official-answer quote is not in the printed scheme: ${JSON.stringify(p.official_answer_quote)}`);
     if (p.any_n_of_m && p.any_n_of_m.n > p.any_n_of_m.of.length) out.push(`${where}: asks for any ${p.any_n_of_m.n} of only ${p.any_n_of_m.of.length}`);
+    // An "any N of M" part must be one the marking can turn into N slots (which point holds the list, and the marks share out in half marks).
+    const slots = planAnyN(p);
+    if (slots && !slots.ok) out.push(`${where}: ${slots.problem}`);
   }
 }
 

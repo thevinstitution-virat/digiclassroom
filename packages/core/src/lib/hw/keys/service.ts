@@ -45,6 +45,8 @@ export interface OfficialScheme {
   key: AnswerKey;
   /** Where the scheme came from, e.g. "CBSE SQP 2025-26, 086 Science, Q14 marking scheme". */
   label: string;
+  /** The bank row it was made from and the content it had, so a key built from it can be told stale when the row changes (phase 3). */
+  source?: { id: string; contentHash: string };
 }
 
 export interface KeyDeps {
@@ -129,7 +131,7 @@ export async function buildKey(req: KeyRequest, deps: KeyDeps, settings: KeySett
       const problems = checkKey(official.key, new Set(), req.marks, { requireCites: false });
       if (problems.length) return { ...meta(), status: 'key_invalid', reason: 'checks_failed', detail: `official scheme ${official.label}`, problems };
       notes.push(`official scheme: ${official.label}`);
-      return { ...meta(), status: 'grounded', source: 'official', key: official.key, passages: [], citations: [], verification: [], partial: false };
+      return { ...meta(), status: 'grounded', source: 'official', key: official.key, passages: [], citations: [], verification: [], partial: false, ...(official.source ? { officialSource: official.source } : {}) };
     }
     const r = req.officialRef;
     notes.push(`official scheme not found (${r.kind} ${r.session} ${r.subjectCode} Q${r.questionNo})`);

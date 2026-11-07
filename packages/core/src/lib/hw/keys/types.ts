@@ -23,7 +23,11 @@ export interface KeyRequest {
   subject: string;
   medium: Medium;
   bookHint?: { contentItemId?: string; title?: string; chapter?: string };
-  officialRef?: { kind: 'sqp' | 'past_paper'; session: string; subjectCode: string; questionNo: string };
+  /**
+   * questionNo is the number as printed, with the alternative for an internal choice ("26A"), and "-vi" for the visually impaired version.
+   * board and classLevel narrow the paper when a subject code is not enough; with neither, two papers matching is a miss, never a guess.
+   */
+  officialRef?: { kind: 'sqp' | 'past_paper'; session: string; subjectCode: string; questionNo: string; board?: string; classLevel?: number };
   competency?: string;
   passageText?: string;
   /**
@@ -124,6 +128,8 @@ export type KeyResult =
       verification: PointVerification[];
       /** Some point is only partly supported: usable only in runs that allow partial keys. */
       partial: boolean;
+      /** An official key: the bank row it came from and the content it had (phase 3), kept so a changed row makes the key stale. */
+      officialSource?: { id: string; contentHash: string };
     })
   | (KeyMeta & { status: 'no_grounding'; reason: NoGroundingReason; detail: string })
   | (KeyMeta & { status: 'key_invalid'; reason: KeyInvalidReason; detail: string; problems: string[] });
