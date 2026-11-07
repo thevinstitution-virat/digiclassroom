@@ -127,6 +127,22 @@ suite('self-practice phase 3 — API', () => {
       expect(src).toContain('practice: a.organizationId === PRACTICE_ORG_ID')
     })
 
+    it('"write it again" goes through the API: a held answer becomes a draft, a stranger gets nothing', async () => {
+      const u = await addUser('e5')
+      const api = as(u)
+      await api.practice.start()
+      const made = await api.practice.startQuestion({ ...pickInput, passageId: 'p-api-1', index: 0, text: Q })
+      const opened = await api.student.start({ assignmentId: made.assignmentId })
+      const sid = opened.submission.id
+      await raw.query(`INSERT INTO hw_answer (id, organization_id, submission_id, question_id, mode, transcript, transcript_status) VALUES ($1,$2,$3,$4,'ink','x','done')`, [randomUUID(), PRACTICE_ORG_ID, sid, opened.questions[0].id])
+      await raw.query(`UPDATE hw_submission SET status = 'ready_for_review', submitted_at = now() WHERE id = $1`, [sid])
+      const stranger = await addUser('e6')
+      await as(stranger).practice.start()
+      await expect(as(stranger).practice.retry({ submissionId: sid })).rejects.toMatchObject({ code: 'NOT_FOUND' })
+      expect(await as(u).practice.retry({ submissionId: sid })).toEqual({ submissionId: sid })
+      expect((await as(u).student.start({ assignmentId: made.assignmentId })).submission.status).toBe('draft')
+    })
+
     it('search says so when the library hub is off, and a question cannot be started then', async () => {
       const u = await addUser('e2')
       const api = as(u)

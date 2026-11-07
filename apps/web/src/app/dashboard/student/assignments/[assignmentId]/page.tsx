@@ -48,7 +48,7 @@ export default function StudentAssignmentPage() {
       ) : !d ? null : d.submission.status === 'draft' ? (
         d.assignment.status === 'closed' ? <HwMessage>{t('st.closed')}</HwMessage> : <AnswerWorkspace data={d} onSubmitted={load} />
       ) : (
-        <AfterSubmit data={d} />
+        <AfterSubmit data={d} onRetry={load} />
       )}
     </HwShell>
   )

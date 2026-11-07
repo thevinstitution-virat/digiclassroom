@@ -61,6 +61,22 @@ export const PRACTICE_TEXT = {
     en: 'You have started as many practice questions as the free trial allows. Upgrade to practise more.',
     hi: 'आपने निःशुल्क ट्रायल में जितने अभ्यास प्रश्न मिलते हैं, उतने शुरू कर लिए हैं। और अभ्यास के लिए अपग्रेड करें।',
   },
+  retryBusy: {
+    en: 'Your answer is still being processed. Please try again in a minute.',
+    hi: 'आपका उत्तर अभी जाँचा जा रहा है। कृपया एक मिनट बाद फिर कोशिश करें।',
+  },
+  retryNotHeld: {
+    en: 'This answer does not need to be written again.',
+    hi: 'इस उत्तर को दोबारा लिखने की ज़रूरत नहीं है।',
+  },
+  retryNoKey: {
+    en: 'This question has no answer key in the textbook, so it cannot be marked. Please choose another question.',
+    hi: 'पाठ्यपुस्तक में इस प्रश्न की उत्तर-कुंजी नहीं मिली, इसलिए इसे अंक नहीं दिए जा सकते। कृपया कोई दूसरा प्रश्न चुनें।',
+  },
+  retryKeyLimit: {
+    en: 'The answer key for this question could not be built. Please choose another question.',
+    hi: 'इस प्रश्न की उत्तर-कुंजी नहीं बन सकी। कृपया कोई दूसरा प्रश्न चुनें।',
+  },
   libraryOff: {
     en: 'Textbook questions are not available yet.',
     hi: 'पाठ्यपुस्तक के प्रश्न अभी उपलब्ध नहीं हैं।',

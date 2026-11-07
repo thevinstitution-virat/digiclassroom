@@ -64,9 +64,16 @@ Read from the code on 7 Nov:
 - **The answer and result screens are the ordinary student ones** (ink or typed answer, hand in, reading, marks). For practice work they change: the back link returns to the Evaluator; the "tap misread words to send to your teacher" panel is hidden (there is no teacher); a returned result shows the "AI practice estimate" label and the "no teacher has checked it" note from the server in the learner's language; a handed-in answer with no mark yet says why it might be missing, and the page keeps checking while it waits. The sidebar's "Assignments" item is hidden for these learners.
 - Tests: `practice-api` (9, tRPC against Postgres with a fake session and hub), `practice-ui` (6: every pr.* string has Hindi with the same placeholders, every key the screens use exists, the sidebar rule). The whole hw suite passes: 715.
 
+### Write it again (7 Nov, local)
+
+- `retryAttempt` (`practice/attempt.ts`, API `hw.practice.retry`, button "Write it again / फिर से लिखें" on the waiting screen): an answer that was read but got no mark (reader or AI not sure, key not ready, trial short) is removed with its reading and suggestions, and the submission is a draft again on the same question. The device's saved copy of the old writing is cleared first, or it would come back looking as if already uploaded.
+- Allowed only for the learner's own submission, only while it is waiting for a mark, and not while a job is still working on it. A marked (returned) answer is final. It needs a usable trial; the new reading and marking are paid from the same allowance, which is what bounds how often a learner can retry.
+- Answer key: a question the book has no key for stays refused ("choose another question"); a failed key is queued again, at most three builds per question (the platform pays for each).
+- Not cleaned up: the old handwriting image and ink file stay in storage (the rows are gone). A storage clean-up for practice files, with a retention period, belongs with the consent decision for under-18 learners.
+- Tests: `practice-retry` (11), one more in `practice-api` and one in `practice-ui`; the whole hw suite passes: 728.
+
 ### What a learner cannot do yet
 
-- **Try a held question again.** If the reader or the AI was not sure, the answer has no mark and the same question opens the same attempt. A "write it again" needs a reset of the submission and its reading; it is the next thing to build.
 - **Write on paper and photograph it** (decision D4).
 - **See the amounts.** By design they see days left and a percentage of the allowance, not rupees.
 

@@ -54,6 +54,13 @@ describe('self-practice text', () => {
     expect(read('components/hw/student/AfterSubmit.tsx')).toContain('practiceEstimate.note[lang]')
   })
 
+  it('"write it again" clears the device\'s old writing before reopening the draft, and is shown only for practice work', () => {
+    const src = read('components/hw/student/AfterSubmit.tsx')
+    expect(src).toContain('await clearDrafts(s.id); await unqueueSubmit(s.id); onRetry?.()')
+    expect(src).toContain('data.practice && !reading')
+    expect(read('app/dashboard/student/assignments/[assignmentId]/page.tsx')).toContain('onRetry={load}')
+  })
+
   it('the sidebar shows the tab only while self-practice is on and the person is eligible, and hides Assignments for them', () => {
     const side = read('components/user/profile/UserSidebar.tsx')
     expect(side).toContain('practice.data?.enabled && practice.data.eligible')

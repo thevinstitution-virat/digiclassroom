@@ -13,6 +13,7 @@ import { HwError, HwLoading, HwMessage } from '../HwShell'
 import { marksLabel, useHwT } from '../strings'
 import type { HwOut } from '../types'
 import { wordsOf } from '../text-spans'
+import { clearDrafts, unqueueSubmit } from '../ink/local-store'
 
 type Started = HwOut['student']['start']
 type Answer = Started['answers'][number]
@@ -154,15 +155,27 @@ function Result({ submissionId }: { submissionId: string }) {
   )
 }
 
-export function AfterSubmit({ data }: { data: Started }) {
+export function AfterSubmit({ data, onRetry }: { data: Started; onRetry?: () => void }) {
   const { t } = useHwT()
   const s = data.submission
+  // Self-practice: write the answer again. The device's copy of the old writing goes first, or it would come back as if already uploaded.
+  const retry = api.hw.practice.retry.useMutation({
+    onSuccess: async () => { await clearDrafts(s.id); await unqueueSubmit(s.id); onRetry?.() },
+  })
   if (s.status === 'returned') return <Result submissionId={s.id} />
   const reading = s.status === 'submitted' || s.status === 'processing'
   const hasInk = data.answers.some((a) => a.mode === 'ink')
   return (
     <div className="space-y-4">
       <HwMessage>{reading ? t('st.processing') : data.practice ? t('pr.held') : t('st.result.waiting')}</HwMessage>
+      {data.practice && !reading && (
+        <div className="space-y-2">
+          <Button variant="outline" disabled={retry.isPending} onClick={() => retry.mutate({ submissionId: s.id })}>
+            {retry.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{retry.isPending ? t('pr.retrying') : t('pr.retry')}
+          </Button>
+          {retry.error && <p className="text-sm text-red-600">{retry.error.message}</p>}
+        </div>
+      )}
       {hasInk && !reading && !data.practice && (
         <Card>
           <CardHeader>

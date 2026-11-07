@@ -444,6 +444,8 @@ const en = {
   'pr.waiting': 'Handed in. We are marking your answer.',
   'pr.held': 'Your answer has been read, but there is no mark yet. This can happen while the answer key is being prepared, when the AI is not sure enough, or when your free trial has ended. Please check back in a little while.',
   'pr.back': 'Back to Virat Evaluator',
+  'pr.retry': 'Write it again',
+  'pr.retrying': 'Opening…',
   'pr.nav': 'Virat Evaluator',
   'pr.nav.desc': 'Practise textbook questions',
 } as const
@@ -881,6 +883,8 @@ const hi: Record<HwKey, string> = {
   'pr.waiting': 'जमा हो गया। हम आपका उत्तर जाँच रहे हैं।',
   'pr.held': 'आपका उत्तर पढ़ लिया गया है, पर अभी अंक नहीं मिला है। ऐसा तब हो सकता है जब उत्तर-कुंजी तैयार हो रही हो, एआई को पूरा भरोसा न हो, या आपका निःशुल्क ट्रायल समाप्त हो गया हो। कृपया थोड़ी देर बाद फिर देखें।',
   'pr.back': 'विराट इवैल्यूएटर पर वापस',
+  'pr.retry': 'फिर से लिखें',
+  'pr.retrying': 'खुल रहा है…',
   'pr.nav': 'विराट इवैल्यूएटर',
   'pr.nav.desc': 'पाठ्यपुस्तक के प्रश्नों का अभ्यास',
 }

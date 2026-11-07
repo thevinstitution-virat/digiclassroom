@@ -6,7 +6,7 @@
 
 import { createHash } from 'node:crypto';
 import { and, eq, sql } from 'drizzle-orm';
-import { hwAssignment, hwQuestion } from '@/db/hw-schema';
+import { hwAnswer, hwAssignment, hwQuestion, hwSubmission } from '@/db/hw-schema';
 import { institutionClasses, institutionSections, studentEnrollments } from '@/db/schema';
 import { getHwConfig } from '../config';
 import { HwError } from '../errors';
@@ -33,6 +33,53 @@ async function ensureLearnerSpace(x: Exec, userId: string, level: number): Promi
     .where(and(eq(studentEnrollments.organizationId, PRACTICE_ORG_ID), eq(studentEnrollments.userId, userId), eq(studentEnrollments.classId, classId), eq(studentEnrollments.sectionId, sectionId))).limit(1);
   if (!e) await x.insert(studentEnrollments).values({ organizationId: PRACTICE_ORG_ID, userId, classId, sectionId, status: 'active' });
   return { classId, sectionId };
+}
+
+/** A question's answer key may be rebuilt this many times for a "write it again" (the platform pays for each build). */
+const MAX_KEY_BUILDS = 3;
+
+/**
+ * "Write it again" for a practice answer that was read but got no mark (the reader or the AI was not sure, the key was not ready, or the
+ * trial ran short): the answer and everything made from it is removed and the submission is a draft again, on the same question and key.
+ * Only the learner's own submission, only while it is waiting for a mark; never while a job is still working on it; never after it was
+ * returned. A failed answer key is queued again (up to MAX_KEY_BUILDS builds); a question the book has no key for stays refused.
+ */
+export async function retryAttempt(userId: string, submissionId: string): Promise<{ submissionId: string }> {
+  if (!practiceEnabled()) throw new HwError('FEATURE_DISABLED', both(PRACTICE_TEXT.off));
+  if (!(await isPracticeLearner(db, userId))) throw new HwError('FORBIDDEN', both(PRACTICE_TEXT.notStarted));
+  await requireUsableTrial(db, userId);
+  await db.transaction(async (tx) => {
+    const [s] = await tx.select().from(hwSubmission)
+      .where(and(eq(hwSubmission.id, submissionId), eq(hwSubmission.organizationId, PRACTICE_ORG_ID), eq(hwSubmission.studentId, userId))).for('update');
+    if (!s) throw new HwError('NOT_FOUND', 'Submission not found.');
+    if (s.status !== 'ready_for_review' && s.status !== 'graded') {
+      // Still being read, or not handed in: wait. Marked (returned): final.
+      throw new HwError('CONFLICT', both(s.status === 'submitted' || s.status === 'processing' ? PRACTICE_TEXT.retryBusy : PRACTICE_TEXT.retryNotHeld));
+    }
+    const questions = await tx.select().from(hwQuestion).where(eq(hwQuestion.assignmentId, s.assignmentId));
+    const busy = await tx.execute<{ n: number }>(sql`
+      SELECT count(*)::int AS n FROM hw_ai_job
+       WHERE organization_id = ${PRACTICE_ORG_ID} AND status IN ('queued', 'running', 'batch_pending')
+         AND (submission_id = ${s.id} OR question_id IN (${sql.join(questions.map((q) => sql`${q.id}`), sql`, `)}))`);
+    if ((busy.rows[0]?.n ?? 0) > 0) throw new HwError('CONFLICT', both(PRACTICE_TEXT.retryBusy));
+
+    for (const q of questions) {
+      const keys = await tx.execute<{ status: string; n: number }>(sql`
+        SELECT (SELECT status FROM hw_question_key WHERE question_id = ${q.id} AND superseded_at IS NULL) AS status,
+               (SELECT count(*)::int FROM hw_question_key WHERE question_id = ${q.id}) AS n`);
+      const { status, n } = keys.rows[0] ?? { status: null, n: 0 };
+      if (status === 'no_grounding') throw new HwError('CONFLICT', both(PRACTICE_TEXT.retryNoKey));
+      if (status === 'failed' || status === null) {
+        if (n >= MAX_KEY_BUILDS) throw new HwError('CONFLICT', both(PRACTICE_TEXT.retryKeyLimit));
+        await queueKey(tx, q, userId);
+      }
+    }
+
+    // The answer goes, and with it its reading, suggestions and marks (they cascade). Cost already spent stays spent.
+    await tx.delete(hwAnswer).where(eq(hwAnswer.submissionId, s.id));
+    await tx.update(hwSubmission).set({ status: 'draft', submittedAt: null, isLate: false, failureReason: null }).where(eq(hwSubmission.id, s.id));
+  });
+  return { submissionId };
 }
 
 export interface StartAttemptInput {

@@ -22,7 +22,7 @@ import { libraryGraphEnabled } from '@/lib/library/graph-client';
 import { PRACTICE_ORG_ID } from '@/lib/hw/practice/rules';
 import { practiceOverview, startTrial } from '@/lib/hw/practice/trial';
 import { parseScope, searchPracticeQuestions } from '@/lib/hw/practice/catalog';
-import { startAttempt } from '@/lib/hw/practice/attempt';
+import { retryAttempt, startAttempt } from '@/lib/hw/practice/attempt';
 
 const TRPC_CODE: Record<HwErrorCode, TRPCError['code']> = {
   UNAUTHORIZED: 'UNAUTHORIZED',
@@ -134,6 +134,10 @@ export const hwRouter = createTRPCRouter({
         const { query, ...scope } = input;
         return searchPracticeQuestions(parseScope(scope), query);
       })),
+    /** "Write it again": a practice answer that got no mark becomes a draft again, on the same question. */
+    retry: protectedProcedure.use(rateLimit(10, 60_000))
+      .input(z.object({ submissionId: id }))
+      .mutation(({ ctx, input }) => runUser(ctx, (u) => retryAttempt(u, input.submissionId))),
     /** Start one picked question; returns the assignment to open (the ordinary student answer screen). */
     startQuestion: protectedProcedure.use(rateLimit(20, 60_000))
       .input(practiceScope.extend({ passageId: z.string().min(1).max(200), index: z.number().int().min(0).max(99), text: z.string().trim().min(8).max(2000) }))
