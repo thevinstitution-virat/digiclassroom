@@ -8,6 +8,7 @@
 import type { ReactNode } from 'react';
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
+import { MathJaxScripts } from '@/components/providers/MathJaxScripts';
 
 async function isEvaluatorOnly(): Promise<boolean> {
   try {
@@ -29,5 +30,11 @@ async function isEvaluatorOnly(): Promise<boolean> {
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   // redirect() works by throwing, so it is called outside the try/catch above.
   if (await isEvaluatorOnly()) redirect('/evaluate');
-  return <>{children}</>;
+  // Formula rendering (MathJax) is needed here, not on the landing page or the sign-in pages.
+  return (
+    <>
+      <MathJaxScripts />
+      {children}
+    </>
+  );
 }

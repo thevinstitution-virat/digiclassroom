@@ -101,44 +101,9 @@ const nextConfig: NextConfig = {
       }
 
 
-      // Enhanced code splitting and memory optimizations
-      if (!dev && !isServer) {
-        config.optimization.splitChunks = {
-          chunks: 'all',
-          minSize: 20000,
-          maxSize: 244000,
-          cacheGroups: {
-            // Core React libraries
-            react: {
-              test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
-              name: 'react',
-              chunks: 'all',
-              priority: 20,
-            },
-            // UI libraries
-            ui: {
-              test: /[\\/]node_modules[\\/](@radix-ui|lucide-react|@heroicons)[\\/]/,
-              name: 'ui',
-              chunks: 'all',
-              priority: 15,
-            },
-            // Animation libraries
-            animation: {
-              test: /[\\/]node_modules[\\/](framer-motion)[\\/]/,
-              name: 'animation',
-              chunks: 'all',
-              priority: 10,
-            },
-            // Other vendor libraries
-            vendor: {
-              test: /[\\/]node_modules[\\/]/,
-              name: 'vendors',
-              chunks: 'all',
-              priority: 1,
-            }
-          }
-        };
-      }
+      // NOTE: there used to be a custom optimization.splitChunks here (a "vendors" group over all of node_modules with maxSize 244000). It put the
+      // whole dependency tree into the initial load of EVERY route: even /_not-found loaded 142 script files (7.9 MB raw), so the landing page took
+      // minutes on a slow connection. Next's default splitting loads only what a route needs.
 
       if (dev) {
         // Reduce bundle analysis in development

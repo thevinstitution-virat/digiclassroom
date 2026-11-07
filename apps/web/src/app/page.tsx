@@ -21,23 +21,8 @@ export default function Home() {
     }
   }, [user, isLoaded, router])
 
-  // Show loading state while checking authentication
-  if (!isLoaded) {
-    return (
-      <div className="indic-landing indic-hero-canvas min-h-screen flex items-center justify-center">
-        <div className="relative z-10 text-center">
-          <div
-            className="animate-spin rounded-full h-24 w-24 mx-auto border-4 border-transparent"
-            style={{ borderBottomColor: 'var(--accent-strong)', borderRightColor: 'var(--gold)' }}
-          />
-          <h2 className="mt-6 text-xl">Loading Digi Classroom…</h2>
-          <p className="indic-muted mt-2">Preparing your personalized learning experience</p>
-        </div>
-      </div>
-    )
-  }
-
-  // Show comprehensive landing page for unauthenticated users
+  // The landing page is rendered on the server and shown straight away, while the session is still being checked. Only once we know the
+  // visitor is signed in do we swap to the short "processing" screen below and send them to the dashboard.
   if (!user) {
     return <EnhancedLandingPage />
   }
