@@ -65,3 +65,20 @@ watching on the long, padded answers.
 - Until a group is eligible, practice learners get their handwriting read and **no mark**, with the reason shown.
 
 Run folder (git-ignored): `hw-evals/runs/run_20261107_f24722da`; report: `hw-evals/reports/textbook-key-a-v1/`.
+
+## Addendum, 7 Nov: luna as the answer-key writer (the owner chose OpenAI for writer and verifier)
+
+Same 13 grounded questions, keys built again with `openai/gpt-6-luna` as writer (low effort) and `openai/gpt-5.4-mini` as verifier, `HW_KEY_ALLOW_SAME_FAMILY=true`
+(run `run_20261107_d1b6a97c`, ₹1.49), against the Gemini writer's keys on the same questions (`run_20261107_20ee531f`, ₹3.76).
+
+| | Gemini writer (tested setup) | luna writer |
+|---|---|---|
+| Keys fully verified and usable | 13 of 13 | **10 of 13** |
+| Partly supported (not usable for AI marks) | 0 | 2 |
+| Failed the code checks (`key_invalid`) | 0 | 1 |
+| Writer cost per key | ₹0.19 | **₹0.021** (9 times less) |
+| Writer plus verifier per key | ₹0.29 | ₹0.115 |
+
+So luna is much cheaper as a key writer, and in this one run about a quarter of the questions did not get a usable key (they would show "no mark"; "write it again" re-queues a key, up to three
+builds). Thirteen questions in one run is a small sample, and the verifier is not an independent family here. Reading, re-reading and marking with luna were measured separately and are unaffected.
+Found by running it: `buildKey` re-checked the family rule itself, so the setting had to be honoured there too (fixed in c44290d, with tests).
