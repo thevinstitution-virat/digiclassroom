@@ -8,6 +8,8 @@ import { REVIEW_FORMAT } from './review';
 
 export interface SheetFigure {
   figureId: string; side: string; description: string; labels: unknown[]; readings: unknown; confidence: string; needsPersonCheck: boolean; note: string | null;
+  /** The attached picture as a data: link, so the sheet stays one offline file; null when none is attached yet. */
+  imageDataUri?: string | null;
 }
 
 export interface SheetRow {
@@ -93,6 +95,8 @@ const SCRIPT = `
 
   function figureBox(f) {
     var kids = [h('div', { text: f.figureId + ' (' + f.side + ' side, read with ' + f.confidence + ' confidence' + (f.needsPersonCheck ? ', needs a person' : '') + ')' }), h('div', { text: f.description })];
+    if (f.imageDataUri) kids.push(h('img', { src: f.imageDataUri, alt: f.description, style: 'max-width:100%;max-height:360px;background:#fff;border:1px solid var(--line);border-radius:6px;margin:4px 0' }));
+    else if (f.side === 'paper') kids.push(h('div', { class: 'hint', text: 'No picture is attached to this figure yet: learners will not be offered this question until one is.' }));
     if (f.labels && f.labels.length) kids.push(h('div', { class: 'hint', text: 'Labels: ' + JSON.stringify(f.labels) }));
     if (f.readings) kids.push(h('div', { class: 'hint', text: 'Readings: ' + JSON.stringify(f.readings) }));
     if (f.note) kids.push(h('div', { class: 'hint', text: 'Note: ' + f.note }));

@@ -18,6 +18,8 @@ export interface GradeQuestion {
   rubric: GradeRubricItem[];
   /** For a per-subject partial-credit rule (HW_PARTIAL_CREDIT_BY_SUBJECT). */
   subject?: string;
+  /** A multiple-choice question of the board-paper bank: the forms of the right and of the wrong options, so it is marked by code (bank/official.ts). */
+  choice?: { acceptedAnswers: string[]; wrongAnswers: string[] };
 }
 
 export interface GradeInput {

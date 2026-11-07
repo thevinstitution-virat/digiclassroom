@@ -15,6 +15,7 @@ import { draftKey, draftsFor, loadDraft, queueSubmit, queuedSubmit, saveDraft, u
 import { marksLabel, useHwT } from '../strings'
 import { HwMessage } from '../HwShell'
 import { isOnline, uploadInk } from './sync'
+import { QuestionFigures } from './QuestionFigures'
 import type { HwOut } from '../types'
 
 type Started = HwOut['student']['start']
@@ -242,6 +243,7 @@ export function AnswerWorkspace({ data, onSubmitted }: { data: Started; onSubmit
             <Badge>{marksLabel(t, question.marks)}</Badge>
           </div>
           <CardTitle className="whitespace-pre-wrap text-lg leading-relaxed">{question.prompt}</CardTitle>
+          {'figures' in question && <QuestionFigures figures={question.figures} />}
           {question.passage && (
             <div className="rounded-md border bg-muted/40 p-3" data-testid="question-passage">
               <p className="mb-1 text-xs font-medium text-muted-foreground">{t('st.q.passage')}</p>

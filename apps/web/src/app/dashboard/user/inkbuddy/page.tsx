@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input'
 import { Field, NativeSelect } from '@/components/hw/fields'
 import { HwError, HwLanguageToggle, HwLoading, HwMessage } from '@/components/hw/HwShell'
 import { marksLabel, useHwT, type HwKey } from '@/components/hw/strings'
+import { PaperPractice } from '@/components/hw/practice/PaperPractice'
 
 const SUBJECTS: { value: string; key: HwKey }[] = [
   { value: 'Science', key: 'pr.sub.science' },
@@ -183,6 +184,7 @@ export default function InkBuddyPage() {
             </p>
           ) : s.message ? <HwMessage>{s.message[lang]}</HwMessage> : null}
           {s.active && s.scopes.length > 0 && <Finder scopes={s.scopes} />}
+          {s.active && <PaperPractice />}
           <Mine />
         </div>
       )}

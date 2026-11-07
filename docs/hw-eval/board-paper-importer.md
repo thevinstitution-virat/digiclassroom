@@ -1,10 +1,10 @@
-# Board-paper bank, importer, person check and official key (design, phases 1-3, 8 Nov 2026)
+# Board-paper bank: importer, person check, official key and practice (design, phases 1-4, 8 Nov 2026)
 
 Why: the answer-key service has a place for an **official** key (`buildKey` tries official, then passage, then textbook; scheme source
 `board_scheme_key`), but nothing fills it. A board's sample paper and marking scheme are the best key there is: the marks and the value points are
 the board's own. This bank holds them, checked by a person, so that later phases can offer them to InkBuddy learners and use them as official keys.
 
-**Status: phases 1, 2 and 3 are built and tested locally on branch `feat/board-paper-bank`. Nothing is applied to production, nothing reads the bank yet,
+**Status: phases 1 to 4 are built and tested locally on branch `feat/board-paper-bank`. Nothing is applied to production, nothing reads the bank yet,
 and nothing is pushed. No teacher has checked a row yet: the check sheet exists and works, and is waiting for a teacher.**
 
 | Phase | What | State |
@@ -12,7 +12,7 @@ and nothing is pushed. No teacher has checked a row yet: the check sheet exists 
 | 1 | Migration 032, bank file schema, validation, dry-run importer, draft import | done |
 | 2 | Migration 033, the check sheet a teacher fills in, and the command that records the check ([phase 2](#phase-2-the-person-check)) | built; waiting for a teacher |
 | 3 | Official-key lookup in `keyRuntime()` (`deps.official`), exact-match plan for multiple choice, "any N" slots, drawings left out of AI marking ([phase 3](#phase-3-the-bank-as-the-official-key)) | built; nothing to find until a teacher has checked rows |
-| 4 | Figures shown to the learner (private images); InkBuddy "CBSE paper practice" and the builder picker (EN/HI) | not started |
+| 4 | Figure pictures (private), publishing, InkBuddy "CBSE paper practice", the builder picker (EN/HI), multiple choice marked by code ([phase 4](#phase-4-practising-from-a-paper)) | built; nothing is offered until a paper is published |
 | 5 | Evaluation through `hw-eval-mutate` with official-reference questions; equation reading checks | not started |
 
 ## The bank file (`cbse-paper-bank/2`)
@@ -90,6 +90,9 @@ two reviewers at once, the guards). The sheet was also driven in a browser: tick
 Phase 3: `bank-official.test.ts` (58 tests: question numbers, multiple choice in every form, written keys, internal choices, drawings, any-N slots, and the real
 paper's 63 rows), `bank-official-db.test.ts` (10: the lookup and every miss, two papers, the staleness check, the key service) and one case in `integration.test.ts`
 (a board-paper question is keyed from a checked bank row, no model is called, and its key goes stale when the check is withdrawn and good again when it is given again).
+Phase 4: `bank-practice.test.ts` (19: picture checks, which rows are offered, the question made from a row, multiple choice marked by code), `bank-practice-db.test.ts` (20: attaching,
+publishing, what is offered, starting a question, the grader), `bank-practice-ui.test.tsx` (18: the screens rendered, Hindi and English) and one more case in `integration.test.ts` (a teacher
+adds a question from the picker, it is keyed officially, and the student's payload carries the figure's signed link and nothing of the scheme).
 The real Class X Science paper was dry-run and imported as draft on a scratch database (39 questions → 63 rows, 80 marks), twice (second run: nothing
 written), and migration 032 was rolled back with that data in place and re-applied with an identical schema.
 
@@ -162,13 +165,53 @@ the question has an internal choice and the number does not say which; the row i
 (`key_stale_book`, "the source text its key rests on changed") and a rebuild is queued. Checked again with the same content, the same key is good again. A rebuild
 with the row gone from the bank falls through to the other sources, as the service always did; those are different keys, in their own eligibility group.
 
-**Not done in this phase (phase 4):** nothing creates `hw_question` rows from the bank yet, so `choiceVerdict` is not called by the grader. Today's exact match
-marks a right short answer free and sends everything else on; zeroing a wrong option in code, and giving a drawing's marks to nobody, need the question that
-phase 4 creates. AI marking of a `board_scheme_key` group still needs its eval gates (phase 5).
+**Left for later:** AI marking of a `board_scheme_key` group still needs its eval gates (phase 5). The phase 4 section says how `choiceVerdict` is now used by the grader.
+
+## Phase 4: practising from a paper
+
+Nothing is offered to anyone until the owner **publishes** a paper, and a published paper offers only the questions that are fair to put in front of a learner.
+
+**The operator's steps, in order** (all commands are `npm run … -w apps/api -- …`):
+
+1. `hw:paper:import` the bank file (draft rows).
+2. `hw:paper:figure list <bank.json> --kind sqp` shows every figure and whether its picture is attached; `hw:paper:figure attach <bank.json> <figure-id> <picture>` attaches a
+   crop of the board's PDF (PNG, JPEG or WebP, 40 to 4000 pixels a side, up to 3 MB; the type is read from the bytes). The picture is a private object under `hw-bank/` in R2.
+   A figure shared by two alternatives is one picture, stored once per row. `attach` is all or nothing and refuses a row a person has already checked.
+3. `hw:paper:review sheet …` makes the check sheet, now **with the pictures beside their words** (embedded, so it stays one offline file). A teacher checks, `apply` records it.
+4. `hw:paper:review publish <bank.json> --kind sqp --by "owner"` is the go-live: the paper must be fully checked and the marks must add up; the paper and its rows become `published`
+   and the act is logged with who did it. `unpublish` is the way back. A new, changed or revised row takes a published paper back to draft (the others keep their check).
+
+**What a learner is offered** (`practice/paper-rules.ts`, `offerVerdict`): a row of a published paper that is not the visually impaired version, whose paper-side figures all have
+pictures, and that the app can mark: multiple choice always (by code), a written row only when written answers of this kind can be marked (an eligible `board_scheme_key` group, or the
+owner set `HW_SELF_PRACTICE_REQUIRE_ELIGIBLE_GROUP=false`), never a row that is only a drawing. The server re-checks all of it when a question is started; the list the browser gets
+has no option, answer or scheme in it.
+
+**Starting a question** (`practice/paper.ts`): the same one-question assignment in the learner's own section as textbook practice, with origin `board_paper`, the question's words (a
+multiple-choice question lists its options and asks for the letter), the marks the app can give (a drawing's marks are not counted, and the question says so), accepted answers for
+multiple choice, and an `origin_ref` of `{kind, session, subjectCode, questionNo, board, classLevel, bankRowId}`. Its key is queued and is the board's own scheme (phase 3). The same
+question twice opens the same attempt; the same trial, budget and attempt limits apply.
+
+**Multiple choice is marked by code** (`grader/exact-match.ts`, `bank/official.ts`): the right option gets full marks, an option that is exactly a wrong one gets 0 (`rule:choice_wrong`, a
+rule model, so no AI suggestion is made and none is paid for), anything else is unclear and goes on as any other answer. This only applies to a question whose `origin_ref.bankRowId`
+names a bank row that is still checked.
+
+**Figures on the answer screen**: a question made from a bank row shows the paper's own pictures (the scheme's figures never), each with its words as the alt text. They are short-lived
+signed links (5 minutes), the same kind the marking screens use.
+
+**The teacher's picker** (builder, "Add a question from a CBSE paper"): published papers and their questions (a teacher also sees written questions without the eligibility rule and the
+visually impaired versions). The server makes the question from the bank row, so a teacher cannot attach one question's key to another question's words. This also fixes the old
+free-text "board paper" fields (`paper`, `year`), which never matched what the answer-key service looks up by.
+
+**Today's numbers for the CBSE Class X Science sample paper** (once published, with no pictures attached yet): 17 of the 20 multiple-choice questions can be offered; Q2, Q21 and Q22
+wait for pictures. The 19 written questions wait for the AI check to pass its gates (phase 5), and 6 of them (Q14, 16, 28, 35, 37, 38) also need pictures. There are 11 paper-side
+figures to attach: q2-fig1, q14-fig1, q16-figA, q16-figB, q21-figs, q22-fig1, q28-fig1, q28-fig2, q35-fig1, q37-fig1, q38-fig1. Nobody has cropped them yet.
+
+**Limits to be honest about:** a picture is checked by a person only if they look at it on the sheet (the code shows it, it cannot make anyone look); a checked row's pictures are protected
+in code, not by a database guard; Hindi is the interface language only (the paper's own words are English); the screens were tested by rendering them, not driven in a browser.
 
 ## Applying to production (later, and only on the owner's go)
 
-Two scripts, in order, same method as 031: checks, backup, rehearsal on a throwaway copy, then `--apply`.
+Phases 3 and 4 add no migration. Two scripts, in order, same method as 031: checks, backup, rehearsal on a throwaway copy, then `--apply`.
 
 1. `docs/hw-eval/apply-migration-032.sh`: four tables and two trigger functions; alters nothing. Down script drops exactly those.
 2. `docs/hw-eval/apply-migration-033.sh`: one table and two guard functions; needs 032. Down script drops exactly those; rows keep their status and checker.
@@ -176,6 +219,6 @@ Two scripts, in order, same method as 031: checks, backup, rehearsal on a throwa
 ## Decisions kept for later phases
 
 - Equations in the bank are text (`plain`/`latex`); the reader and checks come in phase 5.
-- Done in phase 3: "any N of M" points are N slots, drawings are not AI-marked, multiple choice is an exact-match plan. In phase 4 a multiple-choice row becomes a one-mark
-  very-short question with the accepted answers, so today's exact match marks it free.
+- Done in phase 3: "any N of M" points are N slots, drawings are not AI-marked, multiple choice is an exact-match plan. Done in phase 4: a multiple-choice row becomes a one-mark
+  very-short question with the accepted answers, marked by code (right and wrong both).
 - `hw_question.total_marks` is derived by trigger on publish, which is why a choice is stored per alternative and not as one question.

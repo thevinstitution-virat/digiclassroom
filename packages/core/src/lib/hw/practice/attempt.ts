@@ -24,7 +24,7 @@ export const learnerSectionId = (userId: string, level: number): string =>
   `vgp-s-${createHash('sha256').update(userId).digest('hex').slice(0, 20)}-${level}`;
 
 /** The learner's own class level and section in the practice institution, and their enrollment in it. Safe to repeat. */
-async function ensureLearnerSpace(x: Exec, userId: string, level: number): Promise<{ classId: string; sectionId: string }> {
+export async function ensureLearnerSpace(x: Exec, userId: string, level: number): Promise<{ classId: string; sectionId: string }> {
   const classId = levelClassId(level);
   const sectionId = learnerSectionId(userId, level);
   await x.insert(institutionClasses).values({ id: classId, organizationId: PRACTICE_ORG_ID, name: `Class ${level}`, level }).onConflictDoNothing();

@@ -24,6 +24,10 @@ import { practiceOverview, startTrial } from '@/lib/hw/practice/trial';
 import { parseScope, practiceReady, practiceScopes, searchPracticeQuestions } from '@/lib/hw/practice/catalog';
 import { db as hwDb } from '@/lib/hw/db';
 import { retryAttempt, startAttempt } from '@/lib/hw/practice/attempt';
+import { offeredPapers, paperQuestions, startPaperAttempt } from '@/lib/hw/practice/paper';
+import { practiceEnabled } from '@/lib/hw/practice/trial';
+import { addBankQuestion } from '@/lib/hw/bank/teacher';
+import { requireRole } from '@/lib/hw/access/guards';
 
 const TRPC_CODE: Record<HwErrorCode, TRPCError['code']> = {
   UNAUTHORIZED: 'UNAUTHORIZED',
@@ -143,10 +147,31 @@ export const hwRouter = createTRPCRouter({
     retry: protectedProcedure.use(rateLimit(10, 60_000))
       .input(z.object({ submissionId: id }))
       .mutation(({ ctx, input }) => runUser(ctx, (u) => retryAttempt(u, input.submissionId))),
+    /** Board papers a learner can practise from (published, with at least one question that can be offered and marked now). */
+    papers: protectedProcedure.use(rateLimit(30, 60_000))
+      .query(({ ctx }) => runUser(ctx, async () => (practiceEnabled() ? { available: true, papers: await offeredPapers(hwDb) } : { available: false, papers: [] }))),
+    /** The questions of one such paper. Never includes options, answers or the marking scheme. */
+    paperQuestions: protectedProcedure.use(rateLimit(30, 60_000))
+      .input(z.object({ paperId: id }))
+      .query(({ ctx, input }) => runUser(ctx, async () => (practiceEnabled() ? paperQuestions(hwDb, input.paperId) : null))),
+    /** Start one question of a board paper; returns the assignment to open. The server re-checks that it is on offer. */
+    startPaperQuestion: protectedProcedure.use(rateLimit(20, 60_000))
+      .input(z.object({ rowId: id }))
+      .mutation(({ ctx, input }) => runUser(ctx, (u) => startPaperAttempt(u, input.rowId))),
     /** Start one picked question; returns the assignment to open (the ordinary student answer screen). */
     startQuestion: protectedProcedure.use(rateLimit(20, 60_000))
       .input(practiceScope.extend({ passageId: z.string().min(1).max(200), index: z.number().int().min(0).max(99), text: z.string().trim().min(8).max(2000) }))
       .mutation(({ ctx, input }) => runUser(ctx, (u) => startAttempt(u, input))),
+  }),
+
+  // ── Teacher: the board-paper picker in the builder ─────────────────────────────
+  bank: createTRPCRouter({
+    papers: protectedProcedure.query(({ ctx }) => run(ctx, async (a) => { requireRole(a, 'admin', 'teacher'); return offeredPapers(hwDb, 'teacher'); })),
+    questions: protectedProcedure.input(z.object({ paperId: id }))
+      .query(({ ctx, input }) => run(ctx, async (a) => { requireRole(a, 'admin', 'teacher'); return paperQuestions(hwDb, input.paperId, 'teacher'); })),
+    /** Adds the question to a draft assignment; the server makes it from the bank row. */
+    addQuestion: protectedProcedure.input(z.object({ assignmentId: id, rowId: id }))
+      .mutation(({ ctx, input }) => run(ctx, (a) => addBankQuestion(a, input.assignmentId, input.rowId))),
   }),
 
   // ── Teacher: build ────────────────────────────────────────────────────────

@@ -4,6 +4,8 @@
 //   npm run hw:paper:review -w apps/api -- status <bank.json> [--kind sqp|past_paper]                      where the check stands
 //   npm run hw:paper:review -w apps/api -- plan   <verdicts.json>                                          what recording the verdicts would do (writes nothing)
 //   npm run hw:paper:review -w apps/api -- apply  <verdicts.json> [--by "name"]                            record them
+//   npm run hw:paper:review -w apps/api -- publish   <bank.json> [--kind ...] [--by "name"]               the owner's go-live: a fully checked paper is offered to learners
+//   npm run hw:paper:review -w apps/api -- unpublish <bank.json> [--kind ...] [--by "name"]               take it back (questions go back to "checked")
 //
 // The sheet is one HTML file a teacher opens in a browser; it writes the verdicts file. `apply` is all or nothing, binds every verdict to the exact
 // content the teacher saw, and turns a row into "checked" only when every item flagged on it was confirmed. It never changes a row's content.
@@ -25,7 +27,7 @@ function fail(msg: string, code = 1): never {
   process.exit(code);
 }
 
-const USAGE = 'usage: hw-paper-review <sheet|status> <bank.json> [--kind sqp|past_paper] [--out file.html]  |  <plan|apply> <verdicts.json> [--by name]';
+const USAGE = 'usage: hw-paper-review <sheet|status|publish|unpublish> <bank.json> [--kind sqp|past_paper] [--out file.html] [--by name]  |  <plan|apply> <verdicts.json> [--by name]';
 
 function identityFromBank(path: string) {
   const parsed = parseBankFile(readFileSync(path, 'utf8'));
@@ -39,7 +41,7 @@ function identityFromBank(path: string) {
 
 async function main() {
   const [cmd, path] = process.argv.slice(2);
-  if (!['sheet', 'status', 'plan', 'apply'].includes(cmd ?? '') || !path || path.startsWith('--')) fail(USAGE, 2);
+  if (!['sheet', 'status', 'plan', 'apply', 'publish', 'unpublish'].includes(cmd ?? '') || !path || path.startsWith('--')) fail(USAGE, 2);
 
   // Everything that does not need the database is checked before it is opened.
   let verdictFile: ReturnType<typeof parseVerdictFile> | null = null;
@@ -63,10 +65,29 @@ async function main() {
     const rs = await import('@/lib/hw/bank/review-store');
     if (cmd === 'sheet' && paper) {
       const { renderReviewSheet } = await import('@/lib/hw/bank/review-sheet');
-      const data = await rs.loadSheetData(db, rs.identityOfExpanded(paper));
+      // The attached pictures go into the sheet, so a person sees each beside its words.
+      const { getHwObject } = await import('@/lib/hw/storage/r2');
+      const { sniffImage } = await import('@/lib/hw/bank/figures');
+      const readImage = async (key: string) => {
+        const bytes = await getHwObject(key);
+        const info = sniffImage(bytes);
+        return 'problem' in info ? null : `data:${info.mime};base64,${Buffer.from(bytes).toString('base64')}`;
+      };
+      const data = await rs.loadSheetData(db, rs.identityOfExpanded(paper), { readImage });
       writeFileSync(out, renderReviewSheet(data), 'utf8');
       const draft = data.rows.filter((r) => r.status === 'draft');
       console.log(`Sheet written: ${out}\n${data.rows.length} questions, ${draft.length} to check, ${draft.filter((r) => r.needsCheck.length).length} with something to look at.`);
+      return;
+    }
+    if ((cmd === 'publish' || cmd === 'unpublish') && paper) {
+      const by = arg('by') ?? process.env.HW_IMPORT_BY ?? process.env.USERNAME ?? process.env.USER ?? 'owner';
+      try {
+        const r = await rs.setPublished(db, rs.identityOfExpanded(paper), cmd === 'publish', { actor: by });
+        console.log(cmd === 'publish' ? `Published: ${r.rows} questions are now offered to learners (written ones once the AI check for board papers is eligible).` : `Unpublished: ${r.rows} questions are back to "checked"; learners are not offered this paper.`);
+      } catch (e) {
+        if (e instanceof rs.PublishRefusedError || e instanceof rs.PaperNotFoundError) fail(e.message);
+        throw e;
+      }
       return;
     }
     if (cmd === 'status' && paper) {

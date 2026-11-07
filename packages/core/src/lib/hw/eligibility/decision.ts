@@ -2,7 +2,7 @@
 // eligible AND the configuration it was promoted for is the configuration running now. Everything else, including no record at all,
 // means no suggestion: the teacher marks by hand. The default for every group is "not eligible".
 
-import { EXACT_MATCH_MODEL, BLANK_MODEL } from '../grader/exact-match';
+import { EXACT_MATCH_MODEL, BLANK_MODEL, CHOICE_WRONG_MODEL } from '../grader/exact-match';
 
 /** Why a question gets no AI suggestion. The first group is about the kind of question (the registry); the second is about the answer key (roadmap 5.2). */
 export type EligibilityReason = 'eligible' | 'enforcement_off' | 'no_record' | 'insufficient_data' | 'not_yet' | 'config_changed' | KeyOffReason;
@@ -66,4 +66,4 @@ export const aiOffMessage = (reason: EligibilityReason): string => {
 };
 
 /** A suggestion made by a rule in code (a blank answer, or an exact match to an accepted answer) is not an AI suggestion. */
-export const isRuleModel = (model: string): boolean => model === EXACT_MATCH_MODEL || model === BLANK_MODEL;
+export const isRuleModel = (model: string): boolean => model === EXACT_MATCH_MODEL || model === BLANK_MODEL || model === CHOICE_WRONG_MODEL;

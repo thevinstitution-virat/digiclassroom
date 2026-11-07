@@ -15,7 +15,8 @@ import { inkSummary, validateEncodedInk } from '../ink/stroke-format';
 import { queueSubmissionRead } from '../jobs/read-handler';
 import { finishSubmissionIfRead, setTranscript } from '../pipeline';
 import { answerFileKey, keyVersion } from '../storage/keys';
-import { putHwObject } from '../storage/r2';
+import { putHwObject, signedReadUrl } from '../storage/r2';
+import { learnerFigures, type LearnerFigure } from '../bank/figures';
 import { PRACTICE_ORG_ID, PRACTICE_TEXT } from '../practice/rules';
 import { requireUsableTrial } from '../practice/trial';
 
@@ -25,6 +26,16 @@ const MAX_TYPED_CHARS = 50_000;
 function studentQuestion(q: typeof hwQuestion.$inferSelect) {
   // The passage is part of the question and is shown; the answer key, the rubric and the model answer never are.
   return { id: q.id, position: q.position, type: q.type, prompt: q.prompt, passage: q.passage, marks: num(q.marks), languageHint: q.languageHint, answerLines: q.answerLines };
+}
+
+/** A question made from a board paper shows the paper's own figures: private pictures, as short-lived links, with their words for a screen reader. */
+async function withFigures(questions: (typeof hwQuestion.$inferSelect)[]) {
+  const ids = [...new Set(questions.filter((q) => q.origin === 'board_paper' && q.originRef?.bankRowId).map((q) => q.originRef.bankRowId))];
+  const figs = await learnerFigures(db, ids, signedReadUrl);
+  return questions.map((q): ReturnType<typeof studentQuestion> & { figures?: LearnerFigure[] } => {
+    const f = q.origin === 'board_paper' && q.originRef?.bankRowId ? figs.get(q.originRef.bankRowId) : undefined;
+    return f?.length ? { ...studentQuestion(q), figures: f } : studentQuestion(q);
+  });
 }
 
 export async function myAssignments(actor: HwActor) {
@@ -72,7 +83,7 @@ export async function startSubmission(actor: HwActor, assignmentId: string) {
     // Self-practice: no teacher is involved, and the screens say so.
     practice: a.organizationId === PRACTICE_ORG_ID,
     submission: { id: s.id, status: s.status, submittedAt: s.submittedAt, isLate: s.isLate },
-    questions: questions.map(studentQuestion),
+    questions: await withFigures(questions),
     answers: answers.map((x) => ({
       questionId: x.questionId, mode: x.mode, typedText: x.typedText, hasInk: Boolean(x.inkKey), timeSpentMs: x.timeSpentMs,
       // Transcripts appear once reading is done; never while the student can still edit.

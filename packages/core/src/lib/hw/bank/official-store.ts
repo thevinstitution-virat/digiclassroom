@@ -82,3 +82,16 @@ export async function officialSourceValid(d: Reader, rowId: string, contentHash:
   const r = (await d.select({ status: hwBankQuestion.status, contentHash: hwBankQuestion.contentHash }).from(hwBankQuestion).where(eq(hwBankQuestion.id, rowId)).limit(1))[0];
   return !!r && (r.status === 'checked' || r.status === 'published') && r.contentHash === contentHash;
 }
+
+/**
+ * The by-code marking rule for a multiple-choice question made from a bank row (its origin_ref names the row): the forms of the right and of the wrong
+ * options. null for every other question, and for a row that is no longer checked (then the question goes on as any other).
+ */
+export async function choiceRuleOf(d: Reader, q: { origin: string; originRef: Record<string, string> | null }): Promise<{ acceptedAnswers: string[]; wrongAnswers: string[] } | null> {
+  const id = q.origin === 'board_paper' ? q.originRef?.bankRowId : undefined;
+  if (!id) return null;
+  const row = (await d.select().from(hwBankQuestion).where(eq(hwBankQuestion.id, id)).limit(1))[0];
+  if (!row || (row.status !== 'checked' && row.status !== 'published')) return null;
+  const r = markingPlanOf({ number: row.number, alt: row.alt, variant: row.variant, qtype: row.qtype, marks: row.marks, options: row.options, correctOption: row.correctOption, parts: row.parts as OfficialRow['parts'] });
+  return r.ok && r.plan.mode === 'exact' ? { acceptedAnswers: r.plan.acceptedAnswers, wrongAnswers: r.plan.wrongAnswers } : null;
+}

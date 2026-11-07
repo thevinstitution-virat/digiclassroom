@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { draftBlockedReason, isUnsavedDraft, unsavedDraftQuestions } from '@/lib/hw/rubric-draft-rules'
 import { Field, NativeSelect } from '../fields'
 import { marksLabel, useHwT } from '../strings'
+import { PaperPicker } from './PaperPicker'
 import type { HwOut } from '../types'
 
 type Detail = HwOut['assignments']['get']
@@ -293,6 +294,7 @@ export function Builder({ detail, onChanged }: { detail: Detail; onChanged: () =
           {add.error && <span className="text-sm text-red-600">{add.error.message}</span>}
         </CardContent>
       </Card>
+      <PaperPicker assignmentId={detail.assignment.id} onAdded={onChanged} />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <span className="text-sm font-medium">{t('tc.b.total', { n: total })}</span>
         <Button disabled={!qs.length || publish.isPending || unchecked.length > 0} onClick={async () => {

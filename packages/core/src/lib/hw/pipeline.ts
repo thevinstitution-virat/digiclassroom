@@ -12,6 +12,7 @@ import type { GradeQuestion, GradeResult } from './grader/types';
 import { enqueueGrade } from './jobs/queue';
 import { isRuleModel } from './eligibility/decision';
 import { schemeStampsForAnswers } from './keys/product';
+import { choiceRuleOf } from './bank/official-store';
 
 export type AnswerRow = typeof hwAnswer.$inferSelect;
 
@@ -22,6 +23,7 @@ export async function loadGradeQuestion(x: Exec, questionId: string): Promise<Gr
   const rubric = await x.select().from(hwRubricItem)
     .where(and(eq(hwRubricItem.questionId, questionId), isNull(hwRubricItem.retiredAt)))
     .orderBy(asc(hwRubricItem.position), asc(hwRubricItem.createdAt));
+  const choice = await choiceRuleOf(x, q);
   return {
     id: q.id,
     type: q.type,
@@ -31,6 +33,7 @@ export async function loadGradeQuestion(x: Exec, questionId: string): Promise<Gr
     acceptedAnswers: q.acceptedAnswers ?? [],
     rubricVersion: q.rubricVersion,
     rubric: rubric.map((r) => ({ id: r.id, kind: r.kind, description: r.description, marks: num(r.marks) })),
+    ...(choice ? { choice } : {}),
   };
 }
 

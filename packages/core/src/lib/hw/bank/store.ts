@@ -39,9 +39,11 @@ const questionValues = (paperId: string, q: ExpandedQuestion) => ({
   parts: q.parts, schemeText: q.schemeText, equations: q.equations, diagramParts: q.diagramParts, needsCheck: q.needsCheck, contentHash: q.contentHash,
 });
 
-const figureValues = (questionId: string, q: ExpandedQuestion) => q.figures.map((f) => ({
+/** A figure whose words did not change keeps its picture when the row is updated (a new description means the picture may no longer be the right one). */
+const figureValues = (questionId: string, q: ExpandedQuestion, keep: Map<string, { description: string; storageKey: string | null }> = new Map()) => q.figures.map((f) => ({
   id: randomUUID(), questionId, figureId: f.figureId, side: f.side, description: f.description, labels: f.labels, readings: f.readings,
   confidence: f.confidence, needsPersonCheck: f.needsPersonCheck, note: f.note,
+  storageKey: keep.get(f.figureId)?.description === f.description ? keep.get(f.figureId)!.storageKey : null,
 }));
 
 export interface ImportResult { plan: ImportPlan; paperId: string; written: boolean }
@@ -106,8 +108,9 @@ export async function importDraft(database: Database, file: ExpandedPaper, meta:
       await tx.update(hwBankQuestion).set({
         ...content, status: 'draft', checkedBy: null, checkedAt: null, version: sql`${hwBankQuestion.version} + 1`,
       }).where(eq(hwBankQuestion.id, id));
+      const had = await tx.select({ figureId: hwBankFigure.figureId, description: hwBankFigure.description, storageKey: hwBankFigure.storageKey }).from(hwBankFigure).where(eq(hwBankFigure.questionId, id));
       await tx.delete(hwBankFigure).where(eq(hwBankFigure.questionId, id));
-      const figs = figureValues(id, q);
+      const figs = figureValues(id, q, new Map(had.map((h) => [h.figureId, h])));
       if (figs.length) await tx.insert(hwBankFigure).values(figs);
     }
 

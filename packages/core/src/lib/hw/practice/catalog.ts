@@ -42,12 +42,20 @@ export interface HubLike { search(req: HubSearchRequest): Promise<HubSearchRespo
  * Is at least one textbook-key group eligible for AI marks under the marking setup running now? Without one a learner would get their handwriting read and
  * no mark. Needs a grade model; false otherwise.
  */
-export async function textbookGroupEligible(x: Exec): Promise<boolean> {
+export async function schemeGroupEligible(x: Exec, scheme: 'textbook_key' | 'board_scheme_key'): Promise<boolean> {
   let hash: string;
   try { hash = runningConfig().hash; } catch { return false; }
   const rows = await x.select({ n: sql<number>`count(*)::int` }).from(hwEligibility)
-    .where(and(eq(hwEligibility.schemeSource, 'textbook_key'), eq(hwEligibility.status, 'eligible'), eq(hwEligibility.configHash, hash)));
+    .where(and(eq(hwEligibility.schemeSource, scheme), eq(hwEligibility.status, 'eligible'), eq(hwEligibility.configHash, hash)));
   return (rows[0]?.n ?? 0) > 0;
+}
+
+export const textbookGroupEligible = (x: Exec): Promise<boolean> => schemeGroupEligible(x, 'textbook_key');
+
+/** Can a WRITTEN board-paper answer be marked? An eligible board-scheme group (the AI check passed its gates), unless the owner relaxed that rule. Multiple choice needs neither. */
+export async function paperWrittenReady(x: Exec): Promise<boolean> {
+  if (!getHwConfig().HW_SELF_PRACTICE_REQUIRE_ELIGIBLE_GROUP) return true;
+  return schemeGroupEligible(x, 'board_scheme_key');
 }
 
 /** Ready for learners: the library and the answer keys are wired, and (unless the owner turned that off) a textbook-key group can be marked by AI. */

@@ -85,6 +85,10 @@ export const PRACTICE_TEXT = {
     en: 'Textbook questions are not available yet.',
     hi: 'पाठ्यपुस्तक के प्रश्न अभी उपलब्ध नहीं हैं।',
   },
+  paperGone: {
+    en: 'That paper question is not available any more. Please choose another one.',
+    hi: 'वह प्रश्न-पत्र का प्रश्न अब उपलब्ध नहीं है। कृपया कोई दूसरा चुनें।',
+  },
   off: {
     en: 'Self-practice is not available yet.',
     hi: 'स्व-अभ्यास अभी उपलब्ध नहीं है।',
