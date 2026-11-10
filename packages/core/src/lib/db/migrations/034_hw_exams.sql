@@ -19,7 +19,9 @@
 --   * attempt_no cannot exceed the effective allowance (the entitlement's override, else the package's attempts_per_set), enforced by a trigger so
 --     no code path can skip it.
 --   * Marks are NUMERIC(6,2) and the 0.5 grid is enforced where a board mark is stored, as in the bank.
---   * hw_exam_report is append-only, like hw_ai_grade: a second opinion is a new row, never an edit.
+--   * hw_exam_report is append-only and one per attempt: a report is never edited, and a second evaluation means a new attempt.
+--   * Published content cannot go back to draft (that would unfreeze it), an attempt can only start on a published set of a published package,
+--     and neither a set with attempts nor a bank paper a set is built on can be deleted (RESTRICT): a learner's history must not vanish.
 
 BEGIN;
 
@@ -62,7 +64,7 @@ CREATE TABLE hw_exam_set (
   subject          TEXT         NOT NULL CHECK (subject <> ''),
   subject_code     TEXT         NOT NULL CHECK (subject_code <> ''),
   title            TEXT         NOT NULL CHECK (title <> ''),
-  paper_id         VARCHAR(36)  REFERENCES hw_bank_paper(id) ON DELETE SET NULL,
+  paper_id         VARCHAR(36)  REFERENCES hw_bank_paper(id) ON DELETE RESTRICT,
   max_marks        NUMERIC(6,1) NOT NULL CHECK (max_marks > 0 AND (max_marks * 2) = round(max_marks * 2)),
   duration_minutes INTEGER      NOT NULL CHECK (duration_minutes BETWEEN 5 AND 360),
   grace_minutes    INTEGER      NOT NULL DEFAULT 20 CHECK (grace_minutes BETWEEN 0 AND 180),
@@ -170,7 +172,7 @@ CREATE TRIGGER hw_exam_entitlement_touch BEFORE UPDATE ON hw_exam_entitlement
 CREATE TABLE hw_exam_attempt (
   id                 VARCHAR(36)  PRIMARY KEY DEFAULT gen_random_uuid()::text,
   user_id            VARCHAR(255) NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
-  set_id             VARCHAR(36)  NOT NULL REFERENCES hw_exam_set(id) ON DELETE CASCADE,
+  set_id             VARCHAR(36)  NOT NULL REFERENCES hw_exam_set(id) ON DELETE RESTRICT,
   attempt_no         INTEGER      NOT NULL CHECK (attempt_no >= 1),
   assignment_id      VARCHAR(36)  REFERENCES hw_assignment(id) ON DELETE SET NULL,
   status             TEXT         NOT NULL DEFAULT 'started'
@@ -219,15 +221,19 @@ CREATE TRIGGER hw_exam_attempt_clock_frozen BEFORE UPDATE ON hw_exam_attempt
 -- attempt_no may not exceed the effective allowance: the entitlement's override, else the package's attempts_per_set.
 CREATE OR REPLACE FUNCTION hw_exam_attempt_allowance() RETURNS trigger
 LANGUAGE plpgsql AS $$
-DECLARE allowed INTEGER;
+DECLARE allowed INTEGER; set_status TEXT; pkg_status TEXT;
 BEGIN
-  SELECT COALESCE(e.attempts_per_set, p.attempts_per_set) INTO allowed
+  SELECT COALESCE(e.attempts_per_set, p.attempts_per_set), s.status, p.status INTO allowed, set_status, pkg_status
   FROM hw_exam_set s
   JOIN hw_exam_package p ON p.id = s.package_id
   LEFT JOIN hw_exam_entitlement e ON e.package_id = p.id AND e.user_id = NEW.user_id
   WHERE s.id = NEW.set_id;
   IF allowed IS NULL THEN
     RAISE EXCEPTION 'set % has no package allowance', NEW.set_id USING ERRCODE = 'restrict_violation';
+  END IF;
+  IF set_status <> 'published' OR pkg_status <> 'published' THEN
+    RAISE EXCEPTION 'set % is not published (set %, package %); no attempt can start', NEW.set_id, set_status, pkg_status
+      USING ERRCODE = 'restrict_violation';
   END IF;
   IF NEW.attempt_no > allowed THEN
     RAISE EXCEPTION 'attempt % is past the allowance of % for this set', NEW.attempt_no, allowed USING ERRCODE = 'restrict_violation';
@@ -299,6 +305,9 @@ CREATE OR REPLACE FUNCTION hw_exam_package_guard() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
   IF OLD.status = 'draft' THEN RETURN NEW; END IF;
+  IF NEW.status = 'draft' THEN
+    RAISE EXCEPTION 'a % package cannot go back to draft; retire it instead', OLD.status USING ERRCODE = 'restrict_violation';
+  END IF;
   IF NEW.board <> OLD.board OR NEW.class_level <> OLD.class_level OR NEW.exam_year <> OLD.exam_year
      OR NEW.slug <> OLD.slug OR NEW.attempts_per_set <> OLD.attempts_per_set THEN
     RAISE EXCEPTION 'a published package cannot change its identity or its attempt allowance' USING ERRCODE = 'restrict_violation';
@@ -312,6 +321,9 @@ CREATE OR REPLACE FUNCTION hw_exam_set_guard() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
   IF OLD.status = 'draft' THEN RETURN NEW; END IF;
+  IF NEW.status = 'draft' THEN
+    RAISE EXCEPTION 'a % set cannot go back to draft; retire it instead', OLD.status USING ERRCODE = 'restrict_violation';
+  END IF;
   IF NEW.package_id <> OLD.package_id OR NEW.position <> OLD.position OR NEW.kind <> OLD.kind
      OR NEW.max_marks <> OLD.max_marks OR NEW.duration_minutes <> OLD.duration_minutes
      OR NEW.subject_code <> OLD.subject_code OR NEW.medium <> OLD.medium THEN
