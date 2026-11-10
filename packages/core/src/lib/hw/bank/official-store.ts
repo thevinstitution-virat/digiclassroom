@@ -52,7 +52,7 @@ export async function findOfficial(d: Reader, ref: OfficialRef): Promise<Officia
   const row = rows[0];
   if (!row) {
     const any = await d.select({ alt: hwBankQuestion.alt }).from(hwBankQuestion).where(and(eq(hwBankQuestion.paperId, paper.id), eq(hwBankQuestion.number, no.number), isNull(hwBankQuestion.variant)));
-    if (any.some((r) => r.alt) && !no.alt) return { ok: false, miss: 'needs_alternative', detail: `question ${no.number} has an internal choice: name the alternative (${any.map((r) => `${no.number}${r.alt}`).join(' or ')})` };
+    if (any.some((r) => r.alt) && !no.alt) return { ok: false, miss: 'needs_alternative', detail: `question ${no.number} has an internal choice: name the alternative (${any.map((r) => `${no.number}${r.alt}`).sort().join(' or ')})` };
     return { ok: false, miss: 'no_row', detail: `${paper.title} has no question ${ref.questionNo}` };
   }
   const label = questionNoOf(row);

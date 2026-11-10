@@ -2,7 +2,7 @@
 // (all pure).
 
 import { parseAnswerMatch, parsePageRead, type PageRead } from '@/lib/hw/exams/page-reader';
-import { assembleBooklet, type AssembleQuestion } from '@/lib/hw/exams/assemble';
+import { assembleBooklet, choiceLetter, withoutLabel, type AssembleQuestion } from '@/lib/hw/exams/assemble';
 
 describe('parsePageRead', () => {
   it('reads a well-formed page', () => {
@@ -21,6 +21,24 @@ describe('parsePageRead', () => {
     expect(parsePageRead(null)).toEqual({ sheet: null, grid: [], segments: [] });
     expect(parsePageRead({ sheet: { code: 'X', page: 0 }, grid: [{ number: 'one' }], segments: [{ text: 'hello', confidence: 'certain', box: 'Q1' }, 7, {}] }))
       .toEqual({ sheet: null, grid: [], segments: [{ box: [], numbersSeen: [], alternative: null, text: 'hello', confidence: 0.4, unclearCount: 0 }] });
+  });
+});
+
+describe('choiceLetter', () => {
+  it.each([['B', 'B'], ['(B) virtual', 'B'], ['b) virtual and erect', 'B'], ['C.', 'C'], ['Ans: D', 'D'], ['answer - (a)', 'A'], [' ( c ) ', 'C']])('%s -> %s', (t, l) => expect(choiceLetter(t)).toBe(l));
+  it.each([['A virtual image'], ['Because light bends'], ['virtual'], ['E'], ['']])('%s -> no letter', (t) => expect(choiceLetter(t)).toBeNull());
+});
+
+describe('withoutLabel', () => {
+  it.each([
+    ['Q2. (B) virtual', 2, '(B) virtual'], ['q12 Light bends', 12, 'Light bends'], ['Question 4: F = ma', 4, 'F = ma'], ['Ans 7 - the cell', 7, 'the cell'],
+    ['12) Light bends', 12, 'Light bends'], ['3 moles of gas', 3, '3 moles of gas'], ['Q13 is not this one', 1, 'Q13 is not this one'], ['Q2 (A) Heart', 2, '(A) Heart'],
+  ])('%s (Q%d) -> %s', (t, n, out) => expect(withoutLabel(t, n)).toBe(out));
+});
+
+describe('unclear markers', () => {
+  it('[??] counts as one unreadable stretch, like [?]', () => {
+    expect(parsePageRead({ sheet: null, grid: [], segments: [{ box: [], written_numbers: [], alternative: null, text: '[?] the [??] end', confidence: 'low' }] }).segments[0]!.unclearCount).toBe(2);
   });
 });
 
@@ -87,6 +105,22 @@ describe('assembleBooklet', () => {
     const pages = [page(0, { segments: [seg({ text: 'something' })] })];
     const r = assembleBooklet({ ...base, questions, pages, matches: new Map([['p0s0', [{ number: 3, score: 0.5 }, { number: 4, score: 0.45 }]]]) });
     expect([...r.answers.values()].every((a) => a.status === 'needs_review')).toBe(true);
+  });
+
+  it('a multiple-choice answer written with words keeps only its letter; the words go in the note', () => {
+    const r = assembleBooklet({ ...base, questions, pages: [page(0, { segments: [seg({ numbersSeen: [{ number: 1, confidence: 0.95 }], text: '(B) virtual and erect' })] })] });
+    expect(r.answers.get('a1')).toMatchObject({ status: 'done', text: 'B' });
+    expect(r.answers.get('a1')!.note).toMatch(/written: \(B\) virtual and erect$/);
+  });
+
+  it('the label the learner wrote is taken off; a choice answer that names no option goes to a person', () => {
+    const r = assembleBooklet({ ...base, questions, pages: [page(0, { segments: [
+      seg({ numbersSeen: [{ number: 1, confidence: 0.95 }], text: 'Q1. virtual' }),
+      seg({ numbersSeen: [{ number: 3, confidence: 0.95 }], text: 'Q3. Grass is a producer' }),
+    ] })] });
+    expect(r.answers.get('a3')).toMatchObject({ status: 'done', text: 'Grass is a producer' });
+    expect(r.answers.get('a1')).toMatchObject({ status: 'needs_review', text: 'virtual' });
+    expect(r.answers.get('a1')!.note).toMatch(/^could not tell which option was chosen/);
   });
 
   it('hard-to-read writing goes to a person even when it is placed', () => {

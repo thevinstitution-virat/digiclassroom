@@ -16,6 +16,27 @@ import type { PageRead, ReadSegment } from './page-reader';
 
 export interface AssembleQuestion { answerId: string; number: number; alt: string | null; choice: boolean }
 
+/**
+ * A multiple-choice answer is its letter: "(B) virtual", "B.", "b) virtual", "Ans: B" all give "B". A bare letter followed by a word ("A virtual
+ * image") is not taken — it may be the article — and the answer is kept as written, for the marking to judge.
+ */
+export function choiceLetter(text: string): string | null {
+  const t = text.trim().replace(/^ans(?:wer)?\s*[:.-]?\s*/i, '');
+  const m = /^\(\s*([A-Da-d])\s*\)/.exec(t) ?? /^([A-Da-d])\s*(?:$|[.):,-])/.exec(t);
+  return m ? m[1]!.toUpperCase() : null;
+}
+
+/**
+ * The learner's own label at the start of an answer ("Q12.", "12)", "Ans 12 -", "Question 12:") is where it goes, not what it says: the reader
+ * reports it separately, so it is taken off the transcript — only at the very start, and only for this answer's own number.
+ */
+export function withoutLabel(text: string, number: number): string {
+  // "Q12", "Question 12", "Ans 12" with or without punctuation; a bare "12" only with punctuation ("12." / "12)"), so "3 moles of ..." stays whole
+  const prefixed = new RegExp(`^\\s*(?:q(?:uestion)?|ans(?:wer)?)\\s*(?:no\\.?)?\\s*${number}\\s*[.):-]?\\s+`, 'i');
+  const bare = new RegExp(`^\\s*${number}\\s*[.):-]\\s+`);
+  return text.replace(prefixed, '').replace(bare, '');
+}
+
 export interface AnswerOutcome {
   status: 'done' | 'needs_review' | 'blank';
   text: string;
@@ -95,7 +116,7 @@ export function assembleBooklet(input: {
     }
     if (!target) continue;
     const page = pages.find((p) => p.pageId === a.pageId)!;
-    add(target.answerId, { text: s.text, confidence: s.confidence, unclear: s.unclearCount, where: `page ${page.position + 1} (${a.source.replace('_', ' ')})` });
+    add(target.answerId, { text: withoutLabel(s.text, target.number), confidence: s.confidence, unclear: s.unclearCount, where: `page ${page.position + 1} (${a.source.replace('_', ' ')})` });
   }
 
   const needMatch = input.matches
@@ -109,7 +130,16 @@ export function assembleBooklet(input: {
   const answers = new Map<string, AnswerOutcome>();
   for (const q of input.questions) {
     const ps = pieces.get(q.answerId) ?? [];
-    const text = ps.map((p) => p.text).filter((t) => t.trim()).join('\n\n');
+    let text = ps.map((p) => p.text).filter((t) => t.trim()).join('\n\n');
+    // a choice question is marked by code on its letter alone; what else was written is kept in the note
+    let extra = '';
+    let noLetter = false;
+    if (q.choice && text) {
+      const letter = choiceLetter(text);
+      if (letter && text.trim() !== letter) { extra = `; written: ${text.replace(/\s+/g, ' ').slice(0, 120)}`; text = letter; }
+      // a choice question has no rubric: if no letter can be found, nothing would ever mark it — a person does
+      if (!letter) noLetter = true;
+    }
     if (!text) {
       answers.set(q.answerId, unplaced
         ? { status: 'needs_review', text: '', confidence: null, unclearCount: 0, note: 'no writing placed here, but some writing in the booklet could not be placed' }
@@ -118,10 +148,11 @@ export function assembleBooklet(input: {
     }
     const confidence = Math.min(...ps.map((p) => p.confidence));
     const unclearCount = ps.reduce((n, p) => n + p.unclear, 0);
+    const hard = confidence < input.minConfidence;
     answers.set(q.answerId, {
-      status: confidence < input.minConfidence ? 'needs_review' : 'done',
+      status: hard || noLetter ? 'needs_review' : 'done',
       text, confidence, unclearCount,
-      note: (confidence < input.minConfidence ? 'hard to read; ' : '') + `from ${ps.map((p) => p.where).join(', ')}`,
+      note: (hard ? 'hard to read; ' : '') + (noLetter ? 'could not tell which option was chosen; ' : '') + `from ${ps.map((p) => p.where).join(', ')}${extra}`,
     });
   }
   return { mapping, answers, needMatch, review };

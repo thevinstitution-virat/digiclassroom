@@ -162,6 +162,11 @@ async function readAndPlace(attemptId: string, m: Materialised, deps: EvalDeps, 
     calls.push(result);
     a = assembleBooklet({ code: sheet.layout.code, sheetPageNumbers, questions: qs, pages: reads, minConfidence, matches });
   }
+  // what a person must look at, kept with the page it is on (the report shows it: "page 2 could not be read")
+  for (const r of reads) {
+    const items = a.review.filter((x) => x.pageId === r.pageId).map((x) => ({ reason: x.reason, detail: x.detail }));
+    await db.update(hwExamPage).set({ quality: sql`${hwExamPage.quality} || ${JSON.stringify({ review: items })}::jsonb` }).where(eq(hwExamPage.id, r.pageId));
+  }
   return { answers: a.answers, pages: pages.length, review: a.review.length };
 }
 

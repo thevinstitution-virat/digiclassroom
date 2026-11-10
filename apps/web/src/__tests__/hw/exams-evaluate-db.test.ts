@@ -205,6 +205,9 @@ suite('exam packages, evaluating a booklet — integration', () => {
     expect(r).toMatchObject({ ok: true, review: 1 });
     const ans = await answersOf(attemptId);
     expect(ans.every((x) => x.status === 'needs_review')).toBe(true);
+    // and the page says why, for the report and for the person checking
+    expect((await one<{ r: unknown }>(`SELECT quality->'review' AS r FROM hw_exam_page WHERE attempt_id = $1`, [attemptId]))!.r)
+      .toEqual([{ reason: 'alternative_unknown', detail: 'answers Q2A or Q2B, not said which' }]);
   });
 
   it('a failing model is retried on later passes, then left for a person with the reason', async () => {

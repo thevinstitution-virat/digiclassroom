@@ -31,7 +31,8 @@ export interface PageRead {
 }
 
 const conf = (v: unknown): number => CONFIDENCE_VALUE[(v as keyof typeof CONFIDENCE_VALUE)] ?? CONFIDENCE_VALUE.low;
-const unclear = (t: string) => (t.match(/\[\?\]/g) ?? []).length;
+/** Unreadable-word markers; the model sometimes writes [??] for a longer unreadable stretch, which counts once. */
+const unclear = (t: string) => (t.match(/\[\?+\]/g) ?? []).length;
 const qNumber = (label: unknown): number | null => {
   const m = /(\d{1,3})/.exec(String(label ?? ''));
   return m ? Number(m[1]) : null;

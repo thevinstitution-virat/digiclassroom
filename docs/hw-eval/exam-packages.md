@@ -126,7 +126,7 @@ tested exactly and the database functions stay thin:
 | 2 | Super-admin: package and set builder, item picker, publish, grants | **done (local)**; walked through in the browser |
 | 3 | Learner: package catalogue, entitlement, start a set, the server-anchored timer, auto-stop | **done (local)**; walked through in the browser |
 | 4 | The photo booklet: multi-page upload, quality gates, ordering, page-to-question mapping | **done (local)**: booklet, printed answer sheet, and the mapping rule (fed by the reader in phase 5); needs the Study Buddy R2 bucket to run anywhere real |
-| 5 | Batch evaluation of a whole attempt: chunking, ready-by, fallback, cost booked per attempt | to do |
+| 5 | Batch evaluation of a whole attempt: chunking, ready-by, fallback, cost booked per attempt | **5a done (local)**: read, place, hand to marking, cost per attempt, run live on gpt-6-luna; **5b to do**: the batch path (ready-by, chunking, fallback) |
 | 6 | The report: marks, step marking, the 8 parameters, weak areas, progress across attempts | to do |
 | 7 | Pilot behind the existing eligibility gates, with monitoring and budgets on | to do |
 
@@ -266,4 +266,57 @@ Built so far (the reading itself is phase 5):
 - **Phase 5 then has the reader report, per page:** the sheet code and page it reads, and for each stretch
   of writing, the printed box it sits in, any question number written, and its closeness to each
   question's answer key — exactly the `PageEvidence` the rule takes.
+
+## 11. Phase 5a as built: reading a booklet and handing it to marking (11 Nov 2026)
+
+- **Its own space.** Marking work lives in a system institution `vgp-exams` with its own monthly ceiling
+  (`HW_EXAMS_PLATFORM_BUDGET_PAISE`, default Rs 5,000). It never touches an InkBuddy trial (the trial
+  charge and refusals are keyed on InkBuddy's practice space), and its cost is on its own line.
+- **One assignment per attempt** (`exams/materialise.ts`), made when the booklet is first evaluated: board
+  questions through InkBuddy's own offer path, keyed from the bank's person-checked scheme; authored
+  questions with their value points as rubric points; a multiple choice answered by its letter and
+  marked by code. Alternatives are separate questions; the one not taken is blank.
+- **Reading** (`prompts/exam-page-read.v1`): one call per page, verbatim, told only the paper's question
+  numbers — never the questions or the key, so nothing pulls the transcript towards a right answer.
+  It reports the sheet code and page, the multiple-choice grid, and each piece of writing with its box,
+  written number, chosen alternative and confidence. Kept with the page (`hw_exam_page.quality.read`).
+- **Placing** (`exams/assemble.ts` over `exams/mapping.ts`): the matching rule of section 10; the
+  text-only answer-key matcher (`prompts/answer-match.v1`) only for writing nothing else placed, then the
+  rule again. The learner's own label ("Q12.") is taken off the transcript; a multiple choice keeps its
+  letter (and goes to a person if no option can be told); alternatives by the ticked or written letter,
+  else a clear key preference, else review; hard-to-read writing to review; blanks held for review while
+  any writing is unplaced. What a person must look at is kept with its page (`quality.review`).
+- **Hand-over:** one transcript per question, then the existing pipeline: rules (blank, exact match) and
+  strict marking jobs, keys, quotas, monitoring — unchanged. The attempt stays `evaluating` until the
+  report (phase 6).
+- **Running:** a new `exams` step in the job runner claims handed-in attempts by status (no new job kind,
+  no migration), `HW_EXAMS_EVAL_PER_PASS` at a time; a failure is retried up to `HW_EXAMS_EVAL_MAX_TRIES`
+  then left for a person with the reason; a pass that died half-way is picked up again once stale.
+- **Cost** is booked as a finished `read` job on the attempt's submission; the attempt's cost is that job
+  plus its grade jobs.
+- **Publishing** now also refuses a board question InkBuddy would not offer (a figure with no picture,
+  nothing markable), with the reason; at evaluation such a row (changed after publishing) goes to a person.
+
+**Live run** (gpt-6-luna, OpenAI direct, the owner's key, 11 Nov): a 2-page plain-paper booklet — one page
+drawn "handwriting" with "Q1"/"Q2" written, one deliberately blurred. Read in about 18 s; Q1 placed by its
+written number and marked **3/3** by strict marking with the quoted evidence for each value point; Q2's
+"(B) virtual" reduced to "B" and marked **1/1 by code** (free); the blurred page came back as "[?]" at low
+confidence, could not be placed, and was recorded for a person. **Cost: 8.6 paise reading (2 pages and one
+matcher call) + 1.4 paise marking = about Rs 0.10.** Found and fixed on the way: the label kept in
+transcripts left a multiple choice unmarked; "[??]" was not counted as unreadable. The pages were drawn on
+a canvas, not photographed: **reading accuracy and the price per page must still be measured on real phone
+photos of real handwriting** before anything is priced or promised.
+
+**Owner's decision needed — AI marking of authored questions.** The pilot gate (roadmap decision D3,
+`HW_TEACHER_RUBRIC_AI_ENABLED`, off) keeps a question marked with its own rubric off AI marking: such
+questions are marked by a person. Questions the super admin writes in the builder are exactly that, so
+on production today **an authored mock's written answers would wait for a person**; board-paper
+questions (official scheme) and every multiple choice are not affected. The live run above switched the
+gate off locally to exercise the marking. Options: (a) author mocks from the bank's board questions only;
+(b) measure authored-scheme marking like the other groups and promote it through the eligibility
+registry; (c) switch the gate on for the exam space only. Board questions are still subject to the
+eligibility registry (`HW_ELIGIBILITY_ENFORCED`): their group must be promoted before AI marks show.
+
+**Phase 5b (to do):** the batch path — page reads and marking on the Batch API (half price), a visible
+"report ready by" time, chunking for the batch file limits, and the standard-path fallback.
 
