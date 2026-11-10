@@ -7,6 +7,7 @@ import { and, asc, eq, inArray, isNull, max, sql } from 'drizzle-orm';
 import { hwBankPaper, hwBankQuestion } from '@/db/hw-bank-schema';
 import { hwExamEntitlement, hwExamPackage, hwExamSet, hwExamSetItem, type ExamSetKind } from '@/db/hw-exams-schema';
 import { HwError } from '@/lib/hw/errors';
+import { offerCheck } from '@/lib/hw/practice/paper';
 import type { Exec } from '@/lib/hw/db';
 import { attainableMarks, authoredProblems, describeSetProblem, packageProblems, setProblems, type ItemFacts, type SetProblem } from './build-rules';
 
@@ -107,14 +108,15 @@ export async function getPackage(d: Exec, packageId: string) {
   if (!pkg) throw notFound('Package');
   const sets = await d.select().from(hwExamSet).where(eq(hwExamSet.packageId, packageId)).orderBy(asc(hwExamSet.position));
   const facts = await itemFactsBySet(d, sets.map((s) => s.id));
-  const summaries: SetSummary[] = sets.map((s) => {
+  const summaries: SetSummary[] = [];
+  for (const s of sets) {
     const items = facts.get(s.id) ?? [];
-    return {
+    summaries.push({
       id: s.id, position: s.position, kind: s.kind, subject: s.subject, subjectCode: s.subjectCode, title: s.title, status: s.status,
       maxMarks: s.maxMarks, durationMinutes: s.durationMinutes, items: items.length, attainable: attainableMarks(items),
-      problems: s.status === 'draft' ? setProblems(s, items).map(describeSetProblem) : [],
-    };
-  });
+      problems: s.status === 'draft' ? [...setProblems(s, items), ...(await offerProblems(d, s.id))].map(describeSetProblem) : [],
+    });
+  }
   return { package: pkg, sets: summaries };
 }
 
@@ -243,7 +245,7 @@ export async function getSet(d: Exec, setId: string) {
   }).from(hwExamSetItem).leftJoin(hwBankQuestion, eq(hwBankQuestion.id, hwExamSetItem.bankQuestionId))
     .where(eq(hwExamSetItem.setId, setId)).orderBy(asc(hwExamSetItem.position));
   const facts = (await itemFactsBySet(d, [setId])).get(setId) ?? [];
-  const problems: SetProblem[] = set.status === 'draft' ? setProblems(set, facts) : [];
+  const problems: SetProblem[] = set.status === 'draft' ? [...setProblems(set, facts), ...(await offerProblems(d, setId))] : [];
   return { set, items, attainable: attainableMarks(facts), problems: problems.map(describeSetProblem) };
 }
 
@@ -254,7 +256,7 @@ export async function publishSet(d: Exec, setId: string): Promise<{ published: b
     if (set.status === 'published') return { published: true, problems: [] };
     if (set.status === 'retired') throw new HwError('CONFLICT', 'A retired set is reopened, not published again.');
     const facts = (await itemFactsBySet(tx, [setId])).get(setId) ?? [];
-    const problems = setProblems(set, facts);
+    const problems = [...setProblems(set, facts), ...(await offerProblems(tx, setId))];
     if (problems.length) return { published: false, problems: problems.map(describeSetProblem) };
     await guarded('Publishing the set', () => tx.update(hwExamSet).set({ status: 'published' }).where(eq(hwExamSet.id, setId)));
     return { published: true, problems: [] };
@@ -275,6 +277,22 @@ export async function deleteSet(d: Exec, setId: string): Promise<void> {
     const r = await d.delete(hwExamSet).where(and(eq(hwExamSet.id, setId), eq(hwExamSet.status, 'draft'))).returning({ id: hwExamSet.id });
     if (!r.length) throw new HwError('CONFLICT', 'Only a draft set can be deleted; retire a published one.');
   });
+}
+
+/**
+ * The board-paper rows of a set that InkBuddy would not offer a learner as they stand — a figure with no picture, nothing markable — with
+ * the reason. Such a set is not published: the learner could not see or answer the question, or it could not be marked.
+ */
+async function offerProblems(d: Exec, setId: string): Promise<SetProblem[]> {
+  const rows = await d.select({ number: hwExamSetItem.number, rowId: hwExamSetItem.bankQuestionId, status: hwBankQuestion.status })
+    .from(hwExamSetItem).innerJoin(hwBankQuestion, eq(hwBankQuestion.id, hwExamSetItem.bankQuestionId)).where(eq(hwExamSetItem.setId, setId));
+  const out: SetProblem[] = [];
+  for (const r of rows) {
+    if (r.status !== 'published') continue; // already reported as not published
+    const c = await offerCheck(d, r.rowId!, 'teacher');
+    if (!c.ok) out.push({ code: 'bank_row_not_offered', number: r.number, why: c.why });
+  }
+  return out;
 }
 
 // ── items ────────────────────────────────────────────────────────────────────

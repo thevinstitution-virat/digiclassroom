@@ -128,6 +128,12 @@ const EnvSchema = z.object({
    * nothing and cannot start an attempt; the super-admin builder works either way.
    */
   HW_EXAMS_ENABLED: bool(false),
+  /** The exam space's monthly AI ceiling over all learners (paise), set once when the space is created; changed afterwards on the Tenants tab. */
+  HW_EXAMS_PLATFORM_BUDGET_PAISE: num(500_000, 0, 100_000_000),
+  /** Handed-in attempts the job runner starts evaluating per pass (each reads every page of one booklet). */
+  HW_EXAMS_EVAL_PER_PASS: num(2, 1, 50),
+  /** An evaluation that fails is retried this many times before the attempt is left for a person. */
+  HW_EXAMS_EVAL_MAX_TRIES: num(3, 1, 10),
   HW_SELF_PRACTICE_TRIAL_DAYS: num(7, 1, 90),
   HW_SELF_PRACTICE_TRIAL_BUDGET_PAISE: num(1000, 0, 100_000),
   HW_SELF_PRACTICE_STEP_RESERVE_PAISE: num(5, 0, 1000),

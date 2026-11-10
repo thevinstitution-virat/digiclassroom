@@ -29,13 +29,20 @@ const one = async <T = Record<string, unknown>>(sql: string, args: unknown[] = [
 const publicOf = (p: Promise<unknown>) => p.then(() => 'resolved', (e: { publicMessage?: string; message: string }) => e.publicMessage ?? e.message);
 const identOf = (code: string) => ({ board: 'TESTBOARD', klass: 10, code, year: '2099-00', kind: 'sqp' as const });
 
-/** The fixture paper (Q1-Q4, 10 marks, 1 hour), imported, checked by a person and published. */
-async function publishedPaper(): Promise<{ code: string; paperId: string }> {
+const be32 = (n: number) => [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255];
+const figPng = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x48, 0x44, 0x52, ...be32(300), ...be32(200), 8, 2, 0, 0, 0, ...new Array(40).fill(9)]);
+
+/** The fixture paper (Q1-Q4, 10 marks, 1 hour), imported, checked by a person and published; its figures get their pictures unless told not to. */
+async function publishedPaper(opts: { pictures?: boolean } = {}): Promise<{ code: string; paperId: string }> {
   const code = `E-${randomUUID().slice(0, 8)}`;
   codes.push(code);
   const bank = cloneBank();
   bank.paper.code = code;
   const r = await store.importDraft(database, expandBank(bank), { actor: 'importer', sourceSha256: sha256(JSON.stringify(bank)) });
+  if (opts.pictures !== false) {
+    const fig = await import('@/lib/hw/bank/figures');
+    for (const f of ['q3-fig1', 'q4-fig1']) await fig.attachFigureImage(database, async () => undefined, identOf(code), f, figPng);
+  }
   const rows = (await raw.query(`SELECT q.number, q.alt, q.variant, q.content_hash, q.needs_check FROM hw_bank_question q WHERE q.paper_id = $1`, [r.paperId])).rows;
   const verdicts: VerdictIn[] = rows.map((x) => ({ q: x.number, alt: x.alt, variant: x.variant, content_hash: x.content_hash, verdict: 'ok', confirmed: x.needs_check, note: '' }));
   const f: VerdictFile = { format: REVIEW_FORMAT, paper: identOf(code), reviewer: 'Mrs Rao', verdicts };
@@ -102,6 +109,15 @@ suite('exam packages, the builder — integration', () => {
     const pk = await b.getPackage(database, p);
     expect(pk.package.status).toBe('published');
     expect(pk.sets).toEqual([expect.objectContaining({ status: 'published', items: s.items, attainable: 10 })]);
+  });
+
+  it('refuses to publish a set whose board question a learner could not see in full (a figure with no picture)', async () => {
+    const { paperId } = await publishedPaper({ pictures: false });
+    const s = await b.setFromPaper(database, await newPackage(), paperId);
+    const r = await b.publishSet(database, s.id);
+    expect(r.published).toBe(false);
+    expect(r.problems).toEqual(expect.arrayContaining([expect.stringMatching(/^Q3 cannot be set from the board paper: a figure in the question has no picture yet/)]));
+    expect((await b.getSet(database, s.id)).problems).toEqual(r.problems);
   });
 
   it('refuses a paper that is not published', async () => {

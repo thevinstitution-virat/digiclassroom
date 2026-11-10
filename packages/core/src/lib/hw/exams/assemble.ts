@@ -1,0 +1,128 @@
+// Phase 5: from the reader's pages to one transcript per question — pure, so every rule is tested exactly. Called twice by the evaluation: once
+// with no answer-key matches (most writing is placed by the printed box or a written number), and once more after the text-only matcher has
+// scored the writing that was left (`needMatch`).
+//
+// Rules, on top of mapping.ts:
+//   * the multiple-choice grid gives a choice question its letter directly;
+//   * writing placed on a unit with alternatives (Q12 (A) or (B), or Q30 / Q31) goes to the alternative the learner ticked or wrote; failing
+//     that, to the one the answer-key match clearly prefers; failing that, to review — never to a guess;
+//   * a question with writing is 'done' unless a piece of it was read with low confidence ('needs_review');
+//   * a question with no writing is blank (it scores 0 by rule) — unless some writing on the booklet could not be placed, in which case it might
+//     have been answered there, and it goes to review instead of being marked 0.
+
+import type { KeyMatch, MappingResult, PageEvidence, Review } from './mapping';
+import { mapPages, MAPPING_LIMITS } from './mapping';
+import type { PageRead, ReadSegment } from './page-reader';
+
+export interface AssembleQuestion { answerId: string; number: number; alt: string | null; choice: boolean }
+
+export interface AnswerOutcome {
+  status: 'done' | 'needs_review' | 'blank';
+  text: string;
+  confidence: number | null;
+  unclearCount: number;
+  /** For a person: where the text came from, or why it needs them. */
+  note: string;
+}
+
+export interface AssembleResult {
+  mapping: MappingResult;
+  answers: Map<string, AnswerOutcome>;
+  /** Writing nothing placed: send to the answer-key matcher (only before matches are given). */
+  needMatch: { id: string; text: string }[];
+  review: (Review | { segmentId: string; pageId: string; reason: 'alternative_unknown'; detail: string })[];
+}
+
+export function assembleBooklet(input: {
+  code: string;
+  sheetPageNumbers: Map<number, number[]>;
+  questions: AssembleQuestion[];
+  pages: { pageId: string; position: number; read: PageRead }[];
+  matches?: Map<string, KeyMatch[]>;
+  /** Below this reading confidence a piece of writing goes to a person (HW_READ_ESCALATE_BELOW). */
+  minConfidence: number;
+}): AssembleResult {
+  const allNumbers = [...new Set(input.questions.map((q) => q.number))].sort((a, b) => a - b);
+  const pages = [...input.pages].sort((a, b) => a.position - b.position);
+  const segs = new Map<string, ReadSegment>();
+  const evidence: PageEvidence[] = pages.map((p) => ({
+    pageId: p.pageId,
+    sheet: p.read.sheet,
+    segments: p.read.segments.map((s, i) => {
+      const id = `p${p.position}s${i}`;
+      segs.set(id, s);
+      return { id, sheetBox: s.box.length ? s.box : null, numbersSeen: s.numbersSeen, keyMatches: input.matches?.get(id) ?? [] };
+    }),
+  }));
+  const mapping = mapPages(evidence, input.code, input.sheetPageNumbers, allNumbers);
+  const review: AssembleResult['review'] = [...mapping.review];
+
+  type Piece = { text: string; confidence: number; unclear: number; where: string };
+  const pieces = new Map<string, Piece[]>();
+  const add = (answerId: string, p: Piece) => pieces.set(answerId, [...(pieces.get(answerId) ?? []), p]);
+
+  // the grid: a letter per choice question
+  for (const p of pages) {
+    for (const g of p.read.grid) {
+      if (!g.letter) continue;
+      const q = input.questions.find((x) => x.number === g.number && x.choice);
+      if (q) add(q.answerId, { text: g.letter, confidence: 0.95, unclear: 0, where: `grid on page ${p.position + 1}` });
+    }
+  }
+
+  for (const a of mapping.assignments) {
+    const s = segs.get(a.segmentId)!;
+    const candidates = input.questions.filter((q) => a.numbers.includes(q.number));
+    let target: AssembleQuestion | undefined;
+    if (candidates.length === 1) target = candidates[0];
+    else if (candidates.length > 1) {
+      // which alternative: ticked or written letter, then a written number among several, then a clear answer-key preference
+      const byAlt = s.alternative ? candidates.filter((q) => q.alt === s.alternative) : [];
+      const written = s.numbersSeen.filter((n) => n.confidence >= MAPPING_LIMITS.numberConfidence).map((n) => n.number);
+      const byNumber = candidates.filter((q) => written.includes(q.number));
+      if (byAlt.length === 1) target = byAlt[0];
+      else if (byNumber.length === 1) target = byNumber[0];
+      else {
+        const ms = (input.matches?.get(a.segmentId) ?? []).filter((m) => candidates.some((q) => q.number === m.number)).sort((x, y) => y.score - x.score);
+        const [m1, m2] = ms;
+        const sameNumber = new Set(candidates.map((q) => q.number)).size === 1;
+        if (!sameNumber && m1 && m1.score >= MAPPING_LIMITS.keyScore && m1.score - (m2?.score ?? 0) >= MAPPING_LIMITS.keyMargin) target = candidates.find((q) => q.number === m1.number);
+      }
+      if (!target) {
+        review.push({ segmentId: a.segmentId, pageId: a.pageId, reason: 'alternative_unknown', detail: `answers ${candidates.map((q) => `Q${q.number}${q.alt ?? ''}`).join(' or ')}, not said which` });
+        continue;
+      }
+    }
+    if (!target) continue;
+    const page = pages.find((p) => p.pageId === a.pageId)!;
+    add(target.answerId, { text: s.text, confidence: s.confidence, unclear: s.unclearCount, where: `page ${page.position + 1} (${a.source.replace('_', ' ')})` });
+  }
+
+  const needMatch = input.matches
+    ? []
+    : review.filter((r) => r.reason === 'nothing_conclusive').flatMap((r) => {
+      const s = segs.get(r.segmentId);
+      return s && s.text.trim() ? [{ id: r.segmentId, text: s.text }] : [];
+    });
+
+  const unplaced = review.length > 0;
+  const answers = new Map<string, AnswerOutcome>();
+  for (const q of input.questions) {
+    const ps = pieces.get(q.answerId) ?? [];
+    const text = ps.map((p) => p.text).filter((t) => t.trim()).join('\n\n');
+    if (!text) {
+      answers.set(q.answerId, unplaced
+        ? { status: 'needs_review', text: '', confidence: null, unclearCount: 0, note: 'no writing placed here, but some writing in the booklet could not be placed' }
+        : { status: 'blank', text: '', confidence: null, unclearCount: 0, note: 'not attempted' });
+      continue;
+    }
+    const confidence = Math.min(...ps.map((p) => p.confidence));
+    const unclearCount = ps.reduce((n, p) => n + p.unclear, 0);
+    answers.set(q.answerId, {
+      status: confidence < input.minConfidence ? 'needs_review' : 'done',
+      text, confidence, unclearCount,
+      note: (confidence < input.minConfidence ? 'hard to read; ' : '') + `from ${ps.map((p) => p.where).join(', ')}`,
+    });
+  }
+  return { mapping, answers, needMatch, review };
+}

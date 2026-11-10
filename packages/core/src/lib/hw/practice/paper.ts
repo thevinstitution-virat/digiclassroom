@@ -99,12 +99,19 @@ export async function paperQuestions(x: Exec, paperId: string, who: Chooser = 'l
 
 /** One offerable row, re-read from the database with everything that makes it offerable re-checked. Null when it is not on offer (to this chooser, now). */
 export async function offerOf(x: Exec, rowId: string, who: Chooser): Promise<{ header: PaperHeader; row: PaperRowLike; plan: MarkingPlan } | null> {
+  const c = await offerCheck(x, rowId, who);
+  return c.ok ? c.offer : null;
+}
+
+/** offerOf with the reason when the row is not on offer (exam sets refuse to publish such a row, and say why). */
+export async function offerCheck(x: Exec, rowId: string, who: Chooser):
+  Promise<{ ok: true; offer: { header: PaperHeader; row: PaperRowLike; plan: MarkingPlan } } | { ok: false; why: string; detail?: string }> {
   const r = (await x.select({ paperId: hwBankQuestion.paperId }).from(hwBankQuestion).where(eq(hwBankQuestion.id, rowId)).limit(1))[0];
   const l = r ? await loadPaper(x, eq(hwBankPaper.id, r.paperId)) : null;
   const row = l?.rows.find((q) => q.id === rowId);
-  if (!l || !row) return null;
+  if (!l || !row) return { ok: false, why: 'not_published' };
   const v = offerVerdict(row, l.figures.get(row.id) ?? [], who === 'teacher' || await paperWrittenReady(x), { allowVisuallyImpaired: who === 'teacher' });
-  return v.ok ? { header: headerOf(l.paper), row, plan: v.plan } : null;
+  return v.ok ? { ok: true, offer: { header: headerOf(l.paper), row, plan: v.plan } } : { ok: false, why: v.why, ...(v.detail ? { detail: v.detail } : {}) };
 }
 
 /**

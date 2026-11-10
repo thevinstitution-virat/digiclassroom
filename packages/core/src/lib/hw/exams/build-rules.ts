@@ -23,6 +23,7 @@ export type SetProblem =
   | { code: 'marks_mismatch'; total: number; maxMarks: number }
   | { code: 'bank_row_not_published'; itemId: string; number: number; status: string }
   | { code: 'number_gap'; missing: number[] }
+  | { code: 'bank_row_not_offered'; number: number; why: string }
   | { code: 'no_scope' };
 
 /**
@@ -66,6 +67,14 @@ export function packageProblems(sets: { status: string }[]): PackageProblem[] {
   return sets.some((s) => s.status === 'published') ? [] : [{ code: 'no_published_set' }];
 }
 
+const OFFER_WHY: Record<string, string> = {
+  figure_missing: 'a figure in the question has no picture yet (attach it in the bank)',
+  nothing_markable: 'nothing in it can be marked here (a drawing only)',
+  unusable: 'its marking scheme cannot be used',
+  not_published: 'its row is not published',
+  visually_impaired: 'it is the visually-impaired version',
+};
+
 /** A readable line for each problem, for the super-admin screen and the CLI. */
 export function describeSetProblem(p: SetProblem): string {
   switch (p.code) {
@@ -74,6 +83,7 @@ export function describeSetProblem(p: SetProblem): string {
     case 'bank_row_not_published': return `Q${p.number} comes from a board-paper row that is ${p.status}, not published.`;
     case 'number_gap': return `Question number${p.missing.length === 1 ? '' : 's'} ${p.missing.join(', ')} ${p.missing.length === 1 ? 'is' : 'are'} missing.`;
     case 'no_scope': return 'A half-syllabus mock must list the chapters it covers.';
+    case 'bank_row_not_offered': return `Q${p.number} cannot be set from the board paper: ${OFFER_WHY[p.why] ?? p.why}.`;
   }
 }
 
