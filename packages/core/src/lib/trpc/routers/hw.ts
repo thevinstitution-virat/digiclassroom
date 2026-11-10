@@ -28,6 +28,7 @@ import { offeredPapers, paperQuestions, startPaperAttempt } from '@/lib/hw/pract
 import { practiceEnabled } from '@/lib/hw/practice/trial';
 import { addBankQuestion } from '@/lib/hw/bank/teacher';
 import { requireRole } from '@/lib/hw/access/guards';
+import { hwExamsRouter } from './hw-exams';
 
 const TRPC_CODE: Record<HwErrorCode, TRPCError['code']> = {
   UNAUTHORIZED: 'UNAUTHORIZED',
@@ -304,6 +305,9 @@ export const hwRouter = createTRPCRouter({
     result: protectedProcedure.input(z.object({ studentId: z.string().min(1).max(255), submissionId: id }))
       .query(({ ctx, input }) => run(ctx, (a) => guardian.childResult(a, input.studentId, input.submissionId))),
   }),
+
+  // ── Exam packages (docs/hw-eval/exam-packages.md): super-admin builder; learner side from phase 3 ──
+  exams: hwExamsRouter,
 
   // ── Institution admin / platform ──────────────────────────────────────────
   admin: createTRPCRouter({

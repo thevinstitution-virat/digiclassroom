@@ -2,8 +2,9 @@
 
 Design and phases, 11 Nov 2026. Branch `feat/exam-packages`, stacked on `feat/board-paper-bank`.
 
-**Status: phase 1 (schema and rules) is built on this branch. Nothing is applied to any database,
-nothing is pushed, nothing is offered to any learner.**
+**Status: phase 1 (schema and rules) is built and verified on a scratch database; phase 2's server side
+(builder store, publish checks, super-admin API) is built; its screens are not. Nothing is applied to
+any real database, nothing is pushed, nothing is offered to any learner.**
 
 ## 1. What the owner asked for
 
@@ -87,6 +88,14 @@ Database guards, not only code:
    package's `attempts_per_set`), checked by a trigger so no code path can skip it.
 4. `hw_exam_report` is append-only, like `hw_ai_grade`.
 5. A set item may only reference a bank question that is `checked` or `published` — never a draft.
+6. A published package or set can be retired and reopened but **never set back to draft** (which
+   would unfreeze it).
+7. An attempt can only be inserted on a **published set of a published package**.
+8. A set with attempts, and a bank paper a set is built on, **cannot be deleted** (`RESTRICT`):
+   a learner's history cannot vanish. A draft set nobody attempted can be.
+
+Guards 6-8 were added after 034 was first applied to a scratch database and its guards were tested
+against real Postgres (`apps/web/src/__tests__/hw/exams-db.test.ts`), which showed the holes.
 
 ## 4. Rules (pure, tested)
 
@@ -113,8 +122,8 @@ tested exactly and the database functions stay thin:
 | # | What | State |
 |---|---|---|
 | 0 | Land the board-paper bank: push, merge, apply 032 and 033, import a paper, teacher check, publish | **owner's action** |
-| 1 | Migration 034, the rules module, unit tests | **built on this branch** |
-| 2 | Super-admin: package and set builder, item picker (reuses the bank's `PaperPicker`), publish | to do |
+| 1 | Migration 034, the rules module, unit tests; 034 verified up/down/up and its guards tested on a scratch DB | **done (local)** |
+| 2 | Super-admin: package and set builder, item picker (reuses the bank's `PaperPicker`), publish | **server side done (local)**; screens to do |
 | 3 | Learner: package catalogue, entitlement, start a set, the server-anchored timer, auto-stop | to do |
 | 4 | The photo booklet: multi-page upload, quality gates, ordering, page-to-question mapping | to do |
 | 5 | Batch evaluation of a whole attempt: chunking, ready-by, fallback, cost booked per attempt | to do |
@@ -135,3 +144,26 @@ studybuddy app, which does not exist either. Both are in
 - Whether a half-syllabus mock's `syllabus_scope` is authored per subject by a teacher or generated
   from the taxonomy.
 - Rights to distribute past-paper text and figures.
+
+## 7. Phase 2 as built (server side)
+
+- `packages/core/src/lib/hw/exams/build-rules.ts` — the publish checks, pure: `attainableMarks` (each
+  internal-choice group, or else each question number, counted once at its highest mark),
+  `setProblems` (`no_items`, `marks_mismatch`, `bank_row_not_published`, `number_gap`, `no_scope`),
+  `packageProblems` (needs one published set), each with a readable line.
+- `packages/core/src/lib/hw/exams/builder.ts` — the database side: create/update/list/get/publish/
+  retire packages; add a mock set, or **turn a published board paper into a set in one call**
+  (`setFromPaper`: every published row, internal-choice alternatives kept, visually-impaired variants
+  left out, marks and time from the paper); add bank or authored items, edit, remove, reorder;
+  publish a set under a row lock after the checks; grant a package. Migration 034's refusals come
+  back as `HwError` with plain words, never a constraint name.
+- `packages/core/src/db/hw-exams-schema.ts` — the drizzle mirror of 034.
+- `packages/core/src/lib/trpc/routers/hw-exams.ts`, mounted at `hw.exams` — `admin.*` procedures,
+  `super_admin` only; `admin.grant` finds the learner by email.
+- Tests: `exams-build-rules` (pure), `exams-builder-db` and `exams-api` (scratch DB). Bank items carry
+  no chapter (the bank has none), so the builder lets the super-admin set one per item — the report's
+  weak areas by chapter depend on it.
+
+Left for phase 2: the super-admin screens (package list, package page with its sets and their
+problems, set page with the item list, the paper picker, the authored-question form, grant by email).
+

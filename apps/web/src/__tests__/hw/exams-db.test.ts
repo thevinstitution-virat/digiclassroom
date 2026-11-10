@@ -82,7 +82,10 @@ suite('exam packages, migration 034 — integration', () => {
     const c = await raw.connect();
     try {
       await c.query(`SET session_replication_role = replica`);
+      // replica mode switches off ON DELETE CASCADE too, so every child table is emptied by hand
+      if (userIds.length) for (const t of ['hw_exam_report', 'hw_exam_page']) await c.query(`DELETE FROM ${t} WHERE attempt_id IN (SELECT id FROM hw_exam_attempt WHERE user_id = ANY($1))`, [userIds]);
       if (userIds.length) await c.query(`DELETE FROM hw_exam_attempt WHERE user_id = ANY($1)`, [userIds]);
+      if (userIds.length) await c.query(`DELETE FROM hw_exam_entitlement WHERE user_id = ANY($1)`, [userIds]);
       if (packageIds.length) {
         await c.query(`DELETE FROM hw_exam_set_item WHERE set_id IN (SELECT id FROM hw_exam_set WHERE package_id = ANY($1))`, [packageIds]);
         await c.query(`DELETE FROM hw_exam_set WHERE package_id = ANY($1)`, [packageIds]);

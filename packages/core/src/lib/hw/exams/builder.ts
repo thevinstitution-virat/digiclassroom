@@ -1,0 +1,377 @@
+// Exam packages, phase 2: the super-admin builder's database side. A package holds sets; a set holds items, each a published board-paper row or
+// an authored question. Everything is editable while draft; publishing runs the checks in build-rules.ts under a row lock, and from then on
+// migration 034 freezes what a learner's attempt depends on (marks, duration, questions, allowance). The database's own refusals come back here
+// as HwError CONFLICTs with a readable message, so no caller ever sees a raw constraint name.
+
+import { and, asc, eq, inArray, isNull, max, sql } from 'drizzle-orm';
+import { hwBankPaper, hwBankQuestion } from '@/db/hw-bank-schema';
+import { hwExamEntitlement, hwExamPackage, hwExamSet, hwExamSetItem, type ExamSetKind } from '@/db/hw-exams-schema';
+import { HwError } from '@/lib/hw/errors';
+import type { Exec } from '@/lib/hw/db';
+import { attainableMarks, describeSetProblem, packageProblems, setProblems, type ItemFacts, type SetProblem } from './build-rules';
+
+// ── errors ───────────────────────────────────────────────────────────────────
+
+const pgCode = (e: unknown): string | undefined => {
+  const x = e as { code?: string; cause?: { code?: string } } | undefined;
+  return x?.code ?? x?.cause?.code;
+};
+const pgMessage = (e: unknown): string => {
+  const x = e as { message?: string; cause?: { message?: string } } | undefined;
+  return x?.cause?.message ?? x?.message ?? String(e);
+};
+
+/** Runs a write and turns the migration's refusals into a CONFLICT the super-admin can read. */
+async function guarded<T>(what: string, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    const code = pgCode(e);
+    const msg = pgMessage(e);
+    if (code === '23001') throw new HwError('CONFLICT', capitalise(msg.replace(/^.*?: /, '')), `${what}: ${msg}`); // the 034 guard triggers
+    if (code === '23505') throw new HwError('CONFLICT', `${what}: that already exists (${constraintHint(msg)}).`, msg);
+    if (code === '23514') throw new HwError('BAD_REQUEST', `${what}: the values break a rule (${constraintHint(msg)}).`, msg);
+    if (code === '23503') throw new HwError('CONFLICT', `${what}: something still depends on it, or it points at something missing.`, msg);
+    throw e;
+  }
+}
+const capitalise = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const CONSTRAINT_WORDS: Record<string, string> = {
+  hw_exam_package_identity: 'a package with this board, class, exam year and slug',
+  hw_exam_set_order: 'a set in that place',
+  hw_exam_set_item_order: 'a question in that place',
+  hw_exam_entitlement_one: 'this learner already has this package',
+  hw_exam_set_paper_shape: 'a board set must name its paper, and a mock must not',
+  hw_exam_set_scope: 'a half-syllabus mock must list its chapters',
+  hw_exam_set_item_authored_shape: 'a written question needs its parts and scheme; a multiple choice needs four options and the right one',
+  hw_exam_set_item_source: 'a question is a board-paper row or an authored one, not both',
+};
+const constraintHint = (msg: string) => {
+  const name = /constraint "([^"]+)"/.exec(msg)?.[1];
+  return (name && CONSTRAINT_WORDS[name]) ?? 'a database rule';
+};
+
+const notFound = (what: string) => new HwError('NOT_FOUND', `${what} not found.`);
+
+// ── packages ─────────────────────────────────────────────────────────────────
+
+export interface PackageInput {
+  board: string;
+  classLevel: number;
+  examYear: number;
+  slug: string;
+  title: string;
+  blurb?: string;
+  attemptsPerSet?: number;
+  pricePaise?: number;
+}
+
+export async function createPackage(d: Exec, actor: string, input: PackageInput): Promise<{ id: string }> {
+  return guarded('Creating the package', async () => {
+    const [r] = await d.insert(hwExamPackage).values({ ...input, blurb: input.blurb ?? '', createdBy: actor }).returning({ id: hwExamPackage.id });
+    return r!;
+  });
+}
+
+export async function updatePackage(d: Exec, packageId: string, patch: Partial<PackageInput>): Promise<void> {
+  if (Object.keys(patch).length === 0) return;
+  await guarded('Changing the package', async () => {
+    const r = await d.update(hwExamPackage).set(patch).where(eq(hwExamPackage.id, packageId)).returning({ id: hwExamPackage.id });
+    if (!r.length) throw notFound('Package');
+  });
+}
+
+export interface PackageSummary {
+  id: string; board: string; classLevel: number; examYear: number; slug: string; title: string; status: string;
+  attemptsPerSet: number; pricePaise: number; sets: number; publishedSets: number;
+}
+
+export async function listPackages(d: Exec): Promise<PackageSummary[]> {
+  const rows = await d.select({
+    id: hwExamPackage.id, board: hwExamPackage.board, classLevel: hwExamPackage.classLevel, examYear: hwExamPackage.examYear, slug: hwExamPackage.slug,
+    title: hwExamPackage.title, status: hwExamPackage.status, attemptsPerSet: hwExamPackage.attemptsPerSet, pricePaise: hwExamPackage.pricePaise,
+    sets: sql<number>`(SELECT count(*)::int FROM hw_exam_set s WHERE s.package_id = ${hwExamPackage.id})`,
+    publishedSets: sql<number>`(SELECT count(*)::int FROM hw_exam_set s WHERE s.package_id = ${hwExamPackage.id} AND s.status = 'published')`,
+  }).from(hwExamPackage).orderBy(asc(hwExamPackage.examYear), asc(hwExamPackage.classLevel), asc(hwExamPackage.title));
+  return rows;
+}
+
+export interface SetSummary {
+  id: string; position: number; kind: ExamSetKind; subject: string; subjectCode: string; title: string; status: string;
+  maxMarks: number; durationMinutes: number; items: number; attainable: number; problems: string[];
+}
+
+export async function getPackage(d: Exec, packageId: string) {
+  const pkg = (await d.select().from(hwExamPackage).where(eq(hwExamPackage.id, packageId)).limit(1))[0];
+  if (!pkg) throw notFound('Package');
+  const sets = await d.select().from(hwExamSet).where(eq(hwExamSet.packageId, packageId)).orderBy(asc(hwExamSet.position));
+  const facts = await itemFactsBySet(d, sets.map((s) => s.id));
+  const summaries: SetSummary[] = sets.map((s) => {
+    const items = facts.get(s.id) ?? [];
+    return {
+      id: s.id, position: s.position, kind: s.kind, subject: s.subject, subjectCode: s.subjectCode, title: s.title, status: s.status,
+      maxMarks: s.maxMarks, durationMinutes: s.durationMinutes, items: items.length, attainable: attainableMarks(items),
+      problems: s.status === 'draft' ? setProblems(s, items).map(describeSetProblem) : [],
+    };
+  });
+  return { package: pkg, sets: summaries };
+}
+
+export async function publishPackage(d: Exec, packageId: string): Promise<{ published: boolean; problems: string[] }> {
+  return d.transaction(async (tx) => {
+    const pkg = (await tx.select().from(hwExamPackage).where(eq(hwExamPackage.id, packageId)).for('update').limit(1))[0];
+    if (!pkg) throw notFound('Package');
+    if (pkg.status === 'published') return { published: true, problems: [] };
+    const sets = await tx.select({ status: hwExamSet.status }).from(hwExamSet).where(eq(hwExamSet.packageId, packageId));
+    const problems = packageProblems(sets);
+    if (problems.length) return { published: false, problems: ['Publish at least one set first.'] };
+    await guarded('Publishing the package', () =>
+      tx.update(hwExamPackage).set({ status: 'published', publishedAt: pkg.publishedAt ?? new Date() }).where(eq(hwExamPackage.id, packageId)));
+    return { published: true, problems: [] };
+  });
+}
+
+/** Retire (hide from new buyers and new attempts) or bring back. A published thing never goes back to draft: migration 034 refuses it. */
+export async function setPackageOpen(d: Exec, packageId: string, open: boolean): Promise<void> {
+  await guarded(open ? 'Reopening the package' : 'Retiring the package', async () => {
+    const r = await d.update(hwExamPackage).set({ status: open ? 'published' : 'retired' })
+      .where(and(eq(hwExamPackage.id, packageId), sql`${hwExamPackage.status} <> 'draft'`)).returning({ id: hwExamPackage.id });
+    if (!r.length) throw new HwError('CONFLICT', 'Only a published or retired package can be retired or reopened.');
+  });
+}
+
+// ── sets ─────────────────────────────────────────────────────────────────────
+
+export interface SetInput {
+  kind: 'mock_half' | 'mock_full';
+  subject: string;
+  subjectCode: string;
+  title: string;
+  maxMarks: number;
+  durationMinutes: number;
+  graceMinutes?: number;
+  medium?: 'en' | 'hi';
+  syllabusScope?: string[];
+}
+
+async function nextPosition(d: Exec, packageId: string): Promise<number> {
+  const r = await d.select({ m: max(hwExamSet.position) }).from(hwExamSet).where(eq(hwExamSet.packageId, packageId));
+  return (r[0]?.m ?? -1) + 1;
+}
+
+/** An in-house mock: an empty draft set the super-admin fills with items. */
+export async function addSet(d: Exec, packageId: string, input: SetInput): Promise<{ id: string }> {
+  return guarded('Adding the set', async () => {
+    const position = await nextPosition(d, packageId);
+    const [r] = await d.insert(hwExamSet).values({ ...input, packageId, position }).returning({ id: hwExamSet.id });
+    return r!;
+  });
+}
+
+/** "3 Hours", "3 hrs", "2½ hours", "90 minutes" → minutes; null when the paper does not say. */
+export function durationFromPaper(text: string | null | undefined): number | null {
+  if (!text) return null;
+  const t = text.toLowerCase().replace('½', '.5');
+  const h = /(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)/.exec(t);
+  const m = /(\d+)\s*(?:minutes?|mins?)/.exec(t);
+  const total = (h ? Number(h[1]) * 60 : 0) + (m ? Number(m[1]) : 0);
+  return total > 0 ? Math.round(total) : null;
+}
+
+/**
+ * A board paper as a set: every published row of the paper (internal-choice alternatives included, the visually-impaired variants left out),
+ * in the paper's order, with the paper's own marks and time. The set is a draft until published like any other.
+ */
+export async function setFromPaper(d: Exec, packageId: string, paperId: string, opts: { title?: string; durationMinutes?: number } = {}): Promise<{ id: string; items: number }> {
+  return d.transaction(async (tx) => {
+    const paper = (await tx.select().from(hwBankPaper).where(eq(hwBankPaper.id, paperId)).limit(1))[0];
+    if (!paper) throw notFound('Board paper');
+    if (paper.status !== 'published') throw new HwError('CONFLICT', 'Only a published board paper can become a set.');
+    const durationMinutes = opts.durationMinutes ?? durationFromPaper(paper.duration);
+    if (!durationMinutes) throw new HwError('BAD_REQUEST', `The paper does not say how long it is ("${paper.duration ?? ''}"); give the duration.`);
+    const rows = await tx.select().from(hwBankQuestion)
+      .where(and(eq(hwBankQuestion.paperId, paperId), eq(hwBankQuestion.status, 'published'), isNull(hwBankQuestion.variant)))
+      .orderBy(asc(hwBankQuestion.number), sql`${hwBankQuestion.alt} NULLS FIRST`);
+    if (!rows.length) throw new HwError('CONFLICT', 'The paper has no published questions.');
+    return guarded('Making a set from the paper', async () => {
+      const position = await nextPosition(tx, packageId);
+      const [s] = await tx.insert(hwExamSet).values({
+        packageId, position, kind: paper.kind === 'sqp' ? 'sqp' : 'pyq', subject: paper.subject, subjectCode: paper.subjectCode,
+        title: opts.title ?? paper.title, paperId, maxMarks: paper.maxMarks, durationMinutes,
+      }).returning({ id: hwExamSet.id });
+      await tx.insert(hwExamSetItem).values(rows.map((r, i) => ({
+        setId: s!.id, position: i, number: r.number, section: r.section, marks: r.marks, qtype: r.qtype, bankQuestionId: r.id,
+      })));
+      return { id: s!.id, items: rows.length };
+    });
+  });
+}
+
+export async function updateSet(d: Exec, setId: string, patch: Partial<Omit<SetInput, 'kind'>>): Promise<void> {
+  if (Object.keys(patch).length === 0) return;
+  await guarded('Changing the set', async () => {
+    const r = await d.update(hwExamSet).set(patch).where(eq(hwExamSet.id, setId)).returning({ id: hwExamSet.id });
+    if (!r.length) throw notFound('Set');
+  });
+}
+
+/** Item facts for the publish rules, with each bank row's status as it is now. */
+async function itemFactsBySet(d: Exec, setIds: string[]): Promise<Map<string, ItemFacts[]>> {
+  const out = new Map<string, ItemFacts[]>();
+  if (!setIds.length) return out;
+  const rows = await d.select({
+    id: hwExamSetItem.id, setId: hwExamSetItem.setId, number: hwExamSetItem.number, marks: hwExamSetItem.marks,
+    choiceGroup: hwBankQuestion.choiceGroup, bankStatus: hwBankQuestion.status, bankId: hwExamSetItem.bankQuestionId,
+  }).from(hwExamSetItem).leftJoin(hwBankQuestion, eq(hwBankQuestion.id, hwExamSetItem.bankQuestionId))
+    .where(inArray(hwExamSetItem.setId, setIds)).orderBy(asc(hwExamSetItem.position));
+  for (const r of rows) {
+    const list = out.get(r.setId) ?? [];
+    list.push({ id: r.id, number: r.number, marks: r.marks, choiceGroup: r.choiceGroup ?? null, bankStatus: r.bankId ? (r.bankStatus ?? 'missing') : null });
+    out.set(r.setId, list);
+  }
+  return out;
+}
+
+export async function getSet(d: Exec, setId: string) {
+  const set = (await d.select().from(hwExamSet).where(eq(hwExamSet.id, setId)).limit(1))[0];
+  if (!set) throw notFound('Set');
+  const items = await d.select({
+    id: hwExamSetItem.id, position: hwExamSetItem.position, number: hwExamSetItem.number, section: hwExamSetItem.section, marks: hwExamSetItem.marks,
+    qtype: hwExamSetItem.qtype, chapter: hwExamSetItem.chapter, bankQuestionId: hwExamSetItem.bankQuestionId,
+    stem: sql<string>`COALESCE(${hwExamSetItem.stem}, ${hwBankQuestion.stem})`, alt: hwBankQuestion.alt, choiceGroup: hwBankQuestion.choiceGroup,
+  }).from(hwExamSetItem).leftJoin(hwBankQuestion, eq(hwBankQuestion.id, hwExamSetItem.bankQuestionId))
+    .where(eq(hwExamSetItem.setId, setId)).orderBy(asc(hwExamSetItem.position));
+  const facts = (await itemFactsBySet(d, [setId])).get(setId) ?? [];
+  const problems: SetProblem[] = set.status === 'draft' ? setProblems(set, facts) : [];
+  return { set, items, attainable: attainableMarks(facts), problems: problems.map(describeSetProblem) };
+}
+
+export async function publishSet(d: Exec, setId: string): Promise<{ published: boolean; problems: string[] }> {
+  return d.transaction(async (tx) => {
+    const set = (await tx.select().from(hwExamSet).where(eq(hwExamSet.id, setId)).for('update').limit(1))[0];
+    if (!set) throw notFound('Set');
+    if (set.status === 'published') return { published: true, problems: [] };
+    if (set.status === 'retired') throw new HwError('CONFLICT', 'A retired set is reopened, not published again.');
+    const facts = (await itemFactsBySet(tx, [setId])).get(setId) ?? [];
+    const problems = setProblems(set, facts);
+    if (problems.length) return { published: false, problems: problems.map(describeSetProblem) };
+    await guarded('Publishing the set', () => tx.update(hwExamSet).set({ status: 'published' }).where(eq(hwExamSet.id, setId)));
+    return { published: true, problems: [] };
+  });
+}
+
+export async function setSetOpen(d: Exec, setId: string, open: boolean): Promise<void> {
+  await guarded(open ? 'Reopening the set' : 'Retiring the set', async () => {
+    const r = await d.update(hwExamSet).set({ status: open ? 'published' : 'retired' })
+      .where(and(eq(hwExamSet.id, setId), sql`${hwExamSet.status} <> 'draft'`)).returning({ id: hwExamSet.id });
+    if (!r.length) throw new HwError('CONFLICT', 'Only a published or retired set can be retired or reopened.');
+  });
+}
+
+/** A draft set nobody has attempted can be deleted; anything else is retired instead (the database refuses the rest). */
+export async function deleteSet(d: Exec, setId: string): Promise<void> {
+  await guarded('Deleting the set', async () => {
+    const r = await d.delete(hwExamSet).where(and(eq(hwExamSet.id, setId), eq(hwExamSet.status, 'draft'))).returning({ id: hwExamSet.id });
+    if (!r.length) throw new HwError('CONFLICT', 'Only a draft set can be deleted; retire a published one.');
+  });
+}
+
+// ── items ────────────────────────────────────────────────────────────────────
+
+async function nextItemSlot(d: Exec, setId: string): Promise<{ position: number; number: number }> {
+  const r = await d.select({ p: max(hwExamSetItem.position), n: max(hwExamSetItem.number) }).from(hwExamSetItem).where(eq(hwExamSetItem.setId, setId));
+  return { position: (r[0]?.p ?? -1) + 1, number: (r[0]?.n ?? 0) + 1 };
+}
+
+/** A published board-paper row into a mock. Its marks, type and section come from the bank row; only the number and chapter are the set's. */
+export async function addBankItem(d: Exec, setId: string, rowId: string, opts: { number?: number; chapter?: string } = {}): Promise<{ id: string }> {
+  const row = (await d.select().from(hwBankQuestion).where(eq(hwBankQuestion.id, rowId)).limit(1))[0];
+  if (!row) throw notFound('Board-paper question');
+  if (row.status !== 'published') throw new HwError('CONFLICT', `That board-paper question is ${row.status}; only a published one can go in a set.`);
+  return guarded('Adding the question', async () => {
+    const slot = await nextItemSlot(d, setId);
+    const [r] = await d.insert(hwExamSetItem).values({
+      setId, position: slot.position, number: opts.number ?? slot.number, section: row.section, marks: row.marks, qtype: row.qtype,
+      chapter: opts.chapter ?? '', bankQuestionId: row.id,
+    }).returning({ id: hwExamSetItem.id });
+    return r!;
+  });
+}
+
+export interface AuthoredInput {
+  number?: number;
+  section?: string;
+  marks: number;
+  qtype: 'mcq' | 'assertion_reason' | 'very_short' | 'short' | 'long' | 'case_based';
+  chapter?: string;
+  stem: string;
+  options?: string[];
+  correctOption?: 'A' | 'B' | 'C' | 'D' | null;
+  acceptedAnswers?: string[];
+  /** The bank's part shape: label, marks, answer_kind, value_points [{ id, text, marks, quote }]. */
+  parts?: Record<string, unknown>[];
+  schemeText?: string;
+  diagramParts?: string[];
+}
+
+export async function addAuthoredItem(d: Exec, setId: string, input: AuthoredInput): Promise<{ id: string }> {
+  return guarded('Adding the question', async () => {
+    const slot = await nextItemSlot(d, setId);
+    const [r] = await d.insert(hwExamSetItem).values({
+      setId, position: slot.position, number: input.number ?? slot.number, section: input.section ?? '', marks: input.marks, qtype: input.qtype,
+      chapter: input.chapter ?? '', stem: input.stem, options: input.options ?? [], correctOption: input.correctOption ?? null,
+      acceptedAnswers: input.acceptedAnswers ?? [], parts: input.parts ?? [], schemeText: input.schemeText ?? '', diagramParts: input.diagramParts ?? [],
+    }).returning({ id: hwExamSetItem.id });
+    return r!;
+  });
+}
+
+/** Number, section and chapter can be changed on any draft item; the content only on an authored one (a bank row's content is the bank's). */
+export async function updateItem(d: Exec, itemId: string, patch: Partial<AuthoredInput>): Promise<void> {
+  const item = (await d.select({ bank: hwExamSetItem.bankQuestionId }).from(hwExamSetItem).where(eq(hwExamSetItem.id, itemId)).limit(1))[0];
+  if (!item) throw notFound('Question');
+  const { number, section, chapter, ...content } = patch;
+  if (item.bank && Object.keys(content).length) throw new HwError('BAD_REQUEST', 'A board-paper question is changed in the bank, not here.');
+  const set = { ...(number !== undefined && { number }), ...(section !== undefined && { section }), ...(chapter !== undefined && { chapter }), ...content };
+  if (!Object.keys(set).length) return;
+  await guarded('Changing the question', () => d.update(hwExamSetItem).set(set).where(eq(hwExamSetItem.id, itemId)));
+}
+
+export async function removeItem(d: Exec, itemId: string): Promise<void> {
+  await guarded('Removing the question', async () => {
+    const r = await d.delete(hwExamSetItem).where(eq(hwExamSetItem.id, itemId)).returning({ id: hwExamSetItem.id });
+    if (!r.length) throw notFound('Question');
+  });
+}
+
+/** Puts the items in the given order. Every item of the set must be named exactly once. */
+export async function reorderItems(d: Exec, setId: string, orderedIds: string[]): Promise<void> {
+  await d.transaction(async (tx) => {
+    await tx.select({ id: hwExamSet.id }).from(hwExamSet).where(eq(hwExamSet.id, setId)).for('update');
+    const have = await tx.select({ id: hwExamSetItem.id }).from(hwExamSetItem).where(eq(hwExamSetItem.setId, setId));
+    const ids = new Set(have.map((h) => h.id));
+    if (orderedIds.length !== ids.size || new Set(orderedIds).size !== orderedIds.length || orderedIds.some((i) => !ids.has(i))) {
+      throw new HwError('BAD_REQUEST', 'Name every question of the set exactly once.');
+    }
+    await guarded('Reordering', async () => {
+      // two steps, so UNIQUE (set_id, position) never sees two rows on one position
+      await tx.update(hwExamSetItem).set({ position: sql`${hwExamSetItem.position} + 100000` }).where(eq(hwExamSetItem.setId, setId));
+      for (const [i, itemId] of orderedIds.entries()) await tx.update(hwExamSetItem).set({ position: i }).where(eq(hwExamSetItem.id, itemId));
+    });
+  });
+}
+
+// ── entitlements (grants; purchase comes with payments, phase 3) ─────────────
+
+export async function grantEntitlement(d: Exec, actor: string, input: { userId: string; packageId: string; attemptsPerSet?: number | null; expiresAt?: Date | null; source?: 'grant' | 'trial' }): Promise<{ id: string }> {
+  return guarded('Granting the package', async () => {
+    const [r] = await d.insert(hwExamEntitlement).values({
+      userId: input.userId, packageId: input.packageId, source: input.source ?? 'grant', grantedBy: actor,
+      attemptsPerSet: input.attemptsPerSet ?? null, expiresAt: input.expiresAt ?? null,
+    }).onConflictDoUpdate({
+      target: [hwExamEntitlement.userId, hwExamEntitlement.packageId],
+      set: { status: 'active', attemptsPerSet: input.attemptsPerSet ?? null, expiresAt: input.expiresAt ?? null, grantedBy: actor },
+    }).returning({ id: hwExamEntitlement.id });
+    return r!;
+  });
+}
