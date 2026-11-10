@@ -56,6 +56,22 @@ suite('exam packages — super-admin API', () => {
     await expect(sa.exams.admin.create({ ...pkgInput(), slug: 'Bad Slug' })).rejects.toMatchObject({ code: 'BAD_REQUEST' })
   })
 
+  it('the learner procedures are open to a student, and shut while HW_EXAMS_ENABLED is off', async () => {
+    const config = await import('@/lib/hw/config')
+    const st = caller('student')
+    try {
+      process.env.HW_EXAMS_ENABLED = 'false'; config._resetHwConfig()
+      await expect(st.exams.enabled()).resolves.toEqual({ enabled: false })
+      await expect(st.exams.catalogue()).rejects.toMatchObject({ code: 'FORBIDDEN', message: expect.stringContaining('not open yet') })
+      process.env.HW_EXAMS_ENABLED = 'true'; config._resetHwConfig()
+      await expect(st.exams.enabled()).resolves.toEqual({ enabled: true })
+      await expect(st.exams.catalogue()).resolves.toEqual(expect.any(Array))
+      await expect(st.exams.attempt({ attemptId: 'not-mine' })).rejects.toMatchObject({ code: 'NOT_FOUND' })
+    } finally {
+      delete process.env.HW_EXAMS_ENABLED; config._resetHwConfig()
+    }
+  })
+
   it('grants a package by email; an unknown email is NOT_FOUND', async () => {
     const sa = caller('super_admin')
     const { id } = await sa.exams.admin.create(pkgInput())

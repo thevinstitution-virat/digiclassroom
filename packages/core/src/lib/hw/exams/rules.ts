@@ -91,6 +91,24 @@ export function clockFor(startedAt: Date, set: Pick<SetLike, 'durationMinutes' |
 export const remainingMs = (now: Date, expiresAt: Date): number => Math.max(0, expiresAt.getTime() - now.getTime());
 export const isTimeUp = (now: Date, expiresAt: Date): boolean => now.getTime() >= expiresAt.getTime();
 
+/**
+ * Where an attempt stands now, worked out when it is read (no scheduled job is needed for the clock to be honoured):
+ *   started, writing time over                      -> time_up   (ended at the moment the time ran out, not when we noticed)
+ *   started or time_up, upload window over, no page -> abandoned (nothing to mark)
+ * Anything else is unchanged (null). An attempt with pages past its window is the upload step's to close (phase 4), not this one's.
+ */
+export function settle(now: Date, a: AttemptLike & { acceptedPages: number }):
+  | { status: 'time_up'; endedAt: Date }
+  | { status: 'abandoned'; endedAt: Date; failureReason: 'no_pages_uploaded' }
+  | null {
+  const open = a.status === 'started' || a.status === 'time_up';
+  if (open && a.acceptedPages === 0 && now.getTime() > a.uploadDeadlineAt.getTime()) {
+    return { status: 'abandoned', endedAt: a.expiresAt, failureReason: 'no_pages_uploaded' };
+  }
+  if (a.status === 'started' && isTimeUp(now, a.expiresAt)) return { status: 'time_up', endedAt: a.expiresAt };
+  return null;
+}
+
 export type NoUpload = 'too_early' | 'too_late' | 'wrong_status';
 export type UploadVerdict = { ok: true; remainingMs: number } | { ok: false; why: NoUpload };
 

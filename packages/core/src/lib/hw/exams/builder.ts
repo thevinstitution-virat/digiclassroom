@@ -90,8 +90,9 @@ export async function listPackages(d: Exec): Promise<PackageSummary[]> {
   const rows = await d.select({
     id: hwExamPackage.id, board: hwExamPackage.board, classLevel: hwExamPackage.classLevel, examYear: hwExamPackage.examYear, slug: hwExamPackage.slug,
     title: hwExamPackage.title, status: hwExamPackage.status, attemptsPerSet: hwExamPackage.attemptsPerSet, pricePaise: hwExamPackage.pricePaise,
-    sets: sql<number>`(SELECT count(*)::int FROM hw_exam_set s WHERE s.package_id = ${hwExamPackage.id})`,
-    publishedSets: sql<number>`(SELECT count(*)::int FROM hw_exam_set s WHERE s.package_id = ${hwExamPackage.id} AND s.status = 'published')`,
+    // outer columns written out in full: drizzle renders ${col} bare here, and Postgres would bind a bare "id" to the subquery's own table
+    sets: sql<number>`(SELECT count(*)::int FROM hw_exam_set s WHERE s.package_id = "hw_exam_package"."id")`,
+    publishedSets: sql<number>`(SELECT count(*)::int FROM hw_exam_set s WHERE s.package_id = "hw_exam_package"."id" AND s.status = 'published')`,
   }).from(hwExamPackage).orderBy(asc(hwExamPackage.examYear), asc(hwExamPackage.classLevel), asc(hwExamPackage.title));
   return rows;
 }

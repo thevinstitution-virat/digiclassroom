@@ -98,6 +98,7 @@ suite('exam packages, the builder — integration', () => {
     expect(got.problems).toEqual([]);
     expect(await b.publishSet(database, s.id)).toEqual({ published: true, problems: [] });
     expect(await b.publishPackage(database, p)).toEqual({ published: true, problems: [] });
+    expect((await b.listPackages(database)).find((x) => x.id === p)).toMatchObject({ sets: 1, publishedSets: 1 });
     const pk = await b.getPackage(database, p);
     expect(pk.package.status).toBe('published');
     expect(pk.sets).toEqual([expect.objectContaining({ status: 'published', items: s.items, attainable: 10 })]);

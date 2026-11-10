@@ -40,6 +40,7 @@ export default function UserSidebar({ user }: UserSidebarProps) {
   const hw = useHwStatus()
   // Independent learners (no institution): the self-practice tab, while the feature is on for them.
   const practice = api.hw.practice.status.useQuery(undefined, { staleTime: 60_000, retry: false })
+  const exams = api.hw.exams.enabled.useQuery(undefined, { staleTime: 60_000, retry: false })
   const isRater = useIsRater()
 
   // Grouped by use case (mirrors the section pattern already shipped on PDLMS's
@@ -99,6 +100,14 @@ export default function UserSidebar({ user }: UserSidebarProps) {
           featured: true,
           section: 'AI & Research',
           shortName: 'Ink',
+        })]
+      : []),
+    ...(exams.data?.enabled
+      ? [createNavigationItem('Board Exam Practice', '/dashboard/user/exams', PenLine, {
+          description: 'Timed past papers and mock tests, written by hand',
+          featured: true,
+          section: 'AI & Research',
+          shortName: 'Exams',
         })]
       : []),
     createNavigationItem('Sarvagya', '/dashboard/sarvagya', Search, {

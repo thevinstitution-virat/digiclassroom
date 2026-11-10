@@ -10,6 +10,7 @@ import {
   isTimeUp,
   pageVerdict,
   profileFrom,
+  settle,
   remainingMs,
   startVerdict,
   uploadVerdict,
@@ -275,5 +276,29 @@ describe('weak areas', () => {
 
   it('is empty for an empty paper', () => {
     expect(weakAreas([])).toEqual([]);
+  });
+});
+
+describe('settle (phase 3: the clock is honoured when an attempt is read)', () => {
+  const t0 = new Date('2027-02-01T09:00:00Z');
+  const at = (min: number) => new Date(t0.getTime() + min * 60_000);
+  const a = (status: 'started' | 'time_up' | 'uploaded', pages = 0) => ({ status, expiresAt: at(180), uploadDeadlineAt: at(200), acceptedPages: pages });
+  it('nothing changes while writing time runs', () => {
+    expect(settle(at(179), a('started'))).toBeNull();
+  });
+  it('time up exactly when the clock says, ended at the expiry rather than when it was noticed', () => {
+    expect(settle(at(180), a('started'))).toEqual({ status: 'time_up', endedAt: at(180) });
+    expect(settle(at(195), a('started'))).toEqual({ status: 'time_up', endedAt: at(180) });
+  });
+  it('the upload window still open: a time_up attempt waits', () => {
+    expect(settle(at(200), a('time_up'))).toBeNull();
+  });
+  it('the upload window closed with no page: abandoned, whether or not anyone noticed the time running out', () => {
+    expect(settle(at(201), a('time_up'))).toEqual({ status: 'abandoned', endedAt: at(180), failureReason: 'no_pages_uploaded' });
+    expect(settle(at(500), a('started'))).toEqual({ status: 'abandoned', endedAt: at(180), failureReason: 'no_pages_uploaded' });
+  });
+  it('an attempt with pages is not abandoned here (closing it is the upload step’s job)', () => {
+    expect(settle(at(500), a('time_up', 3))).toBeNull();
+    expect(settle(at(500), a('uploaded', 3))).toBeNull();
   });
 });

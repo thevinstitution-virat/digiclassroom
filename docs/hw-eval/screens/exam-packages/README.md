@@ -24,3 +24,24 @@ wrapped in the number column; "1 questions"; the write-a-question form stayed op
 right-answer radios had no accessible name; the grant email label wrapped and misaligned the row. Added: a
 warning on a draft set listing the questions with no chapter, because chapters cannot be added after
 publishing and the report's weak areas are by chapter.
+
+## Phase 3: the learner side (same day)
+
+Run the API with `HW_EXAMS_ENABLED=true` (the `dcp-exams-api` launch entry sets it). The seed also makes
+`wt-learner@walkthrough.test` (no institution, a finished profile so the first-run wizard stays away);
+grant the package to that email from the package page, then sign in as the learner.
+
+Walked: the catalogue (package "In your plan"); the package page; the start warning; the timed paper (the
+clock counts from the server, stays pinned while scrolling, the internal choices show "OR"); shifting the
+device clock 30 minutes did not move the countdown; reloading resumed the same clock; "I have finished
+writing" → upload window countdown and the "uploading opens in the next update" note; the package page in
+Hindi with the way back to the open test; giving up → "not completed", attempt 2 offered; 375 px without
+sideways scroll.
+
+Found and fixed: **every correlated count was wrong** — drizzle renders `${table.column}` bare inside a
+select's `sql```, and Postgres bound the bare `"id"` to the subquery's own table: sets per package (super
+admin list), questions per test (learner), and accepted pages per attempt, which would have abandoned
+attempts that had pages. Outer columns are now written in full, and tests assert each count. Also: the
+countdown read the device clock between refreshes (now `performance.now()`); the clock bar slid under the
+dashboard's sticky header (now placed below it, measured); a badge inside a paragraph (hydration warning).
+

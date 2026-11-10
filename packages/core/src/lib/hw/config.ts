@@ -123,6 +123,11 @@ const EnvSchema = z.object({
    * is still unspent, so the limit holds to within one step. PLATFORM_BUDGET_PAISE is the practice space's monthly ceiling over all learners.
    */
   HW_SELF_PRACTICE_ENABLED: bool(false),
+  /**
+   * Exam packages for learners (docs/hw-eval/exam-packages.md, migration 034): the catalogue, timed attempts and their clock. Off = learners see
+   * nothing and cannot start an attempt; the super-admin builder works either way.
+   */
+  HW_EXAMS_ENABLED: bool(false),
   HW_SELF_PRACTICE_TRIAL_DAYS: num(7, 1, 90),
   HW_SELF_PRACTICE_TRIAL_BUDGET_PAISE: num(1000, 0, 100_000),
   HW_SELF_PRACTICE_STEP_RESERVE_PAISE: num(5, 0, 1000),

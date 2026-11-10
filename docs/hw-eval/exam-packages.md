@@ -2,9 +2,9 @@
 
 Design and phases, 11 Nov 2026. Branch `feat/exam-packages`, stacked on `feat/board-paper-bank`.
 
-**Status: phases 1 and 2 are built and verified on a scratch database (schema, rules, the super-admin
-builder with its screens). Nothing is applied to any real database, nothing is pushed, nothing is offered
-to any learner.**
+**Status: phases 1 to 3 are built and verified on a scratch database (schema, rules, the super-admin
+builder, and the learner's catalogue, start and timed paper behind `HW_EXAMS_ENABLED`, off by default).
+Nothing is applied to any real database, nothing is pushed, nothing is offered to any learner.**
 
 ## 1. What the owner asked for
 
@@ -124,7 +124,7 @@ tested exactly and the database functions stay thin:
 | 0 | Land the board-paper bank: push, merge, apply 032 and 033, import a paper, teacher check, publish | **owner's action** |
 | 1 | Migration 034, the rules module, unit tests; 034 verified up/down/up and its guards tested on a scratch DB | **done (local)** |
 | 2 | Super-admin: package and set builder, item picker, publish, grants | **done (local)**; walked through in the browser |
-| 3 | Learner: package catalogue, entitlement, start a set, the server-anchored timer, auto-stop | to do |
+| 3 | Learner: package catalogue, entitlement, start a set, the server-anchored timer, auto-stop | **done (local)**; walked through in the browser |
 | 4 | The photo booklet: multi-page upload, quality gates, ordering, page-to-question mapping | to do |
 | 5 | Batch evaluation of a whole attempt: chunking, ready-by, fallback, cost booked per attempt | to do |
 | 6 | The report: marks, step marking, the 8 parameters, weak areas, progress across attempts | to do |
@@ -174,4 +174,35 @@ grant by email; a set page with its questions (chapter per question, reorder, re
 picker, the write-a-question form with value points, settings, publish/retire/delete. A draft set warns
 which questions lack a chapter, since chapters freeze with the set. How to run them locally, and what the
 walk-through found: `docs/hw-eval/screens/exam-packages/README.md`.
+
+## 8. Phase 3 as built (learner)
+
+- **Switch:** `HW_EXAMS_ENABLED` (default `false`). Off, the learner procedures refuse and the sidebar entry
+  "Board Exam Practice" is hidden; the super-admin builder works either way.
+- **Store:** `packages/core/src/lib/hw/exams/learner.ts` — `catalogue` (published packages, plus retired
+  ones the learner has access to), `packageForLearner` (sets with attempts used / allowed and the start
+  verdict, the learner's open attempt anywhere), `startAttempt` (under a lock on the learner's entitlement
+  row, so two clicks or two tabs make one attempt — tested), `finishWriting`, `abandonAttempt` (still
+  counts as an attempt, otherwise giving up is a free look at the paper), `attemptView` (the clock and the
+  paper; the paper carries stems, options and figures, never the scheme, value points or the right option
+  — tested by searching the whole response).
+- **The clock:** `started_at` is the server's now; `expires_at` and `upload_deadline_at` are stored once
+  (034 refuses changes). Statuses that follow from time are settled whenever an attempt is read
+  (`rules.settle`): writing time over → `time_up`, ended at the expiry; upload window over with no accepted
+  page → `abandoned` (`no_pages_uploaded`). No scheduled job is needed. One open attempt per learner at a
+  time, across all sets.
+- **The countdown on screen** starts from the server's now sent with the view and adds
+  `performance.now()` time, so changing the device's date or time does not move it (checked in the
+  browser by shifting the page's clock 30 minutes); at zero the page asks the server, which is what ends
+  the time.
+- **Decision: the `hw_assignment` an attempt is marked through is made in phase 5**, when the attempt is
+  sent for marking, not at the start. `assignment_id` stays NULL until then; phases 3-4 need only the clock
+  and the paper, and this keeps the marking pipeline untouched until it is used.
+- **Screens** (`apps/web/src/components/hw-exams/learner/`, routes under `/dashboard/user/exams`), English
+  and Hindi with the shared language switch: the catalogue, a package page (tests, attempts, start with a
+  plain warning that the clock starts at once, the way back to an open test), and the timed paper (the
+  countdown pinned under the dashboard header, the paper with sections and "OR" between internal choices,
+  finish writing, give up). After time is up the page says uploading opens in the next update (phase 4).
+- Tests: `exams-learner-db` (13, against the scratch DB, time passed in), `settle` in `exams-rules`, the
+  learner procedures in `exams-api`.
 

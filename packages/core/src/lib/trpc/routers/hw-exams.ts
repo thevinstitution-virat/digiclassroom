@@ -5,18 +5,21 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { eq } from 'drizzle-orm';
-import { createTRPCRouter, superAdminProcedure } from '../server';
+import { createTRPCRouter, protectedProcedure, rateLimit, superAdminProcedure } from '../server';
 import { isHwError, type HwErrorCode } from '@/lib/hw/errors';
 import { db as hwDb } from '@/lib/hw/db';
 import { user } from '@/db/schema';
 import * as builder from '@/lib/hw/exams/builder';
 import { offeredPapers, paperQuestions } from '@/lib/hw/practice/paper';
 import { ANSWER_KINDS } from '@/lib/hw/bank/schema';
+import * as learner from '@/lib/hw/exams/learner';
+import { signedReadUrl } from '@/lib/hw/storage/r2';
 
 const CODE: Partial<Record<HwErrorCode, TRPCError['code']>> = {
-  UNAUTHORIZED: 'UNAUTHORIZED', FORBIDDEN: 'FORBIDDEN', NOT_FOUND: 'NOT_FOUND', BAD_REQUEST: 'BAD_REQUEST', CONFLICT: 'CONFLICT',
+  UNAUTHORIZED: 'UNAUTHORIZED', FORBIDDEN: 'FORBIDDEN', FEATURE_DISABLED: 'FORBIDDEN', NOT_FOUND: 'NOT_FOUND', BAD_REQUEST: 'BAD_REQUEST', CONFLICT: 'CONFLICT',
 };
 
+/** Runs as the signed-in person (the builder's procedures are also super_admin-gated by their procedure). */
 async function admin<T>(ctx: { userId: string | null }, fn: (actor: string) => Promise<T>): Promise<T> {
   if (!ctx.userId) throw new TRPCError({ code: 'UNAUTHORIZED' });
   try {
@@ -78,6 +81,18 @@ const authoredInput = z.object({
 });
 
 export const hwExamsRouter = createTRPCRouter({
+  // ── Learner (phase 3): any signed-in person, with or without an institution; off unless HW_EXAMS_ENABLED ──
+  enabled: protectedProcedure.query(() => ({ enabled: learner.examsEnabled() })),
+  catalogue: protectedProcedure.query(({ ctx }) => admin(ctx, (u) => learner.catalogue(hwDb, u))),
+  package: protectedProcedure.input(z.object({ packageId: id })).query(({ ctx, input }) => admin(ctx, (u) => learner.packageForLearner(hwDb, u, input.packageId))),
+  /** Starts the next attempt; the server's clock starts now. */
+  start: protectedProcedure.use(rateLimit(10, 60_000)).input(z.object({ setId: id }))
+    .mutation(({ ctx, input }) => admin(ctx, (u) => learner.startAttempt(hwDb, u, input.setId))),
+  attempt: protectedProcedure.input(z.object({ attemptId: id }))
+    .query(({ ctx, input }) => admin(ctx, (u) => learner.attemptView(hwDb, u, input.attemptId, { sign: signedReadUrl }))),
+  finishWriting: protectedProcedure.input(z.object({ attemptId: id })).mutation(({ ctx, input }) => admin(ctx, (u) => learner.finishWriting(hwDb, u, input.attemptId))),
+  abandon: protectedProcedure.input(z.object({ attemptId: id })).mutation(({ ctx, input }) => admin(ctx, (u) => learner.abandonAttempt(hwDb, u, input.attemptId))),
+
   admin: createTRPCRouter({
     list: superAdminProcedure.query(({ ctx }) => admin(ctx, () => builder.listPackages(hwDb))),
     get: superAdminProcedure.input(z.object({ packageId: id })).query(({ ctx, input }) => admin(ctx, () => builder.getPackage(hwDb, input.packageId))),
