@@ -135,6 +135,11 @@ for Study Buddy**, which does not exist yet, and phase 5 needs a **scheduled job
 studybuddy app, which does not exist either. Both are in
 `H:\Trio\VIRAT-EVALUATOR-HANDOFF.md`, section 10.
 
+**Real CBSE material (11 Nov 2026):** the 2026 board papers, the official marking scheme for sets 31/4/1-3 and a real
+examiner-marked answer book are summarised in [`cbse-2026-sources.md`](cbse-2026-sources.md), with three marking rules from the
+scheme that the product does not follow yet (error carried forward, open "any other" points, keeping the better of two answered
+alternatives).
+
 ## 6. Still the owner's to decide
 
 - ~~Page-to-question mapping~~ — **decided 11 Nov 2026** (section 10): a printed answer sheet with the
