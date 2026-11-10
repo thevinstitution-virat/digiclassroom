@@ -64,6 +64,7 @@ export const PLATFORM_NAV: DashboardNavItem[] = [
   // Content & Knowledge — global content management
   { section: 'Content & Knowledge', name: 'Content', href: '/dashboard/super-admin/content', icon: FileText, description: 'NCERT content & ingestion' },
   { section: 'Content & Knowledge', name: 'Study Materials', href: '/dashboard/super-admin/materials', icon: Folder, description: 'Materials & Drive sync' },
+  { section: 'Content & Knowledge', name: 'Exam Packages', href: '/dashboard/super-admin/exams', icon: ClipboardCheck, description: 'CBSE past papers and timed mock tests' },
   { section: 'Content & Knowledge', name: 'Practest Engine', href: '/dashboard/super-admin/practest', icon: Target, description: 'Assessment & question bank' },
   { section: 'Content & Knowledge', name: 'Batches', href: '/dashboard/super-admin/batches', icon: GraduationCap, description: 'Manage course batches & enrollments' },
   { section: 'Content & Knowledge', name: 'Video Library', href: '/dashboard/super-admin/videos', icon: Video, description: 'Global video assets' },

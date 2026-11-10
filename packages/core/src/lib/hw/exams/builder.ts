@@ -8,7 +8,7 @@ import { hwBankPaper, hwBankQuestion } from '@/db/hw-bank-schema';
 import { hwExamEntitlement, hwExamPackage, hwExamSet, hwExamSetItem, type ExamSetKind } from '@/db/hw-exams-schema';
 import { HwError } from '@/lib/hw/errors';
 import type { Exec } from '@/lib/hw/db';
-import { attainableMarks, describeSetProblem, packageProblems, setProblems, type ItemFacts, type SetProblem } from './build-rules';
+import { attainableMarks, authoredProblems, describeSetProblem, packageProblems, setProblems, type ItemFacts, type SetProblem } from './build-rules';
 
 // ── errors ───────────────────────────────────────────────────────────────────
 
@@ -314,7 +314,13 @@ export interface AuthoredInput {
   diagramParts?: string[];
 }
 
+const refuseAuthored = (q: Parameters<typeof authoredProblems>[0]) => {
+  const problems = authoredProblems(q);
+  if (problems.length) throw new HwError('BAD_REQUEST', problems.join(' '));
+};
+
 export async function addAuthoredItem(d: Exec, setId: string, input: AuthoredInput): Promise<{ id: string }> {
+  refuseAuthored(input);
   return guarded('Adding the question', async () => {
     const slot = await nextItemSlot(d, setId);
     const [r] = await d.insert(hwExamSetItem).values({
@@ -328,10 +334,17 @@ export async function addAuthoredItem(d: Exec, setId: string, input: AuthoredInp
 
 /** Number, section and chapter can be changed on any draft item; the content only on an authored one (a bank row's content is the bank's). */
 export async function updateItem(d: Exec, itemId: string, patch: Partial<AuthoredInput>): Promise<void> {
-  const item = (await d.select({ bank: hwExamSetItem.bankQuestionId }).from(hwExamSetItem).where(eq(hwExamSetItem.id, itemId)).limit(1))[0];
+  const item = (await d.select().from(hwExamSetItem).where(eq(hwExamSetItem.id, itemId)).limit(1))[0];
   if (!item) throw notFound('Question');
   const { number, section, chapter, ...content } = patch;
-  if (item.bank && Object.keys(content).length) throw new HwError('BAD_REQUEST', 'A board-paper question is changed in the bank, not here.');
+  if (item.bankQuestionId && Object.keys(content).length) throw new HwError('BAD_REQUEST', 'A board-paper question is changed in the bank, not here.');
+  if (Object.keys(content).length) {
+    refuseAuthored({
+      qtype: content.qtype ?? item.qtype, marks: content.marks ?? item.marks, options: content.options ?? item.options,
+      correctOption: content.correctOption !== undefined ? content.correctOption : item.correctOption,
+      parts: (content.parts ?? item.parts) as Parameters<typeof authoredProblems>[0]['parts'],
+    });
+  }
   const set = { ...(number !== undefined && { number }), ...(section !== undefined && { section }), ...(chapter !== undefined && { chapter }), ...content };
   if (!Object.keys(set).length) return;
   await guarded('Changing the question', () => d.update(hwExamSetItem).set(set).where(eq(hwExamSetItem.id, itemId)));

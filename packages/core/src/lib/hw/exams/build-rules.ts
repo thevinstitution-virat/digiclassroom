@@ -76,3 +76,46 @@ export function describeSetProblem(p: SetProblem): string {
     case 'no_scope': return 'A half-syllabus mock must list the chapters it covers.';
   }
 }
+
+// ── an authored question ────────────────────────────────────────────────────
+
+export interface AuthoredFacts {
+  qtype: string;
+  marks: number;
+  options?: string[];
+  correctOption?: string | null;
+  parts?: { label?: unknown; marks?: unknown; value_points?: unknown }[];
+}
+
+const CHOICE_TYPES = new Set(['mcq', 'assertion_reason']);
+const half = (n: number) => Math.round(n * 2) / 2;
+
+/**
+ * What is wrong with a question the super-admin typed. The marking path turns value-point verdicts into marks in code, so the points must add
+ * up to their part and the parts (each alternative label counted once) to the question — otherwise a full answer could not earn full marks.
+ */
+export function authoredProblems(q: AuthoredFacts): string[] {
+  if (CHOICE_TYPES.has(q.qtype)) {
+    const out: string[] = [];
+    if ((q.options ?? []).length !== 4) out.push('A multiple choice question needs exactly four options.');
+    if (!q.correctOption) out.push('Say which option is right.');
+    return out;
+  }
+  const parts = q.parts ?? [];
+  if (!parts.length) return ['A written question needs at least one part with its value points.'];
+  const out: string[] = [];
+  const byLabel = new Map<string, number>();
+  for (const [i, p] of parts.entries()) {
+    const label = String(p.label ?? '');
+    const name = label ? `Part (${label})` : parts.length > 1 ? `Part ${i + 1}` : 'The answer';
+    const pm = Number(p.marks);
+    const points = Array.isArray(p.value_points) ? (p.value_points as { marks?: unknown }[]) : [];
+    if (!points.length) { out.push(`${name} has no value points.`); continue; }
+    const sum = half(points.reduce((s, v) => s + Number(v.marks ?? 0), 0));
+    if (sum !== pm) out.push(`${name}: the value points add up to ${sum}, but the part is worth ${pm}.`);
+    byLabel.set(label, Math.max(byLabel.get(label) ?? 0, pm));
+  }
+  const total = half([...byLabel.values()].reduce((s, m) => s + m, 0));
+  if (total !== q.marks) out.push(`The parts add up to ${total} marks, but the question is worth ${q.marks}.`);
+  return out;
+}

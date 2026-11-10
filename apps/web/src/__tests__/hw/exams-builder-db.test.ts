@@ -52,7 +52,7 @@ const mock = (packageId: string, maxMarks = 10) =>
   b.addSet(database, packageId, { kind: 'mock_full', subject: 'Science', subjectCode: '086', title: 'Mock 1', maxMarks, durationMinutes: 60 });
 const authored = (marks: number, over: Partial<import('@/lib/hw/exams/builder').AuthoredInput> = {}) => ({
   marks, qtype: 'short' as const, stem: 'Explain refraction.', schemeText: 'Bending of light (1)',
-  parts: [{ label: '', marks, answer_kind: 'explanation', value_points: [{ id: 'v1', text: 'bending of light', marks, quote: '' }] }], ...over,
+  parts: [{ label: '', marks, answer_kind: 'text', value_points: [{ id: 'v1', text: 'bending of light', marks, quote: '' }] }], ...over,
 });
 
 suite('exam packages, the builder — integration', () => {
@@ -162,6 +162,15 @@ suite('exam packages, the builder — integration', () => {
     const slug = (await one<{ slug: string }>(`SELECT slug FROM hw_exam_package WHERE id = $1`, [p]))!.slug;
     expect(await publicOf(b.createPackage(database, 'owner', { board: 'TESTBOARD', classLevel: 10, examYear: 2099, slug, title: 'Again' })))
       .toBe('Creating the package: that already exists (a package with this board, class, exam year and slug).');
+  });
+
+  it('refuses an authored question whose value points do not add up, on add and on change', async () => {
+    const s = await mock(await newPackage(), 6);
+    const bad = authored(3, { parts: [{ label: '', marks: 3, answer_kind: 'text', value_points: [{ id: 'v1', text: 'x', marks: 2, quote: '' }] }] });
+    expect(await publicOf(b.addAuthoredItem(database, s.id, bad))).toBe('The answer: the value points add up to 2, but the part is worth 3.');
+    const ok = await b.addAuthoredItem(database, s.id, authored(3));
+    expect(await publicOf(b.updateItem(database, ok.id, { marks: 4 }))).toBe('The parts add up to 3 marks, but the question is worth 4.');
+    await b.updateItem(database, ok.id, { stem: 'Explain refraction of light.' });
   });
 
   it('reorders items and refuses an order that leaves one out', async () => {

@@ -2,9 +2,9 @@
 
 Design and phases, 11 Nov 2026. Branch `feat/exam-packages`, stacked on `feat/board-paper-bank`.
 
-**Status: phase 1 (schema and rules) is built and verified on a scratch database; phase 2's server side
-(builder store, publish checks, super-admin API) is built; its screens are not. Nothing is applied to
-any real database, nothing is pushed, nothing is offered to any learner.**
+**Status: phases 1 and 2 are built and verified on a scratch database (schema, rules, the super-admin
+builder with its screens). Nothing is applied to any real database, nothing is pushed, nothing is offered
+to any learner.**
 
 ## 1. What the owner asked for
 
@@ -123,7 +123,7 @@ tested exactly and the database functions stay thin:
 |---|---|---|
 | 0 | Land the board-paper bank: push, merge, apply 032 and 033, import a paper, teacher check, publish | **owner's action** |
 | 1 | Migration 034, the rules module, unit tests; 034 verified up/down/up and its guards tested on a scratch DB | **done (local)** |
-| 2 | Super-admin: package and set builder, item picker (reuses the bank's `PaperPicker`), publish | **server side done (local)**; screens to do |
+| 2 | Super-admin: package and set builder, item picker, publish, grants | **done (local)**; walked through in the browser |
 | 3 | Learner: package catalogue, entitlement, start a set, the server-anchored timer, auto-stop | to do |
 | 4 | The photo booklet: multi-page upload, quality gates, ordering, page-to-question mapping | to do |
 | 5 | Batch evaluation of a whole attempt: chunking, ready-by, fallback, cost booked per attempt | to do |
@@ -164,6 +164,14 @@ studybuddy app, which does not exist either. Both are in
   no chapter (the bank has none), so the builder lets the super-admin set one per item — the report's
   weak areas by chapter depend on it.
 
-Left for phase 2: the super-admin screens (package list, package page with its sets and their
-problems, set page with the item list, the paper picker, the authored-question form, grant by email).
+- An authored question's value points must add up to their part and the parts (an alternative label
+  counted once) to the question (`authoredProblems`), checked live in the form and again on the server.
+
+Screens (`apps/web/src/components/hw-exams/admin/`, routes under `/dashboard/super-admin/exams`, nav entry
+"Exam Packages" under Content & Knowledge): the package list and new-package form; a package page with its
+sets and what stops each from publishing, a board paper as a set, a new mock, details, publish/retire, and
+grant by email; a set page with its questions (chapter per question, reorder, remove), the board-question
+picker, the write-a-question form with value points, settings, publish/retire/delete. A draft set warns
+which questions lack a chapter, since chapters freeze with the set. How to run them locally, and what the
+walk-through found: `docs/hw-eval/screens/exam-packages/README.md`.
 

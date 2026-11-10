@@ -11,6 +11,7 @@ import { db as hwDb } from '@/lib/hw/db';
 import { user } from '@/db/schema';
 import * as builder from '@/lib/hw/exams/builder';
 import { offeredPapers, paperQuestions } from '@/lib/hw/practice/paper';
+import { ANSWER_KINDS } from '@/lib/hw/bank/schema';
 
 const CODE: Partial<Record<HwErrorCode, TRPCError['code']>> = {
   UNAUTHORIZED: 'UNAUTHORIZED', FORBIDDEN: 'FORBIDDEN', NOT_FOUND: 'NOT_FOUND', BAD_REQUEST: 'BAD_REQUEST', CONFLICT: 'CONFLICT',
@@ -58,7 +59,7 @@ const part = z.object({
   label: z.string().max(10),
   alternative: z.enum(['A', 'B', 'C', 'D']).nullable().default(null),
   marks: halfMarks,
-  answer_kind: z.string().trim().min(1).max(40),
+  answer_kind: z.enum(ANSWER_KINDS),
   value_points: z.array(valuePoint).min(1).max(30),
 });
 const authoredInput = z.object({
