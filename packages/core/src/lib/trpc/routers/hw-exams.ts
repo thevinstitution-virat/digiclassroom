@@ -94,6 +94,8 @@ export const hwExamsRouter = createTRPCRouter({
     .query(({ ctx, input }) => admin(ctx, (u) => learner.attemptView(hwDb, u, input.attemptId, {
       sign: signedReadUrl, booklet: (attemptId) => pages.bookletPages(hwDb, examPageStore(), attemptId),
     }))),
+  /** The printable answer sheet for a set (numbers and boxes, never the questions). */
+  sheet: protectedProcedure.input(z.object({ setId: id })).query(({ ctx, input }) => admin(ctx, (u) => learner.sheetForLearner(hwDb, u, input.setId))),
   // the booklet (phase 4); pages themselves are uploaded through POST /api/hw/exams/attempts/:attemptId/pages
   removePage: protectedProcedure.input(z.object({ attemptId: id, pageId: id }))
     .mutation(({ ctx, input }) => admin(ctx, (u) => pages.removePage(hwDb, examPageStore(), u, input.attemptId, input.pageId))),
@@ -124,6 +126,7 @@ export const hwExamsRouter = createTRPCRouter({
     setFromPaper: superAdminProcedure.input(z.object({ packageId: id, paperId: id, title: z.string().trim().min(3).max(200).optional(), durationMinutes: z.number().int().min(5).max(360).optional() }))
       .mutation(({ ctx, input }) => admin(ctx, () => builder.setFromPaper(hwDb, input.packageId, input.paperId, input))),
     getSet: superAdminProcedure.input(z.object({ setId: id })).query(({ ctx, input }) => admin(ctx, () => builder.getSet(hwDb, input.setId))),
+    sheet: superAdminProcedure.input(z.object({ setId: id })).query(({ ctx, input }) => admin(ctx, () => learner.sheetFor(hwDb, input.setId))),
     updateSet: superAdminProcedure.input(z.object({ setId: id, patch: setInput.omit({ kind: true }).partial() }))
       .mutation(({ ctx, input }) => admin(ctx, () => builder.updateSet(hwDb, input.setId, input.patch))),
     publishSet: superAdminProcedure.input(z.object({ setId: id })).mutation(({ ctx, input }) => admin(ctx, () => builder.publishSet(hwDb, input.setId))),

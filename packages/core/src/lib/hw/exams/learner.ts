@@ -14,6 +14,7 @@ import type { Exec } from '@/lib/hw/db';
 import { getHwConfig } from '@/lib/hw/config';
 import { learnerFigures, type LearnerFigure } from '@/lib/hw/bank/figures';
 import { clockFor, effectiveAttempts, remainingMs, settle, startVerdict, type EntitlementLike, type NotStarted } from './rules';
+import { sheetLayout } from './sheet';
 
 export const examsEnabled = (): boolean => getHwConfig().HW_EXAMS_ENABLED;
 
@@ -254,3 +255,35 @@ export async function attemptView<P = never>(d: Exec, userId: string, attemptId:
     paper: rows.map(({ i, b }) => paperQuestionOf(i, b && { stem: b.stem, alt: b.alt, options: b.options, choiceGroup: b.choiceGroup }, b ? figs.get(b.id) ?? [] : [])),
   };
 }
+
+// ── the printed answer sheet ─────────────────────────────────────────────────
+
+/** A set's answer sheet: numbers, marks and boxes only, never the questions. For the super-admin's preview and for learners with access. */
+export async function sheetFor(d: Exec, setId: string) {
+  const set = (await d.select().from(hwExamSet).where(eq(hwExamSet.id, setId)).limit(1))[0];
+  if (!set) throw notFound();
+  const pkg = (await d.select({ title: hwExamPackage.title, status: hwExamPackage.status }).from(hwExamPackage).where(eq(hwExamPackage.id, set.packageId)).limit(1))[0]!;
+  const items = await d.select({
+    number: hwExamSetItem.number, alt: hwBankQuestion.alt, choiceGroup: hwBankQuestion.choiceGroup, marks: hwExamSetItem.marks,
+    qtype: hwExamSetItem.qtype, section: hwExamSetItem.section,
+  }).from(hwExamSetItem).leftJoin(hwBankQuestion, eq(hwBankQuestion.id, hwExamSetItem.bankQuestionId))
+    .where(eq(hwExamSetItem.setId, setId)).orderBy(asc(hwExamSetItem.position));
+  return {
+    set: { id: set.id, packageId: set.packageId, title: set.title, subject: set.subject, subjectCode: set.subjectCode, maxMarks: set.maxMarks, durationMinutes: set.durationMinutes, status: set.status },
+    packageTitle: pkg.title,
+    packageStatus: pkg.status,
+    layout: sheetLayout(set.id, items),
+  };
+}
+
+/** The sheet for a learner: the set must be open and the package theirs (any access they have or had — a sheet reveals no question). */
+export async function sheetForLearner(d: Exec, userId: string, setId: string) {
+  requireEnabled();
+  const s = await sheetFor(d, setId);
+  if (s.set.status === 'draft' || s.packageStatus === 'draft') throw notFound();
+  const ent = (await d.select({ id: hwExamEntitlement.id }).from(hwExamEntitlement)
+    .where(and(eq(hwExamEntitlement.packageId, s.set.packageId), eq(hwExamEntitlement.userId, userId))).limit(1))[0];
+  if (!ent) throw new HwError('FORBIDDEN', `${NOT_STARTED_TEXT.not_entitled.en} / ${NOT_STARTED_TEXT.not_entitled.hi}`);
+  return s;
+}
+

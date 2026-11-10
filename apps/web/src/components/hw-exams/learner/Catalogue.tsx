@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Clock } from 'lucide-react'
+import { ArrowLeft, Clock, Printer } from 'lucide-react'
 import { api } from '@/lib/trpc/client'
 import type { HwOut } from '@/components/hw/types'
 import { Badge } from '@/components/ui/badge'
@@ -135,7 +135,12 @@ export function PackageView({ packageId }: { packageId: string }) {
                     <Badge variant="outline" className="mr-2">{t(kindKey(s.kind))}</Badge>
                     {s.subject} · {t('ex.set.meta', { marks: s.maxMarks, min: s.durationMinutes, q: s.questions })}
                   </div>
-                  {access && <p className="mt-1 text-xs text-muted-foreground">{t('ex.set.used', { used: s.used, allowed: s.allowed })}</p>}
+                  {access && (
+                    <p className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+                      <span>{t('ex.set.used', { used: s.used, allowed: s.allowed })}</span>
+                      <a href={`/exam-sheet/${s.id}`} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-primary hover:underline"><Printer className="h-3 w-3" />{t('ex.set.sheet')}</a>
+                    </p>
+                  )}
                 </div>
                 {access && (s.canStart.ok
                   ? <Button size="sm" onClick={() => setStarting(s)}>{t('ex.set.start', { n: s.canStart.attemptNo })}</Button>

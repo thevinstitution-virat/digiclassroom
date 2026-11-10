@@ -125,7 +125,7 @@ tested exactly and the database functions stay thin:
 | 1 | Migration 034, the rules module, unit tests; 034 verified up/down/up and its guards tested on a scratch DB | **done (local)** |
 | 2 | Super-admin: package and set builder, item picker, publish, grants | **done (local)**; walked through in the browser |
 | 3 | Learner: package catalogue, entitlement, start a set, the server-anchored timer, auto-stop | **done (local)**; walked through in the browser |
-| 4 | The photo booklet: multi-page upload, quality gates, ordering, page-to-question mapping | **done (local)** except page-to-question mapping (owner's decision); needs the Study Buddy R2 bucket to run anywhere real |
+| 4 | The photo booklet: multi-page upload, quality gates, ordering, page-to-question mapping | **done (local)**: booklet, printed answer sheet, and the mapping rule (fed by the reader in phase 5); needs the Study Buddy R2 bucket to run anywhere real |
 | 5 | Batch evaluation of a whole attempt: chunking, ready-by, fallback, cost booked per attempt | to do |
 | 6 | The report: marks, step marking, the 8 parameters, weak areas, progress across attempts | to do |
 | 7 | Pilot behind the existing eligibility gates, with monitoring and budgets on | to do |
@@ -137,8 +137,9 @@ studybuddy app, which does not exist either. Both are in
 
 ## 6. Still the owner's to decide
 
-- Page-to-question mapping: the learner tags each page, a numbered answer sheet, or the model reads
-  the question numbers off the page. The schema holds pages in order and does not force the choice.
+- ~~Page-to-question mapping~~ — **decided 11 Nov 2026** (section 10): a printed answer sheet with the
+  question numbers pre-marked, plus the reader matching anything else against the question paper and
+  answer key.
 - Instant evaluation as a paid option, or batch for everyone.
 - `HW_PARTIAL_CREDIT_RULE` (`zero` today).
 - Whether a half-syllabus mock's `syllabus_scope` is authored per subject by a teacher or generated
@@ -232,4 +233,37 @@ walk-through found: `docs/hw-eval/screens/exam-packages/README.md`.
   option needs anyway.
 - Tests: `exams-page-measure` (pure), `exams-pages-db` (10, in-memory store), the settle cases in
   `exams-rules`.
+
+## 10. Matching pages to questions (owner's decision, 11 Nov 2026)
+
+The owner's answer: the model recognises the questions from the question paper and the answer key the
+super admin provided, reads the learner's handwriting, and judges how near each answer is to the key —
+and learners get a **model answer sheet** with the question numbers already marked, proper margins, and
+**no ruled lines** so they can draw diagrams and tables as needed. Together these leave no ambiguity.
+
+Built so far (the reading itself is phase 5):
+
+- **The printed answer sheet** (`lib/hw/exams/sheet.ts`, printed at `/exam-sheet/:setId`; linked from
+  each test on the learner's package page, previewed by the super admin from the set page): A4, unruled;
+  multiple choice answered in one grid of circled letters; each written answer in a box whose height
+  follows its marks (20 mm + 28 mm a mark, at most 220 mm), the question number and marks printed in a
+  24 mm left margin that is not written in; an internal choice is one box with "Answering ☐ A ☐ B"; no
+  box is split across pages; two extra pages at the end ask for the question number before each answer.
+  Every page carries the sheet code and page number large (`C3F245-3`: the set's code and the page),
+  and a black square in each corner so a photo can be squared up. Labels are printed in English and
+  Hindi. The sheet shows numbers and marks only, never the questions, so it can be printed before
+  starting. Plain paper still works (the learner numbers each answer).
+- **The matching rule** (`lib/hw/exams/mapping.ts`, pure, tested), strongest evidence first:
+  1. writing inside a printed box on a page whose code is this set's: that box's question, certain;
+  2. a question number the learner wrote, read with confidence >= 0.8;
+  3. the answer itself, when its closeness to one question's answer key is >= 0.6 and at least 0.15
+     above the next.
+  Anything else goes to **review** rather than being guessed: a page of another set's sheet, a sheet page
+  that does not exist, a different number written inside a printed box, two numbers on one answer, a
+  number that the answer strongly contradicts, or nothing conclusive. An answer continued on an extra
+  page joins its question in page order. A question nothing points to is not attempted. The thresholds
+  are provisional, to be set on real reader output.
+- **Phase 5 then has the reader report, per page:** the sheet code and page it reads, and for each stretch
+  of writing, the printed box it sits in, any question number written, and its closeness to each
+  question's answer key — exactly the `PageEvidence` the rule takes.
 

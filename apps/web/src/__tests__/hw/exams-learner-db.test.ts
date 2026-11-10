@@ -216,6 +216,21 @@ suite('exam packages, the learner — integration', () => {
     expect((await one(`SELECT status FROM hw_exam_attempt WHERE id = $1`, [attemptId]))!.status).toBe('started');
   });
 
+  it('the answer sheet: numbers and boxes only, for learners with access; any set for the super admin', async () => {
+    const { p, s } = await live();
+    const u = await learner();
+    expect(await publicOf(L.sheetForLearner(database, u, s))).toMatch(/not part of your plan/);
+    await grant(u, p);
+    const sh = await L.sheetForLearner(database, u, s);
+    expect(sh.layout.code).toBe(s.replace(/-/g, '').slice(0, 6).toUpperCase());
+    expect(sh.layout.pages[0]!.numbers).toEqual([1, 2]);
+    expect(JSON.stringify(sh)).not.toMatch(/pencil|plane mirror|SECRET/);
+    const draft = await live(5, 'draft');
+    await grant(u, draft.p);
+    expect(await publicOf(L.sheetForLearner(database, u, draft.s))).toMatch(/Not found/);
+    expect((await L.sheetFor(database, draft.s)).layout.totalPages).toBeGreaterThan(0);
+  });
+
   it('a retired test stays visible to those who sat it, and cannot be started again', async () => {
     const { p, s } = await live();
     const u = await learner();

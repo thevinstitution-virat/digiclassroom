@@ -97,6 +97,7 @@ export function SetDetail({ packageId, setId }: { packageId: string; setId: stri
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold tracking-tight">{set.title} <StatusBadge status={set.status} /></h1>
+          <a href={`/exam-sheet/${set.id}?preview=admin`} target="_blank" rel="noopener" className="text-sm text-primary hover:underline">Preview answer sheet</a>
           <p className="text-sm text-muted-foreground">{KIND_LABEL[set.kind]} · {set.subject} ({set.subjectCode}) · {items.length} question{items.length === 1 ? '' : 's'} · {attainable} of {set.maxMarks} marks · {set.durationMinutes} min + {set.graceMinutes} min to upload</p>
         </div>
         <div className="flex flex-wrap gap-2">
