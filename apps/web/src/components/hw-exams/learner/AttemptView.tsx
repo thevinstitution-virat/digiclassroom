@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { HwError, HwLoading, HwMessage } from '@/components/hw/HwShell'
 import { LEARNER_BASE } from './Catalogue'
+import { Booklet } from './Booklet'
 import { clockText, useExamT, type ExKey } from './strings'
 
 type View = HwOut['exams']['attempt']
@@ -125,12 +126,8 @@ export function AttemptView({ attemptId }: { attemptId: string }) {
       </div>
 
       {status === 'started' && <HwMessage>{t('ex.t.instructions')}</HwMessage>}
-      {status === 'time_up' && (
-        <HwMessage>
-          <p className="font-medium">{t('ex.t.timeUp')}</p>
-          <p className="mt-1">{t('ex.t.uploadSoon')}</p>
-        </HwMessage>
-      )}
+      {status === 'time_up' && <HwMessage><p className="font-medium">{t('ex.t.timeUp')}</p></HwMessage>}
+      {(status === 'time_up' || v.booklet.length > 0) && <Booklet attemptId={attemptId} status={status!} pages={v.booklet} onChanged={refresh} />}
       {status === 'abandoned' && (
         <HwMessage>
           <p className="font-medium">{t('ex.t.closed')}</p>

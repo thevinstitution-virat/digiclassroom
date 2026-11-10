@@ -24,11 +24,10 @@ const u16be = (b: Uint8Array, i: number) => (b[i] << 8) | b[i + 1];
 const u24le = (b: Uint8Array, i: number) => b[i] | (b[i + 1] << 8) | (b[i + 2] << 16);
 const ascii = (b: Uint8Array, i: number, n: number) => String.fromCharCode(...b.slice(i, i + n));
 
-/** What the bytes really are, from their own header (never from a file name), with the size in pixels. Or why they cannot be used. */
-export function sniffImage(bytes: Uint8Array): ImageInfo | { problem: string } {
+/** What the bytes really are, from their own header (never from a file name), with the size in pixels — no size limits applied. */
+export function readImageHeader(bytes: Uint8Array): ImageInfo | { problem: string } {
   const n = bytes.length;
   if (n === 0) return { problem: 'the file is empty' };
-  if (n > MAX_FIGURE_BYTES) return { problem: `the picture is ${(n / 1048576).toFixed(1)} MB; the limit is ${MAX_FIGURE_BYTES / 1048576} MB` };
   let kind: ImageInfo['mime'] | null = null;
   let width = 0;
   let height = 0;
@@ -53,9 +52,19 @@ export function sniffImage(bytes: Uint8Array): ImageInfo | { problem: string } {
   }
   if (!kind) return { problem: 'this is not a PNG, JPEG or WebP picture' };
   if (!width || !height) return { problem: 'the size of the picture could not be read' };
+  return { mime: kind, ext: kind === 'image/png' ? 'png' : kind === 'image/jpeg' ? 'jpg' : 'webp', width, height, bytes: n };
+}
+
+/** A figure picture: what the bytes really are, within the figure limits. Or why they cannot be used. */
+export function sniffImage(bytes: Uint8Array): ImageInfo | { problem: string } {
+  const n = bytes.length;
+  if (n > MAX_FIGURE_BYTES) return { problem: `the picture is ${(n / 1048576).toFixed(1)} MB; the limit is ${MAX_FIGURE_BYTES / 1048576} MB` };
+  const info = readImageHeader(bytes);
+  if ('problem' in info) return info;
+  const { width, height } = info;
   if (width < MIN_FIGURE_SIDE || height < MIN_FIGURE_SIDE) return { problem: `the picture is ${width}x${height}; each side must be at least ${MIN_FIGURE_SIDE} pixels` };
   if (width > MAX_FIGURE_SIDE || height > MAX_FIGURE_SIDE) return { problem: `the picture is ${width}x${height}; each side must be at most ${MAX_FIGURE_SIDE} pixels` };
-  return { mime: kind, ext: kind === 'image/png' ? 'png' : kind === 'image/jpeg' ? 'jpg' : 'webp', width, height, bytes: n };
+  return info;
 }
 
 export class FigureRefusedError extends Error {

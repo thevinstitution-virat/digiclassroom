@@ -14,6 +14,8 @@ import { offeredPapers, paperQuestions } from '@/lib/hw/practice/paper';
 import { ANSWER_KINDS } from '@/lib/hw/bank/schema';
 import * as learner from '@/lib/hw/exams/learner';
 import { signedReadUrl } from '@/lib/hw/storage/r2';
+import * as pages from '@/lib/hw/exams/pages';
+import { examPageStore } from '@/lib/hw/storage/exam-pages';
 
 const CODE: Partial<Record<HwErrorCode, TRPCError['code']>> = {
   UNAUTHORIZED: 'UNAUTHORIZED', FORBIDDEN: 'FORBIDDEN', FEATURE_DISABLED: 'FORBIDDEN', NOT_FOUND: 'NOT_FOUND', BAD_REQUEST: 'BAD_REQUEST', CONFLICT: 'CONFLICT',
@@ -89,7 +91,16 @@ export const hwExamsRouter = createTRPCRouter({
   start: protectedProcedure.use(rateLimit(10, 60_000)).input(z.object({ setId: id }))
     .mutation(({ ctx, input }) => admin(ctx, (u) => learner.startAttempt(hwDb, u, input.setId))),
   attempt: protectedProcedure.input(z.object({ attemptId: id }))
-    .query(({ ctx, input }) => admin(ctx, (u) => learner.attemptView(hwDb, u, input.attemptId, { sign: signedReadUrl }))),
+    .query(({ ctx, input }) => admin(ctx, (u) => learner.attemptView(hwDb, u, input.attemptId, {
+      sign: signedReadUrl, booklet: (attemptId) => pages.bookletPages(hwDb, examPageStore(), attemptId),
+    }))),
+  // the booklet (phase 4); pages themselves are uploaded through POST /api/hw/exams/attempts/:attemptId/pages
+  removePage: protectedProcedure.input(z.object({ attemptId: id, pageId: id }))
+    .mutation(({ ctx, input }) => admin(ctx, (u) => pages.removePage(hwDb, examPageStore(), u, input.attemptId, input.pageId))),
+  reorderPages: protectedProcedure.input(z.object({ attemptId: id, orderedIds: z.array(id).max(60) }))
+    .mutation(({ ctx, input }) => admin(ctx, (u) => pages.reorderPages(hwDb, u, input.attemptId, input.orderedIds))),
+  submitBooklet: protectedProcedure.input(z.object({ attemptId: id }))
+    .mutation(({ ctx, input }) => admin(ctx, (u) => pages.submitBooklet(hwDb, u, input.attemptId))),
   finishWriting: protectedProcedure.input(z.object({ attemptId: id })).mutation(({ ctx, input }) => admin(ctx, (u) => learner.finishWriting(hwDb, u, input.attemptId))),
   abandon: protectedProcedure.input(z.object({ attemptId: id })).mutation(({ ctx, input }) => admin(ctx, (u) => learner.abandonAttempt(hwDb, u, input.attemptId))),
 

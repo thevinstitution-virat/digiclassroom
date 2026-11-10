@@ -17,7 +17,7 @@ import { clockFor, effectiveAttempts, remainingMs, settle, startVerdict, type En
 
 export const examsEnabled = (): boolean => getHwConfig().HW_EXAMS_ENABLED;
 
-const requireEnabled = () => {
+export const requireEnabled = () => {
   if (!examsEnabled()) throw new HwError('FEATURE_DISABLED', 'Exam practice is not open yet. / परीक्षा अभ्यास अभी शुरू नहीं हुआ है।');
 };
 const notFound = () => new HwError('NOT_FOUND', 'Not found. / नहीं मिला।');
@@ -41,7 +41,7 @@ const entLike = (e: EntRow | undefined): EntitlementLike | null =>
   e ? { packageId: e.packageId, status: e.status, startsAt: e.startsAt, expiresAt: e.expiresAt, attemptsPerSet: e.attemptsPerSet } : null;
 
 /** Applies rules.settle to the learner's open attempts, so every read sees the clock's truth. Returns how many changed. */
-async function settleOpen(d: Exec, userId: string, now: Date, onlyAttemptId?: string): Promise<number> {
+export async function settleOpen(d: Exec, userId: string, now: Date, onlyAttemptId?: string): Promise<number> {
   const rows = await d.select({
     id: hwExamAttempt.id, status: hwExamAttempt.status, expiresAt: hwExamAttempt.expiresAt, uploadDeadlineAt: hwExamAttempt.uploadDeadlineAt,
     // outer column written out in full: drizzle renders ${col} bare here, and a bare "id" would bind to hw_exam_page itself
@@ -56,6 +56,7 @@ async function settleOpen(d: Exec, userId: string, now: Date, onlyAttemptId?: st
     // only from the status we read: a concurrent finish or upload wins, and this becomes a no-op
     const res = await d.update(hwExamAttempt).set({
       status: s.status, endedAt: sql`COALESCE(${hwExamAttempt.endedAt}, ${s.endedAt})`, ...(s.status === 'abandoned' && { failureReason: s.failureReason }),
+      ...(s.status === 'uploaded' && { submittedAt: s.submittedAt }),
     }).where(and(eq(hwExamAttempt.id, r.id), eq(hwExamAttempt.status, r.status))).returning({ id: hwExamAttempt.id });
     changed += res.length;
   }
@@ -174,7 +175,7 @@ export async function startAttempt(d: Exec, userId: string, setId: string, now =
   });
 }
 
-async function ownAttempt(d: Exec, userId: string, attemptId: string) {
+export async function ownAttempt(d: Exec, userId: string, attemptId: string) {
   const a = (await d.select().from(hwExamAttempt).where(and(eq(hwExamAttempt.id, attemptId), eq(hwExamAttempt.userId, userId))).limit(1))[0];
   if (!a) throw notFound(); // someone else's attempt is simply not there
   return a;
@@ -226,7 +227,7 @@ export function paperQuestionOf(
   };
 }
 
-export async function attemptView(d: Exec, userId: string, attemptId: string, opts: { now?: Date; sign?: (key: string) => Promise<string> } = {}) {
+export async function attemptView<P = never>(d: Exec, userId: string, attemptId: string, opts: { now?: Date; sign?: (key: string) => Promise<string>; booklet?: (attemptId: string) => Promise<P[]> } = {}) {
   requireEnabled();
   const now = opts.now ?? new Date();
   await settleOpen(d, userId, now, attemptId);
@@ -248,6 +249,8 @@ export async function attemptView(d: Exec, userId: string, attemptId: string, op
     remainingMs: a.status === 'started' ? remainingMs(now, a.expiresAt) : 0,
     uploadRemainingMs: a.status === 'started' || a.status === 'time_up' ? Math.max(0, a.uploadDeadlineAt.getTime() - now.getTime()) : 0,
     set: { id: set.id, packageId: set.packageId, title: set.title, subject: set.subject, subjectCode: set.subjectCode, kind: set.kind, maxMarks: set.maxMarks, durationMinutes: set.durationMinutes },
+    /** The photographed pages, in order (phase 4), when the caller can show them. */
+    booklet: opts.booklet ? await opts.booklet(a.id) : ([] as P[]),
     paper: rows.map(({ i, b }) => paperQuestionOf(i, b && { stem: b.stem, alt: b.alt, options: b.options, choiceGroup: b.choiceGroup }, b ? figs.get(b.id) ?? [] : [])),
   };
 }

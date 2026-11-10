@@ -2,8 +2,8 @@
 
 Design and phases, 11 Nov 2026. Branch `feat/exam-packages`, stacked on `feat/board-paper-bank`.
 
-**Status: phases 1 to 3 are built and verified on a scratch database (schema, rules, the super-admin
-builder, and the learner's catalogue, start and timed paper behind `HW_EXAMS_ENABLED`, off by default).
+**Status: phases 1 to 4 are built and verified on a scratch database (schema, rules, the super-admin
+builder, the learner's catalogue, timed paper and photo booklet behind `HW_EXAMS_ENABLED`, off by default).
 Nothing is applied to any real database, nothing is pushed, nothing is offered to any learner.**
 
 ## 1. What the owner asked for
@@ -125,7 +125,7 @@ tested exactly and the database functions stay thin:
 | 1 | Migration 034, the rules module, unit tests; 034 verified up/down/up and its guards tested on a scratch DB | **done (local)** |
 | 2 | Super-admin: package and set builder, item picker, publish, grants | **done (local)**; walked through in the browser |
 | 3 | Learner: package catalogue, entitlement, start a set, the server-anchored timer, auto-stop | **done (local)**; walked through in the browser |
-| 4 | The photo booklet: multi-page upload, quality gates, ordering, page-to-question mapping | to do |
+| 4 | The photo booklet: multi-page upload, quality gates, ordering, page-to-question mapping | **done (local)** except page-to-question mapping (owner's decision); needs the Study Buddy R2 bucket to run anywhere real |
 | 5 | Batch evaluation of a whole attempt: chunking, ready-by, fallback, cost booked per attempt | to do |
 | 6 | The report: marks, step marking, the 8 parameters, weak areas, progress across attempts | to do |
 | 7 | Pilot behind the existing eligibility gates, with monitoring and budgets on | to do |
@@ -205,4 +205,31 @@ walk-through found: `docs/hw-eval/screens/exam-packages/README.md`.
   finish writing, give up). After time is up the page says uploading opens in the next update (phase 4).
 - Tests: `exams-learner-db` (13, against the scratch DB, time passed in), `settle` in `exams-rules`, the
   learner procedures in `exams-api`.
+
+## 9. Phase 4 as built (the photo booklet)
+
+- **When:** pages are taken only once writing time is over (finished early, or the clock ran out) and
+  until the upload deadline fixed at the start. Handing in closes the booklet. When the window closes
+  with pages and the learner has not handed in, the attempt is **handed in as it stands at the deadline**
+  (`rules.settle` → `uploaded`); with no page it is abandoned, as before.
+- **Checked in the browser first** (`lib/hw/exams/page-measure.ts`, pure): brightness, share of blown-out
+  pixels (glare), and sharpness (variance of the Laplacian on an ~800 px copy). The photo is then
+  shrunk to 2400 px on the long side and sent as JPEG (about 150-350 KB a page). **The thresholds are
+  provisional** until calibrated on real photographs of real answer pages, so for blur, light and glare
+  the learner may choose "use it anyway"; the choice and the measurements are stored with the page
+  (`quality`).
+- **Checked again on the server** (`lib/hw/exams/pages.ts`, `POST /api/hw/exams/attempts/:id/pages`):
+  what the bytes really are (from their header), at least about 1.2 MP, at most 8 MB, not the same
+  photo twice (sha256), at most 40 pages, the window open, and the attempt the caller's own. "Too small"
+  cannot be overridden.
+- **Storage:** private objects `hw-exams/{attempt}/p{page}.{ext}`, shown through short-lived signed links;
+  a removed page's object is deleted. **R2 for Study Buddy does not exist yet**; for local development
+  only, `HW_DEV_LOCAL_STORAGE_DIR` keeps pages in a folder (ignored in production).
+- **Order:** pages are moved up or down and removed until handed in.
+- **Not built: page-to-question mapping** — still the owner's choice (the learner tags pages, a numbered
+  answer sheet, or the reader finds the question numbers). `hw_exam_page.question_hint` is there for the
+  first option. The screen tells the learner to number each answer as on the paper, which the third
+  option needs anyway.
+- Tests: `exams-page-measure` (pure), `exams-pages-db` (10, in-memory store), the settle cases in
+  `exams-rules`.
 

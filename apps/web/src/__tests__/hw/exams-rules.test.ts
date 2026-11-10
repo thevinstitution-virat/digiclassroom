@@ -297,8 +297,12 @@ describe('settle (phase 3: the clock is honoured when an attempt is read)', () =
     expect(settle(at(201), a('time_up'))).toEqual({ status: 'abandoned', endedAt: at(180), failureReason: 'no_pages_uploaded' });
     expect(settle(at(500), a('started'))).toEqual({ status: 'abandoned', endedAt: at(180), failureReason: 'no_pages_uploaded' });
   });
-  it('an attempt with pages is not abandoned here (closing it is the upload step’s job)', () => {
-    expect(settle(at(500), a('time_up', 3))).toBeNull();
+  it('the upload window closed with pages: handed in as it stands, at the deadline', () => {
+    expect(settle(at(500), a('time_up', 3))).toEqual({ status: 'uploaded', endedAt: at(180), submittedAt: at(200) });
+    expect(settle(at(500), a('started', 1))).toEqual({ status: 'uploaded', endedAt: at(180), submittedAt: at(200) });
+    expect(settle(at(199), a('time_up', 3))).toBeNull();
+  });
+  it('a booklet already handed in is left alone', () => {
     expect(settle(at(500), a('uploaded', 3))).toBeNull();
   });
 });

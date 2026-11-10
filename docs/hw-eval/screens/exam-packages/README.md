@@ -45,3 +45,16 @@ attempts that had pages. Outer columns are now written in full, and tests assert
 countdown read the device clock between refreshes (now `performance.now()`); the clock bar slid under the
 dashboard's sticky header (now placed below it, measured); a badge inside a paragraph (hydration warning).
 
+## Phase 4: the photo booklet (same day)
+
+The `dcp-exams-api` launch entry also sets `HW_DEV_LOCAL_STORAGE_DIR=H:\Trio\dev-storage`, so pages are
+kept on disk instead of R2. Photos were fed to the "Choose photos" picker from the page itself (canvas
+drawings of ruled pages with handwriting-style text, one of them blurred), since the browser pane has no
+file dialog.
+
+Walked: two sharp pages uploaded straight away; the blurred page held back with "This photo looks
+blurred" and kept with "Use it anyway" (marked "Kept although it looked blurred"); moving a page up;
+removing a page (its file deleted from storage — checked on disk); "Hand in 2 pages" → "Your booklet is
+handed in: 2 pages", every control gone; the stored rows match the files (1500x2000 JPEGs, about
+140-320 KB); 375 px without sideways scroll. No new findings.
+

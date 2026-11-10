@@ -5,6 +5,8 @@
 export const HW_PREFIX = 'hw-assignments/';
 /** The board-paper bank's figure images (docs/hw-eval/board-paper-importer.md): private objects, shown to a learner through short-lived signed links only. */
 export const HW_BANK_PREFIX = 'hw-bank/';
+/** Exam packages: a learner's photographed answer pages (docs/hw-eval/exam-packages.md), private, read through short-lived signed links. */
+export const HW_EXAMS_PREFIX = 'hw-exams/';
 
 export type HwFileKind = 'ink' | 'render' | 'photo';
 
@@ -46,10 +48,15 @@ export function bankFigureKey(figureRowId: string, version: number, ext: 'png' |
   return `${HW_BANK_PREFIX}${checkId('figureRowId', figureRowId)}.v${version}.${ext}`;
 }
 
+/** One photographed answer page: hw-exams/{attempt id}/p{page id}.{ext}. A page row is never re-pointed, so no version is needed. */
+export function examPageKey(attemptId: string, pageId: string, ext: 'png' | 'jpg' | 'webp'): string {
+  return `${HW_EXAMS_PREFIX}${checkId('attemptId', attemptId)}/p${checkId('pageId', pageId)}.${ext}`;
+}
+
 /** Refuse any key outside this feature's prefixes, or with path tricks in it. */
 export function assertHwKey(key: string): string {
-  if (!(key.startsWith(HW_PREFIX) || key.startsWith(HW_BANK_PREFIX)) || key.includes('..') || key.includes('//') || key.includes('\\')) {
-    throw new Error(`refusing R2 key outside ${HW_PREFIX} and ${HW_BANK_PREFIX}: ${key}`);
+  if (!(key.startsWith(HW_PREFIX) || key.startsWith(HW_BANK_PREFIX) || key.startsWith(HW_EXAMS_PREFIX)) || key.includes('..') || key.includes('//') || key.includes('\\')) {
+    throw new Error(`refusing R2 key outside ${HW_PREFIX}, ${HW_BANK_PREFIX} and ${HW_EXAMS_PREFIX}: ${key}`);
   }
   return key;
 }

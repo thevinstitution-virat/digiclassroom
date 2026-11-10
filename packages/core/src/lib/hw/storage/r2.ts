@@ -2,7 +2,7 @@
 // touches keys under hw-assignments/, and refuses to run without credentials (the shared
 // module only logs a warning).
 
-import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { r2Client } from '@/lib/services/r2';
 import { HwError } from '../errors';
@@ -34,4 +34,9 @@ export async function getHwObject(key: string): Promise<Uint8Array> {
 export async function signedReadUrl(key: string): Promise<string> {
   assertHwKey(key);
   return getSignedUrl(r2Client, new GetObjectCommand({ Bucket: bucket(), Key: key }), { expiresIn: READ_URL_SECONDS });
+}
+
+export async function deleteHwObject(key: string): Promise<void> {
+  assertHwKey(key);
+  await r2Client.send(new DeleteObjectCommand({ Bucket: bucket(), Key: key }));
 }

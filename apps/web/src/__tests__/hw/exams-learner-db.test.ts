@@ -145,7 +145,7 @@ suite('exam packages, the learner — integration', () => {
     expect((await L.startAttempt(database, u, s, at(82))).attemptNo).toBe(2);
   });
 
-  it('an attempt with an accepted page is not abandoned when the upload window closes', async () => {
+  it('an attempt with an accepted page is not abandoned when the upload window closes: it is handed in at the deadline', async () => {
     const { p, s } = await live();
     const u = await learner();
     await grant(u, p);
@@ -153,7 +153,8 @@ suite('exam packages, the learner — integration', () => {
     await L.finishWriting(database, u, attemptId, at(30));
     await raw.query(`INSERT INTO hw_exam_page (attempt_id, position, image_key, mime_type, width_px, height_px, bytes, sha256) VALUES ($1, 0, 'hw-exams/t.jpg', 'image/jpeg', 1200, 1600, 1000, $2)`, [attemptId, 'c'.repeat(64)]);
     const v = await L.attemptView(database, u, attemptId, { now: at(500) });
-    expect(v.attempt).toMatchObject({ status: 'time_up', pages: 1 });
+    expect(v.attempt).toMatchObject({ status: 'uploaded', pages: 1 });
+    expect(await one(`SELECT submitted_at FROM hw_exam_attempt WHERE id = $1`, [attemptId])).toEqual({ submitted_at: at(80) });
     await raw.query(`DELETE FROM hw_exam_page WHERE attempt_id = $1`, [attemptId]);
   });
 

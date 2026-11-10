@@ -95,15 +95,20 @@ export const isTimeUp = (now: Date, expiresAt: Date): boolean => now.getTime() >
  * Where an attempt stands now, worked out when it is read (no scheduled job is needed for the clock to be honoured):
  *   started, writing time over                      -> time_up   (ended at the moment the time ran out, not when we noticed)
  *   started or time_up, upload window over, no page -> abandoned (nothing to mark)
- * Anything else is unchanged (null). An attempt with pages past its window is the upload step's to close (phase 4), not this one's.
+ *   started or time_up, upload window over, pages  -> uploaded  (handed in with the pages it has, at the deadline)
+ * Anything else is unchanged (null).
  */
 export function settle(now: Date, a: AttemptLike & { acceptedPages: number }):
   | { status: 'time_up'; endedAt: Date }
   | { status: 'abandoned'; endedAt: Date; failureReason: 'no_pages_uploaded' }
+  | { status: 'uploaded'; endedAt: Date; submittedAt: Date }
   | null {
   const open = a.status === 'started' || a.status === 'time_up';
   if (open && a.acceptedPages === 0 && now.getTime() > a.uploadDeadlineAt.getTime()) {
     return { status: 'abandoned', endedAt: a.expiresAt, failureReason: 'no_pages_uploaded' };
+  }
+  if (open && a.acceptedPages > 0 && now.getTime() > a.uploadDeadlineAt.getTime()) {
+    return { status: 'uploaded', endedAt: a.expiresAt, submittedAt: a.uploadDeadlineAt };
   }
   if (a.status === 'started' && isTimeUp(now, a.expiresAt)) return { status: 'time_up', endedAt: a.expiresAt };
   return null;
@@ -145,7 +150,12 @@ export const PAGE_LIMITS = {
   minBrightness: 0.18,
   maxBrightness: 0.92,
   maxGlare: 0.08,
+  /** A board paper is rarely more than 30 sides; this stops a runaway upload, not a learner. */
+  maxPages: 40,
 } as const;
+
+/** Problems a learner may override ("use this photo anyway"): the measurements behind them are not yet calibrated on real pages. */
+export const SOFT_PAGE_PROBLEMS: ReadonlySet<PageProblem> = new Set(['too_blurred', 'too_dark', 'too_bright', 'glare']);
 
 export type PageVerdict = { ok: true } | { ok: false; why: PageProblem };
 
