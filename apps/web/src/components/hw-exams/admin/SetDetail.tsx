@@ -53,13 +53,16 @@ function Settings({ set, onSaved }: { set: SetRow; onSaved: () => void }) {
   )
 }
 
+/** The curriculum's chapter names, offered by every chapter field on the page (a datalist: anything else can still be typed). */
+export const CHAPTER_LIST = 'hw-exam-chapters'
+
 function ChapterCell({ itemId, value, editable, onSaved }: { itemId: string; value: string; editable: boolean; onSaved: () => void }) {
   const [v, setV] = useState(value)
   const update = api.hw.exams.admin.updateItem.useMutation({ onSuccess: onSaved })
   if (!editable) return <span>{value || <span className="text-muted-foreground">—</span>}</span>
   return (
     <span className="flex gap-1">
-      <Input value={v} onChange={(e) => setV(e.target.value)} className="h-8 min-w-[10rem]" aria-label="Chapter" placeholder="chapter" />
+      <Input value={v} onChange={(e) => setV(e.target.value)} className="h-8 min-w-[10rem]" aria-label="Chapter" placeholder="chapter" list={CHAPTER_LIST} />
       {v !== value && <Button size="sm" className="h-8" disabled={update.isPending} onClick={() => update.mutate({ itemId, patch: { chapter: v.trim() } })}>Save</Button>}
     </span>
   )
@@ -81,7 +84,7 @@ export function SetDetail({ packageId, setId }: { packageId: string; setId: stri
 
   if (q.isLoading) return <HwLoading />
   if (q.error) return <HwError message={q.error.message} onRetry={() => q.refetch()} />
-  const { set, items, attainable, problems } = q.data!
+  const { set, items, attainable, problems, warnings, blueprint } = q.data!
   const draft = set.status === 'draft'
   const move = (i: number, by: -1 | 1) => {
     const ids = items.map((x) => x.id)
@@ -109,6 +112,17 @@ export function SetDetail({ packageId, setId }: { packageId: string; setId: stri
       </div>
       <Note tone="error">{actionError}</Note>
       {draft && <Problems items={publishProblems.length ? publishProblems : problems} />}
+      {draft && <Problems items={warnings} title="Worth a look (does not stop publishing)" />}
+      {blueprint && (
+        <>
+          <datalist id={CHAPTER_LIST}>{blueprint.chapters.map((c) => <option key={c} value={c} />)}</datalist>
+          {(set.kind === 'mock_full' || set.kind === 'mock_half') && (
+            <p className="text-xs text-muted-foreground">
+              Mocks are checked against the board’s {blueprint.session} curriculum: <a href={blueprint.source.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{blueprint.source.title}</a>.
+            </p>
+          )}
+        </>
+      )}
       {draft && items.some((x) => !x.chapter) && (
         <Note tone="error">
           {`${items.filter((x) => !x.chapter).length} of ${items.length} questions have no chapter (${items.filter((x) => !x.chapter).map((x) => `Q${x.number}${x.alt ?? ''}`).join(', ')}). `}

@@ -34,7 +34,7 @@ export function BankPicker({ setId, onAdded, onCancel }: { setId: string; onAdde
                 {papers.data!.map((p) => <option key={p.paperId} value={p.paperId}>{p.board} {p.classLevel} {p.subject} — {p.kind === 'sqp' ? 'sample paper' : 'past paper'} {p.session}</option>)}
               </NativeSelect>
             </Field>
-            <Field label="Chapter for the questions you add" hint="used for the learner’s weak areas"><Input value={chapter} onChange={(e) => setChapter(e.target.value)} placeholder="Light – Reflection and Refraction" /></Field>
+            <Field label="Chapter for the questions you add" hint="used for the learner’s weak areas"><Input value={chapter} onChange={(e) => setChapter(e.target.value)} list="hw-exam-chapters" placeholder="Light – Reflection and Refraction" /></Field>
           </div>
           {qs.isLoading ? <HwLoading /> : qs.error ? <HwError message={qs.error.message} /> : (
             <ul className="max-h-96 divide-y overflow-y-auto rounded-md border">
@@ -122,7 +122,7 @@ export function AuthoredForm({ setId, onAdded, onCancel }: { setId: string; onAd
         </Field>
         <Field label="Marks"><Input type="number" min={0.5} step="0.5" value={marks} onChange={(e) => setMarks(e.target.value)} /></Field>
         <Field label="Section" hint="optional"><Input value={section} onChange={(e) => setSection(e.target.value)} placeholder="B" /></Field>
-        <Field label="Chapter"><Input value={chapter} onChange={(e) => setChapter(e.target.value)} /></Field>
+        <Field label="Chapter"><Input value={chapter} onChange={(e) => setChapter(e.target.value)} list="hw-exam-chapters" /></Field>
       </div>
       <Field label="Question"><Textarea rows={3} value={stem} onChange={(e) => setStem(e.target.value)} /></Field>
 

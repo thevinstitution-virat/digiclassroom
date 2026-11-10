@@ -10,6 +10,7 @@ import { HwError } from '@/lib/hw/errors';
 import { offerCheck } from '@/lib/hw/practice/paper';
 import type { Exec } from '@/lib/hw/db';
 import { attainableMarks, authoredProblems, describeSetProblem, packageProblems, setProblems, type ItemFacts, type SetProblem } from './build-rules';
+import { blueprintChapters, blueprintCheck, blueprintFor, type Blueprint, type BlueprintItem } from './blueprint';
 
 // ── errors ───────────────────────────────────────────────────────────────────
 
@@ -114,7 +115,7 @@ export async function getPackage(d: Exec, packageId: string) {
     summaries.push({
       id: s.id, position: s.position, kind: s.kind, subject: s.subject, subjectCode: s.subjectCode, title: s.title, status: s.status,
       maxMarks: s.maxMarks, durationMinutes: s.durationMinutes, items: items.length, attainable: attainableMarks(items),
-      problems: s.status === 'draft' ? [...setProblems(s, items), ...(await offerProblems(d, s.id))].map(describeSetProblem) : [],
+      problems: s.status === 'draft' ? [...setProblems(s, items), ...(await offerProblems(d, s.id)), ...(await blueprintFindings(d, pkg, s)).problems].map(describeSetProblem) : [],
     });
   }
   return { package: pkg, sets: summaries };
@@ -235,6 +236,33 @@ async function itemFactsBySet(d: Exec, setIds: string[]): Promise<Map<string, It
   return out;
 }
 
+type PackageKey = { board: string; classLevel: number; examYear: number };
+type SetKey = { id: string; kind: string; subjectCode: string; syllabusScope: string[] };
+
+/** The board's blueprint for a set, and what it says about the set (blueprint.ts). No blueprint for the paper: nothing to say. */
+async function blueprintFindings(d: Exec, pkg: PackageKey, set: SetKey): Promise<{ blueprint: Blueprint | null; problems: SetProblem[]; warnings: string[] }> {
+  const blueprint = blueprintFor({ ...pkg, subjectCode: set.subjectCode });
+  if (!blueprint) return { blueprint, problems: [], warnings: [] };
+  const rows = await d.select({
+    number: hwExamSetItem.number, marks: hwExamSetItem.marks, chapter: hwExamSetItem.chapter, bankId: hwExamSetItem.bankQuestionId,
+    stem: hwExamSetItem.stem, options: hwExamSetItem.options, schemeText: hwExamSetItem.schemeText, parts: hwExamSetItem.parts,
+    alt: hwBankQuestion.alt, choiceGroup: hwBankQuestion.choiceGroup,
+  }).from(hwExamSetItem).leftJoin(hwBankQuestion, eq(hwBankQuestion.id, hwExamSetItem.bankQuestionId))
+    .where(eq(hwExamSetItem.setId, set.id)).orderBy(asc(hwExamSetItem.position));
+  const items: BlueprintItem[] = rows.map((r) => ({
+    number: r.number, marks: r.marks, choiceGroup: r.choiceGroup ?? null, alt: r.alt ?? null, chapter: r.chapter,
+    authoredText: r.bankId ? null : [r.stem ?? '', ...(r.options ?? []), r.schemeText, JSON.stringify(r.parts ?? [])].join(' '),
+  }));
+  return { blueprint, ...blueprintCheck(blueprint, set, items) };
+}
+
+async function packageKey(d: Exec, packageId: string): Promise<PackageKey> {
+  const pkg = (await d.select({ board: hwExamPackage.board, classLevel: hwExamPackage.classLevel, examYear: hwExamPackage.examYear })
+    .from(hwExamPackage).where(eq(hwExamPackage.id, packageId)).limit(1))[0];
+  if (!pkg) throw notFound('Package');
+  return pkg;
+}
+
 export async function getSet(d: Exec, setId: string) {
   const set = (await d.select().from(hwExamSet).where(eq(hwExamSet.id, setId)).limit(1))[0];
   if (!set) throw notFound('Set');
@@ -245,8 +273,14 @@ export async function getSet(d: Exec, setId: string) {
   }).from(hwExamSetItem).leftJoin(hwBankQuestion, eq(hwBankQuestion.id, hwExamSetItem.bankQuestionId))
     .where(eq(hwExamSetItem.setId, setId)).orderBy(asc(hwExamSetItem.position));
   const facts = (await itemFactsBySet(d, [setId])).get(setId) ?? [];
-  const problems: SetProblem[] = set.status === 'draft' ? [...setProblems(set, facts), ...(await offerProblems(d, setId))] : [];
-  return { set, items, attainable: attainableMarks(facts), problems: problems.map(describeSetProblem) };
+  const bp = await blueprintFindings(d, await packageKey(d, set.packageId), set);
+  const problems: SetProblem[] = set.status === 'draft' ? [...setProblems(set, facts), ...(await offerProblems(d, setId)), ...bp.problems] : [];
+  return {
+    set, items, attainable: attainableMarks(facts), problems: problems.map(describeSetProblem),
+    // Advice from the board's blueprint that does not stop publishing, and the curriculum's chapter names to pick from.
+    warnings: set.status === 'draft' ? bp.warnings : [],
+    blueprint: bp.blueprint && { session: bp.blueprint.session, source: bp.blueprint.source, chapters: blueprintChapters(bp.blueprint) },
+  };
 }
 
 export async function publishSet(d: Exec, setId: string): Promise<{ published: boolean; problems: string[] }> {
@@ -256,7 +290,7 @@ export async function publishSet(d: Exec, setId: string): Promise<{ published: b
     if (set.status === 'published') return { published: true, problems: [] };
     if (set.status === 'retired') throw new HwError('CONFLICT', 'A retired set is reopened, not published again.');
     const facts = (await itemFactsBySet(tx, [setId])).get(setId) ?? [];
-    const problems = [...setProblems(set, facts), ...(await offerProblems(tx, setId))];
+    const problems = [...setProblems(set, facts), ...(await offerProblems(tx, setId)), ...(await blueprintFindings(tx, await packageKey(tx, set.packageId), set)).problems];
     if (problems.length) return { published: false, problems: problems.map(describeSetProblem) };
     await guarded('Publishing the set', () => tx.update(hwExamSet).set({ status: 'published' }).where(eq(hwExamSet.id, setId)));
     return { published: true, problems: [] };

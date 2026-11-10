@@ -64,3 +64,35 @@ are questions without a key.
    product may show past-paper text and figures to paying learners is still the owner's question (exam-packages.md section 6).
 
 The scanned papers (31/1, 31/8, the answer book) can be read from page images here; no outside processing is needed for them.
+
+## 6. The board's own documents for 2026-27 (2027 boards)
+
+All on `https://cbseacademic.nic.in/` (the portal's "Curriculum 2026-27" tab is `curriculum_2027.html`; sample papers are
+`sqp_classx_2026-27.html`). Prefix each path below with that address.
+
+| What | Path |
+|---|---|
+| Class X Science (086) curriculum: unit marks, chapters, formative-only topics, question-paper design | `web_material/CurriculumMain27/SecPart1/Science_SecP1_2026-27.pdf` |
+| Its reading material (the formative-only chapters' NCERT text) | `web_material/CurriculumMain27/SecPart1/Science_SecP1IX_2026-27_RM.pdf` |
+| Class X Mathematics / Social Science / English (Language and Literature) | `.../SecPart1/Maths_SecP1X_2026-27.pdf`, `.../SocialScience_SecP1X_2026-27.pdf`, `.../English_LL_SecP1_2026-27.pdf` |
+| Initial pages (general scheme of studies) | `.../SecPart1/Curriculum_SecP1_2026-27.pdf` |
+| Class X sample papers and marking schemes 2026-27 | `web_material/SQP/ClassX_2026_27/Science-SQP.pdf` and `Science-MS.pdf`; likewise `MathsStandard-`, `SocialScience-`, `EnglishL-` |
+
+Class XII lives on the same tab (Senior Secondary); not looked up yet.
+
+**What the Science curriculum says, and what is built from it** (`packages/core/src/lib/hw/exams/blueprint.ts`, read from the PDF
+above on 11 Nov 2026): units I Chemical Substances 25, II World of Living 25, III Natural Phenomena 12, IV Effects of Current 13,
+V Natural Resources 5 (80; internal assessment 20). Units II and V are the paper's Biology section (30), I is Chemistry (25), III and
+IV Physics (25), which is the split the 2026 papers print. **Assessed only formatively** (in the syllabus, not in the year-end paper):
+Periodic Classification of Elements; Evolution (acquired and inherited traits, speciation, fossils, human evolution); Motor,
+Electromagnetic Induction, Electric Generator. Also not assessed: the colour of the sun at sunrise and sunset; information in NCERT's
+boxes; derivations of the mirror and lens formulae. None of the 15 text-layer 2026 papers asks any formative-only topic.
+
+- A **mock** in a CBSE Class 10, 2027 package (Science 086) cannot be published with a question, or a half-syllabus scope, on a
+  formative-only chapter. Words in a written question that point to one ("generator", "Mendeleev", "fossil"; never "motor neuron")
+  are a warning, as are a chapter that is not one of the curriculum's, and marks per unit that differ from the board paper's once
+  every question has a chapter. Board papers (PYQ, sample paper) are the board's own and are not checked.
+- The builder suggests the curriculum's 13 chapter names in every chapter field and links the curriculum it checks against.
+- For the phase 6 report, `studyPriorities` ranks units by **board marks at stake**: the unit's marks in the board paper times the
+  share lost in the attempt (half of a 25-mark unit lost, 12.5, comes before all of a 5-mark unit, 5).
+- Only Science 086 for 2027 is in. Each further subject is added from the board's own curriculum PDF, never from a third party's summary.

@@ -24,7 +24,10 @@ export type SetProblem =
   | { code: 'bank_row_not_published'; itemId: string; number: number; status: string }
   | { code: 'number_gap'; missing: number[] }
   | { code: 'bank_row_not_offered'; number: number; why: string }
-  | { code: 'no_scope' };
+  | { code: 'no_scope' }
+  /** From the board's blueprint (blueprint.ts): a mock question or scope on a topic the year-end paper does not test. */
+  | { code: 'formative_chapter'; chapter: string; topic: string; numbers: string[]; session: string }
+  | { code: 'formative_scope'; chapter: string; session: string };
 
 /**
  * The marks a candidate can actually score: each choice group (or, without one, each question number) counts once, at its highest mark.
@@ -84,6 +87,8 @@ export function describeSetProblem(p: SetProblem): string {
     case 'number_gap': return `Question number${p.missing.length === 1 ? '' : 's'} ${p.missing.join(', ')} ${p.missing.length === 1 ? 'is' : 'are'} missing.`;
     case 'no_scope': return 'A half-syllabus mock must list the chapters it covers.';
     case 'bank_row_not_offered': return `Q${p.number} cannot be set from the board paper: ${OFFER_WHY[p.why] ?? p.why}.`;
+    case 'formative_chapter': return `${p.numbers.join(', ')} ${p.numbers.length === 1 ? 'is' : 'are'} on ${p.chapter}, which the ${p.session} curriculum assesses only formatively${p.topic !== p.chapter ? ` (${p.topic})` : ''}: the board paper will not ask it. Take ${p.numbers.length === 1 ? 'it' : 'them'} out of the mock.`;
+    case 'formative_scope': return `The syllabus scope includes ${p.chapter}, which the ${p.session} curriculum assesses only formatively: the board paper will not ask it.`;
   }
 }
 

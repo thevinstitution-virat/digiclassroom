@@ -146,6 +146,35 @@ suite('exam packages, the builder — integration', () => {
     expect(r).toEqual({ published: true, problems: [] });
   });
 
+  it('a CBSE 2027 Science mock is checked against the board’s 2026-27 blueprint; a board paper is not', async () => {
+    const pk = await b.createPackage(database, 'owner', { board: 'CBSE', classLevel: 10, examYear: 2027, slug: `bp-${randomUUID().slice(0, 8)}`, title: 'Class 10 2027' });
+    packageIds.push(pk.id);
+    const s = await mock(pk.id, 6);
+    const q1 = await b.addAuthoredItem(database, s.id, authored(3, { chapter: 'Periodic Classification of Elements' }));
+    await b.addAuthoredItem(database, s.id, authored(3, { chapter: 'Electricity', stem: 'How does an electric generator work?' }));
+    let r = await b.publishSet(database, s.id);
+    expect(r.published).toBe(false);
+    expect(r.problems).toEqual([expect.stringMatching(/^Q1 is on Periodic Classification of Elements, which the 2026-27 curriculum assesses only formatively/)]);
+    let got = await b.getSet(database, s.id);
+    expect(got.problems).toEqual(r.problems);
+    expect(got.blueprint).toMatchObject({ session: '2026-27', chapters: expect.arrayContaining(['Electricity', 'Our Environment']) });
+    expect(got.warnings).toEqual(expect.arrayContaining([expect.stringContaining('Q2 mentions "generator"')]));
+    expect((await b.getPackage(database, pk.id)).sets[0]!.problems).toEqual(r.problems);
+
+    await b.updateItem(database, q1.id, { chapter: 'Our Environment' });
+    got = await b.getSet(database, s.id);
+    expect(got.problems).toEqual([]);
+    expect(got.warnings).toContain('Unit I (Chemical Substances - Nature and Behaviour) has 0 marks here; the board paper gives it 25.');
+    r = await b.publishSet(database, s.id);
+    expect(r).toEqual({ published: true, problems: [] });
+    expect((await b.getSet(database, s.id)).warnings).toEqual([]); // advice is for drafts only
+
+    // the same package's board paper is the board's own: no blueprint check
+    const { paperId } = await publishedPaper();
+    const paperSet = await b.setFromPaper(database, pk.id, paperId);
+    expect((await b.getSet(database, paperSet.id)).warnings).toEqual([]);
+  });
+
   it('a published set refuses edits with a readable message, never a constraint name', async () => {
     const p = await newPackage();
     const s = await mock(p, 3);
