@@ -187,6 +187,13 @@ export default function InkBuddyPage() {
             </p>
           ) : s.message ? <HwMessage>{s.message[lang]}</HwMessage> : null}
           {s.active && s.scopes.length > 0 && <Finder scopes={s.scopes} />}
+          {/* the books of the learner's own class only: say why there are none */}
+          {s.active && s.scopes.length === 0 && ('classSet' in s && !s.classSet ? (
+            <HwMessage>
+              <p>{t('pr.noClass')}</p>
+              <Button asChild size="sm" variant="outline" className="mt-2"><Link href="/dashboard/user/profile">{t('pr.noClass.link')}</Link></Button>
+            </HwMessage>
+          ) : <HwMessage>{t('pr.noBooks', { cls: ('classLevels' in s ? s.classLevels : []).join(', ') })}</HwMessage>)}
           {s.active && <PaperPractice />}
           <Mine />
         </div>

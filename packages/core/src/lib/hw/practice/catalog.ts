@@ -18,6 +18,7 @@ import { subjectNodeCodes } from '../keys/hub-retrieval';
 import { keySettingsFromEnv } from '../keys/service';
 import { normaliseClass } from '../keys/scope';
 import { PRACTICE_TEXT, questionShape, type PracticeQuestionType } from './rules';
+import { learnerClass, scopesForLearner, type LearnerClass } from './learner-class';
 
 export interface PracticeScope { classLevel: number; subject: string; medium: 'en' | 'hi' }
 
@@ -159,9 +160,19 @@ export async function offeredScopes(deps: { list?: () => Promise<{ node_code: st
 
 const sameScope = (a: PracticeScope, b: PracticeScope) => a.classLevel === b.classLevel && a.medium === b.medium && a.subject.toLowerCase() === b.subject.toLowerCase();
 
-/** Refuses a class, subject and medium the library has no book for on offer, so a question is never keyed from another subject's book. */
-export async function requireOfferedScope(scope: PracticeScope, deps?: Parameters<typeof offeredScopes>[0]): Promise<void> {
-  if (!(await offeredScopes(deps)).some((s) => sameScope(s, scope))) throw new HwError('BAD_REQUEST', `${PRACTICE_TEXT.scopeOff.en} / ${PRACTICE_TEXT.scopeOff.hi}`);
+/** What one learner is offered: the library's books of their own class, in their medium (learner-class.ts), as Virat Gyankosh does. */
+export async function offeredScopesFor(userId: string, deps?: Parameters<typeof offeredScopes>[0] & { learner?: LearnerClass }): Promise<{ scopes: PracticeScope[]; learner: LearnerClass }> {
+  const learner = deps?.learner ?? await learnerClass(userId);
+  return { scopes: scopesForLearner(await offeredScopes(deps), learner), learner };
+}
+
+/**
+ * Refuses a class, subject and medium the library has no book for on offer, so a question is never keyed from another subject's book; with
+ * a learner, also anything outside their own class.
+ */
+export async function requireOfferedScope(scope: PracticeScope, deps?: Parameters<typeof offeredScopes>[0] & { userId?: string; learner?: LearnerClass }): Promise<void> {
+  const on = deps?.userId ? (await offeredScopesFor(deps.userId, deps)).scopes : await offeredScopes(deps);
+  if (!on.some((s) => sameScope(s, scope))) throw new HwError('BAD_REQUEST', `${PRACTICE_TEXT.scopeOff.en} / ${PRACTICE_TEXT.scopeOff.hi}`);
 }
 
 function requestOf(scope: PracticeScope, query: string): HubSearchRequest {
@@ -191,11 +202,11 @@ function questionsOf(res: HubSearchResponse): CatalogQuestion[] {
 }
 
 /** Book exercise questions about a topic the learner typed, most relevant first. */
-export async function searchPracticeQuestions(scope: PracticeScope, rawQuery: string, hub: HubLike | null = defaultHub()): Promise<{ available: boolean; questions: CatalogQuestion[]; warnings: string[]; message?: { en: string; hi: string } }> {
+export async function searchPracticeQuestions(scope: PracticeScope, rawQuery: string, hub: HubLike | null = defaultHub(), userId?: string): Promise<{ available: boolean; questions: CatalogQuestion[]; warnings: string[]; message?: { en: string; hi: string } }> {
   const query = rawQuery.trim().replace(/\s+/g, ' ');
   if (query.length < 2 || query.length > 200) throw new HwError('BAD_REQUEST', 'Type a topic of 2 to 200 characters.');
   if (!hub) return { available: false, questions: [], warnings: [], message: PRACTICE_TEXT.libraryOff };
-  await requireOfferedScope(scope);
+  await requireOfferedScope(scope, userId ? { userId } : undefined);
   // The word "questions" pulls the book's exercise rows forward: the hub ranks them with the explanatory text, and a topic alone often returns none (measured on the live book).
   const res = await searchHub(hub, requestOf(scope, `${query} questions`));
   const q = shingles(query, 1);

@@ -15,6 +15,7 @@ import { paperWrittenReady } from './catalog';
 import { answerLinesOf, attemptTitle, hwTypeOf, offerVerdict, originRefOf, promptOf, type PaperHeader, type PaperRowLike } from './paper-rules';
 import { PRACTICE_ORG_ID, PRACTICE_TEXT } from './rules';
 import { ensurePracticeSpace, isPracticeLearner, practiceEnabled, requireUsableTrial } from './trial';
+import { learnerClass } from './learner-class';
 
 const both = (t: { en: string; hi: string }) => `${t.en} / ${t.hi}`;
 
@@ -126,6 +127,8 @@ export async function startPaperAttempt(userId: string, rowId: string): Promise<
   const offer = await offerOf(db, rowId, 'learner');
   if (!offer) throw new HwError('NOT_FOUND', both(PRACTICE_TEXT.paperGone));
   const { header, row: q, plan } = offer;
+  // InkBuddy offers the learner's own class only (owner, 13 Nov 2026)
+  if (!(await learnerClass(userId)).classLevels.includes(header.classLevel)) throw new HwError('NOT_FOUND', both(PRACTICE_TEXT.paperGone));
 
   const prior = await db.execute<{ id: string }>(sql`
     SELECT a.id FROM hw_assignment a JOIN hw_question hq ON hq.assignment_id = a.id

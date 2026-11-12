@@ -34,6 +34,8 @@ const uid = (k: string) => `pr-${randomUUID().slice(0, 8)}-${k}`
 async function learner(k: string) {
   const id = uid(k)
   await raw.query(`INSERT INTO "user" (id, name, email, role, created_at) VALUES ($1, $2, $3, 'student', now())`, [id, `${k} Person`, `${id}@example.test`])
+  // InkBuddy offers a learner their own class (13 Nov 2026): the test learner studies Class 9
+  await raw.query(`INSERT INTO enhanced_user_profiles (user_id, grade_level, medium) VALUES ($1, 9, 'ENGLISH') ON CONFLICT (user_id) DO NOTHING`, [id])
   await trial.startTrial(id)
   return id
 }

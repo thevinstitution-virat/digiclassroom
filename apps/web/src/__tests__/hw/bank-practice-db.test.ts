@@ -83,6 +83,8 @@ const learner = async () => {
   const id = `bp-${randomUUID().slice(0, 8)}`;
   userIds.push(id);
   await raw.query(`INSERT INTO "user" (id, name, email, role, created_at) VALUES ($1, 'Learner', $2, 'student', now())`, [id, `${id}@example.test`]);
+  // InkBuddy offers a learner their own class (13 Nov 2026): the test learner studies Class 10
+  await raw.query(`INSERT INTO enhanced_user_profiles (user_id, grade_level, medium) VALUES ($1, 10, 'ENGLISH') ON CONFLICT (user_id) DO NOTHING`, [id])
   await trial.startTrial(id);
   return id;
 };

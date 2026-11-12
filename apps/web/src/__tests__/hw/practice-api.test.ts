@@ -48,6 +48,8 @@ const uid = (k: string) => `pi-${randomUUID().slice(0, 8)}-${k}`
 async function addUser(k: string) {
   const id = uid(k)
   await raw.query(`INSERT INTO "user" (id, name, email, role, created_at) VALUES ($1, $2, $3, 'student', now())`, [id, `${k} Person`, `${id}@example.test`])
+  // InkBuddy offers a learner their own class (13 Nov 2026): the test learner studies Class 9
+  await raw.query(`INSERT INTO enhanced_user_profiles (user_id, grade_level, medium) VALUES ($1, 9, 'ENGLISH') ON CONFLICT (user_id) DO NOTHING`, [id])
   return id
 }
 const caller = (userId: string | null) => router.hwRouter.createCaller({
@@ -150,9 +152,22 @@ suite('self-practice phase 3 — API', () => {
       const saved = process.env.HW_SELF_PRACTICE_SCOPES
       try {
         process.env.HW_SELF_PRACTICE_SCOPES = '9:Science:en,10:Mathematics:en'; config._resetHwConfig()
-        expect(((await as(u).practice.status()) as { scopes?: unknown[] }).scopes).toHaveLength(2)
+        // a Class 9 learner is offered Class 9 only (owner, 13 Nov 2026), however many classes the library has
+        expect(((await as(u).practice.status()) as { scopes?: unknown[] }).scopes).toEqual([{ classLevel: 9, subject: 'Science', medium: 'en' }])
+        await expect(as(u).practice.search({ ...pickInput, classLevel: '10', subject: 'Mathematics', query: 'algebra' })).rejects.toMatchObject({ code: 'BAD_REQUEST' })
+        // once their profile says Class 10, they are offered Class 10
+        await raw.query(`UPDATE enhanced_user_profiles SET grade_level = 10 WHERE user_id = $1`, [u])
+        expect(((await as(u).practice.status()) as { scopes?: unknown[]; classLevels?: number[] })).toMatchObject({ scopes: [{ classLevel: 10, subject: 'Mathematics', medium: 'en' }], classLevels: [10], classSet: true })
         await expect(as(u).practice.search({ ...pickInput, classLevel: '10', subject: 'Mathematics', query: 'algebra' })).resolves.toMatchObject({ available: true })
       } finally { if (saved === undefined) delete process.env.HW_SELF_PRACTICE_SCOPES; else process.env.HW_SELF_PRACTICE_SCOPES = saved; config._resetHwConfig() }
+    })
+
+    it('a learner with no class set is offered no book and told so', async () => {
+      const u = await addUser('s01b')
+      await raw.query(`DELETE FROM enhanced_user_profiles WHERE user_id = $1`, [u])
+      expect(await as(u).practice.status()).toMatchObject({ scopes: [], classSet: false, classLevels: [] })
+      await as(u).practice.start()
+      await expect(as(u).practice.search({ ...pickInput, query: 'photosynthesis' })).rejects.toMatchObject({ code: 'BAD_REQUEST' })
     })
 
     it('someone in an institution may start a trial too (owner, 13 Nov 2026)', async () => {

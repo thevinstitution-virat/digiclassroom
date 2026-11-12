@@ -49,6 +49,8 @@ const uid = (k: string) => `pa-${randomUUID().slice(0, 8)}-${k}`
 async function learner(k: string, startTrial = true) {
   const id = uid(k)
   await raw.query(`INSERT INTO "user" (id, name, email, role, created_at) VALUES ($1, $2, $3, 'student', now())`, [id, `${k} Person`, `${id}@example.test`])
+  // InkBuddy offers a learner their own class (13 Nov 2026): the test learner studies Class 9
+  await raw.query(`INSERT INTO enhanced_user_profiles (user_id, grade_level, medium) VALUES ($1, 9, 'ENGLISH') ON CONFLICT (user_id) DO NOTHING`, [id])
   if (startTrial) await trial.startTrial(id)
   return id
 }
@@ -243,6 +245,8 @@ suite('self-practice phase 2 — integration', () => {
       const u = await learner('a8')
       const hub = fakeHub([EX1])
       await attempt.startAttempt(u, pick(EX1, 1, q1), { hub })
+      // the learner moves up a class: InkBuddy then offers Class 10 (their own class only)
+      await raw.query(`UPDATE enhanced_user_profiles SET grade_level = 10 WHERE user_id = $1`, [u])
       await attempt.startAttempt(u, { ...pick(EX1, 2, 'Why are leaves green?'), classLevel: '10' }, { hub })
       const rows = (await raw.query(`SELECT class_id FROM student_enrollments WHERE user_id = $1 AND class_id LIKE 'vgp-class-%' ORDER BY class_id`, [u])).rows.map((r) => r.class_id)
       expect(rows).toEqual(expect.arrayContaining(['vgp-class-10', 'vgp-class-9']))

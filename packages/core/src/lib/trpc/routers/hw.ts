@@ -22,7 +22,8 @@ import { conceptFeedbackForSubmission } from '@/lib/hw/concept-feedback';
 import { libraryGraphEnabled } from '@/lib/library/graph-client';
 import { PRACTICE_ORG_ID } from '@/lib/hw/practice/rules';
 import { practiceOverview, startTrial } from '@/lib/hw/practice/trial';
-import { offeredScopes, parseScope, practiceReady, searchPracticeQuestions } from '@/lib/hw/practice/catalog';
+import { offeredScopesFor, parseScope, practiceReady, searchPracticeQuestions } from '@/lib/hw/practice/catalog';
+import { learnerClass } from '@/lib/hw/practice/learner-class';
 import { db as hwDb } from '@/lib/hw/db';
 import { retryAttempt, startAttempt } from '@/lib/hw/practice/attempt';
 import { offeredPapers, paperQuestions, startPaperAttempt } from '@/lib/hw/practice/paper';
@@ -138,16 +139,19 @@ export const hwRouter = createTRPCRouter({
     status: protectedProcedure.query(({ ctx }) => runUser(ctx, async (u) => {
       const o = await practiceOverview(u);
       // ready: the library and the answer keys are wired and a group can be marked, so starting the trial is worth the learner's days.
-      return o.enabled ? { ...o, ready: await practiceReady(hwDb), scopes: await offeredScopes() } : o;
+      if (!o.enabled) return o;
+      // the books of the learner's own class and medium (their learning path, else their profile), as Virat Gyankosh offers
+      const { scopes, learner } = await offeredScopesFor(u);
+      return { ...o, ready: await practiceReady(hwDb), scopes, classSet: learner.classLevels.length > 0, classLevels: learner.classLevels };
     })),
     start: protectedProcedure.use(rateLimit(10, 60_000))
       .mutation(({ ctx }) => runUser(ctx, async (u) => { const r = await startTrial(u); return { started: r.started, endsAt: r.endsAt }; })),
     /** Book exercise questions about a topic, for the learner's class, subject and medium. */
     search: protectedProcedure.use(rateLimit(20, 60_000))
       .input(practiceScope.extend({ query: z.string().trim().min(2).max(200) }))
-      .query(({ ctx, input }) => runUser(ctx, async () => {
+      .query(({ ctx, input }) => runUser(ctx, async (u) => {
         const { query, ...scope } = input;
-        return searchPracticeQuestions(parseScope(scope), query);
+        return searchPracticeQuestions(parseScope(scope), query, undefined, u);
       })),
     /** "Write it again": a practice answer that got no mark becomes a draft again, on the same question. */
     retry: protectedProcedure.use(rateLimit(10, 60_000))
@@ -155,11 +159,20 @@ export const hwRouter = createTRPCRouter({
       .mutation(({ ctx, input }) => runUser(ctx, (u) => retryAttempt(u, input.submissionId))),
     /** Board papers a learner can practise from (published, with at least one question that can be offered and marked now). */
     papers: protectedProcedure.use(rateLimit(30, 60_000))
-      .query(({ ctx }) => runUser(ctx, async () => (practiceEnabled() ? { available: true, papers: await offeredPapers(hwDb) } : { available: false, papers: [] }))),
+      .query(({ ctx }) => runUser(ctx, async (u) => {
+        if (!practiceEnabled()) return { available: false, papers: [] };
+        // the learner's own class only, as for textbook questions
+        const mine = (await learnerClass(u)).classLevels;
+        return { available: true, papers: (await offeredPapers(hwDb)).filter((p) => mine.includes(p.classLevel)) };
+      })),
     /** The questions of one such paper. Never includes options, answers or the marking scheme. */
     paperQuestions: protectedProcedure.use(rateLimit(30, 60_000))
       .input(z.object({ paperId: id }))
-      .query(({ ctx, input }) => runUser(ctx, async () => (practiceEnabled() ? paperQuestions(hwDb, input.paperId) : null))),
+      .query(({ ctx, input }) => runUser(ctx, async (u) => {
+        if (!practiceEnabled()) return null;
+        const r = await paperQuestions(hwDb, input.paperId);
+        return r && (await learnerClass(u)).classLevels.includes(r.paper.classLevel) ? r : null;
+      })),
     /** Start one question of a board paper; returns the assignment to open. The server re-checks that it is on offer. */
     startPaperQuestion: protectedProcedure.use(rateLimit(20, 60_000))
       .input(z.object({ rowId: id }))

@@ -4,6 +4,7 @@
 
 import { _resetScopeCache, offeredScopes, requireOfferedScope, scopesFromPlacements } from '@/lib/hw/practice/catalog'
 import { _resetHwConfig } from '@/lib/hw/config'
+import { classFromPath, scopesForLearner } from '@/lib/hw/practice/learner-class'
 
 const ROWS = [
   { node_code: 'SCH.CBSE.C9.SCIENCE', medium: 'en' },
@@ -57,5 +58,33 @@ describe('InkBuddy scopes from the library', () => {
     expect(await offeredScopes({ list, now: 0 })).toHaveLength(2)
     rows = [...rows, { node_code: 'SCH.CBSE.C8.SCIENCE', medium: 'en' }]
     expect(await offeredScopes({ list, now: 11 * 60_000 })).toEqual(expect.arrayContaining([{ classLevel: 8, subject: 'Science', medium: 'en' }]))
+  })
+})
+
+describe('InkBuddy offers the learner their own class', () => {
+  const ALL = scopesFromPlacements([
+    { node_code: 'SCH.CBSE.C9.SCIENCE', medium: 'en' },
+    { node_code: 'SCH.CBSE.C10.SCIENCE', medium: 'en' },
+    { node_code: 'SCH.CBSE.C10.SCIENCE', medium: 'hi' },
+    { node_code: 'SCH.CBSE.C10.MATHEMATICS_STANDARD', medium: 'en' },
+  ])
+
+  it('reads the classes from the learning path goals, a class or a subject node alike, and its medium', () => {
+    expect(classFromPath({ goals: [{ code: 'SCH.CBSE.C10.SCIENCE', gradeLevel: null }, { code: 'SCH.CBSE.C10', gradeLevel: 10 }], medium: 'Hindi' }))
+      .toEqual({ classLevels: [10], medium: 'hi', source: 'path' })
+    expect(classFromPath({ goals: [{ code: 'EXAM.JEE', gradeLevel: 11 }], medium: null, legacy: { gradeLevel: 11, medium: 'english' } }))
+      .toEqual({ classLevels: [11], medium: 'en', source: 'path' })
+    expect(classFromPath({ goals: [], medium: null })).toEqual({ classLevels: [], medium: null, source: null })
+  })
+
+  it('offers only the learner’s class, in their medium where the library has it, else the medium it has', () => {
+    expect(scopesForLearner(ALL, { classLevels: [10], medium: 'hi', source: 'profile' })).toEqual([
+      { classLevel: 10, subject: 'Mathematics', medium: 'en' }, // no Hindi Mathematics book: the English one rather than nothing
+      { classLevel: 10, subject: 'Science', medium: 'hi' },
+    ])
+    expect(scopesForLearner(ALL, { classLevels: [9], medium: 'en', source: 'path' })).toEqual([{ classLevel: 9, subject: 'Science', medium: 'en' }])
+    expect(scopesForLearner(ALL, { classLevels: [], medium: null, source: null })).toEqual([])
+    // medium not set: both mediums of the class
+    expect(scopesForLearner(ALL, { classLevels: [10], medium: null, source: 'profile' })).toHaveLength(3)
   })
 })

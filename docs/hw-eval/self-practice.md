@@ -128,3 +128,9 @@ Read from the code on 7 Nov:
   evaluation gates, and its questions with a ready key are AI-marked even under `HW_ELIGIBILITY_ENFORCED` (`eligibility/registry.ts`).
   Marks stay labelled "practice estimate, not checked by a teacher". Set the variable to true to close it again.
 - The library hub and the answer-key writer/verifier keys are still required (`practiceLibraryReady`).
+- **Own class only** (owner, 13 Nov 2026, same rule as Virat Gyankosh): a learner is offered the library's books of THEIR class and medium.
+  The class comes from their learning path (onboarding goals: `SCH.CBSE.C10` or `SCH.CBSE.C10.SCIENCE` both mean Class 10), else from the
+  class on their profile (`enhanced_user_profiles.grade_level`); the medium from the path, else the profile (`practice/learner-class.ts`).
+  A subject whose book exists only in the other medium is offered in that medium rather than not at all. Board papers in InkBuddy follow
+  the same rule. Search, starting a question and starting a board-paper question all refuse another class. No class set: the screen asks
+  the learner to set it in their profile; class set but no book yet: the screen says so.
