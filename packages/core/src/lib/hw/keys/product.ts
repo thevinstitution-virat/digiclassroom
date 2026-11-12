@@ -15,6 +15,7 @@ import { institutionClasses } from '@/db/schema';
 import { hwAssignment, hwQuestion, hwRubricItem, type HwQuestionSchemeSource, type HwRubricKind } from '@/db/hw-schema';
 import { db, monthKey, newId, num, type Exec } from '../db';
 import { getHwConfig } from '../config';
+import { EXAM_ORG_ID } from '../exams/space';
 import { HwError, describeError } from '../errors';
 import { quotaAllows, quotaRefusal, quotaState } from '../cost/quota';
 import { costOf } from '../cost/usage';
@@ -322,7 +323,8 @@ const TEACHER_STAMP: SchemeStamp = { source: 'teacher_rubric', keyId: null, keyS
  */
 export async function checkKeyForMarking(x: Exec, q: QuestionRow, opts: { rt?: KeyRuntime | null; enforceTeacherRubric?: boolean; /** false = look only, never queue a rebuild (previews and listings) */ rebuild?: boolean } = {}): Promise<KeyCheck> {
   if (q.rubricMode === 'teacher') {
-    return opts.enforceTeacherRubric === false || getHwConfig().HW_TEACHER_RUBRIC_AI_ENABLED ? { ok: true, scheme: TEACHER_STAMP } : { ok: false, reason: 'teacher_rubric' };
+    const examOverride = q.organizationId === EXAM_ORG_ID && getHwConfig().HW_EXAMS_AUTHORED_AI_ENABLED; // D3 for exams only
+    return opts.enforceTeacherRubric === false || getHwConfig().HW_TEACHER_RUBRIC_AI_ENABLED || examOverride ? { ok: true, scheme: TEACHER_STAMP } : { ok: false, reason: 'teacher_rubric' };
   }
   const cur = (await currentKeys(x, [q.id])).get(q.id);
   if (!q.activeKeyId) {

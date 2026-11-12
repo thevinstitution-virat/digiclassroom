@@ -172,4 +172,32 @@ suite('exam packages, pools and practice tests — integration', () => {
     await P.buildPractice(database, u, { poolSetId: pool, topics: [], types: [], count: 2 }, T0, () => 0);
     expect((await b.getPackage(database, p)).sets.map((s) => s.kind)).toEqual(['pool']);
   });
+
+  it('decision D3 for exams only: an authored exam question is AI-markable only with HW_EXAMS_AUTHORED_AI_ENABLED, and nowhere else', async () => {
+    const { p, pool } = await poolPackage();
+    const u = await learner();
+    await b.grantEntitlement(database, 'owner', { userId: u, packageId: p, attemptsPerSet: null, expiresAt: null });
+    const made = await P.buildPractice(database, u, { poolSetId: pool, topics: [], types: ['short'], count: 1 }, T0, () => 0);
+    const { attemptId } = await L.startAttempt(database, u, made.setId, T0);
+    const { materialiseAttempt } = await import('@/lib/hw/exams/materialise');
+    const m = await database.transaction((tx) => materialiseAttempt(tx, attemptId));
+    const qid = m.questions[0]!.questionId;
+    const { eligibilityOfQuestion } = await import('@/lib/hw/eligibility/registry');
+    const { checkKeyForMarking } = await import('@/lib/hw/keys/product');
+    const { hwQuestion } = await import('@/db/hw-schema');
+    const { eq } = await import('drizzle-orm');
+    const config = await import('@/lib/hw/config');
+    const set = (v: string) => { process.env.HW_EXAMS_AUTHORED_AI_ENABLED = v; process.env.HW_ELIGIBILITY_ENFORCED = 'true'; process.env.HW_GRADE_MODEL = 'test-grader'; config._resetHwConfig(); };
+    try {
+      set('false');
+      expect(await eligibilityOfQuestion(database, qid)).toMatchObject({ eligible: false, reason: 'teacher_rubric' });
+      set('true');
+      expect(await eligibilityOfQuestion(database, qid)).toMatchObject({ eligible: true, scheme: { source: 'teacher_rubric' } });
+      // the same question in any other institution stays with a person
+      const q = (await database.select().from(hwQuestion).where(eq(hwQuestion.id, qid)))[0]!;
+      expect(await checkKeyForMarking(database, { ...q, organizationId: 'some-school' })).toEqual({ ok: false, reason: 'teacher_rubric' });
+    } finally {
+      delete process.env.HW_EXAMS_AUTHORED_AI_ENABLED; delete process.env.HW_ELIGIBILITY_ENFORCED; config._resetHwConfig();
+    }
+  });
 });

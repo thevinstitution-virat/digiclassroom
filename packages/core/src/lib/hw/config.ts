@@ -209,6 +209,12 @@ const EnvSchema = z.object({
    */
   HW_TEACHER_RUBRIC_AI_ENABLED: bool(false),
   /**
+   * Decision D3 for exam packages only (owner, 12 Nov 2026): questions a super admin wrote (a teacher's rubric) in the exam space (vgp-exams) are
+   * AI-marked, although that group has not passed the evaluation gates. Teachers' own homework everywhere else keeps HW_TEACHER_RUBRIC_AI_ENABLED and
+   * the eligibility registry. Off = authored exam questions are marked by a person, as before.
+   */
+  HW_EXAMS_AUTHORED_AI_ENABLED: bool(false),
+  /**
    * Monitoring and alerts (roadmap 5.4). Rates are over the last 7 Indian-time days, for one group, on the marking setup that was promoted.
    * A rate over its limit raises an alert only when the sample is at least HW_MONITOR_MIN_ANSWERS. Only the two marking-quality alerts
    * (override rate, large override rate) take a group out of 'eligible' automatically, and only while HW_MONITOR_AUTODEMOTE is on; the
