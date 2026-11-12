@@ -312,6 +312,11 @@ transcripts left a multiple choice unmarked; "[??]" was not counted as unreadabl
 a canvas, not photographed: **reading accuracy and the price per page must still be measured on real phone
 photos of real handwriting** before anything is priced or promised.
 
+**Real handwriting, measured 12 Nov** ([`real-handwriting-read-1.md`](real-handwriting-read-1.md)): six pages of a real examiner-marked CBSE
+answer book on the production reader, 81% of words read right at 5.5 paise a page, but option letters and question numbers misread at 0.95
+confidence and some unreadable words filled in with the textbook's idea. Plain-paper booklets are not ready to promise; cheap code checks and
+higher-resolution crops are proposed there.
+
 **Owner's decision needed — AI marking of authored questions.** The pilot gate (roadmap decision D3,
 `HW_TEACHER_RUBRIC_AI_ENABLED`, off) keeps a question marked with its own rubric off AI marking: such
 questions are marked by a person. Questions the super admin writes in the builder are exactly that, so
