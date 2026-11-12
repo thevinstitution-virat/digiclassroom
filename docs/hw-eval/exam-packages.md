@@ -127,7 +127,7 @@ tested exactly and the database functions stay thin:
 | 3 | Learner: package catalogue, entitlement, start a set, the server-anchored timer, auto-stop | **done (local)**; walked through in the browser |
 | 4 | The photo booklet: multi-page upload, quality gates, ordering, page-to-question mapping | **done (local)**: booklet, printed answer sheet, and the mapping rule (fed by the reader in phase 5); needs the Study Buddy R2 bucket to run anywhere real |
 | 5 | Batch evaluation of a whole attempt: chunking, ready-by, fallback, cost booked per attempt | **done (local)**: 5a read, place, hand to marking (live on gpt-6-luna); 5b the batch path (ready-by, chunking, fallback; section 12), off until the owner chooses batch or instant |
-| 6 | The report: marks, step marking, the 8 parameters, weak areas, progress across attempts | to do |
+| 6 | The report: marks, step marking, the 8 parameters, weak areas, progress across attempts | **done (local)**: section 14 |
 | 7 | Pilot behind the existing eligibility gates, with monitoring and budgets on | to do |
 
 Phases 2 to 6 each need the previous one's tables; phase 4 additionally needs **an R2 bucket and key
@@ -383,3 +383,54 @@ The owner asked for topic-wise board questions that learners can practise by cho
   the pilot gate `HW_TEACHER_RUBRIC_AI_ENABLED` is off (section 11, the owner's decision D3).
 - Tests: `exams-practice-db` (9: the draw; making, seeing and starting a practice test; nobody else can; a pool cannot be attempted; refusals).
   Browser-checked on scratch: the builder card in English, a 10-question test made, its printed sheet.
+
+## 14. Phase 6 as built: the report (12 Nov 2026)
+
+`packages/core/src/lib/hw/exams/report.ts`, the writing check `prompts/writing-profile.v1.ts`, the learner's screen
+`apps/web/src/components/hw-exams/learner/Report.tsx`. No migration: `hw_exam_report` (034) already had every column.
+
+**When.** A new job-runner step, `exam reports`, runs right after `grade` in every pass (a no-op unless `HW_EXAMS_ENABLED`). An attempt is
+ready when it is `evaluating`, its submission has left `processing` (every page read), no answer's transcript is still `pending`, no grade job
+for its questions is `queued`, `running` or `batch_pending`, no answer key for its questions is still `building`, and it has no report. The
+report is written once (`hw_exam_report` is append-only, one row per attempt), the attempt becomes `reported` with `reported_at` and
+`marks_awarded`. Two runners racing: the second finds the row and writes nothing.
+
+**Marks.** Per answer: the teacher's final grade (`hw_grade`) if there is one, else the latest automatic grade (`hw_ai_grade`: a rule's, such
+as a blank or an exact multiple-choice match, or the model's strict verdicts), else **pending**: shown as waiting for a person, with its marks
+left out of the total and said so ("their 2 marks are not in this total yet"). Never guessed. An internal choice counts once, at the better
+alternative answered (CBSE's rule; a pending alternative beats a blank one). A drawing part left out of the mark (board rows) is shown as such.
+Each value point is listed with its marks, its verdict and the learner's own words the marking pass quoted.
+
+**The report is a snapshot.** A pending answer a person marks later does not change the stored report (append-only). Showing such late marks
+is a follow-up: either a second report row per attempt (needs a migration to relax `UNIQUE (attempt_id)`), or overlaying `hw_grade` on the
+pending questions when the report is shown.
+
+**The eight parameters** (each with the counts behind it and, when it has no score, a reason code the screen says in English or Hindi):
+
+| Parameter | How | Band |
+|---|---|---|
+| Correct facts | of the points the learner wrote (strict marking's `fact`: same fact 1, right idea wrong detail 0.5, different fact 0; an absent point is not counted), plus each multiple choice right or wrong | strong ≥ 0.8, fair ≥ 0.5 |
+| Step marking | step marks earned on marked answers with two or more value points | |
+| Spelling, grammar, punctuation | the writing check: one text-only call per report (`writing-profile.v1`, the grade model) over the learner's written answers whose read stands (`done`; a read waiting for a person would show its misreads as spelling); 0-10 each with up to three real examples. Skipped below 25 words. Advice only: never moves a mark. `HW_EXAMS_WRITING_PROFILE` (default on) | |
+| Presentation | how readable the pages were: the reader's mean confidence, less twice the share of words it could not make out | |
+| Diagrams and tables | of the questions asking for one (a board row's drawing parts, or the question says draw / diagram / table), how many answers have a `[diagram]` or `[table]` | |
+| Sticking to the textbook | not available: needs the library hub | |
+
+**Where marks were lost.** By chapter and by topic (the pool topic), worst first, with the kinds of question where marks were lost; and, when
+the package's paper has a board blueprint (`blueprint.ts`, CBSE X Science 086 for 2027), **study priorities**: per unit, the board marks the
+learner could gain at this attempt's loss rate (a 12-mark unit with a third lost = 4 to gain), largest first.
+
+**Progress.** The screen shows the learner's attempts at the same test, in order, and the change since the last one.
+
+**Cost.** The writing check is booked as a `grade` job on the attempt's submission (and its first question); the report's `cost_paise` is
+everything the attempt cost: reads, marking and the writing check.
+
+**Storage.** `per_question` (one row per answer, with status `marked | blank | pending | not_counted`), `profile`
+(`{ version: 'exam-report.v1', parameters, writing, priorities, markedMarks, pendingMarks, excludedMarks }`), `weak_areas` (chapter and
+topic rows, `level` says which), `grader_model`, `reader_model`, `prompt_version` (marking prompts + writing + report version).
+
+**Tests**: `exams-report` (7: choosing the final mark, internal choice, pending and left-out marks, the parameters and their reasons, the
+writing check, weak areas and study priorities; and one attempt end to end on Postgres: not ready while a grade job is queued, the report and
+the attempt, append-only, nothing made twice, the learner's view, a second attempt with progress and the writing check booked). Full hw suite
+1222 passed. Browser-checked on scratch in English and Hindi: a full-marks attempt, then a weaker second attempt with a pending answer, a weak
+chapter, a study priority and writing examples.

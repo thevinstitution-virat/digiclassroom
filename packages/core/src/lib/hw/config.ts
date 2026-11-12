@@ -153,6 +153,11 @@ const EnvSchema = z.object({
   HW_EXAMS_BATCH_ENABLED: bool(false),
   /** Hours from hand-in to the promised report on the batch path; reading gets 60% of it, marking the rest. */
   HW_EXAMS_BATCH_HOURS: num(24, 2, 96),
+  /**
+   * The exam report's writing check (prompts/writing-profile.v1.ts): one text-only call per report for spelling, grammar and punctuation, as
+   * advice that never moves a mark. Off = those three parameters are reported as not checked.
+   */
+  HW_EXAMS_WRITING_PROFILE: bool(true),
   HW_EXAMS_READ_SPLIT: z.preprocess((v) => (v === '' || v === undefined ? undefined : String(v).trim().toLowerCase()), z.enum(['halves', 'page']).optional()).transform((v) => v ?? 'halves'),
   HW_SELF_PRACTICE_TRIAL_DAYS: num(7, 1, 90),
   HW_SELF_PRACTICE_TRIAL_BUDGET_PAISE: num(1000, 0, 100_000),

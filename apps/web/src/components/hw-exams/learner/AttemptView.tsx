@@ -13,6 +13,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { HwError, HwLoading, HwMessage } from '@/components/hw/HwShell'
 import { LEARNER_BASE } from './Catalogue'
 import { Booklet } from './Booklet'
+import { ExamReport } from './Report'
 import { clockText, useExamT, type ExKey } from './strings'
 
 type View = HwOut['exams']['attempt']
@@ -127,6 +128,8 @@ export function AttemptView({ attemptId }: { attemptId: string }) {
 
       {status === 'started' && <HwMessage>{t('ex.t.instructions')}</HwMessage>}
       {status === 'time_up' && <HwMessage><p className="font-medium">{t('ex.t.timeUp')}</p></HwMessage>}
+      {/* a reported attempt shows its marks first, then the pages they came from */}
+      {status === 'reported' && v.report && <ExamReport report={v.report} attemptNo={a.attemptNo} />}
       {(status === 'time_up' || v.booklet.length > 0) && <Booklet attemptId={attemptId} status={status!} pages={v.booklet} onChanged={refresh} />}
       {(status === 'uploaded' || status === 'evaluating') && (
         <HwMessage><p className="font-medium">{a.readyBy ? t('ex.t.readyBy', { date: date(a.readyBy) }) : t('ex.t.marking')}</p></HwMessage>

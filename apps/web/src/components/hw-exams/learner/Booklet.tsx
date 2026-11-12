@@ -93,7 +93,7 @@ export function Booklet({ attemptId, status, pages, onChanged }: { attemptId: st
     <Card>
       <CardHeader className="pb-2"><CardTitle className="text-lg">{t('ex.b.title')}</CardTitle></CardHeader>
       <CardContent className="space-y-4">
-        {open ? <p className="text-sm text-muted-foreground">{t('ex.b.howto')}</p> : <p className="text-sm font-medium">{t('ex.b.handedIn', { n: pages.length })}</p>}
+        {open ? <p className="text-sm text-muted-foreground">{t('ex.b.howto')}</p> : <p className="text-sm font-medium">{t(status === 'reported' ? 'ex.b.handedInMarked' : 'ex.b.handedIn', { n: pages.length })}</p>}
 
         {open && (
           <div className="flex flex-wrap gap-2">

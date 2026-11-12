@@ -260,6 +260,9 @@ export async function attemptView<P = never>(d: Exec, userId: string, attemptId:
     /** The photographed pages, in order (phase 4), when the caller can show them. */
     booklet: opts.booklet ? await opts.booklet(a.id) : ([] as P[]),
     paper: rows.map(({ i, b }) => paperQuestionOf(i, b && { stem: b.stem, alt: b.alt, options: b.options, choiceGroup: b.choiceGroup }, b ? figs.get(b.id) ?? [] : [])),
+    /** The report (phase 6), once made; with this learner's earlier attempts at the same set. */
+    // loaded on demand: the report module brings the job runner's database and AI clients, which this module otherwise never needs
+    report: a.status === 'reported' ? await (await import('./report')).reportView(d, a) : null,
   };
 }
 

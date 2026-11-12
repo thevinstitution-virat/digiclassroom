@@ -10,6 +10,7 @@ import {
 import { ANSWER_MATCH_PROMPT_VERSION, ANSWER_MATCH_SCHEMA, ANSWER_MATCH_SYSTEM_PROMPT, answerMatchInput, type MatchQuestion } from '../prompts/answer-match.v1';
 import { EXAM_BOX_READ_PROMPT_VERSION, EXAM_BOX_READ_SCHEMA, EXAM_BOX_READ_SYSTEM_PROMPT, examBoxLabel } from '../prompts/exam-box-read.v1';
 import { CONFIDENCE_VALUE } from '../reader/parse';
+import { parseWritingProfile, WRITING_PROFILE_SCHEMA, WRITING_PROFILE_SYSTEM_PROMPT, writingProfileInput, type WritingProfile } from '../prompts/writing-profile.v1';
 import type { KeyMatch, NumberSeen } from './mapping';
 
 export { EXAM_PAGE_READ_PROMPT_VERSION, ANSWER_MATCH_PROMPT_VERSION, EXAM_BOX_READ_PROMPT_VERSION };
@@ -88,6 +89,10 @@ export function boxReadCall(model: string, image: Uint8Array, mime: 'image/png' 
   };
 }
 
+export function writingProfileCall(model: string, answers: { label: string; text: string }[]): GeminiCall {
+  return { model, systemInstruction: WRITING_PROFILE_SYSTEM_PROMPT, schema: WRITING_PROFILE_SCHEMA, parts: [textPart(writingProfileInput(answers))] };
+}
+
 export function pageReadCall(model: string, image: Uint8Array, mime: 'image/png' | 'image/jpeg' | 'image/webp', questions: PaperQuestionRef[], lang: 'en' | 'hi'): GeminiCall {
   return {
     model,
@@ -129,6 +134,8 @@ export interface ExamAi {
   matchAnswers(input: { questions: MatchQuestion[]; answers: { id: string; text: string }[] }): Promise<{ matches: Map<string, KeyMatch[]>; result: AiResult }>;
   /** One answer box cut out of a printed sheet page (sheet-read.ts). Absent: printed pages are read whole, like plain paper. */
   readBox?(input: { image: Uint8Array; mime: 'image/png' | 'image/jpeg' | 'image/webp'; numbers: number[]; alternatives: string[]; lang: 'en' | 'hi' }): Promise<{ read: BoxRead; result: AiResult }>;
+  /** The report's writing check (exams/report.ts), text only. Absent: the three writing parameters are reported as not checked. */
+  writingProfile?(input: { answers: { label: string; text: string }[] }): Promise<{ profile: WritingProfile | null; result: AiResult }>;
 }
 
 export function liveExamAi(models: { read: string; match: string }): ExamAi {
@@ -144,6 +151,10 @@ export function liveExamAi(models: { read: string; match: string }): ExamAi {
     async readBox(i) {
       const result = await generate(routed(boxReadCall(models.read, i.image, i.mime, i.numbers, i.alternatives, i.lang), 'read'));
       return { read: parseBoxRead(result.json), result };
+    },
+    async writingProfile(i) {
+      const result = await generate(routed(writingProfileCall(models.match, i.answers), 'grade'));
+      return { profile: parseWritingProfile(result.json), result };
     },
   };
 }

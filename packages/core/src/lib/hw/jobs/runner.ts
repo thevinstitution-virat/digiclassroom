@@ -10,6 +10,7 @@ import { monitorTick } from '../shadow/monitor';
 import { runKeyBuilds } from '../keys/product';
 import { runPracticeRelease } from '../practice/release';
 import { pollExamBatches, runExamEvaluations } from '../exams/evaluate';
+import { runExamReports } from '../exams/report';
 
 export interface DrainSummary {
   recovered: number;
@@ -25,6 +26,8 @@ export interface DrainSummary {
   practiceReleased: number;
   /** Handed-in exam booklets read and handed to marking (zero unless HW_EXAMS_ENABLED). */
   examsEvaluated: number;
+  /** Exam reports made, once an attempt's marking has finished (zero unless HW_EXAMS_ENABLED). */
+  examsReported: number;
   errors: string[];
   ms: number;
 }
@@ -32,7 +35,7 @@ export interface DrainSummary {
 export async function drain(workerId: string, budgetMs: number): Promise<DrainSummary> {
   const started = Date.now();
   const deadline = started + budgetMs;
-  const s: DrainSummary = { recovered: 0, readPolled: 0, gradePolled: 0, readTaken: 0, gradeTaken: 0, keysBuilt: 0, monitored: 0, practiceReleased: 0, examsEvaluated: 0, errors: [], ms: 0 };
+  const s: DrainSummary = { recovered: 0, readPolled: 0, gradePolled: 0, readTaken: 0, gradeTaken: 0, keysBuilt: 0, monitored: 0, practiceReleased: 0, examsEvaluated: 0, examsReported: 0, errors: [], ms: 0 };
 
   // Each step is isolated: one failing step must not stop the others, and is reported.
   const step = async (name: string, fn: () => Promise<number>, into: keyof Omit<DrainSummary, 'errors' | 'ms'>) => {
@@ -54,6 +57,8 @@ export async function drain(workerId: string, budgetMs: number): Promise<DrainSu
   await step('exams', async () => (await runExamEvaluations()).filter((o) => o.ok).length, 'examsEvaluated');
   await step('read', () => runReadJobs(workerId, deadline), 'readTaken');
   await step('grade', () => runGradeJobs(workerId, deadline), 'gradeTaken');
+  // an exam attempt whose marking this pass finished gets its report (one text-only writing check per report)
+  await step('exam reports', async () => (await runExamReports()).filter((o) => o.ok).length, 'examsReported');
   // Independent learners have no teacher: return what is ready, with AI practice estimates (a no-op unless HW_SELF_PRACTICE_ENABLED).
   await step('practice release', () => runPracticeRelease(), 'practiceReleased');
   // Keys after reading and marking: a teacher waiting for a key is waiting on an authoring step, not on a student's work.
