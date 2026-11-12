@@ -68,7 +68,8 @@ was judged by the numbers read, not run through the full matching.
    It costs one more text-only matcher call per booklet whenever an answer was placed by a written number.
 3. **Half-page reading: built (12 Nov), on by default** (`HW_EXAMS_READ_SPLIT=halves`; `page` reads whole pages as before). Each page is cut
    into a top and a bottom half that share 8% of the height (`exams/crop.ts`, `sharp`, loaded on demand: if it is missing, pages are read whole and
-   the log says so); each half is read; `exams/halves.ts` joins them, dropping the writing both halves read (the longest pair of word runs that
+   the log says so; whether the api's production image has a working sharp is not checked yet, so look for that log line after the first
+   deploy); each half is read; `exams/halves.ts` joins them, dropping the writing both halves read (the longest pair of word runs that
    start and end alike and share most words, which may differ in length because each half reads the seam its own way) and keeping both reads'
    question numbers. The page's stored read says `split: 'halves'`. Pages under 1,200 px tall are read whole.
    Live on the same six pages through the product's own path (sharp cut, two reads, join), compared with the whole-page runs on production settings:
