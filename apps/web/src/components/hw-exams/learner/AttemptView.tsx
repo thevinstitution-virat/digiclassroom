@@ -72,7 +72,7 @@ function Question({ q, first }: { q: Q; first: boolean }) {
 }
 
 export function AttemptView({ attemptId }: { attemptId: string }) {
-  const { t, pick } = useExamT()
+  const { t, pick, date } = useExamT()
   const utils = api.useUtils()
   const q = api.hw.exams.attempt.useQuery({ attemptId }, { retry: false, refetchOnWindowFocus: true, staleTime: 0 })
   const refresh = () => utils.hw.exams.attempt.invalidate({ attemptId })
@@ -128,6 +128,9 @@ export function AttemptView({ attemptId }: { attemptId: string }) {
       {status === 'started' && <HwMessage>{t('ex.t.instructions')}</HwMessage>}
       {status === 'time_up' && <HwMessage><p className="font-medium">{t('ex.t.timeUp')}</p></HwMessage>}
       {(status === 'time_up' || v.booklet.length > 0) && <Booklet attemptId={attemptId} status={status!} pages={v.booklet} onChanged={refresh} />}
+      {(status === 'uploaded' || status === 'evaluating') && (
+        <HwMessage><p className="font-medium">{a.readyBy ? t('ex.t.readyBy', { date: date(a.readyBy) }) : t('ex.t.marking')}</p></HwMessage>
+      )}
       {status === 'abandoned' && (
         <HwMessage>
           <p className="font-medium">{t('ex.t.closed')}</p>

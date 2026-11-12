@@ -24,6 +24,8 @@ import { shadowAfterGrade } from '../shadow/shadow';
 import { aiOffMessage } from '../eligibility/decision';
 import { eligibilityOfQuestion } from '../eligibility/registry';
 import { decideBatch, dueFor, fallbackNote, homeworkBatchSettings, isOverdue, readyBy, requeueStandard, saveStamp, stampPayload } from './homework-batch';
+import { examMarkingMode } from '../exams/batch';
+import { EXAM_ORG_ID } from '../exams/space';
 
 const RUBRIC_CHANGED = 'rubric changed while marking; suggestions discarded and re-queued';
 
@@ -214,7 +216,18 @@ export async function runGradeJobs(workerId: string, deadline: number): Promise<
       const p = await plan(job);
       if (!p) continue;
       const inPayload = payloadOf<GradePayload>(job);
-      if (cfg.HW_HOMEWORK_BATCH_ENABLED) {
+      // an exam booklet's marking follows its attempt: batched against the attempt's promised report time, or marked now (exams/batch.ts)
+      const exam = job.organizationId === EXAM_ORG_ID && job.questionId
+        ? await examMarkingMode(db, job.questionId, new Date(), { enabled: cfg.HW_EXAMS_BATCH_ENABLED, windowHours: cfg.HW_EXAMS_BATCH_HOURS })
+        : null;
+      let examReadyBy: string | undefined;
+      if (exam) {
+        if (!exam.batch || inPayload?.standard) {
+          await runSync(job, p.q, p.chunks, { followers: p.followers, keyHash: p.keyHash }, (inPayload?.standard ? inPayload.fallbackReason : exam.batch ? undefined : exam.reason) ?? undefined);
+          continue;
+        }
+        examReadyBy = exam.markBy.toISOString();
+      } else if (cfg.HW_HOMEWORK_BATCH_ENABLED) {
         // Homework batches; urgent work and a fallback stay on the standard path.
         const d = decideBatch({
           standardForced: Boolean(inPayload?.standard), fallbackReason: inPayload?.fallbackReason, providerCanBatch: true,
@@ -240,7 +253,8 @@ export async function runGradeJobs(workerId: string, deadline: number): Promise<
       }
       const payload: GradePayload = {
         rubricVersion: p.q.rubricVersion, chunks: p.chunks, ...(p.followers ? { followers: p.followers, keyHash: p.keyHash } : {}),
-        ...(cfg.HW_HOMEWORK_BATCH_ENABLED ? { readyBy: readyBy(new Date(), homeworkBatchSettings().deadlineHours).toISOString(), submittedAt: new Date().toISOString() } : {}),
+        ...(examReadyBy ? { readyBy: examReadyBy, submittedAt: new Date().toISOString() }
+          : cfg.HW_HOMEWORK_BATCH_ENABLED ? { readyBy: readyBy(new Date(), homeworkBatchSettings().deadlineHours).toISOString(), submittedAt: new Date().toISOString() } : {}),
       };
       await markBatchPending(db, job.id, name, model, payload, cfg.HW_BATCH_POLL_SECONDS, providerFor('grade'));
     } catch (e) {

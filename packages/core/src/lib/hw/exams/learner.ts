@@ -244,6 +244,8 @@ export async function attemptView<P = never>(d: Exec, userId: string, attemptId:
     attempt: {
       id: a.id, attemptNo: a.attemptNo, status: a.status, startedAt: a.startedAt, expiresAt: a.expiresAt, uploadDeadlineAt: a.uploadDeadlineAt,
       endedAt: a.endedAt, failureReason: a.failureReason, pages,
+      /** When the report is promised (batch evaluation, exams/batch.ts); null = it is being marked straight away. */
+      readyBy: a.status === 'uploaded' || a.status === 'evaluating' ? a.readyBy : null,
     },
     /** The server's now, so the page counts down from the server's clock rather than the device's. */
     serverNow: now,

@@ -113,14 +113,19 @@ export async function claim(kind: HwJobKind, limit: number, workerId: string, fi
   return filter ? jobs.filter(filter) : jobs;
 }
 
-/** Claim batch jobs due for a poll; pushing run_after forward keeps other workers off them. */
-export async function claimBatchPending(kind: HwJobKind, limit: number, workerId: string, pollSeconds: number): Promise<JobRow[]> {
+/**
+ * Claim batch jobs due for a poll; pushing run_after forward keeps other workers off them. `scope` keeps one institution's batches apart:
+ * exam booklets are read in batches of their own (exams/evaluate.ts), which the homework read poller must not take.
+ */
+export async function claimBatchPending(kind: HwJobKind, limit: number, workerId: string, pollSeconds: number, scope: { orgId?: string; notOrgId?: string } = {}): Promise<JobRow[]> {
+  const only = scope.orgId ? sql`organization_id = ${scope.orgId}` : sql`true`;
+  const not = scope.notOrgId ? sql`organization_id <> ${scope.notOrgId}` : sql`true`;
   const rows = await db.execute<{ id: string }>(sql`
     UPDATE hw_ai_job SET locked_at = now(), locked_by = ${workerId},
            run_after = now() + make_interval(secs => ${pollSeconds})
      WHERE id IN (
        SELECT id FROM hw_ai_job
-        WHERE status = 'batch_pending' AND kind = ${kind} AND run_after <= now() AND ${ownJobs()}
+        WHERE status = 'batch_pending' AND kind = ${kind} AND run_after <= now() AND ${ownJobs()} AND ${only} AND ${not}
         ORDER BY created_at
         LIMIT ${limit}
         FOR UPDATE SKIP LOCKED)

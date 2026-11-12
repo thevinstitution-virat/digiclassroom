@@ -61,6 +61,11 @@ function fakeAi(reads: PageRead[], opts: { fail?: boolean } = {}) {
   return { ai, calls };
 }
 const deps = (ai: ExamAi) => ({ ai, getObject: async (k: string) => objects.get(k)!, now: () => at(100) });
+/** The parsed read of rawPage in the batch tests, for the fake reader on the standard path. */
+const rawPageRead = (code: string): PageRead => ({ sheet: { code, page: 1 }, grid: [{ number: 1, letter: 'C' }], segments: [
+  { box: [2], numbersSeen: [], alternative: 'B', text: 'Kidney', confidence: 0.95, unclearCount: 0 },
+  { box: [3], numbersSeen: [], alternative: 'D', text: '(a) Grass', confidence: 0.95, unclearCount: 0 },
+] });
 const seg = (o: Partial<PageRead['segments'][number]>): PageRead['segments'][number] => ({ box: [], numbersSeen: [], alternative: null, text: '', confidence: 0.95, unclearCount: 0, ...o });
 
 /** The fixture paper (Q1 mcq, Q2 A/B, Q3 C/D case-based, Q4 long; 10 marks, 1 hour) as a published set; a learner who has handed in `pages` photos. */
@@ -282,6 +287,112 @@ suite('exam packages, evaluating a booklet — integration', () => {
     expect(await one(`SELECT status, failure_reason FROM hw_exam_attempt WHERE id = $1`, [attemptId])).toEqual({ status: 'evaluating', failure_reason: 'eval failed: provider down' });
     // made once, kept: the assignment is not duplicated by the retries
     expect(await one(`SELECT count(*)::int n FROM hw_assignment WHERE created_by = (SELECT user_id FROM hw_exam_attempt WHERE id = $1)`, [attemptId])).toEqual({ n: 1 });
+  });
+
+  describe('the batch path (phase 5b)', () => {
+    // a provider batch API standing in for OpenAI: it keeps what was submitted and answers polls with what the test says
+    function fakeBatch() {
+      const created: { name: string; items: import('@/lib/hw/ai').BatchItem[] }[] = [];
+      let answer: (items: import('@/lib/hw/ai').BatchItem[]) => import('@/lib/hw/ai').BatchOutcome = () => ({ state: 'pending' });
+      const api: import('@/lib/hw/exams/evaluate').ExamBatchApi = {
+        provider: 'openai', readModel: 'test-reader',
+        async create(items, name) { created.push({ name: `fake-${created.length}-${name}`, items }); return created[created.length - 1]!.name; },
+        async poll(name) { const c = created.find((x) => x.name === name); if (!c) throw new Error('no such batch'); return answer(c.items); },
+      };
+      return { api, created, answerWith: (f: typeof answer) => { answer = f; } };
+    }
+    // the reader's raw JSON for the printed-sheet page of the first test
+    const rawPage = (code: string) => ({ sheet: { code, page: 1 }, grid: [{ number: 1, letter: 'C' }], segments: [
+      { box: ['Q2'], written_numbers: [], alternative: 'B', text: 'Kidney', confidence: 'high' },
+      { box: ['Q3'], written_numbers: [], alternative: 'D', text: '(a) Grass', confidence: 'high' },
+    ] });
+    const succeeded = (code: string) => (items: import('@/lib/hw/ai').BatchItem[]): import('@/lib/hw/ai').BatchOutcome =>
+      ({ state: 'succeeded', results: new Map(items.map((i) => [i.key, { ok: true as const, result: { json: rawPage(code), usage, rawUsage: {}, model: 'test-reader' } }])) });
+    const batchJobs = (attemptId: string) => raw.query(`SELECT status, batch_ref, error, tokens_in::int AS t, payload_ref::jsonb -> 'exam' ->> 'readBy' AS read_by FROM hw_ai_job
+      WHERE organization_id = 'vgp-exams' AND kind = 'read' AND batch_ref IS NOT NULL AND payload_ref::jsonb -> 'exam' ->> 'attemptId' = $1`, [attemptId]).then((r) => r.rows);
+    const withBatch = async (fn: () => Promise<void>) => {
+      process.env.HW_EXAMS_BATCH_ENABLED = 'true';
+      config._resetHwConfig();
+      try { await fn(); } finally { process.env.HW_EXAMS_BATCH_ENABLED = 'false'; config._resetHwConfig(); }
+    };
+
+    it('the reads go to the provider as a batch with a promised time; the poll places them, hands over to marking, and books batch prices', () => withBatch(async () => {
+      const { attemptId, code } = await handedIn(1);
+      // the promise is made at hand-in, so the learner sees it at once
+      const promised = (await one<{ ready_by: Date | null }>(`SELECT ready_by FROM hw_exam_attempt WHERE id = $1`, [attemptId]))!.ready_by;
+      expect(promised).not.toBeNull();
+      const fb = fakeBatch();
+      const { ai, calls } = fakeAi([]);
+      const r = await evaluate(attemptId, ai, { batch: fb.api });
+      expect((await one<{ ready_by: Date }>(`SELECT ready_by FROM hw_exam_attempt WHERE id = $1`, [attemptId]))!.ready_by).toEqual(promised); // and kept
+      expect(r).toMatchObject({ ok: true, batched: true, requests: 1, batches: 1 });
+      expect(calls).toEqual({ read: 0, match: 0 });
+      expect(fb.created).toHaveLength(1);
+      expect(fb.created[0]!.items[0]!.call).toMatchObject({ model: 'test-reader' });
+      const att = (await one<{ status: string; ready_by: Date | null }>(`SELECT status, ready_by FROM hw_exam_attempt WHERE id = $1`, [attemptId]))!;
+      expect(att.status).toBe('evaluating');
+      expect(att.ready_by).not.toBeNull();
+      expect(await batchJobs(attemptId)).toEqual([expect.objectContaining({ status: 'batch_pending' })]);
+      expect((await answersOf(attemptId)).every((x) => x.status === 'pending')).toBe(true);
+      // an attempt waiting on its batch is not "stale", however long it waits
+      const c = await raw.connect();
+      try { await c.query(`SET session_replication_role = replica`); await c.query(`UPDATE hw_exam_attempt SET updated_at = now() - interval '3 days' WHERE id = $1`, [attemptId]); }
+      finally { await c.query(`SET session_replication_role = DEFAULT`); c.release(); }
+      await E.recoverStaleAttempts();
+      expect((await one<{ status: string }>(`SELECT status FROM hw_exam_attempt WHERE id = $1`, [attemptId]))!.status).toBe('evaluating');
+
+      expect(await E.pollExamAttempt(attemptId, { ...deps(ai), batch: fb.api })).toEqual({ attemptId, state: 'waiting' });
+      fb.answerWith(succeeded(code));
+      const done = await E.pollExamAttempt(attemptId, { ...deps(ai), batch: fb.api });
+      expect(done).toMatchObject({ state: 'done', outcome: { ok: true, pages: 1, review: 0 } });
+      expect(calls).toEqual({ read: 0, match: 0 });
+      const by = Object.fromEntries((await answersOf(attemptId)).map((x) => [x.q, x]));
+      expect(by['1']).toMatchObject({ status: 'done', transcript: 'C' });
+      expect(by['2B']).toMatchObject({ status: 'done', transcript: 'Kidney' });
+      expect(by['3D']).toMatchObject({ status: 'done', transcript: '(a) Grass' });
+      expect(await batchJobs(attemptId)).toEqual([expect.objectContaining({ status: 'done', t: 1500, error: 'exam booklet batch: 1 read(s)' })]);
+      expect((await one<{ q: { read?: { via?: string } } }>(`SELECT quality AS q FROM hw_exam_page WHERE attempt_id = $1`, [attemptId]))!.q.read?.via).toBe('batch');
+      // marking of this attempt is batched against the same promise, ending before it
+      const qid = (await one<{ id: string }>(`SELECT q.id FROM hw_question q JOIN hw_exam_attempt a ON a.assignment_id = q.assignment_id WHERE a.id = $1 LIMIT 1`, [attemptId]))!.id;
+      const mode = await (await import('@/lib/hw/exams/batch')).examMarkingMode(database, qid, new Date(), { enabled: true, windowHours: 24 });
+      expect(mode).toMatchObject({ batch: true });
+      expect((mode as { markBy: Date }).markBy.getTime()).toBeLessThan(att.ready_by!.getTime());
+    }), 120_000);
+
+    it('a batch that fails is closed with the reason, and the booklet is read now on the standard path', () => withBatch(async () => {
+      const { attemptId, code } = await handedIn(1);
+      const fb = fakeBatch();
+      const { ai, calls } = fakeAi([rawPageRead(code)]);
+      await evaluate(attemptId, ai, { batch: fb.api });
+      fb.answerWith(() => ({ state: 'failed', reason: 'expired' }));
+      const r = await E.pollExamAttempt(attemptId, { ...deps(ai), batch: fb.api });
+      expect(r).toMatchObject({ state: 'standard', reason: 'the batch failed (expired)', outcome: { ok: true, pages: 1 } });
+      expect(calls).toEqual({ read: 1, match: 0 });
+      expect(await batchJobs(attemptId)).toEqual([expect.objectContaining({ status: 'done', error: 'Re-run on the standard path: the batch failed (expired)' })]);
+      expect(await one(`SELECT evaluation_mode FROM hw_exam_attempt WHERE id = $1`, [attemptId])).toEqual({ evaluation_mode: 'standard' });
+      expect(Object.fromEntries((await answersOf(attemptId)).map((x) => [x.q, x]))['2B']).toMatchObject({ status: 'done', transcript: 'Kidney' });
+    }), 120_000);
+
+    it('a batch not finished by its reading deadline is given up on, and the booklet read now', () => withBatch(async () => {
+      const { attemptId, code } = await handedIn(1);
+      const fb = fakeBatch();
+      const { ai, calls } = fakeAi([rawPageRead(code)]);
+      await evaluate(attemptId, ai, { batch: fb.api });
+      const [job] = await batchJobs(attemptId);
+      const late = { ...deps(ai), batch: fb.api, now: () => new Date(Date.parse(job.read_by) + 60_000) };
+      const r = await E.pollExamAttempt(attemptId, late);
+      expect(r).toMatchObject({ state: 'standard', reason: `the batch was not finished by ${job.read_by}` });
+      expect(calls.read).toBe(1);
+    }), 120_000);
+
+    it('with the batch path off, a booklet is read now as before', async () => {
+      const { attemptId, code } = await handedIn(1);
+      const fb = fakeBatch();
+      const { ai, calls } = fakeAi([rawPageRead(code)]);
+      expect(await evaluate(attemptId, ai, { batch: fb.api })).toMatchObject({ ok: true, pages: 1 });
+      expect(fb.created).toHaveLength(0);
+      expect(calls.read).toBe(1);
+    }, 120_000);
   });
 
   it('the runner claims handed-in attempts only while HW_EXAMS_ENABLED is on', async () => {

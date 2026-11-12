@@ -126,7 +126,7 @@ tested exactly and the database functions stay thin:
 | 2 | Super-admin: package and set builder, item picker, publish, grants | **done (local)**; walked through in the browser |
 | 3 | Learner: package catalogue, entitlement, start a set, the server-anchored timer, auto-stop | **done (local)**; walked through in the browser |
 | 4 | The photo booklet: multi-page upload, quality gates, ordering, page-to-question mapping | **done (local)**: booklet, printed answer sheet, and the mapping rule (fed by the reader in phase 5); needs the Study Buddy R2 bucket to run anywhere real |
-| 5 | Batch evaluation of a whole attempt: chunking, ready-by, fallback, cost booked per attempt | **5a done (local)**: read, place, hand to marking, cost per attempt, run live on gpt-6-luna; **5b to do**: the batch path (ready-by, chunking, fallback) |
+| 5 | Batch evaluation of a whole attempt: chunking, ready-by, fallback, cost booked per attempt | **done (local)**: 5a read, place, hand to marking (live on gpt-6-luna); 5b the batch path (ready-by, chunking, fallback; section 12), off until the owner chooses batch or instant |
 | 6 | The report: marks, step marking, the 8 parameters, weak areas, progress across attempts | to do |
 | 7 | Pilot behind the existing eligibility gates, with monitoring and budgets on | to do |
 
@@ -145,7 +145,7 @@ alternatives).
 - ~~Page-to-question mapping~~ — **decided 11 Nov 2026** (section 10): a printed answer sheet with the
   question numbers pre-marked, plus the reader matching anything else against the question paper and
   answer key.
-- Instant evaluation as a paid option, or batch for everyone.
+- Instant evaluation as a paid option, or batch for everyone. (Both paths exist now, section 12; batch is off until this is decided.)
 - `HW_PARTIAL_CREDIT_RULE` (`zero` today).
 - Whether a half-syllabus mock's `syllabus_scope` is authored per subject by a teacher or generated
   from the taxonomy.
@@ -336,6 +336,26 @@ gate off locally to exercise the marking. Options: (a) author mocks from the ban
 registry; (c) switch the gate on for the exam space only. Board questions are still subject to the
 eligibility registry (`HW_ELIGIBILITY_ENFORCED`): their group must be promoted before AI marks show.
 
-**Phase 5b (to do):** the batch path — page reads and marking on the Batch API (half price), a visible
-"report ready by" time, chunking for the batch file limits, and the standard-path fallback.
+## 12. Phase 5b as built: the batch path (12 Nov 2026)
+
+Switch: `HW_EXAMS_BATCH_ENABLED` (default **off**: whether learners get batch, instant, or a choice is still the owner's decision, section 6);
+window `HW_EXAMS_BATCH_HOURS` (default 24). Off, every booklet is read and marked straight away, as before.
+
+- **One promise per attempt.** At hand-in the attempt's `ready_by` (migration 034 already had it, with `evaluation_mode`, default `batch`) is set
+  to hand-in + the window, and the learner's screen says "Your report will be ready by 13 Nov 2026, 4:51 pm" (English and Hindi); with batch off,
+  or an attempt in `standard` mode, it says the answers are being marked now. Browser-checked on the scratch database.
+- **Plan, then read** (`evaluate.ts`): the reading is first planned by code alone (`planBooklet`: box reads for printed-sheet pages, halves or a
+  whole read for the rest). The plan is read now, or submitted as provider batches: `exams/batch.ts` keeps each batch file under 40,000 requests
+  and 150 MB (OpenAI allows 50,000 and 200 MB; a 40-page booklet in halves is about 32 MB, one batch). Each batch is a `read` job of the exam
+  space in `batch_pending`, its plan in the payload (no images kept). The homework read poller no longer takes exam batches
+  (`claimBatchPending` scope); the exam step polls its own (`pollExamBatches`, a new runner step before `exams`).
+- **Deadlines inside the promise.** Reading must finish by 60% of the window (or by the promise less marking's 40%, if picked up late); less
+  than an hour left, it is read now. Marking of a batched attempt is batched by the grade step against the same promise, ending 10% of the window
+  before it (`examMarkingMode` in the grade handler); too close, it is marked now. A batch exam marking job ignores the homework batch switches.
+- **Fallback, always with the reason.** A batch that cannot be created, fails, has any failed read, or is not done by its reading deadline is
+  closed ("Re-run on the standard path: the batch failed (expired)"), what came back is still booked, and the booklet is read now; the attempt
+  is then `standard`. An attempt waiting on its batch is never treated as stale. The answer-key matcher (one small text call) always runs now.
+- **Cost**: a batch's reads are booked on its own job rows at batch prices (half), so the attempt's cost is still its read jobs plus its grade jobs.
+- Tests: `exams-batch` (9, pure: the promise and deadlines, chunking), `exams-evaluate-db` (5 more: batch then collect at batch price with
+  marking batched against the same promise; a failed batch; a late batch; still waiting; batch off; an attempt waiting on its batch is not stale).
 

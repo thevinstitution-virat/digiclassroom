@@ -146,6 +146,13 @@ const EnvSchema = z.object({
    * photos of real handwriting: 93-96% of words read right against 88% for halves, every grid letter right, cheaper.
    */
   HW_EXAMS_SHEET_VISION: bool(true),
+  /**
+   * Exam booklets are read and marked through the provider's batch API at half price (exams/batch.ts), with a "report ready by" time the
+   * learner sees; anything that fails or runs late is re-run on the standard path. Off = every booklet is read and marked straight away.
+   */
+  HW_EXAMS_BATCH_ENABLED: bool(false),
+  /** Hours from hand-in to the promised report on the batch path; reading gets 60% of it, marking the rest. */
+  HW_EXAMS_BATCH_HOURS: num(24, 2, 96),
   HW_EXAMS_READ_SPLIT: z.preprocess((v) => (v === '' || v === undefined ? undefined : String(v).trim().toLowerCase()), z.enum(['halves', 'page']).optional()).transform((v) => v ?? 'halves'),
   HW_SELF_PRACTICE_TRIAL_DAYS: num(7, 1, 90),
   HW_SELF_PRACTICE_TRIAL_BUDGET_PAISE: num(1000, 0, 100_000),

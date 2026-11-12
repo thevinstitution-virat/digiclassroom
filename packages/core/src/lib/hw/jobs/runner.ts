@@ -9,7 +9,7 @@ import { pollReadBatches, runReadJobs } from './read-handler';
 import { monitorTick } from '../shadow/monitor';
 import { runKeyBuilds } from '../keys/product';
 import { runPracticeRelease } from '../practice/release';
-import { runExamEvaluations } from '../exams/evaluate';
+import { pollExamBatches, runExamEvaluations } from '../exams/evaluate';
 
 export interface DrainSummary {
   recovered: number;
@@ -50,6 +50,7 @@ export async function drain(workerId: string, budgetMs: number): Promise<DrainSu
   await step('poll grade batches', () => pollGradeBatches(workerId), 'gradePolled');
   // Reading first: grading needs transcripts.
   // exam booklets first: what they hand over is marked by the grade step of this same pass
+  await step('poll exam batches', async () => (await pollExamBatches()).filter((o) => o.state !== 'waiting').length, 'examsEvaluated');
   await step('exams', async () => (await runExamEvaluations()).filter((o) => o.ok).length, 'examsEvaluated');
   await step('read', () => runReadJobs(workerId, deadline), 'readTaken');
   await step('grade', () => runGradeJobs(workerId, deadline), 'gradeTaken');

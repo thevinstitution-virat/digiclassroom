@@ -22,6 +22,7 @@ import { failAnswers, finishSubmissionIfRead, setTranscript } from '../pipeline'
 import { claim, claimBatchPending, complete, enqueueRead, fail, markBatchPending, payloadOf, type JobRow, type ReadPayload } from './queue';
 import { shadowAfterRead } from '../shadow/shadow';
 import { decideBatch, dueFor, homeworkBatchSettings, isOverdue, readyBy, requeueStandard, saveStamp, stampPayload } from './homework-batch';
+import { EXAM_ORG_ID } from '../exams/space';
 
 interface PreparedRead {
   job: JobRow;
@@ -247,7 +248,8 @@ async function submitReadBatch(group: PreparedRead[]): Promise<void> {
 
 /** Poll provider batches for read jobs and apply finished ones. */
 export async function pollReadBatches(workerId: string): Promise<number> {
-  const jobs = await claimBatchPending('read', 50, workerId, getHwConfig().HW_BATCH_POLL_SECONDS);
+  // exam booklets' read batches are the exam step's own (exams/evaluate.ts)
+  const jobs = await claimBatchPending('read', 50, workerId, getHwConfig().HW_BATCH_POLL_SECONDS, { notOrgId: EXAM_ORG_ID });
   const byBatch = new Map<string, JobRow[]>();
   for (const j of jobs) {
     if (!j.batchRef) {

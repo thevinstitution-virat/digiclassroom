@@ -6,6 +6,7 @@
 // When the upload window closes, an attempt with pages is handed in as it stands (rules.settle); one with no page is abandoned.
 
 import { createHash, randomUUID } from 'node:crypto';
+import { getHwConfig } from '../config';
 import { and, asc, count, eq, max, sql } from 'drizzle-orm';
 import { hwExamAttempt, hwExamPage } from '@/db/hw-exams-schema';
 import { HwError } from '@/lib/hw/errors';
@@ -105,7 +106,12 @@ export async function submitBooklet(d: Exec, userId: string, attemptId: string, 
   await openBooklet(d, userId, attemptId, now);
   const pages = (await d.select({ n: count() }).from(hwExamPage).where(and(eq(hwExamPage.attemptId, attemptId), eq(hwExamPage.status, 'accepted'))))[0]!.n;
   if (!pages) throw new HwError('CONFLICT', both('Add at least one page first.', 'पहले कम से कम एक पन्ना जोड़ें।'));
-  const r = await d.update(hwExamAttempt).set({ status: 'uploaded', submittedAt: now })
+  // on the batch path the report gets its promised time at hand-in, so the learner sees it at once (exams/batch.ts)
+  const cfg = getHwConfig();
+  const readyBy = cfg.HW_EXAMS_BATCH_ENABLED
+    ? sql`CASE WHEN ${hwExamAttempt.evaluationMode} = 'batch' THEN ${new Date(now.getTime() + cfg.HW_EXAMS_BATCH_HOURS * 3_600_000).toISOString()}::timestamptz ELSE NULL END`
+    : null;
+  const r = await d.update(hwExamAttempt).set({ status: 'uploaded', submittedAt: now, ...(readyBy ? { readyBy } : {}) })
     .where(and(eq(hwExamAttempt.id, attemptId), eq(hwExamAttempt.userId, userId), eq(hwExamAttempt.status, 'time_up'))).returning({ id: hwExamAttempt.id });
   if (!r.length) throw new HwError('CONFLICT', NO_UPLOAD.wrong_status);
   return { pages };
