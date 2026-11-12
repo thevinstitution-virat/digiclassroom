@@ -14,6 +14,7 @@ import { QUESTION_PRESETS } from '@/lib/hw/presets';
 import * as assignments from '@/lib/hw/services/assignments';
 import * as submissions from '@/lib/hw/services/submissions';
 import * as marking from '@/lib/hw/services/marking';
+import * as revisions from '@/lib/hw/revisions';
 import * as guardian from '@/lib/hw/services/guardian';
 import { getHwConfig } from '@/lib/hw/config';
 import { institutionMonitor } from '@/lib/hw/monitoring/views';
@@ -80,6 +81,10 @@ const practiceScope = z.object({
 const mode = z.enum(['typed', 'ink', 'photo']);
 const marks = z.number().positive().max(100).refine((n) => Math.round(n * 2) === n * 2, 'Marks must be whole or half marks');
 const itemMarks = z.array(z.object({ rubric_item_id: id, marks: z.number().min(0).max(100) })).max(20);
+export const revisionInput = z.object({
+  answerId: id, itemMarks: itemMarks.optional(), marks: z.number().min(0).max(100).optional(),
+  reason: z.string().trim().min(3).max(1000), name: z.string().max(120).optional(), designation: z.string().max(120).optional(),
+});
 
 const assignmentInput = z.object({
   classId: id,
@@ -293,6 +298,10 @@ export const hwRouter = createTRPCRouter({
       .mutation(({ ctx, input }) => run(ctx, (a) => marking.fixTranscript(a, input.answerId, input))),
     returnAssignment: protectedProcedure.input(z.object({ assignmentId: id }))
       .mutation(({ ctx, input }) => run(ctx, (a) => marking.returnAssignment(a, input.assignmentId))),
+    /** Marks changed after the work was returned (migration 036): with the reviser's name, designation and a reason. */
+    revise: protectedProcedure.input(revisionInput)
+      .mutation(({ ctx, input }) => run(ctx, (a) => revisions.reviseHomeworkAnswer(a, input))),
+    reviser: protectedProcedure.query(({ ctx }) => run(ctx, (a) => revisions.homeworkReviserDefaults(a))),
   }),
 
   // ── A parent's view of a linked child's returned work (off unless HW_PARENT_VIEW_ENABLED). Links are made through guardian invitations (guardian router). ──

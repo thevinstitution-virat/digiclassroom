@@ -16,6 +16,7 @@ import * as learner from '@/lib/hw/exams/learner';
 import * as practice from '@/lib/hw/exams/practice';
 import { signedReadUrl } from '@/lib/hw/storage/r2';
 import * as pages from '@/lib/hw/exams/pages';
+import * as revisions from '@/lib/hw/revisions';
 import { examPageStore } from '@/lib/hw/storage/exam-pages';
 
 const CODE: Partial<Record<HwErrorCode, TRPCError['code']>> = {
@@ -111,6 +112,17 @@ export const hwExamsRouter = createTRPCRouter({
     .mutation(({ ctx, input }) => admin(ctx, (u) => pages.submitBooklet(hwDb, u, input.attemptId))),
   finishWriting: protectedProcedure.input(z.object({ attemptId: id })).mutation(({ ctx, input }) => admin(ctx, (u) => learner.finishWriting(hwDb, u, input.attemptId))),
   abandon: protectedProcedure.input(z.object({ attemptId: id })).mutation(({ ctx, input }) => admin(ctx, (u) => learner.abandonAttempt(hwDb, u, input.attemptId))),
+
+  // ── revising reported attempts (migration 036): the super admin, and the learner's school (its admin, the learner's teachers) ──
+  reviews: createTRPCRouter({
+    available: protectedProcedure.query(({ ctx }) => admin(ctx, (u) => revisions.canReviseAnyExam(u))),
+    list: protectedProcedure.query(({ ctx }) => admin(ctx, (u) => revisions.examReportsForStaff(u))),
+    get: protectedProcedure.input(z.object({ attemptId: id })).query(({ ctx, input }) => admin(ctx, (u) => revisions.examReportForStaff(u, input.attemptId))),
+    revise: protectedProcedure.input(z.object({
+      answerId: id, itemMarks: z.array(z.object({ rubric_item_id: id, marks: z.number().min(0).max(100) })).max(20).optional(), marks: z.number().min(0).max(100).optional(),
+      reason: z.string().trim().min(3).max(1000), name: z.string().max(120).optional(), designation: z.string().max(120).optional(),
+    })).use(rateLimit(60, 60_000)).mutation(({ ctx, input }) => admin(ctx, (u) => revisions.reviseExamAnswer(u, input))),
+  }),
 
   admin: createTRPCRouter({
     list: superAdminProcedure.query(({ ctx }) => admin(ctx, () => builder.listPackages(hwDb))),

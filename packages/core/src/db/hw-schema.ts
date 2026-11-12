@@ -258,6 +258,27 @@ export const hwGradeHistory = pgTable('hw_grade_history', {
   recordedAt: ts('recorded_at').notNull().defaultNow(),
 });
 
+/** Migration 036: marks changed after they reached the learner, with who changed them. Append-only. */
+export type HwReviserKind = 'platform' | 'admin' | 'teacher';
+export const hwMarkRevision = pgTable('hw_mark_revision', {
+  id: id(),
+  organizationId: orgId(),
+  answerId: varchar('answer_id', { length: 36 }).notNull(),
+  submissionId: varchar('submission_id', { length: 36 }).notNull(),
+  examAttemptId: varchar('exam_attempt_id', { length: 36 }),
+  marksBefore: numeric('marks_before', { precision: 6, scale: 2 }),
+  marksAfter: numeric('marks_after', { precision: 6, scale: 2 }).notNull(),
+  itemMarks: jsonb('item_marks').$type<HwItemMark[]>().notNull().default([]),
+  reason: text('reason').notNull(),
+  revisedBy: varchar('revised_by', { length: 255 }).notNull(),
+  reviserName: text('reviser_name').notNull(),
+  reviserDesignation: text('reviser_designation').notNull(),
+  reviserKind: text('reviser_kind').$type<HwReviserKind>().notNull(),
+  showReviser: boolean('show_reviser').notNull(),
+  reviserOrgId: varchar('reviser_org_id', { length: 255 }),
+  createdAt: ts('created_at').notNull().defaultNow(),
+});
+
 export const hwAiUsageMonthly = pgTable('hw_ai_usage_monthly', {
   organizationId: orgId(),
   month: date('month', { mode: 'string' }).notNull(),

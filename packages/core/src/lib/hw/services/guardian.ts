@@ -60,7 +60,7 @@ export async function childResult(actor: HwActor, studentId: string, submissionI
   return {
     assignment: res.assignment, total: res.total,
     questions: res.questions.map((q) => ({
-      id: q.id, position: q.position, type: q.type, prompt: q.prompt, passage: q.passage, marks: q.marks, awarded: q.awarded, comment: q.comment, keyPoints: q.keyPoints,
+      id: q.id, position: q.position, type: q.type, prompt: q.prompt, passage: q.passage, marks: q.marks, awarded: q.awarded, comment: q.comment, revision: q.revision, keyPoints: q.keyPoints,
     })),
   };
 }

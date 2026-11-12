@@ -19,6 +19,7 @@ import { putHwObject, signedReadUrl } from '../storage/r2';
 import { learnerFigures, type LearnerFigure } from '../bank/figures';
 import { PRACTICE_ORG_ID, PRACTICE_TEXT } from '../practice/rules';
 import { requireUsableTrial } from '../practice/trial';
+import { latestRevisionsFor } from '../revisions';
 
 const MAX_TYPED_CHARS = 50_000;
 
@@ -263,6 +264,8 @@ export async function myResult(actor: HwActor, submissionId: string) {
   const itemIds = answers.flatMap(({ g }) => (g?.itemMarks ?? []).map((m) => m.rubric_item_id));
   const items = itemIds.length ? await db.select().from(hwRubricItem).where(inArray(hwRubricItem.id, itemIds)) : [];
   const total = answers.reduce((s, { g }) => s + num(g?.marks), 0);
+  // marks changed after the work was returned (migration 036): who, only when a school's admin or teacher did it
+  const revised = await latestRevisionsFor(db, answers.map(({ a }) => a.id));
   return {
     assignment: { id: assignment.id, title: assignment.title, totalMarks: num(assignment.totalMarks) },
     // Self-practice: no teacher checked these marks, and the screen must say so (English and Hindi).
@@ -276,6 +279,7 @@ export async function myResult(actor: HwActor, submissionId: string) {
         transcript: row?.a.transcript ?? '',
         awarded: g ? num(g.marks) : null,
         comment: g?.comment ?? null,
+        revision: row ? revised.get(row.a.id) ?? null : null,
         keyPoints: (g?.itemMarks ?? []).map((m) => {
           const it = items.find((i) => i.id === m.rubric_item_id);
           return { description: it?.description ?? '', marks: m.marks, outOf: num(it?.marks) };

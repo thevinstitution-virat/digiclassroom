@@ -17,6 +17,7 @@ import { TenantsTab } from '@/components/hw-eval/admin/TenantsTab'
 import { EligibilityTab } from '@/components/hw-eval/admin/EligibilityTab'
 import { MonitoringTab } from '@/components/hw-eval/admin/MonitoringTab'
 import { RunsTab } from '@/components/hw-eval/admin/RunsTab'
+import { AiUsageTab } from '@/components/hw-eval/admin/AiUsageTab'
 
 const KINDS = ['transcribe', 'blind_mark', 'key_audit', 'deidentify'] as const
 const skillsOf = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean)
@@ -313,6 +314,7 @@ export default function EvaluationAdminPage() {
           <TabsTrigger value="eligibility">Eligibility</TabsTrigger>
           <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
           <TabsTrigger value="runs">Runs &amp; gates</TabsTrigger>
+          <TabsTrigger value="usage">AI usage</TabsTrigger>
         </TabsList>
         <TabsContent value="raters" className="space-y-5">
           <Raters />
@@ -324,6 +326,7 @@ export default function EvaluationAdminPage() {
         <TabsContent value="eligibility"><EligibilityTab /></TabsContent>
         <TabsContent value="monitoring"><MonitoringTab /></TabsContent>
         <TabsContent value="runs"><RunsTab /></TabsContent>
+        <TabsContent value="usage"><AiUsageTab /></TabsContent>
       </Tabs>
     </EvalShell>
   )

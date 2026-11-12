@@ -141,5 +141,7 @@ export const hwExamReport = pgTable('hw_exam_report', {
   graderModel: text('grader_model').notNull(),
   promptVersion: text('prompt_version').notNull(),
   costPaise: numeric('cost_paise', { precision: 10, scale: 4, mode: 'number' }).notNull().default(0),
+  /** 036: 0 = the report as made; 1, 2, ... = after each revision of its marks (a new row each time). */
+  revision: integer('revision').notNull().default(0),
   createdAt: ts('created_at').notNull().defaultNow(),
 });

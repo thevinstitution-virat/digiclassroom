@@ -19,6 +19,7 @@ import { runsAndGates } from '@/lib/hw/eligibility/runs-view';
 import { superMonitor } from '@/lib/hw/monitoring/views';
 import { copyDatasets, copyQueue } from '@/lib/hw/eval-tools/copies';
 import { getHwConfig } from '@/lib/hw/config';
+import { aiUsageDashboard } from '@/lib/hw/ai-usage';
 
 const TRPC_CODE: Record<HwErrorCode, TRPCError['code']> = {
   UNAUTHORIZED: 'UNAUTHORIZED', FORBIDDEN: 'FORBIDDEN', FEATURE_DISABLED: 'FORBIDDEN', NOT_FOUND: 'NOT_FOUND',
@@ -107,6 +108,9 @@ export const hwEvalRouter = createTRPCRouter({
       .mutation(({ ctx, input }) => run(ctx, (a) => registry.demote(a, input))),
     // Monitoring tab (5.4) and Runs & gates tab (5.5, read-only)
     monitoring: protectedProcedure.query(({ ctx }) => run(ctx, (a) => superMonitor(a))),
+    /** Super admin: AI batches running now, tokens and cost by day, institution, kind and model. */
+    aiUsage: protectedProcedure.input(z.object({ days: z.number().int().min(7).max(90).default(30) }).optional())
+      .query(({ ctx, input }) => run(ctx, (a) => aiUsageDashboard(a, { days: input?.days }))),
     runsAndGates: protectedProcedure.query(({ ctx }) => run(ctx, (a) => runsAndGates(a))),
     // Tenants tab (roadmap 5.1)
     tenants: protectedProcedure.query(({ ctx }) => run(ctx, (a) => tenants.listTenants(a))),

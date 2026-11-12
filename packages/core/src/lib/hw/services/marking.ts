@@ -26,7 +26,7 @@ type AnswerRow = typeof hwAnswer.$inferSelect;
 type AiGradeRow = typeof hwAiGrade.$inferSelect;
 
 /** An answer, its question and assignment, checked against the teacher's access. */
-async function answerForMarking(actor: HwActor, answerId: string) {
+export async function answerForMarking(actor: HwActor, answerId: string) {
   const [a] = await db.select().from(hwAnswer).where(and(eq(hwAnswer.id, answerId), eq(hwAnswer.organizationId, actor.orgId))).limit(1);
   if (!a) throw new HwError('NOT_FOUND', 'Answer not found.');
   const [q] = await db.select().from(hwQuestion).where(eq(hwQuestion.id, a.questionId)).limit(1);
@@ -36,7 +36,7 @@ async function answerForMarking(actor: HwActor, answerId: string) {
   return { answer: a, question: q, assignment, submission: s };
 }
 
-async function currentRubric(questionId: string) {
+export async function currentRubric(questionId: string) {
   return db.select().from(hwRubricItem)
     .where(and(eq(hwRubricItem.questionId, questionId), isNull(hwRubricItem.retiredAt)))
     .orderBy(asc(hwRubricItem.position));
@@ -64,7 +64,7 @@ async function usableAiGrade(answer: AnswerRow, rubricVersion: number, aiGradeId
 }
 
 /** Validate item marks against the current rubric; returns their sum. */
-function checkItemMarks(itemMarks: HwItemMark[], rubric: { id: string; marks: string }[], questionMarks: number): number {
+export function checkItemMarks(itemMarks: HwItemMark[], rubric: { id: string; marks: string }[], questionMarks: number): number {
   const seen = new Set<string>();
   let sum = 0;
   for (const m of itemMarks) {
@@ -79,6 +79,16 @@ function checkItemMarks(itemMarks: HwItemMark[], rubric: { id: string; marks: st
   }
   if (sum > questionMarks) throw new HwError('BAD_REQUEST', `Key points add up to ${sum}, more than the question's ${questionMarks} marks.`);
   return sum;
+}
+
+/**
+ * A person's final mark for an answer, written as a revision (revisions.ts: released homework, a reported exam attempt). The one other place
+ * hw_grade is written; still only ever a person's action, never the AI's.
+ */
+export async function writePersonGrade(tx: Exec, orgId: string, answerId: string, userId: string, g: { marks: number; itemMarks: HwItemMark[] }) {
+  const now = new Date();
+  await tx.insert(hwGrade).values({ answerId, organizationId: orgId, marks: String(g.marks), itemMarks: g.itemMarks, source: 'manual', aiGradeId: null, gradedBy: userId, gradedAt: now })
+    .onConflictDoUpdate({ target: hwGrade.answerId, set: { marks: String(g.marks), itemMarks: g.itemMarks, source: 'manual', aiGradeId: null, gradedBy: userId, gradedAt: now } });
 }
 
 /** All answers of a submission graded -> submission is graded. */

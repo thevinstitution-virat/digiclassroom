@@ -19,6 +19,7 @@ import { NativeSelect } from '../fields'
 import { marksLabel, useHwT } from '../strings'
 import type { HwOut } from '../types'
 import { annotate } from '../text-spans'
+import { RevisePanel } from '@/components/hw/Revision'
 
 type Queue = HwOut['marking']['queue']
 type Row = Queue['answers'][number]
@@ -93,6 +94,10 @@ function Panel({ q, row, onDone }: { q: Queue; row: Row; onDone: () => void }) {
   const note = api.hw.marking.comment.useMutation({ onSuccess: onDone })
   const fix = api.hw.marking.fixTranscript.useMutation({ onSuccess: () => { setFixing(false); onDone() } })
   const notInstr = api.hw.marking.notAnInstruction.useMutation({ onSuccess: onDone })
+  // returned work: marks change only as a revision, with the reviser's name and designation (migration 036)
+  const [revising, setRevising] = useState(false)
+  const reviser = api.hw.marking.reviser.useQuery(undefined, { enabled: row.submissionStatus === 'returned', staleTime: 300_000 })
+  const revise = api.hw.marking.revise.useMutation({ onSuccess: () => { setRevising(false); onDone() } })
   const busy = accept.isPending || edit.isPending || hand.isPending || note.isPending || fix.isPending || notInstr.isPending
   const err = accept.error ?? edit.error ?? hand.error ?? note.error ?? fix.error ?? notInstr.error
 
@@ -194,6 +199,14 @@ function Panel({ q, row, onDone }: { q: Queue; row: Row; onDone: () => void }) {
       {row.grade && <p className="text-sm font-medium text-green-700 dark:text-green-400"><Check className="mr-1 inline h-4 w-4" />{t('mk.graded', { n: row.grade.marks, of: q.question.marks, source: t(`mk.source.${row.grade.source}`) })}</p>}
       {err && <HwMessage tone="error">{err.message}</HwMessage>}
 
+      {returned && (revising && reviser.data ? (
+        <RevisePanel
+          rubric={q.rubric.map((r) => ({ id: r.id, description: r.description, marks: r.marks, awarded: ((row.grade?.itemMarks ?? []) as { rubric_item_id: string; marks: number }[]).find((g) => g.rubric_item_id === r.id)?.marks ?? 0 }))}
+          questionMarks={q.question.marks} currentMarks={row.grade ? Number(row.grade.marks) : null} me={reviser.data}
+          busy={revise.isPending} error={revise.error?.message} onSubmit={(i) => revise.mutate({ answerId: row.answerId, ...i })} onCancel={() => setRevising(false)} />
+      ) : (
+        <Button size="sm" variant="outline" disabled={!reviser.data} onClick={() => { revise.reset(); setRevising(true) }}>{t('rv.open')}</Button>
+      ))}
       {!returned && (
         <div className="flex flex-wrap items-end gap-2">
           {s && !changed && <Button disabled={!canAccept || busy} onClick={() => accept.mutate({ answerId: row.answerId, aiGradeId: s.id, comment: comment || null })}>{busy && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}{t('mk.accept')} (A)</Button>}

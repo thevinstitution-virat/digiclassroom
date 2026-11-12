@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { HwError, HwLoading, HwMessage, HwShell } from '@/components/hw/HwShell'
 import { NativeSelect } from '@/components/hw/fields'
 import { marksLabel, useHwT } from '@/components/hw/strings'
+import { RevisionNote } from '@/components/hw/Revision'
 
 function Result({ studentId, submissionId }: { studentId: string; submissionId: string }) {
   const { t } = useHwT()
@@ -32,6 +33,7 @@ function Result({ studentId, submissionId }: { studentId: string; submissionId: 
               {q.keyPoints.map((k, i) => <li key={i}>{k.description} — {k.marks}/{k.outOf}</li>)}
             </ul>
           )}
+          {q.revision && <RevisionNote r={q.revision} className="mt-1" />}
           {q.comment && <p className="mt-2 rounded bg-amber-50 p-2 dark:bg-amber-950/30"><span className="font-medium">{t('pa.teacherComment')}: </span>{q.comment}</p>}
         </div>
       ))}

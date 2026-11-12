@@ -14,6 +14,7 @@ import { marksLabel, useHwT } from '../strings'
 import type { HwOut } from '../types'
 import { wordsOf } from '../text-spans'
 import { clearDrafts, unqueueSubmit } from '../ink/local-store'
+import { RevisionNote } from '@/components/hw/Revision'
 
 type Started = HwOut['student']['start']
 type Answer = Started['answers'][number]
@@ -142,6 +143,7 @@ function Result({ submissionId }: { submissionId: string }) {
                 ))}
               </ul>
             )}
+            {q.revision && <RevisionNote r={q.revision} />}
             {q.comment && (
               <div>
                 <p className="font-medium">{t('st.result.teacherComment')}</p>

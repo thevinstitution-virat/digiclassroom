@@ -11,7 +11,7 @@
 // Pure assembly first (tested exactly), then the database side: which attempts are ready, loading them, writing the row.
 
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
-import { hwAiGrade, hwAiJob, hwAnswer, hwGrade, hwQuestion, hwRubricItem, hwSubmission } from '@/db/hw-schema';
+import { hwAiGrade, hwAiJob, hwAnswer, hwGrade, hwMarkRevision, hwQuestion, hwRubricItem, hwSubmission } from '@/db/hw-schema';
 import { hwExamAttempt, hwExamPackage, hwExamReport, hwExamSet, hwExamSetItem } from '@/db/hw-exams-schema';
 import { hwBankQuestion } from '@/db/hw-bank-schema';
 import { getHwConfig, requireModel } from '../config';
@@ -82,6 +82,8 @@ export type QuestionStatus = 'marked' | 'blank' | 'pending' | 'not_counted';
 export interface ReportPoint { text: string; marks: number; awarded: number; verdict: 'met' | 'partial' | 'missing'; quote: string }
 
 export interface ReportQuestion {
+  /** The marking record's answer (reports made before 13 Nov 2026 lack it). */
+  answerId?: string;
   number: number;
   alt: string | null;
   qtype: string;
@@ -160,7 +162,7 @@ export function perQuestionOf(answers: ReportAnswer[]): ReportQuestion[] {
   const rows = answers.map((a) => {
     const f = finalOf(a);
     const q: ReportQuestion = {
-      number: a.number, alt: a.alt, qtype: a.qtype, chapter: a.chapter, topic: a.topic, marks: a.marks,
+      answerId: a.answerId, number: a.number, alt: a.alt, qtype: a.qtype, chapter: a.chapter, topic: a.topic, marks: a.marks,
       awarded: f?.awarded ?? null, status: f?.status ?? 'pending', source: f?.source ?? null, points: f?.points ?? [],
       excludedMarks: round2(Math.max(0, a.itemMarks - a.marks)), reason: f ? null : pendingReason(a),
     };
@@ -491,23 +493,76 @@ export async function reportAttempt(attemptId: string, deps: ReportDeps): Promis
   }
 }
 
+// ── revising a report (migration 036) ───────────────────────────────────────
+
+/**
+ * After a person changed marks on a reported attempt (revisions.ts): a NEW report row, the next revision, assembled from the marks as they now
+ * stand (a person's grade beats the automatic one). The writing check and the models are carried over from the latest row, never re-run.
+ * Runs in the caller's transaction; returns the new revision's marks.
+ */
+export async function rebuildReport(tx: Exec, attemptId: string): Promise<{ revision: number; marksAwarded: number }> {
+  const [latest] = await tx.select().from(hwExamReport).where(eq(hwExamReport.attemptId, attemptId)).orderBy(desc(hwExamReport.revision)).limit(1);
+  if (!latest) throw new Error(`attempt ${attemptId} has no report to revise`);
+  const r = await loadReportAnswers(tx, attemptId);
+  const bp = blueprintFor({ board: r.pkg.board, classLevel: r.pkg.classLevel, examYear: r.pkg.examYear, subjectCode: r.set.subjectCode });
+  const prev = latest.profile as Partial<ReportBody['profile']>;
+  const writingWhy = (prev.parameters ?? []).find((x) => x.id === 'spelling')?.why ?? null;
+  const body = assembleReport(r.answers, { maxMarks: r.attempt.maxMarks, writing: prev.writing ?? null, writingWhy, blueprint: bp });
+  const revision = latest.revision + 1;
+  await tx.insert(hwExamReport).values({
+    id: newId(), attemptId, revision, marksAwarded: body.marksAwarded, maxMarks: body.maxMarks,
+    perQuestion: body.perQuestion as unknown[],
+    profile: { ...body.profile, markedMarks: body.markedMarks, pendingMarks: body.pendingMarks, excludedMarks: body.excludedMarks } as Record<string, unknown>,
+    weakAreas: body.weakAreas as unknown[], readerModel: latest.readerModel, graderModel: latest.graderModel, promptVersion: latest.promptVersion, costPaise: latest.costPaise,
+  });
+  await tx.update(hwExamAttempt).set({ marksAwarded: body.marksAwarded, updatedAt: new Date() }).where(eq(hwExamAttempt.id, attemptId));
+  return { revision, marksAwarded: body.marksAwarded };
+}
+
 // ── reading a report ─────────────────────────────────────────────────────────
+
+/** A change of marks as the learner sees it: who only when the reviser is a school's admin or teacher; the app's own staff, the date only. */
+export interface LearnerRevision {
+  answerId: string;
+  marksBefore: number | null;
+  marksAfter: number;
+  at: Date;
+  by: { name: string; designation: string } | null;
+}
 
 export interface ReportView extends ReportBody {
   createdAt: Date;
+  /** 0 = as made; 1, 2, ... after each revision of its marks. */
+  revision: number;
+  /** The changes of marks behind the revisions, oldest first. */
+  revisions: LearnerRevision[];
   /** This learner's earlier reports on the same set, oldest first, for progress. */
   progress: { attemptNo: number; marksAwarded: number; maxMarks: number; reportedAt: Date; parameters: { id: ParameterId; score: number | null }[] }[];
 }
 
-/** The report of an attempt (null before it is made), with the learner's earlier attempts at the same set. The caller has checked ownership. */
+/** An attempt's revisions as its learner may see them. */
+export async function learnerRevisions(x: Exec, attemptId: string): Promise<LearnerRevision[]> {
+  const rows = await x.select().from(hwMarkRevision).where(eq(hwMarkRevision.examAttemptId, attemptId)).orderBy(asc(hwMarkRevision.createdAt));
+  return rows.map(learnerRevisionOf);
+}
+
+export const learnerRevisionOf = (r: typeof hwMarkRevision.$inferSelect): LearnerRevision => ({
+  answerId: r.answerId, marksBefore: r.marksBefore === null ? null : Number(r.marksBefore), marksAfter: Number(r.marksAfter), at: r.createdAt,
+  by: r.showReviser ? { name: r.reviserName, designation: r.reviserDesignation } : null,
+});
+
+/** The report of an attempt (null before it is made), at its latest revision, with the learner's earlier attempts at the same set. The caller has checked access. */
 export async function reportView(x: Exec, attempt: { id: string; userId: string; setId: string; attemptNo: number }): Promise<ReportView | null> {
-  const row = (await x.select().from(hwExamReport).where(eq(hwExamReport.attemptId, attempt.id)).limit(1))[0];
+  const row = (await x.select().from(hwExamReport).where(eq(hwExamReport.attemptId, attempt.id)).orderBy(desc(hwExamReport.revision)).limit(1))[0];
   if (!row) return null;
   const p = row.profile as Partial<ReportBody['profile']> & { markedMarks?: number; pendingMarks?: number; excludedMarks?: number };
-  const earlier = await x.select({ r: hwExamReport, a: { attemptNo: hwExamAttempt.attemptNo, reportedAt: hwExamAttempt.reportedAt } })
+  const all = await x.select({ r: hwExamReport, a: { attemptNo: hwExamAttempt.attemptNo, reportedAt: hwExamAttempt.reportedAt } })
     .from(hwExamReport).innerJoin(hwExamAttempt, eq(hwExamAttempt.id, hwExamReport.attemptId))
     .where(and(eq(hwExamAttempt.userId, attempt.userId), eq(hwExamAttempt.setId, attempt.setId)))
-    .orderBy(asc(hwExamAttempt.attemptNo));
+    .orderBy(asc(hwExamAttempt.attemptNo), asc(hwExamReport.revision));
+  // one row per attempt: its latest revision
+  const latestOf = new Map<number, (typeof all)[number]>();
+  for (const e of all) latestOf.set(e.a.attemptNo, e);
   return {
     marksAwarded: row.marksAwarded, maxMarks: row.maxMarks,
     markedMarks: p.markedMarks ?? row.maxMarks, pendingMarks: p.pendingMarks ?? 0, excludedMarks: p.excludedMarks ?? 0,
@@ -515,7 +570,9 @@ export async function reportView(x: Exec, attempt: { id: string; userId: string;
     profile: { version: p.version ?? REPORT_VERSION, parameters: p.parameters ?? [], writing: p.writing ?? null, priorities: p.priorities ?? [] },
     weakAreas: row.weakAreas as ReportWeakArea[],
     createdAt: row.createdAt,
-    progress: earlier.filter((e) => e.a.attemptNo <= attempt.attemptNo).map((e) => ({
+    revision: row.revision,
+    revisions: await learnerRevisions(x, attempt.id),
+    progress: [...latestOf.values()].filter((e) => e.a.attemptNo <= attempt.attemptNo).map((e) => ({
       attemptNo: e.a.attemptNo, marksAwarded: e.r.marksAwarded, maxMarks: e.r.maxMarks, reportedAt: e.a.reportedAt ?? e.r.createdAt,
       parameters: (((e.r.profile as { parameters?: ReportParameter[] }).parameters) ?? []).map((x) => ({ id: x.id, score: x.score })),
     })),

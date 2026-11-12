@@ -7,6 +7,7 @@ import type { HwOut } from '@/components/hw/types'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useExamT, type ExKey } from './strings'
+import { RevisionNote, type RevisionLike } from '@/components/hw/Revision'
 
 type Rep = NonNullable<HwOut['exams']['attempt']['report']>
 type Param = Rep['profile']['parameters'][number]
@@ -66,7 +67,7 @@ const VERDICT_ICON = {
   missing: <XCircle className="h-4 w-4 shrink-0 text-red-600" aria-hidden />,
 }
 
-function QuestionRow({ q }: { q: QRow }) {
+function QuestionRow({ q, revision }: { q: QRow; revision?: RevisionLike }) {
   const { t } = useExamT()
   const label = t('ex.q', { n: `${q.number}${q.alt ?? ''}` })
   const status = q.status === 'marked' ? null : <Badge variant="outline" className="text-xs">{t(`ex.r.q.${q.status}` as ExKey)}</Badge>
@@ -82,6 +83,7 @@ function QuestionRow({ q }: { q: QRow }) {
           <span className="font-mono tabular-nums">{q.awarded === null ? '—' : fmt(q.awarded)} / {fmt(q.marks)}</span>
         </div>
       </div>
+      {revision && <RevisionNote r={revision} />}
       {q.reason && <p className="text-sm text-muted-foreground">{t(q.status === 'pending' ? 'ex.r.q.pendingWhy' : 'ex.r.q.pending')}</p>}
       {q.excludedMarks > 0 && <p className="text-xs text-muted-foreground">{t('ex.r.q.excluded', { n: fmt(q.excludedMarks) })}</p>}
       {q.points.length > 0 && q.status !== 'not_counted' && (
@@ -110,6 +112,8 @@ export function ExamReport({ report: r, attemptNo }: { report: Rep; attemptNo: n
   const topics = r.weakAreas.filter((w) => w.level === 'topic' && w.share < 1)
   const priorities = r.profile.priorities.filter((p) => p.gainable > 0)
   const pending = r.perQuestion.filter((q) => q.status === 'pending').length
+  // the latest change of marks on each answer (a report is re-made after each revision)
+  const revisedOf = new Map(r.revisions.map((x) => [x.answerId, x]))
 
   return (
     <div className="space-y-4">
@@ -132,7 +136,7 @@ export function ExamReport({ report: r, attemptNo }: { report: Rep; attemptNo: n
           <Bar value={share} band={share >= 0.8 ? 'strong' : share >= 0.5 ? 'fair' : 'weak'} />
           {pending > 0 && <p className="text-sm text-amber-700 dark:text-amber-300">{t('ex.r.pending', { n: pending, m: fmt(r.pendingMarks) })}</p>}
           {r.excludedMarks > 0 && <p className="text-sm text-muted-foreground">{t('ex.r.excluded', { n: fmt(r.excludedMarks) })}</p>}
-          <p className="text-xs text-muted-foreground">{t('ex.r.madeAt', { date: date(r.createdAt) })}</p>
+          <p className="text-xs text-muted-foreground">{t(r.revision > 0 ? 'ex.r.updatedAt' : 'ex.r.madeAt', { date: date(r.createdAt) })}</p>
         </CardContent>
       </Card>
 
@@ -218,7 +222,7 @@ export function ExamReport({ report: r, attemptNo }: { report: Rep; attemptNo: n
             <span className="flex items-center gap-1">{VERDICT_ICON.missing}{t('ex.r.v.missing')}</span>
             {pending > 0 && <span className="flex items-center gap-1"><CircleDashed className="h-4 w-4" aria-hidden />{t('ex.r.q.pending')}</span>}
           </p>
-          <ul className="divide-y">{r.perQuestion.map((q, i) => <QuestionRow key={`${q.number}-${q.alt ?? ''}-${i}`} q={q} />)}</ul>
+          <ul className="divide-y">{r.perQuestion.map((q, i) => <QuestionRow key={`${q.number}-${q.alt ?? ''}-${i}`} q={q} revision={q.answerId ? revisedOf.get(q.answerId) : undefined} />)}</ul>
         </CardContent>
       </Card>
     </div>
