@@ -314,8 +314,10 @@ photos of real handwriting** before anything is priced or promised.
 
 **Real handwriting, measured 12 Nov** ([`real-handwriting-read-1.md`](real-handwriting-read-1.md)): six pages of a real examiner-marked CBSE
 answer book on the production reader, 81% of words read right at 5.5 paise a page, but option letters and question numbers misread at 0.95
-confidence and some unreadable words filled in with the textbook's idea. Plain-paper booklets are not ready to promise; cheap code checks and
-higher-resolution crops are proposed there.
+confidence and some unreadable words filled in with the textbook's idea. Plain-paper booklets are not ready to promise. Two checks are now in
+placement: a multiple choice whose written words are another option's goes to a person, and every answer placed by a written number is also
+scored by the text-only matcher, so a number its content contradicts goes to a person (mapping.ts already had the rule; 5a never gave it the
+scores). A letter the reader reports only in its "alternative" field is now used. Higher-resolution crops are still only proposed.
 
 **Owner's decision needed — AI marking of authored questions.** The pilot gate (roadmap decision D3,
 `HW_TEACHER_RUBRIC_AI_ENABLED`, off) keeps a question marked with its own rubric off AI marking: such

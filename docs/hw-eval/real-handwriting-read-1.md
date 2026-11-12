@@ -60,6 +60,12 @@ was judged by the numbers read, not run through the full matching.
    - *Question numbers:* run the text-only answer-key match on every answer, not only unplaced ones, and send an answer to a person when its written
      number points to a question its content does not fit (chemical equations under an assertion-reason question). The matching rule already
      names this case; 5a only runs the matcher for unplaced writing.
+   **Both built (12 Nov, `assemble.ts`, `evaluate.ts`).** Replaying the four real page-2 reads through the product's code (each option's words
+   taken from what the student wrote, since the 2025 paper is not here): 11 of the 12 wrong letters now go to a person (the twelfth, Q2, is an
+   equation with no option words, read at 0.75), and none of the 20 right letters is flagged. The replay also found that in half the runs the
+   reader put the letter in its "alternative" field and left it out of the text, which sent every multiple choice to a person; that letter is
+   now used. The number check is covered by tests (a "Q20" answer the matcher reads as Q26 goes to a person); a live check needs the 2025 paper.
+   It costs one more text-only matcher call per booklet whenever an answer was placed by a written number.
 3. **Read at higher resolution**: crop each page (two halves with a small overlap, or each printed box of the answer sheet) at about 1.6 times the
    cost (8.7 against 5.5 paise a page; a 30-page booklet about Rs 2.6 against Rs 1.7 at standard price, half that on batch). Needs de-duplication
    at the seam.

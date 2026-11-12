@@ -1,6 +1,7 @@
 // Phase 5: evaluating a handed-in booklet. The job runner calls runExamEvaluations every pass; each attempt it claims goes
 //   uploaded -> evaluating: materialise its assignment (materialise.ts), read every page (one call per page, verbatim, no answer key),
-//   place the writing (assemble.ts + mapping.ts, with the text-only answer-key matcher only for what is left), write one transcript per
+//   place the writing (assemble.ts + mapping.ts, with the text-only answer-key matcher for what is left and to check every answer placed by a
+//   number the learner wrote), write one transcript per
 //   question, and hand the submission to the marking pipeline that already exists (rules first, then strict marking jobs).
 // The attempt stays 'evaluating' while it is marked; the report (phase 6) closes it.
 //
@@ -148,7 +149,7 @@ async function readAndPlace(attemptId: string, m: Materialised, deps: EvalDeps, 
   const sheet = await sheetFor(db, m.setId);
   const sheetPageNumbers = new Map(sheet.layout.pages.map((p) => [p.page, p.numbers]));
   const minConfidence = getHwConfig().HW_READ_ESCALATE_BELOW;
-  const qs = m.questions.map((q) => ({ answerId: q.answerId, number: q.number, alt: q.alt, choice: q.choice }));
+  const qs = m.questions.map((q) => ({ answerId: q.answerId, number: q.number, alt: q.alt, choice: q.choice, options: q.options }));
   let a = assembleBooklet({ code: sheet.layout.code, sheetPageNumbers, questions: qs, pages: reads, minConfidence });
   if (a.needMatch.length) {
     const byNumber = new Map<number, { number: number; question: string; modelAnswer: string }>();

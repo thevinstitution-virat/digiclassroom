@@ -2,7 +2,7 @@
 // (all pure).
 
 import { parseAnswerMatch, parsePageRead, type PageRead } from '@/lib/hw/exams/page-reader';
-import { assembleBooklet, choiceLetter, withoutLabel, type AssembleQuestion } from '@/lib/hw/exams/assemble';
+import { assembleBooklet, choiceLetter, optionFromWords, withoutLabel, type AssembleQuestion } from '@/lib/hw/exams/assemble';
 
 describe('parsePageRead', () => {
   it('reads a well-formed page', () => {
@@ -127,5 +127,93 @@ describe('assembleBooklet', () => {
     const r = assembleBooklet({ ...base, questions, pages: [page(0, { sheet: { code: 'C3F245', page: 1 }, segments: [seg({ box: [3], text: 'scrawl [?] [?]', confidence: 0.4, unclearCount: 2 })] })] });
     expect(r.answers.get('a3')).toMatchObject({ status: 'needs_review', unclearCount: 2, confidence: 0.4 });
     expect(r.answers.get('a3')!.note).toMatch(/^hard to read/);
+  });
+});
+
+// Real handwriting (docs/hw-eval/real-handwriting-read-1.md): ticked letters and question numbers were misread at 0.95 confidence.
+describe('the checks added after the real-handwriting measurement', () => {
+  const opts = [
+    { letter: 'A', text: 'Na2O and K2O' }, { letter: 'B', text: 'Al₂O₃ and MgO' },
+    { letter: 'C', text: 'ZnO and CaO' }, { letter: 'D', text: 'Cytoplasm and oxygen-deficient muscle cells' },
+  ];
+  const ar = [
+    { letter: 'A', text: 'Both A and R are true, and R is the correct explanation of A.' },
+    { letter: 'B', text: 'Both A and R are true, and R is not the correct explanation of A.' },
+    { letter: 'C', text: 'A is true but R is false.' }, { letter: 'D', text: 'A is false but R is true.' },
+  ];
+
+  describe('optionFromWords', () => {
+    it('finds the option the words are, whatever the case, hyphens or subscripts', () => {
+      expect(optionFromWords('Al2O3 and MgO', opts)).toBe('B');
+      expect(optionFromWords('Cytoplasm and Oxygen deficient muscle cells', opts)).toBe('D');
+      expect(optionFromWords('5', [{ letter: 'A', text: '3' }, { letter: 'B', text: '4' }, { letter: 'C', text: '5' }, { letter: 'D', text: '6' }])).toBe('C');
+    });
+    it('says nothing when the words do not clearly point at one option', () => {
+      expect(optionFromWords('Both A and R are true, and R is the correct explanation of A', ar)).toBeNull(); // A and B differ by one word
+      expect(optionFromWords('oxides', opts)).toBeNull();
+      expect(optionFromWords('', opts)).toBeNull();
+      expect(optionFromWords('anything', [{ letter: 'A', text: '' }, { letter: 'B', text: '' }])).toBeNull(); // options drawn in a figure
+    });
+  });
+
+  it('a letter read as one option, with words that are another option, goes to a person', () => {
+    const qs = [Q('m6', 6, { choice: true, options: opts }), Q('m8', 8, { choice: true, options: opts })];
+    const r = assembleBooklet({ ...base, questions: qs, matches: new Map(), pages: [page(0, { segments: [
+      seg({ numbersSeen: [{ number: 6, confidence: 0.95 }], text: '(A) Al₂O₃ and MgO' }),
+      seg({ numbersSeen: [{ number: 8, confidence: 0.95 }], text: '(D) Cytoplasm and Oxygen deficient muscle cells' }),
+    ] })] });
+    expect(r.answers.get('m6')).toMatchObject({ status: 'needs_review', text: 'A' });
+    expect(r.answers.get('m6')!.note).toContain("the letter was read as A but the words written are option B's");
+    expect(r.answers.get('m8')).toMatchObject({ status: 'done', text: 'D' }); // words and letter agree
+  });
+
+  it('a letter the reader gave only in its "alternative" field is the answer; the words are still checked', () => {
+    const qs = [Q('m1', 1, { choice: true, options: opts }), Q('m6', 6, { choice: true, options: opts }), Q('m7', 7, { choice: true })];
+    const r = assembleBooklet({ ...base, questions: qs, matches: new Map(), pages: [page(0, { segments: [
+      seg({ numbersSeen: [{ number: 1, confidence: 0.95 }], alternative: 'C', text: 'ZnO and CaO' }),
+      seg({ numbersSeen: [{ number: 6, confidence: 0.95 }], alternative: 'A', text: 'Al₂O₃ and MgO' }),
+      seg({ numbersSeen: [{ number: 7, confidence: 0.95 }], text: 'ZnO and CaO' }),
+    ] })] });
+    expect(r.answers.get('m1')).toMatchObject({ status: 'done', text: 'C' });
+    expect(r.answers.get('m6')).toMatchObject({ status: 'needs_review', text: 'A' });
+    expect(r.answers.get('m7')).toMatchObject({ status: 'needs_review', note: expect.stringContaining('could not tell which option was chosen') });
+  });
+
+  it('no options, a letter alone, or words that fit no option: no check, as before', () => {
+    const qs = [Q('x1', 1, { choice: true }), Q('x2', 2, { choice: true, options: opts }), Q('x3', 3, { choice: true, options: opts })];
+    const r = assembleBooklet({ ...base, questions: qs, matches: new Map(), pages: [page(0, { segments: [
+      seg({ numbersSeen: [{ number: 1, confidence: 0.95 }], text: '(A) Al₂O₃ and MgO' }),
+      seg({ numbersSeen: [{ number: 2, confidence: 0.95 }], text: '(C)' }),
+      seg({ numbersSeen: [{ number: 3, confidence: 0.95 }], text: '(C) because it is amphoteric' }),
+    ] })] });
+    expect([...r.answers.values()].map((a) => [a.status, a.text])).toEqual([['done', 'A'], ['done', 'C'], ['done', 'C']]);
+  });
+
+  it('every answer placed by a written number is also sent to the answer-key matcher; one placed by a printed box is not', () => {
+    const questions = [Q('a3', 3), Q('a4', 4)];
+    const r = assembleBooklet({ ...base, questions, pages: [
+      page(0, { sheet: { code: 'C3F245', page: 1 }, segments: [seg({ box: [3], text: 'Grass is a producer' })] }),
+      page(1, { segments: [seg({ numbersSeen: [{ number: 4, confidence: 0.95 }], text: '2HNO3 + Ca(OH)2 -> Ca(NO3)2 + 2H2O' })] }),
+    ] });
+    expect(r.needMatch).toEqual([{ id: 'p1s0', text: '2HNO3 + Ca(OH)2 -> Ca(NO3)2 + 2H2O' }]);
+    expect(r.answers.get('a4')).toMatchObject({ status: 'done' }); // placed by its number until the matcher says otherwise
+  });
+
+  it('"Q.26" read as 20: the answer reads like Q26, so a person decides instead of filing it under Q20', () => {
+    const qs = [Q('q20', 20, { choice: true }), Q('q26', 26)];
+    const pages = [page(0, { segments: [seg({ numbersSeen: [{ number: 20, confidence: 0.95 }], text: '(a) 2HNO3 + Ca(OH)2 -> Ca(NO3)2 + 2H2O' })] })];
+    const r = assembleBooklet({ ...base, questions: qs, pages, matches: new Map([['p0s0', [{ number: 26, score: 0.95 }, { number: 20, score: 0.05 }]]]) });
+    expect(r.review).toEqual([expect.objectContaining({ reason: 'numbers_disagree', detail: 'numbered Q20 but reads like the answer to Q26' })]);
+    expect(r.answers.get('q20')!.status).toBe('needs_review');
+    expect(r.answers.get('q26')!.status).toBe('needs_review');
+  });
+
+  it('a written number the content agrees with is kept', () => {
+    const qs = [Q('q20', 20, { choice: true }), Q('q26', 26)];
+    const pages = [page(0, { segments: [seg({ numbersSeen: [{ number: 26, confidence: 0.95 }], text: '(a) 2HNO3 + Ca(OH)2 -> Ca(NO3)2 + 2H2O' })] })];
+    const r = assembleBooklet({ ...base, questions: qs, pages, matches: new Map([['p0s0', [{ number: 26, score: 0.95 }, { number: 20, score: 0.05 }]]]) });
+    expect(r.review).toEqual([]);
+    expect(r.answers.get('q26')).toMatchObject({ status: 'done' });
+    expect(r.answers.get('q20')).toMatchObject({ status: 'blank' });
   });
 });

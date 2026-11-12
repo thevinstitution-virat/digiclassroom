@@ -187,6 +187,19 @@ suite('exam packages, evaluating a booklet — integration', () => {
     expect(await one(`SELECT count(*)::int n FROM hw_practice_trial WHERE user_id = $1`, [u])).toEqual({ n: 0 });
   });
 
+  it('plain paper: a written number the answer contradicts is checked by the matcher and goes to a person, not to that question', async () => {
+    const { attemptId } = await handedIn(1);
+    // the fake matcher says every answer reads like Q4: here the learner's "Q2 (B)" is a misread number (real handwriting, 12 Nov)
+    const { ai, calls } = fakeAi([{ sheet: null, grid: [], segments: [seg({ numbersSeen: [{ number: 2, confidence: 0.95 }], alternative: 'B', text: 'F = ma, so the force doubles' })] }]);
+    const r = await evaluate(attemptId, ai);
+    expect(r).toMatchObject({ ok: true, review: 1, calls: 2 });
+    expect(calls).toEqual({ read: 1, match: 1 });
+    const by = Object.fromEntries((await answersOf(attemptId)).map((x) => [x.q, x]));
+    expect(by['2B']).toMatchObject({ status: 'needs_review', transcript: null });
+    expect((await one<{ q: { review?: { reason: string; detail: string }[] } }>(`SELECT quality AS q FROM hw_exam_page WHERE attempt_id = $1`, [attemptId]))!.q.review)
+      .toEqual([{ reason: 'numbers_disagree', detail: 'numbered Q2 but reads like the answer to Q4' }]);
+  });
+
   it('plain paper without numbers: the answer-key matcher places the writing', async () => {
     const { attemptId } = await handedIn(1);
     const { ai, calls } = fakeAi([{ sheet: null, grid: [], segments: [seg({ text: 'A labelled cell; F = ma' })] }]);

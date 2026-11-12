@@ -36,6 +36,8 @@ export interface ExamQuestion {
   /** For answer matching: the question as the learner saw it, and its model answer. */
   prompt: string;
   modelAnswer: string;
+  /** A choice question's options by letter (A-D), for checking the words a learner writes beside the letter; empty otherwise. */
+  options: { letter: string; text: string }[];
 }
 
 export interface Materialised { assignmentId: string; submissionId: string; questions: ExamQuestion[]; lang: 'en' | 'hi'; setId: string }
@@ -131,12 +133,12 @@ async function load(tx: Exec, assignmentId: string, userId: string, items: (type
   const rows = await tx.select({ q: hwQuestion, answerId: hwAnswer.id }).from(hwQuestion)
     .innerJoin(hwAnswer, and(eq(hwAnswer.questionId, hwQuestion.id), eq(hwAnswer.submissionId, sub.id)))
     .where(eq(hwQuestion.assignmentId, assignmentId)).orderBy(asc(hwQuestion.position));
-  const bankRows = new Map<string, { alt: string | null; group: string | null; scheme: string }>();
+  const bankRows = new Map<string, { alt: string | null; group: string | null; scheme: string; options: { letter: string; text: string }[] }>();
   const bankIds = items.flatMap((i) => (i.bankQuestionId ? [i.bankQuestionId] : []));
   if (bankIds.length) {
-    for (const b of await tx.select({ id: hwBankQuestion.id, alt: hwBankQuestion.alt, group: hwBankQuestion.choiceGroup, scheme: hwBankQuestion.schemeText })
+    for (const b of await tx.select({ id: hwBankQuestion.id, alt: hwBankQuestion.alt, group: hwBankQuestion.choiceGroup, scheme: hwBankQuestion.schemeText, options: hwBankQuestion.options })
       .from(hwBankQuestion).where(inArray(hwBankQuestion.id, bankIds))) {
-      bankRows.set(b.id, { alt: b.alt, group: b.group, scheme: b.scheme });
+      bankRows.set(b.id, { alt: b.alt, group: b.group, scheme: b.scheme, options: b.options ?? [] });
     }
   }
   const questions: ExamQuestion[] = rows.map(({ q, answerId }) => {
@@ -147,6 +149,7 @@ async function load(tx: Exec, assignmentId: string, userId: string, items: (type
       itemId: it.id, questionId: q.id, answerId, number: it.number, alt: bank?.alt ?? null, handOnly: q.originRef.handOnly ?? null, choiceGroup: bank?.group ?? null, choice: CHOICE.has(it.qtype),
       marks: Number(q.marks), itemMarks: it.marks, prompt: q.prompt,
       modelAnswer: bank?.scheme || q.modelAnswer || q.acceptedAnswers.join(' / ') || pointsText(it.parts),
+      options: !CHOICE.has(it.qtype) ? [] : bank ? bank.options : ((it.options as string[]) ?? []).map((text, i) => ({ letter: 'ABCD'[i]!, text })),
     };
   });
   return { assignmentId, submissionId: sub.id, questions };
