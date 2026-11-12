@@ -107,7 +107,8 @@ export interface SetSummary {
 export async function getPackage(d: Exec, packageId: string) {
   const pkg = (await d.select().from(hwExamPackage).where(eq(hwExamPackage.id, packageId)).limit(1))[0];
   if (!pkg) throw notFound('Package');
-  const sets = await d.select().from(hwExamSet).where(eq(hwExamSet.packageId, packageId)).orderBy(asc(hwExamSet.position));
+  // learners' own practice sets are theirs, not part of the package the super admin builds
+  const sets = await d.select().from(hwExamSet).where(and(eq(hwExamSet.packageId, packageId), isNull(hwExamSet.ownerUserId))).orderBy(asc(hwExamSet.position));
   const facts = await itemFactsBySet(d, sets.map((s) => s.id));
   const summaries: SetSummary[] = [];
   for (const s of sets) {
@@ -147,7 +148,8 @@ export async function setPackageOpen(d: Exec, packageId: string, open: boolean):
 // ── sets ─────────────────────────────────────────────────────────────────────
 
 export interface SetInput {
-  kind: 'mock_half' | 'mock_full';
+  /** 'pool' (035): the questions learners draw their own practice tests from; it is never attempted itself. */
+  kind: 'mock_half' | 'mock_full' | 'pool';
   subject: string;
   subjectCode: string;
   title: string;
@@ -268,7 +270,7 @@ export async function getSet(d: Exec, setId: string) {
   if (!set) throw notFound('Set');
   const items = await d.select({
     id: hwExamSetItem.id, position: hwExamSetItem.position, number: hwExamSetItem.number, section: hwExamSetItem.section, marks: hwExamSetItem.marks,
-    qtype: hwExamSetItem.qtype, chapter: hwExamSetItem.chapter, bankQuestionId: hwExamSetItem.bankQuestionId,
+    qtype: hwExamSetItem.qtype, chapter: hwExamSetItem.chapter, topic: hwExamSetItem.topic, bankQuestionId: hwExamSetItem.bankQuestionId,
     stem: sql<string>`COALESCE(${hwExamSetItem.stem}, ${hwBankQuestion.stem})`, alt: hwBankQuestion.alt, choiceGroup: hwBankQuestion.choiceGroup,
   }).from(hwExamSetItem).leftJoin(hwBankQuestion, eq(hwBankQuestion.id, hwExamSetItem.bankQuestionId))
     .where(eq(hwExamSetItem.setId, setId)).orderBy(asc(hwExamSetItem.position));
@@ -357,6 +359,8 @@ export interface AuthoredInput {
   marks: number;
   qtype: 'mcq' | 'assertion_reason' | 'very_short' | 'short' | 'long' | 'case_based';
   chapter?: string;
+  /** The topic within the chapter (035), for learners choosing what to practise from a pool. */
+  topic?: string;
   stem: string;
   options?: string[];
   correctOption?: 'A' | 'B' | 'C' | 'D' | null;
@@ -378,7 +382,7 @@ export async function addAuthoredItem(d: Exec, setId: string, input: AuthoredInp
     const slot = await nextItemSlot(d, setId);
     const [r] = await d.insert(hwExamSetItem).values({
       setId, position: slot.position, number: input.number ?? slot.number, section: input.section ?? '', marks: input.marks, qtype: input.qtype,
-      chapter: input.chapter ?? '', stem: input.stem, options: input.options ?? [], correctOption: input.correctOption ?? null,
+      chapter: input.chapter ?? '', topic: input.topic ?? '', stem: input.stem, options: input.options ?? [], correctOption: input.correctOption ?? null,
       acceptedAnswers: input.acceptedAnswers ?? [], parts: input.parts ?? [], schemeText: input.schemeText ?? '', diagramParts: input.diagramParts ?? [],
     }).returning({ id: hwExamSetItem.id });
     return r!;
@@ -389,7 +393,7 @@ export async function addAuthoredItem(d: Exec, setId: string, input: AuthoredInp
 export async function updateItem(d: Exec, itemId: string, patch: Partial<AuthoredInput>): Promise<void> {
   const item = (await d.select().from(hwExamSetItem).where(eq(hwExamSetItem.id, itemId)).limit(1))[0];
   if (!item) throw notFound('Question');
-  const { number, section, chapter, ...content } = patch;
+  const { number, section, chapter, topic, ...content } = patch;
   if (item.bankQuestionId && Object.keys(content).length) throw new HwError('BAD_REQUEST', 'A board-paper question is changed in the bank, not here.');
   if (Object.keys(content).length) {
     refuseAuthored({
@@ -398,7 +402,7 @@ export async function updateItem(d: Exec, itemId: string, patch: Partial<Authore
       parts: (content.parts ?? item.parts) as Parameters<typeof authoredProblems>[0]['parts'],
     });
   }
-  const set = { ...(number !== undefined && { number }), ...(section !== undefined && { section }), ...(chapter !== undefined && { chapter }), ...content };
+  const set = { ...(number !== undefined && { number }), ...(section !== undefined && { section }), ...(chapter !== undefined && { chapter }), ...(topic !== undefined && { topic }), ...content };
   if (!Object.keys(set).length) return;
   await guarded('Changing the question', () => d.update(hwExamSetItem).set(set).where(eq(hwExamSetItem.id, itemId)));
 }

@@ -70,6 +70,64 @@ export function Catalogue() {
 }
 
 type LSet = HwOut['exams']['package']['sets'][number]
+type LPool = HwOut['exams']['package']['pools'][number]
+
+/** A learner's own practice test from a question pool (035): topics and types as checkboxes, the number of questions from a list. */
+function PracticeBuilder({ pool, onMade }: { pool: LPool; onMade: () => void }) {
+  const { t, lang, pick } = useExamT()
+  const [topics, setTopics] = useState<string[]>(pool.topics.map((x) => x.topic))
+  const [types, setTypes] = useState<string[]>(pool.types.map((x) => x.qtype))
+  const [count, setCount] = useState(10)
+  const [made, setMade] = useState(false)
+  const build = api.hw.exams.buildPractice.useMutation({ onSuccess: () => { setMade(true); onMade() } })
+  const toggle = (list: string[], v: string, set: (x: string[]) => void) => set(list.includes(v) ? list.filter((x) => x !== v) : [...list, v])
+  const counts = [5, 10, 15, 20, 25, 30].filter((n) => n <= Math.max(5, pool.questions))
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">{t('ex.practice.title')}</CardTitle>
+        <p className="text-sm text-muted-foreground">{t('ex.practice.intro', { title: pool.title, n: pool.questions })}</p>
+      </CardHeader>
+      <CardContent className="space-y-4 text-sm">
+        <fieldset>
+          <legend className="mb-1 flex items-center gap-3 font-medium">{t('ex.practice.topics')}
+            <button type="button" className="text-xs font-normal text-primary hover:underline" onClick={() => setTopics(pool.topics.map((x) => x.topic))}>{t('ex.practice.all')}</button>
+          </legend>
+          <div className="grid gap-1 sm:grid-cols-2">
+            {pool.topics.map((x) => (
+              <label key={x.topic} className="flex items-start gap-2">
+                <input type="checkbox" className="mt-0.5" checked={topics.includes(x.topic)} onChange={() => toggle(topics, x.topic, setTopics)} />
+                <span>{x.topic || '—'} <span className="text-xs text-muted-foreground">({x.questions})</span></span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend className="mb-1 font-medium">{t('ex.practice.types')}</legend>
+          <div className="flex flex-wrap gap-x-4 gap-y-1">
+            {pool.types.map((x) => (
+              <label key={x.qtype} className="flex items-center gap-2">
+                <input type="checkbox" checked={types.includes(x.qtype)} onChange={() => toggle(types, x.qtype, setTypes)} />
+                <span>{lang === 'hi' ? x.label.hi : x.label.en} <span className="text-xs text-muted-foreground">({x.marks.length === 1 && x.marks[0] === 1 ? t('ex.q.mark', { n: 1 }) : t('ex.q.marks', { n: x.marks.join('/') })}, {x.questions})</span></span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="font-medium">{t('ex.practice.count')}</span>
+            <select className="h-9 rounded-md border bg-background px-2" value={count} onChange={(e) => setCount(Number(e.target.value))}>
+              {counts.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </label>
+          <Button disabled={build.isPending || !topics.length || !types.length} onClick={() => { setMade(false); build.mutate({ poolSetId: pool.id, topics, types, count }) }}>{t('ex.practice.make')}</Button>
+        </div>
+        {build.error && <p role="alert" className="text-sm text-red-600">{pick(build.error.message)}</p>}
+        {made && <p role="status" className="text-sm text-emerald-700 dark:text-emerald-400">{t('ex.practice.made')}</p>}
+      </CardContent>
+    </Card>
+  )
+}
 
 function StartDialog({ set, onClose }: { set: LSet; onClose: () => void }) {
   const { t, pick } = useExamT()
@@ -103,7 +161,7 @@ export function PackageView({ packageId }: { packageId: string }) {
   const [starting, setStarting] = useState<LSet | null>(null)
   if (q.isLoading) return <HwLoading />
   if (q.error) return <HwError message={pick(q.error.message)} onRetry={() => q.refetch()} />
-  const { package: pkg, sets, access, openAttempt } = q.data!
+  const { package: pkg, sets, access, openAttempt, pools } = q.data!
   const kindKey = (k: string) => `ex.kind.${k}` as ExKey
 
   return (
@@ -123,7 +181,8 @@ export function PackageView({ packageId }: { packageId: string }) {
           </CardContent>
         </Card>
       )}
-      {!sets.length && <HwMessage>{t('ex.set.none')}</HwMessage>}
+      {access && pools.map((p) => <PracticeBuilder key={p.id} pool={p} onMade={() => q.refetch()} />)}
+      {!sets.length && !pools.length && <HwMessage>{t('ex.set.none')}</HwMessage>}
       <div className="space-y-3">
         {sets.map((s) => (
           <Card key={s.id}>

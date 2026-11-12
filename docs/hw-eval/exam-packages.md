@@ -359,3 +359,27 @@ window `HW_EXAMS_BATCH_HOURS` (default 24). Off, every booklet is read and marke
 - Tests: `exams-batch` (9, pure: the promise and deadlines, chunking), `exams-evaluate-db` (5 more: batch then collect at batch price with
   marking batched against the same promise; a failed batch; a late batch; still waiting; batch off; an attempt waiting on its batch is not stale).
 
+
+## 13. Question pools and a learner's own practice test (migration 035, 12 Nov 2026)
+
+The owner asked for topic-wise board questions that learners can practise by choosing how many questions and which types.
+
+- **A pool** is a set of kind `pool` in a package: board-paper questions for a chapter, each with a `topic` (new column on
+  `hw_exam_set_item`). It is never attempted (code and a migration 035 trigger both refuse). The super admin publishes it after a teacher has
+  checked its keys; a package with only a pool can be published.
+- **A practice test**: on the package page a learner with access chooses topics and question types (checkboxes, with how many questions each
+  has) and a number of questions (5 to 30), and gets a set of kind `practice` of their own (`owner_user_id`, `pool_set_id`): the questions
+  copied from the pool, spread over the chosen topics, in the board's order (objective first, then by marks), writing time at the board's pace
+  (2.25 minutes a mark, at least 10). It has its own printed answer sheet and is started, written, photographed and marked like any set. Only
+  its learner sees or starts it (code and trigger); the super admin's package page does not list practice tests. At most 15 a day per learner.
+- **Pool files** (`exam-pool/1`, kept in `hw-evals/chapter-pools/`, git-ignored: board material) are loaded with
+  `npm run hw:exam:pool -w apps/api -- check|import <pool.json>` into a draft "chapter practice" package. Each key's scheme text says where it
+  came from: `CBSE marking scheme: ...` or `KEY TO CHECK: written by the assistant from NCERT ...`.
+- **First pool: chapter 1, Chemical Reactions and Equations** (`cbse-x-science-ch1-2026.json`): 33 questions from the 2026 papers with a text
+  layer (31/2, 31/3, 31/4, 31/5, the May second exam 31/7, the visually impaired papers), repeats across sets merged with every source kept;
+  14 multiple choice, 3 assertion-reason, 2 two-mark, 14 three-mark; 8 topics. 6 keys are CBSE's own scheme (31/4); 27 were written by the
+  assistant from the NCERT chapter and must be checked by a teacher before the pool is published. The scanned papers (31/1, 31/8) are not in it.
+- **What learners get marked**: multiple choice and assertion-reason by code. Written answers to these (authored) questions go to a person while
+  the pilot gate `HW_TEACHER_RUBRIC_AI_ENABLED` is off (section 11, the owner's decision D3).
+- Tests: `exams-practice-db` (9: the draw; making, seeing and starting a practice test; nobody else can; a pool cannot be attempted; refusals).
+  Browser-checked on scratch: the builder card in English, a 10-question test made, its printed sheet.

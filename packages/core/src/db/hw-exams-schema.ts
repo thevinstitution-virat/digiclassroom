@@ -9,7 +9,8 @@ const ts = (name: string) => timestamp(name, { withTimezone: true, mode: 'date' 
 const id = () => varchar('id', { length: 36 }).primaryKey().$defaultFn(() => randomUUID());
 
 export type ExamContentStatus = 'draft' | 'published' | 'retired';
-export type ExamSetKind = 'pyq' | 'sqp' | 'mock_half' | 'mock_full';
+/** 'pool' (035): questions learners draw their own tests from, never attempted; 'practice': one learner's test drawn from a pool. */
+export type ExamSetKind = 'pyq' | 'sqp' | 'mock_half' | 'mock_full' | 'pool' | 'practice';
 export type ExamAttemptStatus = 'started' | 'time_up' | 'uploaded' | 'evaluating' | 'reported' | 'abandoned';
 
 export const hwExamPackage = pgTable('hw_exam_package', {
@@ -43,6 +44,9 @@ export const hwExamSet = pgTable('hw_exam_set', {
   graceMinutes: integer('grace_minutes').notNull().default(20),
   medium: text('medium').$type<'en' | 'hi'>().notNull().default('en'),
   syllabusScope: jsonb('syllabus_scope').$type<string[]>().notNull().default([]),
+  /** 035: the learner a practice set was made for, and the pool it was drawn from (both set exactly when kind = 'practice'). */
+  ownerUserId: varchar('owner_user_id', { length: 255 }),
+  poolSetId: varchar('pool_set_id', { length: 36 }),
   status: text('status').$type<ExamContentStatus>().notNull().default('draft'),
   createdAt: ts('created_at').notNull().defaultNow(),
   updatedAt: ts('updated_at').notNull().defaultNow(),
@@ -57,6 +61,8 @@ export const hwExamSetItem = pgTable('hw_exam_set_item', {
   marks: numeric('marks', { precision: 4, scale: 1, mode: 'number' }).notNull(),
   qtype: text('qtype').$type<BankQuestionType>().notNull(),
   chapter: text('chapter').notNull().default(''),
+  /** 035: the topic within the chapter, for a learner choosing what to practise. */
+  topic: text('topic').notNull().default(''),
   bankQuestionId: varchar('bank_question_id', { length: 36 }),
   stem: text('stem'),
   options: jsonb('options').$type<string[]>().notNull().default([]),

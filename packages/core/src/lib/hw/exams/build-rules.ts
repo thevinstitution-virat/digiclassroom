@@ -13,7 +13,7 @@ export interface ItemFacts {
 }
 
 export interface SetFacts {
-  kind: 'pyq' | 'sqp' | 'mock_half' | 'mock_full';
+  kind: 'pyq' | 'sqp' | 'mock_half' | 'mock_full' | 'pool' | 'practice';
   maxMarks: number;
   syllabusScope: string[];
 }

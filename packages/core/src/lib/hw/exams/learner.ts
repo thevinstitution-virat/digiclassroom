@@ -15,6 +15,7 @@ import { getHwConfig } from '@/lib/hw/config';
 import { learnerFigures, type LearnerFigure } from '@/lib/hw/bank/figures';
 import { clockFor, effectiveAttempts, remainingMs, settle, startVerdict, type EntitlementLike, type NotStarted } from './rules';
 import { sheetLayout } from './sheet';
+import { poolsOf, visibleTo } from './practice';
 
 export const examsEnabled = (): boolean => getHwConfig().HW_EXAMS_ENABLED;
 
@@ -38,7 +39,7 @@ export const NOT_STARTED_TEXT: Record<NotStarted, { en: string; hi: string }> = 
 const OPEN: ExamAttemptStatus[] = ['started', 'time_up'];
 
 type EntRow = typeof hwExamEntitlement.$inferSelect;
-const entLike = (e: EntRow | undefined): EntitlementLike | null =>
+export const entLike = (e: EntRow | undefined): EntitlementLike | null =>
   e ? { packageId: e.packageId, status: e.status, startsAt: e.startsAt, expiresAt: e.expiresAt, attemptsPerSet: e.attemptsPerSet } : null;
 
 /** Applies rules.settle to the learner's open attempts, so every read sees the clock's truth. Returns how many changed. */
@@ -121,6 +122,8 @@ export async function packageForLearner(d: Exec, userId: string, packageId: stri
 
   const out: LearnerSet[] = [];
   for (const { s, questions } of sets) {
+    // a question pool is drawn from, never sat; a practice test is only its own learner's (035)
+    if (!visibleTo(s, userId)) continue;
     const mine = attempts.filter((a) => a.setId === s.id);
     if (s.status === 'retired' && !mine.length) continue; // a retired test is shown only to those who sat it
     const v = startVerdict({
@@ -141,6 +144,8 @@ export async function packageForLearner(d: Exec, userId: string, packageId: stri
     package: { id: pkg.id, title: pkg.title, blurb: pkg.blurb, board: pkg.board, classLevel: pkg.classLevel, examYear: pkg.examYear, status: pkg.status },
     access: entLike(ent) ? { status: ent!.status, expiresAt: ent!.expiresAt } : null,
     sets: out,
+    /** Question pools the learner can make their own practice tests from (topics and types to choose). */
+    pools: pkg.status === 'published' ? await poolsOf(d, pkg.id) : [],
     /** The learner's open attempt anywhere (one clock at a time), so the page can send them back to it. */
     openAttempt: open ? { id: open.id, setId: open.setId } : null,
   };
@@ -156,7 +161,7 @@ export async function startAttempt(d: Exec, userId: string, setId: string, now =
   requireEnabled();
   return d.transaction(async (tx) => {
     const set = (await tx.select().from(hwExamSet).where(eq(hwExamSet.id, setId)).limit(1))[0];
-    if (!set) throw notFound();
+    if (!set || !visibleTo(set, userId)) throw notFound();
     const pkg = (await tx.select().from(hwExamPackage).where(eq(hwExamPackage.id, set.packageId)).limit(1))[0]!;
     const ent = (await tx.select().from(hwExamEntitlement)
       .where(and(eq(hwExamEntitlement.packageId, pkg.id), eq(hwExamEntitlement.userId, userId))).for('update').limit(1))[0];
@@ -283,6 +288,8 @@ export async function sheetForLearner(d: Exec, userId: string, setId: string) {
   requireEnabled();
   const s = await sheetFor(d, setId);
   if (s.set.status === 'draft' || s.packageStatus === 'draft') throw notFound();
+  const row = (await d.select({ kind: hwExamSet.kind, ownerUserId: hwExamSet.ownerUserId }).from(hwExamSet).where(eq(hwExamSet.id, setId)).limit(1))[0];
+  if (!row || !visibleTo(row, userId)) throw notFound();
   const ent = (await d.select({ id: hwExamEntitlement.id }).from(hwExamEntitlement)
     .where(and(eq(hwExamEntitlement.packageId, s.set.packageId), eq(hwExamEntitlement.userId, userId))).limit(1))[0];
   if (!ent) throw new HwError('FORBIDDEN', `${NOT_STARTED_TEXT.not_entitled.en} / ${NOT_STARTED_TEXT.not_entitled.hi}`);

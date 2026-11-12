@@ -13,6 +13,7 @@ import * as builder from '@/lib/hw/exams/builder';
 import { offeredPapers, paperQuestions } from '@/lib/hw/practice/paper';
 import { ANSWER_KINDS } from '@/lib/hw/bank/schema';
 import * as learner from '@/lib/hw/exams/learner';
+import * as practice from '@/lib/hw/exams/practice';
 import { signedReadUrl } from '@/lib/hw/storage/r2';
 import * as pages from '@/lib/hw/exams/pages';
 import { examPageStore } from '@/lib/hw/storage/exam-pages';
@@ -48,7 +49,7 @@ const packageInput = z.object({
 });
 
 const setInput = z.object({
-  kind: z.enum(['mock_half', 'mock_full']),
+  kind: z.enum(['mock_half', 'mock_full', 'pool']),
   subject: z.string().trim().min(2).max(60),
   subjectCode: z.string().trim().min(1).max(20),
   title: z.string().trim().min(3).max(200),
@@ -73,6 +74,7 @@ const authoredInput = z.object({
   marks: halfMarks,
   qtype: z.enum(['mcq', 'assertion_reason', 'very_short', 'short', 'long', 'case_based']),
   chapter: z.string().trim().max(200).optional(),
+  topic: z.string().trim().max(200).optional(),
   stem: z.string().trim().min(3).max(20_000),
   options: z.array(z.string().trim().min(1).max(2000)).length(4).optional(),
   correctOption: z.enum(['A', 'B', 'C', 'D']).nullable().optional(),
@@ -88,6 +90,10 @@ export const hwExamsRouter = createTRPCRouter({
   catalogue: protectedProcedure.query(({ ctx }) => admin(ctx, (u) => learner.catalogue(hwDb, u))),
   package: protectedProcedure.input(z.object({ packageId: id })).query(({ ctx, input }) => admin(ctx, (u) => learner.packageForLearner(hwDb, u, input.packageId))),
   /** Starts the next attempt; the server's clock starts now. */
+  /** A practice test of the learner's own, drawn from a pool (035): topics and types to include, and how many questions. */
+  buildPractice: protectedProcedure.use(rateLimit(10, 60_000))
+    .input(z.object({ poolSetId: id, topics: z.array(z.string().trim().max(200)).max(40), types: z.array(z.string().trim().max(40)).max(10), count: z.number().int().min(1).max(30) }))
+    .mutation(({ ctx, input }) => admin(ctx, (u) => practice.buildPractice(hwDb, u, input))),
   start: protectedProcedure.use(rateLimit(10, 60_000)).input(z.object({ setId: id }))
     .mutation(({ ctx, input }) => admin(ctx, (u) => learner.startAttempt(hwDb, u, input.setId))),
   attempt: protectedProcedure.input(z.object({ attemptId: id }))
