@@ -20,10 +20,11 @@ import { recordUsage } from '../cost/usage';
 import { failAnswers, finishSubmissionIfRead, setTranscript } from '../pipeline';
 import { examPageStore } from '../storage/exam-pages';
 import { assembleBooklet, type AnswerOutcome } from './assemble';
-import { sharpHalfCropper, type HalfCropper } from './crop';
+import { loadSharp, sharpHalfCropper, type HalfCropper } from './crop';
 import { mergeHalves } from './halves';
+import { readSheetPhoto } from './sheet-read';
 import { materialiseAttempt, type Materialised } from './materialise';
-import { EXAM_PAGE_READ_PROMPT_VERSION, liveExamAi, type ExamAi, type PageRead, type PaperQuestionRef } from './page-reader';
+import { EXAM_BOX_READ_PROMPT_VERSION, EXAM_PAGE_READ_PROMPT_VERSION, liveExamAi, type ExamAi, type PageRead, type PaperQuestionRef } from './page-reader';
 import { sheetFor } from './learner';
 import { EXAM_ORG_ID } from './space';
 import type { AiResult } from '../ai';
@@ -34,12 +35,15 @@ export interface EvalDeps {
   now(): Date;
   /** Cuts a page into two overlapping halves to read separately (HW_EXAMS_READ_SPLIT=halves); absent or null = read the whole page. */
   halves?: HalfCropper | null;
+  /** sharp, for reading printed answer-sheet pages box by box (HW_EXAMS_SHEET_VISION); absent or null = every page is read as a page. */
+  sharp?: typeof import('sharp') | null;
 }
 
 export async function liveEvalDeps(): Promise<EvalDeps> {
   const store = examPageStore();
   return {
     halves: getHwConfig().HW_EXAMS_READ_SPLIT === 'halves' ? await sharpHalfCropper() : null,
+    sharp: getHwConfig().HW_EXAMS_SHEET_VISION ? await loadSharp() : null,
     ai: liveExamAi({ read: requireModel('read'), match: requireModel('grade') }),
     getObject: async (key) => {
       // the page store hands out links; for the bytes, R2 directly or the local stand-in's data: URL
@@ -141,13 +145,24 @@ async function readAndPlace(attemptId: string, m: Materialised, deps: EvalDeps, 
   }
   const refs = [...units.values()].sort((a, b) => a.number - b.number);
 
+  const sheet = await sheetFor(db, m.setId);
   const reads: { pageId: string; position: number; read: PageRead }[] = [];
   for (const p of pages) {
     const image = await deps.getObject(p.imageKey);
-    const halves = deps.halves ? await deps.halves(image) : null;
-    let read: PageRead;
-    let model: string;
-    if (halves) {
+    let read: PageRead | null = null;
+    let model = 'code';
+    let how: 'sheet' | 'halves' | 'page' = 'sheet';
+    let sheetFallback: string | null = null;
+    if (deps.sharp && deps.ai.readBox) {
+      // a printed answer-sheet page: code finds it, reads the grid and picks the boxes with writing; the reader transcribes each box
+      const r = await readSheetPhoto({ image, layout: sheet.layout, questions: refs, lang: m.lang, ai: deps.ai, sharp: deps.sharp });
+      calls.push(...r.calls);
+      if (r.ok) { read = r.read; model = r.calls[0]?.model ?? 'code'; } else sheetFallback = r.reason;
+    }
+    // not a printed sheet page (or one code could not square up): read as a page, in halves by default
+    const halves = read ? null : deps.halves ? await deps.halves(image) : null;
+    if (!read && halves) {
+      how = 'halves';
       // two overlapping halves, each read at about twice the detail, joined at the seam (halves.ts)
       const top = await deps.ai.readPage({ image: halves[0], mime: 'image/jpeg', questions: refs, lang: m.lang });
       calls.push(top.result);
@@ -155,19 +170,20 @@ async function readAndPlace(attemptId: string, m: Materialised, deps: EvalDeps, 
       calls.push(bottom.result);
       read = mergeHalves(top.read, bottom.read);
       model = top.result.model;
-    } else {
+    } else if (!read) {
+      how = 'page';
       const whole = await deps.ai.readPage({ image, mime: p.mimeType, questions: refs, lang: m.lang });
       calls.push(whole.result);
       read = whole.read;
       model = whole.result.model;
     }
-    reads.push({ pageId: p.id, position: p.position, read });
+    reads.push({ pageId: p.id, position: p.position, read: read! });
     // kept with the page for the report and for a person checking it
-    await db.update(hwExamPage).set({ quality: sql`${hwExamPage.quality} || ${JSON.stringify({ read: { ...read, model, prompt: EXAM_PAGE_READ_PROMPT_VERSION, split: halves ? 'halves' : 'page' } })}::jsonb` })
+    const prompt = how === 'sheet' ? EXAM_BOX_READ_PROMPT_VERSION : EXAM_PAGE_READ_PROMPT_VERSION;
+    await db.update(hwExamPage).set({ quality: sql`${hwExamPage.quality} || ${JSON.stringify({ read: { ...read!, model, prompt, split: how, ...(sheetFallback ? { sheetFallback } : {}) } })}::jsonb` })
       .where(eq(hwExamPage.id, p.id));
   }
 
-  const sheet = await sheetFor(db, m.setId);
   const sheetPageNumbers = new Map(sheet.layout.pages.map((p) => [p.page, p.numbers]));
   const minConfidence = getHwConfig().HW_READ_ESCALATE_BELOW;
   const qs = m.questions.map((q) => ({ answerId: q.answerId, number: q.number, alt: q.alt, choice: q.choice, options: q.options }));

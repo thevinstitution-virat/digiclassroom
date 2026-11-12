@@ -10,6 +10,7 @@ import { cloneBank } from '@/test-support/hw/bank-fixture';
 import { expandBank, sha256 } from '@/lib/hw/bank/expand';
 import { REVIEW_FORMAT, type VerdictFile, type VerdictIn } from '@/lib/hw/bank/review';
 import type { ExamAi, PageRead } from '@/lib/hw/exams/page-reader';
+import { drawPage, photograph, toRgb } from '@/test-support/hw/sheet-photo';
 
 const DB_URL = process.env.HW_ITEST_DATABASE_URL;
 const suite = DB_URL ? describe : describe.skip;
@@ -94,7 +95,7 @@ async function handedIn(pages = 2) {
   return { u, s, attemptId, code: S.sheetCode(s) };
 }
 /** Evaluate only this test's attempt (other suites may leave handed-in attempts in the shared scratch DB). */
-async function evaluate(attemptId: string, ai: ExamAi, extra: { halves?: (image: Uint8Array) => Promise<[Uint8Array, Uint8Array] | null> } = {}) {
+async function evaluate(attemptId: string, ai: ExamAi, extra: Partial<import('@/lib/hw/exams/evaluate').EvalDeps> = {}) {
   await raw.query(`UPDATE hw_exam_attempt SET status = 'evaluating' WHERE id = $1 AND status = 'uploaded'`, [attemptId]);
   return E.evaluateClaimed(attemptId, { ...deps(ai), ...extra });
 }
@@ -206,6 +207,31 @@ suite('exam packages, evaluating a booklet — integration', () => {
     expect((await one<{ q: { read?: { split?: string; sheet?: unknown } } }>(`SELECT quality AS q FROM hw_exam_page WHERE attempt_id = $1`, [attemptId]))!.q.read)
       .toMatchObject({ split: 'halves', sheet: { code, page: 1 } });
   });
+
+  it('a printed-sheet photo is read box by box: the grid by code, only the box with writing sent to the reader, no page read', async () => {
+    const { attemptId, s } = await handedIn(1);
+    const { layout } = await L.sheetFor(database, s);
+    const sharp = (await (await import('@/lib/hw/exams/crop')).loadSharp())!;
+    const crop = await import('@/lib/hw/exams/crop');
+    // the learner circled C for Q1 and wrote in the box for Q3, ticking alternative D
+    const photo = await crop.encodeJpeg(sharp, toRgb(photograph(drawPage(layout, 1, { marks: { 1: 'C' }, ink: [3] }), { width: 1200, height: 1650 })), 85);
+    const boxes: number[][] = [];
+    const { ai, calls } = fakeAi([]);
+    const boxAi: ExamAi = { ...ai, async readBox({ numbers }) {
+      boxes.push(numbers);
+      return { read: { numbersSeen: [], alternative: 'D', text: '(a) Grass\nD. Fungi', confidence: 0.95, unclearCount: 0 }, result: { json: {}, usage, rawUsage: {}, model: 'test-reader' } };
+    } };
+    const r = await evaluate(attemptId, boxAi, { sharp, getObject: async () => photo });
+    expect(r).toMatchObject({ ok: true, pages: 1, review: 0, calls: 1 });
+    expect(calls).toEqual({ read: 0, match: 0 });
+    expect(boxes).toEqual([[3]]);
+    const by = Object.fromEntries((await answersOf(attemptId)).map((x) => [x.q, x]));
+    expect(by['1']).toMatchObject({ status: 'done', transcript: 'C' });
+    expect(by['3D']).toMatchObject({ status: 'done', transcript: '(a) Grass\nD. Fungi' });
+    expect(by['3C']).toMatchObject({ status: 'done', transcript: '' });
+    expect((await one<{ q: { read?: { split?: string; prompt?: string; sheet?: unknown } } }>(`SELECT quality AS q FROM hw_exam_page WHERE attempt_id = $1`, [attemptId]))!.q.read)
+      .toMatchObject({ split: 'sheet', prompt: 'exam-box-read.v1', sheet: { code: layout.code, page: 1 } });
+  }, 120_000);
 
   it('plain paper: a written number the answer contradicts is checked by the matcher and goes to a person, not to that question', async () => {
     const { attemptId } = await handedIn(1);

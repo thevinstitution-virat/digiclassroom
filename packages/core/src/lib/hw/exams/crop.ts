@@ -28,3 +28,25 @@ export async function sharpHalfCropper(): Promise<HalfCropper | null> {
     return [new Uint8Array(a!), new Uint8Array(b!)];
   };
 }
+
+/** sharp, or null when it cannot be loaded. */
+export async function loadSharp(): Promise<typeof import('sharp') | null> {
+  try {
+    const mod = await import('sharp');
+    return ((mod as unknown as { default?: typeof import('sharp') }).default ?? mod) as typeof import('sharp');
+  } catch {
+    return null;
+  }
+}
+
+/** A photo as RGB pixels, turned upright by its EXIF orientation (sheet-vision.ts works on these). */
+export async function decodeRaster(sharp: typeof import('sharp'), image: Uint8Array): Promise<import('./sheet-vision').Raster> {
+  const { data, info } = await sharp(image).rotate().removeAlpha().toColourspace('srgb').raw().toBuffer({ resolveWithObject: true });
+  return { width: info.width, height: info.height, channels: info.channels === 1 ? 1 : 3, data: new Uint8Array(data.buffer, data.byteOffset, data.length) };
+}
+
+/** A raster as a JPEG, for sending to the reader. */
+export async function encodeJpeg(sharp: typeof import('sharp'), r: import('./sheet-vision').Raster, quality = 88): Promise<Uint8Array> {
+  const buf = await sharp(Buffer.from(r.data.buffer, r.data.byteOffset, r.data.length), { raw: { width: r.width, height: r.height, channels: r.channels } }).jpeg({ quality }).toBuffer();
+  return new Uint8Array(buf);
+}

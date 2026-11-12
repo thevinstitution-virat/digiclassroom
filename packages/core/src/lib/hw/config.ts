@@ -140,6 +140,12 @@ const EnvSchema = z.object({
    * (docs/hw-eval/real-handwriting-read-1.md): halves read the question numbers right and stopped filling unreadable words with the textbook's
    * idea, at about 1.6 times the cost.
    */
+  /**
+   * Printed answer-sheet pages are read by code and box by box (exams/sheet-read.ts): corners, page code, the multiple-choice grid from the
+   * ink, then one reader call per box with writing. A page code cannot square up is read the HW_EXAMS_READ_SPLIT way. Measured on phone-style
+   * photos of real handwriting: 93-96% of words read right against 88% for halves, every grid letter right, cheaper.
+   */
+  HW_EXAMS_SHEET_VISION: bool(true),
   HW_EXAMS_READ_SPLIT: z.preprocess((v) => (v === '' || v === undefined ? undefined : String(v).trim().toLowerCase()), z.enum(['halves', 'page']).optional()).transform((v) => v ?? 'halves'),
   HW_SELF_PRACTICE_TRIAL_DAYS: num(7, 1, 90),
   HW_SELF_PRACTICE_TRIAL_BUDGET_PAISE: num(1000, 0, 100_000),

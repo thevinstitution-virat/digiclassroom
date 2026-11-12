@@ -321,6 +321,11 @@ scores). A letter the reader reports only in its "alternative" field is now used
 (`HW_EXAMS_READ_SPLIT=halves`, `exams/halves.ts` + `exams/crop.ts`): fewer invented words and better question numbers, at about 1.6 times the
 reading cost (8.7 against 5.5 paise a page); `page` turns it off.
 
+**Printed sheet read box by box (12 Nov)** ([`printed-sheet-read-1.md`](printed-sheet-read-1.md)): code finds the page's corners, straightens it,
+reads a new identity strip (sheet code + page) and the multiple-choice grid from the ink, and sends only the boxes with writing to the reader,
+one call each (`exam-box-read.v1`). On phone-style photos of the real student's handwriting: 93-96% of words right, every grid letter right,
+nothing to review, about 3.5 paise a box (about Rs 0.70 a paper). `HW_EXAMS_SHEET_VISION` (on); pages code cannot square up fall back to halves.
+
 **Owner's decision needed — AI marking of authored questions.** The pilot gate (roadmap decision D3,
 `HW_TEACHER_RUBRIC_AI_ENABLED`, off) keeps a question marked with its own rubric off AI marking: such
 questions are marked by a person. Questions the super admin writes in the builder are exactly that, so

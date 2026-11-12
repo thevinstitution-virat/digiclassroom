@@ -8,10 +8,11 @@ import {
   EXAM_PAGE_READ_PROMPT_VERSION, EXAM_PAGE_READ_SCHEMA, EXAM_PAGE_READ_SYSTEM_PROMPT, examPageLabel,
 } from '../prompts/exam-page-read.v1';
 import { ANSWER_MATCH_PROMPT_VERSION, ANSWER_MATCH_SCHEMA, ANSWER_MATCH_SYSTEM_PROMPT, answerMatchInput, type MatchQuestion } from '../prompts/answer-match.v1';
+import { EXAM_BOX_READ_PROMPT_VERSION, EXAM_BOX_READ_SCHEMA, EXAM_BOX_READ_SYSTEM_PROMPT, examBoxLabel } from '../prompts/exam-box-read.v1';
 import { CONFIDENCE_VALUE } from '../reader/parse';
 import type { KeyMatch, NumberSeen } from './mapping';
 
-export { EXAM_PAGE_READ_PROMPT_VERSION, ANSWER_MATCH_PROMPT_VERSION };
+export { EXAM_PAGE_READ_PROMPT_VERSION, ANSWER_MATCH_PROMPT_VERSION, EXAM_BOX_READ_PROMPT_VERSION };
 
 export interface PaperQuestionRef { number: number; alternatives: string[]; choice: boolean }
 
@@ -66,6 +67,27 @@ export function parsePageRead(json: unknown): PageRead {
   return { sheet, grid, segments };
 }
 
+/** One cut-out answer box, read: the same fields as a page segment, without the placement (code already knows the box). */
+export interface BoxRead { numbersSeen: NumberSeen[]; alternative: string | null; text: string; confidence: number; unclearCount: number }
+
+export function parseBoxRead(json: unknown): BoxRead {
+  const o = isObj(json) ? json : {};
+  const text = typeof o.text === 'string' ? o.text.trim() : '';
+  const numbersSeen = (Array.isArray(o.written_numbers) ? o.written_numbers : []).flatMap((w) =>
+    isObj(w) && Number.isInteger(w.number) ? [{ number: w.number as number, confidence: conf(w.confidence) }] : []);
+  const alt = typeof o.alternative === 'string' && /^[A-Da-d]$/.test(o.alternative.trim()) ? o.alternative.trim().toUpperCase() : null;
+  return { numbersSeen, alternative: alt, text, confidence: conf(o.confidence), unclearCount: unclear(text) };
+}
+
+export function boxReadCall(model: string, image: Uint8Array, mime: 'image/png' | 'image/jpeg' | 'image/webp', numbers: number[], alternatives: string[], lang: 'en' | 'hi'): GeminiCall {
+  return {
+    model,
+    systemInstruction: EXAM_BOX_READ_SYSTEM_PROMPT,
+    schema: EXAM_BOX_READ_SCHEMA,
+    parts: [textPart(examBoxLabel(numbers, alternatives, lang)), imagePart(image, mime, 'HIGH')],
+  };
+}
+
 export function pageReadCall(model: string, image: Uint8Array, mime: 'image/png' | 'image/jpeg' | 'image/webp', questions: PaperQuestionRef[], lang: 'en' | 'hi'): GeminiCall {
   return {
     model,
@@ -105,6 +127,8 @@ export function answerMatchCall(model: string, questions: MatchQuestion[], answe
 export interface ExamAi {
   readPage(input: { image: Uint8Array; mime: 'image/png' | 'image/jpeg' | 'image/webp'; questions: PaperQuestionRef[]; lang: 'en' | 'hi' }): Promise<{ read: PageRead; result: AiResult }>;
   matchAnswers(input: { questions: MatchQuestion[]; answers: { id: string; text: string }[] }): Promise<{ matches: Map<string, KeyMatch[]>; result: AiResult }>;
+  /** One answer box cut out of a printed sheet page (sheet-read.ts). Absent: printed pages are read whole, like plain paper. */
+  readBox?(input: { image: Uint8Array; mime: 'image/png' | 'image/jpeg' | 'image/webp'; numbers: number[]; alternatives: string[]; lang: 'en' | 'hi' }): Promise<{ read: BoxRead; result: AiResult }>;
 }
 
 export function liveExamAi(models: { read: string; match: string }): ExamAi {
@@ -116,6 +140,10 @@ export function liveExamAi(models: { read: string; match: string }): ExamAi {
     async matchAnswers(i) {
       const result = await generate(routed(answerMatchCall(models.match, i.questions, i.answers), 'grade'));
       return { matches: parseAnswerMatch(result.json, i.answers.map((a) => a.id), i.questions.map((q) => q.number)), result };
+    },
+    async readBox(i) {
+      const result = await generate(routed(boxReadCall(models.read, i.image, i.mime, i.numbers, i.alternatives, i.lang), 'read'));
+      return { read: parseBoxRead(result.json), result };
     },
   };
 }
