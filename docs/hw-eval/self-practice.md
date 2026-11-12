@@ -113,3 +113,18 @@ Read from the code on 7 Nov:
 2. **Question picker (done 7 Nov, local):** search the hub for exercise questions, verify, create the attempt, queue the key.
 3. **Tab and pages (done 7 Nov, local, not checked in a browser):** the sidebar item, the picker, the answer page (reusing the student answer screen), the result with the label, trial status. English and Hindi.
 4. **Pilot checklist (done 7 Nov):** `npm run hw:practice:readiness`, the runbook and monitoring queries in [self-practice-pilot.md](self-practice-pilot.md). Running the pilot is not done.
+
+## Opened to every learner, library-driven (owner, 13 Nov 2026)
+
+- **Who**: every learner may start the InkBuddy trial, a school's students too. Each has their own trial and budget, apart from their school's
+  work and quota. InkBuddy screens mark their API requests `x-hw-space: practice` (`lib/trpc/hw-space.ts`); the server serves such a request
+  from the practice space only for someone with a trial (`access/actor.ts`), and the space only ever shows a learner their own questions.
+  Answer links from InkBuddy carry `?space=practice`. Without the marker a school's student is in their school, as before.
+- **What**: the classes and subjects on offer are every book the library has published (CBSE subject placements, e.g.
+  `SCH.CBSE.C10.SCIENCE` → Class 10 Science), re-read every 10 minutes (`practice/catalog.ts`, `offeredScopes`). A new book in the library
+  is on offer without any server setting. `HW_SELF_PRACTICE_SCOPES` is now only an optional limit (normally unset); a server with no library
+  reader configured falls back to it as the list.
+- **Open now**: `HW_SELF_PRACTICE_REQUIRE_ELIGIBLE_GROUP` defaults to false. InkBuddy no longer waits for a textbook-key group to pass the
+  evaluation gates, and its questions with a ready key are AI-marked even under `HW_ELIGIBILITY_ENFORCED` (`eligibility/registry.ts`).
+  Marks stay labelled "practice estimate, not checked by a teacher". Set the variable to true to close it again.
+- The library hub and the answer-key writer/verifier keys are still required (`practiceLibraryReady`).

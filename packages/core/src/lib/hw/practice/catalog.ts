@@ -5,6 +5,7 @@
 // class, subject and medium: the server never trusts question text from the browser.
 
 import { libraryHubEnabled, searchLibrary } from '../../library/search';
+import { publishedPlacements, readerConfigured } from '../../library/db';
 import { HubError, type HubSearchRequest, type HubSearchResponse } from '../../library/hub-client';
 import { and, eq, sql } from 'drizzle-orm';
 import { hwEligibility } from '@/db/hw-control-schema';
@@ -89,7 +90,10 @@ export function parseScope(input: { classLevel: string | number; subject: string
 
 const MAX_LISTED = 30;
 
-/** The books on offer (HW_SELF_PRACTICE_SCOPES; default Class 9 Science, English). */
+/**
+ * A list of scopes written as `class:Subject:medium` (HW_SELF_PRACTICE_SCOPES). Since 13 Nov 2026 this is only an optional LIMIT: unset, the
+ * classes and subjects on offer are whatever the library has published (offeredScopes). The default here is kept for that parser's callers.
+ */
 export function practiceScopes(raw: string | undefined = getHwConfig().HW_SELF_PRACTICE_SCOPES): PracticeScope[] {
   const out: PracticeScope[] = [];
   for (const part of (raw && raw.trim() ? raw : '9:Science:en').split(',')) {
@@ -100,10 +104,64 @@ export function practiceScopes(raw: string | undefined = getHwConfig().HW_SELF_P
   return out;
 }
 
+const titleWords = (slug: string) => slug.split('_').filter(Boolean).map((w) => w[0]!.toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+const mediumOf = (m: string): 'en' | 'hi' | null => {
+  const k = m.trim().toLowerCase();
+  return k === 'en' || k.startsWith('eng') ? 'en' : k === 'hi' || k.startsWith('hin') ? 'hi' : null;
+};
+
+/**
+ * The library's published books as practice scopes: a CBSE subject placement `SCH.CBSE.C10.SCIENCE` in English becomes Class 10 Science (en).
+ * Class-level placements (no subject) and other boards are left out (answer keys are CBSE); Class 10's two mathematics courses are one
+ * "Mathematics". Sorted by class, subject, medium. Pure.
+ */
+export function scopesFromPlacements(rows: { node_code: string; medium: string }[]): PracticeScope[] {
+  const seen = new Map<string, PracticeScope>();
+  for (const r of rows) {
+    const m = /^SCH\.CBSE\.C(\d{1,2})\.([A-Z0-9_]+)$/.exec(r.node_code.trim());
+    const medium = mediumOf(r.medium);
+    if (!m || !medium) continue;
+    const classLevel = Number(m[1]);
+    if (classLevel < 1 || classLevel > 12) continue;
+    const subject = titleWords(m[2]!.replace(/^MATHEMATICS_(STANDARD|BASIC)$/, 'MATHEMATICS'));
+    seen.set(`${classLevel}|${subject.toLowerCase()}|${medium}`, { classLevel, subject, medium });
+  }
+  return [...seen.values()].sort((a, b) => a.classLevel - b.classLevel || a.subject.localeCompare(b.subject) || a.medium.localeCompare(b.medium));
+}
+
+const SCOPE_CACHE_MS = 10 * 60_000;
+let scopeCache: { at: number; scopes: PracticeScope[] } | null = null;
+export const _resetScopeCache = () => { scopeCache = null; };
+
+/**
+ * The classes and subjects InkBuddy offers: every book the library has published (re-read every 10 minutes), so a new book is on offer
+ * without touching the server's settings. HW_SELF_PRACTICE_SCOPES, when set, limits that list to its entries (an emergency brake, normally
+ * unset). If the library cannot be listed, the last list read is kept; with none, nothing is offered rather than a guess. A server with no
+ * library reader configured (tests, a bare local setup) offers the HW_SELF_PRACTICE_SCOPES list itself, as before 13 Nov 2026.
+ */
+export async function offeredScopes(deps: { list?: () => Promise<{ node_code: string; medium: string }[]>; now?: number } = {}): Promise<PracticeScope[]> {
+  const raw = getHwConfig().HW_SELF_PRACTICE_SCOPES;
+  const list = deps.list ?? (readerConfigured() ? publishedPlacements : null);
+  if (!list) return practiceScopes(raw);
+  const now = deps.now ?? Date.now();
+  if (!scopeCache || now - scopeCache.at > SCOPE_CACHE_MS) {
+    try {
+      scopeCache = { at: now, scopes: scopesFromPlacements(await list()) };
+    } catch (e) {
+      console.error(`[hw] InkBuddy could not list the library's books: ${(e as Error).message}`);
+      scopeCache = { at: now, scopes: scopeCache?.scopes ?? [] };
+    }
+  }
+  if (!raw || !raw.trim()) return scopeCache.scopes;
+  const limit = practiceScopes(raw);
+  return scopeCache.scopes.filter((s) => limit.some((l) => sameScope(l, s)));
+}
+
+const sameScope = (a: PracticeScope, b: PracticeScope) => a.classLevel === b.classLevel && a.medium === b.medium && a.subject.toLowerCase() === b.subject.toLowerCase();
+
 /** Refuses a class, subject and medium the library has no book for on offer, so a question is never keyed from another subject's book. */
-export function requireOfferedScope(scope: PracticeScope): void {
-  const ok = practiceScopes().some((s) => s.classLevel === scope.classLevel && s.medium === scope.medium && s.subject.toLowerCase() === scope.subject.toLowerCase());
-  if (!ok) throw new HwError('BAD_REQUEST', `${PRACTICE_TEXT.scopeOff.en} / ${PRACTICE_TEXT.scopeOff.hi}`);
+export async function requireOfferedScope(scope: PracticeScope, deps?: Parameters<typeof offeredScopes>[0]): Promise<void> {
+  if (!(await offeredScopes(deps)).some((s) => sameScope(s, scope))) throw new HwError('BAD_REQUEST', `${PRACTICE_TEXT.scopeOff.en} / ${PRACTICE_TEXT.scopeOff.hi}`);
 }
 
 function requestOf(scope: PracticeScope, query: string): HubSearchRequest {
@@ -137,7 +195,7 @@ export async function searchPracticeQuestions(scope: PracticeScope, rawQuery: st
   const query = rawQuery.trim().replace(/\s+/g, ' ');
   if (query.length < 2 || query.length > 200) throw new HwError('BAD_REQUEST', 'Type a topic of 2 to 200 characters.');
   if (!hub) return { available: false, questions: [], warnings: [], message: PRACTICE_TEXT.libraryOff };
-  requireOfferedScope(scope);
+  await requireOfferedScope(scope);
   // The word "questions" pulls the book's exercise rows forward: the hub ranks them with the explanatory text, and a topic alone often returns none (measured on the live book).
   const res = await searchHub(hub, requestOf(scope, `${query} questions`));
   const q = shingles(query, 1);

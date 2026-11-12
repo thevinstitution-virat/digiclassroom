@@ -22,7 +22,7 @@ import { conceptFeedbackForSubmission } from '@/lib/hw/concept-feedback';
 import { libraryGraphEnabled } from '@/lib/library/graph-client';
 import { PRACTICE_ORG_ID } from '@/lib/hw/practice/rules';
 import { practiceOverview, startTrial } from '@/lib/hw/practice/trial';
-import { parseScope, practiceReady, practiceScopes, searchPracticeQuestions } from '@/lib/hw/practice/catalog';
+import { offeredScopes, parseScope, practiceReady, searchPracticeQuestions } from '@/lib/hw/practice/catalog';
 import { db as hwDb } from '@/lib/hw/db';
 import { retryAttempt, startAttempt } from '@/lib/hw/practice/attempt';
 import { offeredPapers, paperQuestions, startPaperAttempt } from '@/lib/hw/practice/paper';
@@ -138,7 +138,7 @@ export const hwRouter = createTRPCRouter({
     status: protectedProcedure.query(({ ctx }) => runUser(ctx, async (u) => {
       const o = await practiceOverview(u);
       // ready: the library and the answer keys are wired and a group can be marked, so starting the trial is worth the learner's days.
-      return o.enabled ? { ...o, ready: await practiceReady(hwDb), scopes: practiceScopes() } : o;
+      return o.enabled ? { ...o, ready: await practiceReady(hwDb), scopes: await offeredScopes() } : o;
     })),
     start: protectedProcedure.use(rateLimit(10, 60_000))
       .mutation(({ ctx }) => runUser(ctx, async (u) => { const r = await startTrial(u); return { started: r.started, endsAt: r.endsAt }; })),
@@ -242,7 +242,9 @@ export const hwRouter = createTRPCRouter({
 
   // ── Student ───────────────────────────────────────────────────────────────
   student: createTRPCRouter({
-    assignments: protectedProcedure.query(({ ctx }) => run(ctx, (a) => submissions.myAssignments(a))),
+    // `space` only keeps the InkBuddy list apart from the school list in the browser's cache; the server goes by x-hw-space (hw-space.ts)
+    assignments: protectedProcedure.input(z.object({ space: z.enum(['school', 'practice']) }).optional())
+      .query(({ ctx }) => run(ctx, (a) => submissions.myAssignments(a))),
     start: protectedProcedure.input(z.object({ assignmentId: id }))
       .mutation(({ ctx, input }) => run(ctx, (a) => submissions.startSubmission(a, input.assignmentId))),
     saveAnswer: protectedProcedure

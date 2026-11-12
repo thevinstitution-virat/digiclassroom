@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams } from 'next/navigation'
 import { ChevronLeft } from 'lucide-react'
 import { api } from '@/lib/trpc/client'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,7 @@ import { HwError, HwLoading, HwMessage, HwShell } from '@/components/hw/HwShell'
 import { AnswerWorkspace } from '@/components/hw/student/AnswerWorkspace'
 import { AfterSubmit } from '@/components/hw/student/AfterSubmit'
 import { useHwT } from '@/components/hw/strings'
+import { useHwSpace } from '@/lib/trpc/hw-space'
 
 /** While reading runs, check back this often. */
 const POLL_MS = 20_000
@@ -17,6 +18,9 @@ const POLL_MS = 20_000
 export default function StudentAssignmentPage() {
   const { t } = useHwT()
   const { assignmentId } = useParams<{ assignmentId: string }>()
+  // opened from InkBuddy: this question lives in the learner's InkBuddy space, not their school (a school's student too)
+  const practice = useSearchParams()?.get('space') === 'practice'
+  useHwSpace(practice ? 'practice' : null)
   const start = api.hw.student.start.useMutation()
   const [loaded, setLoaded] = useState(false)
 

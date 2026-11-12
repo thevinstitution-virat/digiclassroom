@@ -22,7 +22,7 @@ export function PaperPractice() {
   const paperId = chosen && list.some((p) => p.paperId === chosen) ? chosen : list[0]?.paperId ?? ''
   const questions = api.hw.practice.paperQuestions.useQuery({ paperId }, { enabled: paperId !== '', retry: false })
   const open = api.hw.practice.startPaperQuestion.useMutation({
-    onSuccess: (r) => router.push(`/dashboard/student/assignments/${r.assignmentId}`),
+    onSuccess: (r) => router.push(`/dashboard/student/assignments/${r.assignmentId}?space=practice`),
   })
   // No published paper has a question to offer yet: say nothing rather than show an empty card.
   if (papers.isLoading || papers.error || !papers.data?.available || list.length === 0) return null

@@ -166,10 +166,11 @@ const EnvSchema = z.object({
   /** The most questions one learner may start during the trial (each one costs the platform an answer key). */
   HW_SELF_PRACTICE_MAX_ATTEMPTS: num(25, 1, 1000),
   /**
-   * InkBuddy offers the free trial only when marks are possible: at least one textbook-key group is eligible for the running marking setup. Set false to
-   * open it before any group is promoted (learners then get their handwriting read and no mark).
+   * true = InkBuddy offers the free trial only once a textbook-key group has passed the evaluation gates for the running marking setup.
+   * Owner's decision, 13 Nov 2026: open now (default false); InkBuddy's marks are AI practice estimates, labelled as such, and with this off
+   * its questions are AI-marked without a promoted group (eligibility/registry.ts). Set true to close it again until a group passes.
    */
-  HW_SELF_PRACTICE_REQUIRE_ELIGIBLE_GROUP: bool(true),
+  HW_SELF_PRACTICE_REQUIRE_ELIGIBLE_GROUP: bool(false),
   /**
    * The books InkBuddy offers, as "class:subject:medium" separated by commas (e.g. "9:Science:en,10:Science:en"). Only these can be searched or started:
    * the library places a book at a class, so a scope outside the list could be answered from a book of another subject. Default: the one book in the library.

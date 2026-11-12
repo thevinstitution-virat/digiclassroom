@@ -57,6 +57,19 @@ export async function publishedWork(workId: string): Promise<WorkSummary | null>
   return rows[0] ?? null;
 }
 
+/** Every published work's curriculum placements with its medium: what the library can teach from, for listing the classes and subjects on offer. */
+export async function publishedPlacements(): Promise<{ node_code: string; medium: string }[]> {
+  return readOnly<{ node_code: string; medium: string }>(
+    pool('LIBRARY_READER_DATABASE_URL'),
+    `SELECT DISTINCT pl.node_code, w.medium
+       FROM library.work w JOIN library.placement pl ON pl.work_id = w.id
+      WHERE w.status = 'published' AND pl.node_code IS NOT NULL`,
+    [],
+  );
+}
+
+export const readerConfigured = (): boolean => Boolean(process.env.LIBRARY_READER_DATABASE_URL);
+
 /**
  * Practice questions that print lettered options (`Choices: a-d`), of the work's chapters that have a live revision,
  * with the printed answer when the evaluator role is configured.

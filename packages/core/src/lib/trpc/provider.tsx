@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { httpLink } from '@trpc/client'
 import { api } from './client'
+import { hwSpaceHeaders } from './hw-space'
 import superjson from 'superjson'
 
 function getBaseUrl() {
@@ -49,8 +50,9 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
           fetch(url, options) {
             return fetch(url, { ...options, credentials: 'include' })
           },
+          // InkBuddy screens mark their requests (hw-space.ts)
           headers() {
-            return {}
+            return hwSpaceHeaders()
           },
         }),
       ],

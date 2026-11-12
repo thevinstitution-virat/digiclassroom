@@ -13,6 +13,7 @@ import { hwEligibility, hwEligibilityEvent, hwEvalGateResult } from '@/db/hw-con
 import { writeAudit } from '../admin-audit';
 import { getHwConfig, requireModel } from '../config';
 import { EXAM_ORG_ID } from '../exams/space';
+import { PRACTICE_ORG_ID } from '../practice/rules';
 import { HwError } from '../errors';
 import { requireSuperAdmin, type EvalActor } from '../eval-tools/access';
 import { markPromptVersion } from '../grader/mark-mode';
@@ -62,6 +63,8 @@ export async function eligibilityOfQuestion(x: Exec, questionId: string, opts: {
   if (!key.ok) return { eligible: false, reason: key.reason };
   // decision D3 for exams only (HW_EXAMS_AUTHORED_AI_ENABLED): an exam question the super admin wrote is AI-marked without a promoted group
   if (q.organizationId === EXAM_ORG_ID && q.rubricMode === 'teacher' && getHwConfig().HW_EXAMS_AUTHORED_AI_ENABLED) return { eligible: true, reason: 'eligible', scheme: key.scheme };
+  // InkBuddy (owner, 13 Nov 2026): with its gate off, a practice question with a ready key is AI-marked; the learner sees a practice estimate
+  if (q.organizationId === PRACTICE_ORG_ID && !getHwConfig().HW_SELF_PRACTICE_REQUIRE_ELIGIBLE_GROUP) return { eligible: true, reason: 'eligible', scheme: key.scheme };
   const parts = await groupOfQuestion(x, questionId);
   return parts ? eligibilityOfGroup(x, parts) : { eligible: false, reason: 'no_record' };
 }

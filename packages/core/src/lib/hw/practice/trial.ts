@@ -49,12 +49,11 @@ export async function practiceOverview(userId: string, now = new Date()) {
   const cfg = getHwConfig();
   if (!cfg.HW_SELF_PRACTICE_ENABLED) return { enabled: false as const };
   const t = await getTrial(db, userId);
-  const [m] = (await db.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM member WHERE user_id = ${userId}`)).rows;
   const v = trialVerdict(t, now, cfg.HW_SELF_PRACTICE_STEP_RESERVE_PAISE);
   return {
     enabled: true as const,
-    /** Someone who belongs to an institution and has no trial is not who this is for. */
-    eligible: t !== null || (m?.n ?? 0) === 0,
+    /** Every learner may (owner, 13 Nov 2026): a school's students too, each with their own trial, apart from their school's work. */
+    eligible: true,
     started: t !== null,
     active: v.ok,
     trialDays: cfg.HW_SELF_PRACTICE_TRIAL_DAYS,
@@ -71,7 +70,7 @@ export async function trialStatus(userId: string, lang: PracticeLang = 'en', now
 }
 
 /**
- * Start the learner's one trial (or return the one they have). Only someone who belongs to no institution may start one; the caller
+ * Start the learner's one trial (or return the one they have). Any learner may, a school's students too (owner, 13 Nov 2026); the caller
  * is responsible for knowing the person is a learner and not staff.
  */
 export async function startTrial(userId: string, now = new Date()): Promise<{ started: boolean; endsAt: Date }> {
@@ -80,8 +79,6 @@ export async function startTrial(userId: string, now = new Date()): Promise<{ st
   return db.transaction(async (tx) => {
     const existing = await getTrial(tx, userId);
     if (existing) return { started: false, endsAt: existing.endsAt };
-    const [m] = await tx.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM member WHERE user_id = ${userId}`).then((r) => r.rows);
-    if ((m?.n ?? 0) > 0) throw new HwError('FORBIDDEN', 'Self-practice is for learners who are not part of an institution.');
     await ensurePracticeSpace(tx);
     const endsAt = new Date(now.getTime() + cfg.HW_SELF_PRACTICE_TRIAL_DAYS * 86_400_000);
     await tx.insert(hwPracticeTrial).values({
@@ -91,7 +88,7 @@ export async function startTrial(userId: string, now = new Date()): Promise<{ st
   });
 }
 
-/** True when the user has a trial row (of any state) and is in no institution: the people the practice space belongs to. */
+/** True when the user has a trial row (of any state): the people the practice space belongs to (a school's student too, since 13 Nov 2026). */
 export async function isPracticeLearner(x: Exec, userId: string): Promise<boolean> {
   if (!practiceEnabled()) return false;
   return (await getTrial(x, userId)) !== null;

@@ -155,13 +155,13 @@ suite('self-practice phase 3 — API', () => {
       } finally { if (saved === undefined) delete process.env.HW_SELF_PRACTICE_SCOPES; else process.env.HW_SELF_PRACTICE_SCOPES = saved; config._resetHwConfig() }
     })
 
-    it('someone in an institution is not who this is for', async () => {
+    it('someone in an institution may start a trial too (owner, 13 Nov 2026)', async () => {
       const u = await addUser('s2')
       const org = uid('school')
       await raw.query(`INSERT INTO organization (id, name, slug, created_at) VALUES ($1, $2, $3, now())`, [org, org, org])
       await raw.query(`INSERT INTO member (id, organization_id, user_id, role, created_at) VALUES ($1, $2, $3, 'student', now())`, [uid('m'), org, u])
-      expect(await as(u).practice.status()).toMatchObject({ enabled: true, eligible: false, started: false })
-      await expect(as(u).practice.start()).rejects.toMatchObject({ code: 'FORBIDDEN' })
+      expect(await as(u).practice.status()).toMatchObject({ enabled: true, eligible: true, started: false })
+      expect(await as(u).practice.start()).toMatchObject({ started: true })
     })
 
     it('says "off" while the feature is off', async () => {

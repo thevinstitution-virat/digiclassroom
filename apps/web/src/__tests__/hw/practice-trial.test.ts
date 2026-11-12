@@ -117,11 +117,11 @@ suite('self-practice — integration', () => {
       expect(Number((await one<{ n: string }>(`SELECT count(*) AS n FROM hw_practice_trial WHERE user_id = $1`, [u])).n)).toBe(1)
     })
 
-    it('is refused for someone who belongs to an institution', async () => {
+    it('is open to students of a school too (owner, 13 Nov 2026), with a trial of their own', async () => {
       const u = await addUser('pupil')
       await addSchoolMember(u)
-      await expect(trial.startTrial(u)).rejects.toMatchObject({ code: 'FORBIDDEN' })
-      expect(await one(`SELECT 1 FROM hw_practice_trial WHERE user_id = $1`, [u])).toBeUndefined()
+      expect(await trial.startTrial(u)).toMatchObject({ started: true })
+      expect(await one(`SELECT 1 FROM hw_practice_trial WHERE user_id = $1`, [u])).toBeTruthy()
     })
 
     it('is refused while the feature is off', async () => {
@@ -316,6 +316,15 @@ suite('self-practice — integration', () => {
       const { resolveHwActor } = await import('@/lib/hw/access/actor')
       const u = await addUser('actor4'); await trial.startTrial(u); as(u)
       await expect(resolveHwActor(new Headers({ 'x-org-id': PRACTICE_ORG_ID }))).rejects.toMatchObject({ code: 'FORBIDDEN' })
+    })
+    it('an InkBuddy screen (x-hw-space: practice) puts a student of a school with a trial in the practice space; elsewhere they stay in their school', async () => {
+      const { resolveHwActor } = await import('@/lib/hw/access/actor')
+      const u = await addUser('actor6'); const school = await addSchoolMember(u); await trial.startTrial(u); as(u)
+      expect(await resolveHwActor(new Headers({ 'x-hw-space': 'practice' }))).toMatchObject({ userId: u, orgId: PRACTICE_ORG_ID, role: 'student', isPlatformStaff: false })
+      expect(await resolveHwActor(new Headers())).toMatchObject({ userId: u, orgId: school, role: 'student' })
+      // without a trial the header changes nothing
+      const v = await addUser('actor7'); const vSchool = await addSchoolMember(v); as(v)
+      expect(await resolveHwActor(new Headers({ 'x-hw-space': 'practice' }))).toMatchObject({ userId: v, orgId: vSchool })
     })
     it('the practice space is closed again when the feature is switched off', async () => {
       const { resolveHwActor } = await import('@/lib/hw/access/actor')

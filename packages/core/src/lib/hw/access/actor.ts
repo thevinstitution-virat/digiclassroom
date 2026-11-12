@@ -25,6 +25,12 @@ export async function resolveHwActor(headers: Headers): Promise<HwActor> {
   const sessionOrg = ((session.session as { activeOrganizationId?: string | null }).activeOrganizationId ?? '').trim();
   let orgId = headerOrg || sessionOrg;
 
+  // InkBuddy screens say so (x-hw-space: practice): a learner with a trial works in the practice space whatever school they belong to. The
+  // space holds only their own questions (studentCanSee), so the header can claim nothing that is someone else's.
+  if ((headers.get('x-hw-space') ?? '').trim() === 'practice' && (await isPracticeLearner(db, userId))) {
+    return { userId, orgId: PRACTICE_ORG_ID, role: 'student', isPlatformStaff: false };
+  }
+
   if (globalRole === 'super_admin') {
     if (!orgId) throw new HwError('FORBIDDEN', 'Choose an institution first.');
     return { userId, orgId, role: 'admin', isPlatformStaff: true };

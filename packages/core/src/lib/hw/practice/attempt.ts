@@ -98,7 +98,7 @@ export async function startAttempt(userId: string, input: StartAttemptInput, dep
   await requireUsableTrial(db, userId);
 
   const scope = parseScope(input);
-  requireOfferedScope(scope);
+  await requireOfferedScope(scope);
   const q = await verifyCatalogQuestion(scope, input, deps.hub === undefined ? defaultHub() : deps.hub);
   if (!q) throw new HwError('NOT_FOUND', 'That question was not found in the textbook. Search again and pick it from the list.');
 

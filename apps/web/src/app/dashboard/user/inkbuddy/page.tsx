@@ -17,6 +17,7 @@ import { Field, NativeSelect } from '@/components/hw/fields'
 import { HwError, HwLanguageToggle, HwLoading, HwMessage } from '@/components/hw/HwShell'
 import { marksLabel, useHwT, type HwKey } from '@/components/hw/strings'
 import { PaperPractice } from '@/components/hw/practice/PaperPractice'
+import { useHwSpace } from '@/lib/trpc/hw-space'
 
 const SUBJECTS: { value: string; key: HwKey }[] = [
   { value: 'Science', key: 'pr.sub.science' },
@@ -57,7 +58,7 @@ function Finder({ scopes }: { scopes: Scope[] }) {
 
   const found = api.hw.practice.search.useQuery(asked!, { enabled: asked !== null, retry: false, staleTime: 300_000 })
   const open = api.hw.practice.startQuestion.useMutation({
-    onSuccess: (r) => router.push(`/dashboard/student/assignments/${r.assignmentId}`),
+    onSuccess: (r) => router.push(`/dashboard/student/assignments/${r.assignmentId}?space=practice`),
   })
 
   return (
@@ -119,7 +120,7 @@ function Finder({ scopes }: { scopes: Scope[] }) {
 
 function Mine() {
   const { t } = useHwT()
-  const list = api.hw.student.assignments.useQuery(undefined, { retry: false })
+  const list = api.hw.student.assignments.useQuery({ space: 'practice' }, { retry: false, staleTime: 0 })
   const label = (s: string | undefined) => (!s || s === 'draft' ? 'st.list.pending' : s === 'returned' ? 'st.list.returned' : 'st.list.submitted') as HwKey
   return (
     <Card>
@@ -133,7 +134,7 @@ function Mine() {
               <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3 text-sm">
                 <span className="min-w-0 flex-1">{a.title}<span className="text-muted-foreground"> · {a.subject}</span></span>
                 <Badge variant="secondary">{t(label(a.submission?.status))}</Badge>
-                <Button asChild size="sm" variant="outline"><Link href={`/dashboard/student/assignments/${a.id}`}>{t('st.list.open')}</Link></Button>
+                <Button asChild size="sm" variant="outline"><Link href={`/dashboard/student/assignments/${a.id}?space=practice`}>{t('st.list.open')}</Link></Button>
               </li>
             ))}
           </ul>
@@ -144,6 +145,8 @@ function Mine() {
 }
 
 export default function InkBuddyPage() {
+  // InkBuddy is the learner's own space, whatever school they belong to: every request from this screen says so
+  useHwSpace('practice')
   const { t, lang } = useHwT()
   const status = api.hw.practice.status.useQuery(undefined, { retry: false })
   const utils = api.useUtils()
