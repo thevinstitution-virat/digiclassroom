@@ -1,5 +1,6 @@
 // Phase 5: evaluating a handed-in booklet. The job runner calls runExamEvaluations every pass; each attempt it claims goes
-//   uploaded -> evaluating: materialise its assignment (materialise.ts), read every page (one call per page, verbatim, no answer key),
+//   uploaded -> evaluating: materialise its assignment (materialise.ts), read every page (verbatim, no answer key; by default as two
+//   overlapping halves, two calls a page, HW_EXAMS_READ_SPLIT),
 //   place the writing (assemble.ts + mapping.ts, with the text-only answer-key matcher for what is left and to check every answer placed by a
 //   number the learner wrote), write one transcript per
 //   question, and hand the submission to the marking pipeline that already exists (rules first, then strict marking jobs).
@@ -19,6 +20,8 @@ import { recordUsage } from '../cost/usage';
 import { failAnswers, finishSubmissionIfRead, setTranscript } from '../pipeline';
 import { examPageStore } from '../storage/exam-pages';
 import { assembleBooklet, type AnswerOutcome } from './assemble';
+import { sharpHalfCropper, type HalfCropper } from './crop';
+import { mergeHalves } from './halves';
 import { materialiseAttempt, type Materialised } from './materialise';
 import { EXAM_PAGE_READ_PROMPT_VERSION, liveExamAi, type ExamAi, type PageRead, type PaperQuestionRef } from './page-reader';
 import { sheetFor } from './learner';
@@ -29,11 +32,14 @@ export interface EvalDeps {
   ai: ExamAi;
   getObject(key: string): Promise<Uint8Array>;
   now(): Date;
+  /** Cuts a page into two overlapping halves to read separately (HW_EXAMS_READ_SPLIT=halves); absent or null = read the whole page. */
+  halves?: HalfCropper | null;
 }
 
-export function liveEvalDeps(): EvalDeps {
+export async function liveEvalDeps(): Promise<EvalDeps> {
   const store = examPageStore();
   return {
+    halves: getHwConfig().HW_EXAMS_READ_SPLIT === 'halves' ? await sharpHalfCropper() : null,
     ai: liveExamAi({ read: requireModel('read'), match: requireModel('grade') }),
     getObject: async (key) => {
       // the page store hands out links; for the bytes, R2 directly or the local stand-in's data: URL
@@ -80,7 +86,7 @@ export async function runExamEvaluations(limit = getHwConfig().HW_EXAMS_EVAL_PER
   await recoverStale(db);
   const ids = await claim(limit);
   if (!ids.length) return [];
-  const d = deps ?? liveEvalDeps();
+  const d = deps ?? (await liveEvalDeps());
   const out: EvalOutcome[] = [];
   for (const id of ids) out.push(await evaluateClaimed(id, d));
   return out;
@@ -138,11 +144,26 @@ async function readAndPlace(attemptId: string, m: Materialised, deps: EvalDeps, 
   const reads: { pageId: string; position: number; read: PageRead }[] = [];
   for (const p of pages) {
     const image = await deps.getObject(p.imageKey);
-    const { read, result } = await deps.ai.readPage({ image, mime: p.mimeType, questions: refs, lang: m.lang });
-    calls.push(result);
+    const halves = deps.halves ? await deps.halves(image) : null;
+    let read: PageRead;
+    let model: string;
+    if (halves) {
+      // two overlapping halves, each read at about twice the detail, joined at the seam (halves.ts)
+      const top = await deps.ai.readPage({ image: halves[0], mime: 'image/jpeg', questions: refs, lang: m.lang });
+      calls.push(top.result);
+      const bottom = await deps.ai.readPage({ image: halves[1], mime: 'image/jpeg', questions: refs, lang: m.lang });
+      calls.push(bottom.result);
+      read = mergeHalves(top.read, bottom.read);
+      model = top.result.model;
+    } else {
+      const whole = await deps.ai.readPage({ image, mime: p.mimeType, questions: refs, lang: m.lang });
+      calls.push(whole.result);
+      read = whole.read;
+      model = whole.result.model;
+    }
     reads.push({ pageId: p.id, position: p.position, read });
     // kept with the page for the report and for a person checking it
-    await db.update(hwExamPage).set({ quality: sql`${hwExamPage.quality} || ${JSON.stringify({ read: { ...read, model: result.model, prompt: EXAM_PAGE_READ_PROMPT_VERSION } })}::jsonb` })
+    await db.update(hwExamPage).set({ quality: sql`${hwExamPage.quality} || ${JSON.stringify({ read: { ...read, model, prompt: EXAM_PAGE_READ_PROMPT_VERSION, split: halves ? 'halves' : 'page' } })}::jsonb` })
       .where(eq(hwExamPage.id, p.id));
   }
 

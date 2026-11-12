@@ -134,6 +134,13 @@ const EnvSchema = z.object({
   HW_EXAMS_EVAL_PER_PASS: num(2, 1, 50),
   /** An evaluation that fails is retried this many times before the attempt is left for a person. */
   HW_EXAMS_EVAL_MAX_TRIES: num(3, 1, 10),
+  /**
+   * How a booklet page is read: 'halves' (default) reads the top and bottom half separately, overlapping, at about twice the resolution the
+   * provider keeps of a whole page, and joins them (exams/halves.ts); 'page' reads the whole page in one call. Measured on real handwriting
+   * (docs/hw-eval/real-handwriting-read-1.md): halves read the question numbers right and stopped filling unreadable words with the textbook's
+   * idea, at about 1.6 times the cost.
+   */
+  HW_EXAMS_READ_SPLIT: z.preprocess((v) => (v === '' || v === undefined ? undefined : String(v).trim().toLowerCase()), z.enum(['halves', 'page']).optional()).transform((v) => v ?? 'halves'),
   HW_SELF_PRACTICE_TRIAL_DAYS: num(7, 1, 90),
   HW_SELF_PRACTICE_TRIAL_BUDGET_PAISE: num(1000, 0, 100_000),
   HW_SELF_PRACTICE_STEP_RESERVE_PAISE: num(5, 0, 1000),

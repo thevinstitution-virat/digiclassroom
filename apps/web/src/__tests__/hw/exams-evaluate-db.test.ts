@@ -94,9 +94,9 @@ async function handedIn(pages = 2) {
   return { u, s, attemptId, code: S.sheetCode(s) };
 }
 /** Evaluate only this test's attempt (other suites may leave handed-in attempts in the shared scratch DB). */
-async function evaluate(attemptId: string, ai: ExamAi) {
+async function evaluate(attemptId: string, ai: ExamAi, extra: { halves?: (image: Uint8Array) => Promise<[Uint8Array, Uint8Array] | null> } = {}) {
   await raw.query(`UPDATE hw_exam_attempt SET status = 'evaluating' WHERE id = $1 AND status = 'uploaded'`, [attemptId]);
-  return E.evaluateClaimed(attemptId, deps(ai));
+  return E.evaluateClaimed(attemptId, { ...deps(ai), ...extra });
 }
 const answersOf = (attemptId: string) => all<{ q: string; status: string; transcript: string | null; reason: string | null }>(`
   SELECT q.origin_ref->>'questionNo' AS q, w.transcript_status AS status, w.transcript, w.failure_reason AS reason
@@ -185,6 +185,26 @@ suite('exam packages, evaluating a booklet — integration', () => {
       .toEqual({ kind: 'read', status: 'done', organization_id: 'vgp-exams', t: 3000 });
     // nothing touched InkBuddy: no practice trial, nothing in the practice space
     expect(await one(`SELECT count(*)::int n FROM hw_practice_trial WHERE user_id = $1`, [u])).toEqual({ n: 0 });
+  });
+
+  it('a page read as two overlapping halves: two reads, joined at the seam, and kept with the page as such', async () => {
+    const { attemptId, code } = await handedIn(1);
+    const cut: Uint8Array[] = [];
+    const halves = async (image: Uint8Array): Promise<[Uint8Array, Uint8Array]> => { cut.push(image); return [new Uint8Array([1]), new Uint8Array([2])]; };
+    const { ai, calls } = fakeAi([
+      { sheet: { code, page: 1 }, grid: [{ number: 1, letter: 'C' }], segments: [seg({ box: [3], alternative: 'D', text: '(a) Grass is eaten\nby the deer' })] },
+      { sheet: null, grid: [], segments: [seg({ text: 'by the deer, which the tiger eats' })] },
+    ]);
+    const r = await evaluate(attemptId, ai, { halves });
+    expect(r).toMatchObject({ ok: true, pages: 1, review: 0, calls: 2 });
+    expect(calls).toEqual({ read: 2, match: 0 });
+    expect(cut).toHaveLength(1);
+    const by = Object.fromEntries((await answersOf(attemptId)).map((x) => [x.q, x]));
+    expect(by['1']).toMatchObject({ status: 'done', transcript: 'C' });
+    expect(by['3D']).toMatchObject({ status: 'done', transcript: '(a) Grass is eaten\nby the deer\nwhich the tiger eats' }); // the seam's repeat read once
+    expect(by['4']).toMatchObject({ status: 'done', transcript: '' });
+    expect((await one<{ q: { read?: { split?: string; sheet?: unknown } } }>(`SELECT quality AS q FROM hw_exam_page WHERE attempt_id = $1`, [attemptId]))!.q.read)
+      .toMatchObject({ split: 'halves', sheet: { code, page: 1 } });
   });
 
   it('plain paper: a written number the answer contradicts is checked by the matcher and goes to a person, not to that question', async () => {

@@ -66,13 +66,30 @@ was judged by the numbers read, not run through the full matching.
    reader put the letter in its "alternative" field and left it out of the text, which sent every multiple choice to a person; that letter is
    now used. The number check is covered by tests (a "Q20" answer the matcher reads as Q26 goes to a person); a live check needs the 2025 paper.
    It costs one more text-only matcher call per booklet whenever an answer was placed by a written number.
-3. **Read at higher resolution**: crop each page (two halves with a small overlap, or each printed box of the answer sheet) at about 1.6 times the
-   cost (8.7 against 5.5 paise a page; a 30-page booklet about Rs 2.6 against Rs 1.7 at standard price, half that on batch). Needs de-duplication
-   at the seam.
-4. **A second opinion from a different model** where two reads disagree. Luna re-reading luna repeated the same letter errors.
-5. **Prompt:** say exactly what to do with a crossed-out word and an inserted correction, and repeat that unreadable writing is [?], never the
+3. **Half-page reading: built (12 Nov), on by default** (`HW_EXAMS_READ_SPLIT=halves`; `page` reads whole pages as before). Each page is cut
+   into a top and a bottom half that share 8% of the height (`exams/crop.ts`, `sharp`, loaded on demand: if it is missing, pages are read whole and
+   the log says so); each half is read; `exams/halves.ts` joins them, dropping the writing both halves read (the longest pair of word runs that
+   start and end alike and share most words, which may differ in length because each half reads the seam its own way) and keeping both reads'
+   question numbers. The page's stored read says `split: 'halves'`. Pages under 1,200 px tall are read whole.
+   Live on the same six pages through the product's own path (sharp cut, two reads, join), compared with the whole-page runs on production settings:
+
+   | | Whole page (2 runs) | Halves (2 runs: crops by hand, then the built path) |
+   |---|---|---|
+   | Words read right | 81.4% | 82.8%, 80.9% |
+   | Question numbers read right (Q22, 26, 27, 28, 30) | 5 of 10 | 7 of 10 (26 and 30 every time; 22 never) |
+   | Invented clause on p16 | 1 of 2 runs | 0 of 2 |
+   | Crossed-out "pole" read instead of the correction | 2 of 2 | 0 of 2 (written [?], for a person) |
+   | Option letters | 3 wrong each run | 4 and 3 wrong (the letter check above catches those with words) |
+   | Cost, time per page | 5.5 paise, 13.5 s | 8.7 paise, 19-22 s |
+
+   So halves do not raise the word score and do not fix the ticked letters; what they buy is fewer **confident inventions** (the textbook's
+   sentence, a crossed-out word), which no later check can catch, and somewhat better question numbers, which the matcher check now backs up.
+   A 30-page booklet costs about Rs 2.6 to read at standard price (Rs 1.3 on batch) against Rs 1.7. Two runs each, one student: indicative only.
+4. **Finer crops** (not built): each printed box of the answer sheet read on its own, once the printed sheet is measured.
+5. **A second opinion from a different model** where two reads disagree. Luna re-reading luna repeated the same letter errors.
+6. **Prompt:** say exactly what to do with a crossed-out word and an inserted correction, and repeat that unreadable writing is [?], never the
    expected answer.
-6. **Measure again on what learners will send:** the printed answer sheet, filled in by hand and photographed on a phone, with the printed box
+7. **Measure again on what learners will send:** the printed answer sheet, filled in by hand and photographed on a phone, with the printed box
    numbers and the circled-letter grid. The box removes the number problem by design, and no examiner ink is on the letters.
 
-**Spent:** about Rs 1.8 for 36 page reads across all runs.
+**Spent:** about Rs 1.8 for 36 page reads in the first measurement, and Rs 0.5 for the 12 half-page reads of the built path.
