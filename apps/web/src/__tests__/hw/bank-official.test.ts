@@ -164,7 +164,8 @@ describe('"any N of M" as N slots', () => {
 
 const realBank = join(__dirname, '../../../../../hw-evals/banks/cbse-x-science-sqp-2026-27/bank.json');
 (existsSync(realBank) ? describe : describe.skip)('the CBSE Class X Science sample paper (local file)', () => {
-  const parsed = parseBankFile(readFileSync(realBank, 'utf8'));
+  // jest runs a skipped block's body to collect its tests: read the file only when it is there
+  const parsed = parseBankFile(existsSync(realBank) ? readFileSync(realBank, 'utf8') : '{}');
   const paper = parsed.ok ? expandBank(parsed.bank, { kind: 'sqp' }) : null;
   it('is still a valid bank file', () => { expect(parsed.ok && validateBank(parsed.bank)).toEqual([]); });
   it('every row has a marking plan whose key adds up to what the app can mark', () => {

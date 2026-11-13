@@ -22,7 +22,7 @@ export type SheetPlan =
   | { ok: false; reason: string };
 
 /** Code only: find the page, read its grid, cut out the boxes with writing. No model is called. */
-export async function planSheetPhoto(input: { image: Uint8Array; layout: SheetLayout; sharp: typeof import('sharp') }): Promise<SheetPlan> {
+export async function planSheetPhoto(input: { image: Uint8Array; layout: SheetLayout; sharp: import('./crop').SharpFn }): Promise<SheetPlan> {
   const { sharp, layout } = input;
   const photo = await decodeRaster(sharp, input.image);
   const corners = findCorners(toGrey(photo));
@@ -90,7 +90,7 @@ export async function readSheetPhoto(input: {
   questions: PaperQuestionRef[];
   lang: 'en' | 'hi';
   ai: ExamAi;
-  sharp: typeof import('sharp');
+  sharp: import('./crop').SharpFn;
 }): Promise<SheetPhoto> {
   const calls: AiResult[] = [];
   const { ai } = input;

@@ -270,7 +270,8 @@ describe('the import plan', () => {
 // The real CBSE bank is not in git; when it is on this machine, check it too.
 const realBank = join(__dirname, '../../../../../hw-evals/banks/cbse-x-science-sqp-2026-27/bank.json');
 (existsSync(realBank) ? describe : describe.skip)('the CBSE Class X Science sample paper (local file)', () => {
-  const parsed = parseBankFile(readFileSync(realBank, 'utf8'));
+  // jest runs a skipped block's body to collect its tests: read the file only when it is there
+  const parsed = parseBankFile(existsSync(realBank) ? readFileSync(realBank, 'utf8') : '{}');
   it('is valid and adds up to 80 marks', () => {
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;

@@ -34,7 +34,7 @@ function fakeAi() {
 
 describe('readSheetPhoto', () => {
   jest.setTimeout(60_000);
-  let sharp: typeof import('sharp');
+  let sharp: import('@/lib/hw/exams/crop').SharpFn;
   beforeAll(async () => { sharp = (await loadSharp())!; });
   const photoOf = async (pageNo: number, opts: Parameters<typeof drawPage>[2], l = layout) => encodeJpeg(sharp, toRgb(photograph(drawPage(l, pageNo, opts), { width: 1200, height: 1650 })), 85);
 

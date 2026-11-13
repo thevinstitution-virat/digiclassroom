@@ -55,7 +55,7 @@ export interface EvalDeps {
   /** Cuts a page into two overlapping halves to read separately (HW_EXAMS_READ_SPLIT=halves); absent or null = read the whole page. */
   halves?: HalfCropper | null;
   /** sharp, for reading printed answer-sheet pages box by box (HW_EXAMS_SHEET_VISION); absent or null = every page is read as a page. */
-  sharp?: typeof import('sharp') | null;
+  sharp?: import('./crop').SharpFn | null;
   /** The batch API (HW_EXAMS_BATCH_ENABLED and a provider that can batch reads); absent or null = every booklet is read now. */
   batch?: ExamBatchApi | null;
 }
