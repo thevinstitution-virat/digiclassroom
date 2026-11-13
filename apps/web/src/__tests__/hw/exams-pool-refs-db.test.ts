@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import { Pool } from 'pg';
 import { drawPractice, type PoolItem } from '@/lib/hw/exams/practice';
 import { examFigureKey } from '@/lib/hw/storage/keys';
-import { authoredOf, check, type Pool as PoolFile } from '../../../../../scripts/hw-exam-pool-import';
+import { aiCheckLine, authoredOf, autoCheckedBy, check, withAiCheck, type Pool as PoolFile } from '../../../../../scripts/hw-exam-pool-import';
 
 const DB_URL = process.env.HW_ITEST_DATABASE_URL;
 const suite = DB_URL ? describe : describe.skip;
@@ -99,6 +99,29 @@ describe('pool importer (exam-pool/2)', () => {
   it('refuses a key whose points do not add up', () => {
     const r = check(poolFile([writtenItem('bad', [{ label: 'a', marks: 2, points: [['one', 1]] }])]), base);
     expect(r.problems.join(' ')).toMatch(/bad: .*add up to 1/);
+  });
+});
+
+describe('the AI check of an assistant key', () => {
+  const auto = (status: 'approved' | 'disputed' | 'needs_person', why = 'Luna agrees (B): "the book line"') => ({ model: 'gpt-6-luna', at: '2026-11-14', status, why });
+  it('goes in as the second line, so the key still says KEY TO CHECK first', () => {
+    const a = authoredOf(poolFile([mcq('a')]), mcq('a', { autoCheck: auto('approved') }));
+    const lines = a.schemeText!.split('\n');
+    expect(lines[0]).toMatch(/^KEY TO CHECK/);
+    expect(lines[1]).toBe('AI check (gpt-6-luna, 2026-11-14): confirmed from the textbook. Luna agrees (B): "the book line"');
+  });
+  it('only a confirmed key is stamped auto-checked; a disputed or unsure one waits for a teacher', () => {
+    expect(autoCheckedBy(mcq('a', { autoCheck: auto('approved') }))).toBe('Auto-check: gpt-6-luna (2026-11-14)');
+    expect(autoCheckedBy(mcq('a', { autoCheck: auto('disputed') }))).toBeNull();
+    expect(autoCheckedBy(mcq('a', { autoCheck: auto('needs_person') }))).toBeNull();
+    expect(autoCheckedBy(mcq('a'))).toBeNull();
+    expect(aiCheckLine(mcq('a', { key: 'official', official: 'x', autoCheck: auto('approved') }))).toBeNull();
+  });
+  it('a new verdict replaces the old line instead of adding another', () => {
+    const first = withAiCheck('KEY TO CHECK: x\nSource: y\nkey', aiCheckLine(mcq('a', { autoCheck: auto('needs_person', 'not confirmed for point 2') })));
+    const again = withAiCheck(first, aiCheckLine(mcq('a', { autoCheck: auto('disputed', 'point 2: wrong equation') })));
+    expect(again).toBe('KEY TO CHECK: x\nAI check (gpt-6-luna, 2026-11-14): DISPUTED. point 2: wrong equation\nSource: y\nkey');
+    expect(withAiCheck(again, null)).toBe('KEY TO CHECK: x\nSource: y\nkey');
   });
 });
 

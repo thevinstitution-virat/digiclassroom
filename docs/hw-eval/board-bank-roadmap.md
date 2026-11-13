@@ -156,8 +156,23 @@ The pictures come to 40 distinct objects. On the scratch database all 13 were im
 - **Tests:** `practice-board-db.test.ts` 15 (weak-topic order, pace, the draw and its choice rule, reopening an open test, first-try marks from a test, the trial's limit). The catalogue test now runs on class 9, because scratch's real class 10 pools changed its counts.
 - **Browser walk on scratch (13 Nov):** weak topics listed; quick test on chapter 5, 5 questions, timer "12 minutes for 5 marks"; 3 right, 1 wrong, 1 blank → handed in, job runner → grade card 3/5 (60%), "Revise these first" 5.4.2 and 5.4.1; the home listed the test at 3 / 5 and "Your practice" did not count its questions.
 
+### The AI key check (14 Nov 2026)
+
+The owner asked that teachers should not have to check every assistant key by hand, and chose gpt-6-luna alone ("these are only class 10th questions").
+
+- **The textbook:** PDLMS's enriched NCERT Science X text, exported read-only from DCP prod's library reader (`library.passage`, book `sci10-en`, live revision, `retrieval_class = 'reference'`) into `cbse-science-qbank/ncert-sci10-passages.json`: 832 passages with chapter, section and printed pages. No PDF is read.
+- **The check** (`cbse-science-qbank/verify_keys.py`): each assistant key goes to gpt-6-luna (`reasoning_effort` low, strict JSON schema) with its whole chapter (≤ 53k characters, sent first so the prompt cache serves it).
+  - Multiple choice and assertion-reason: the model picks the option itself and quotes the book.
+  - Written: every marking point is judged correct / incorrect / not in the book, with a quote, and the model names anything essential the key misses.
+  - Code then checks each quote is really in the chapter (normalised; ≥ 60% of the quote's sentences found word for word).
+  - **approved** only when the model agrees on every point with a real quote and the key carries no note of doubt; **disputed** when it calls the key wrong; **needs a person** otherwise.
+  - Verdicts are cached in `verify/luna.json` by printed reference and a hash of the key; a changed key loses its verdict until it is checked again.
+  - Cost: about ₹0.075 a key.
+- **Into the pools:** `pools.py build` adds `autoCheck` {model, at, status, why} to each checked assistant key. The importer writes the verdict into the scheme text as the second line, "AI check (gpt-6-luna, date): confirmed from the textbook | DISPUTED | a person must check. <why>". It marks a confirmed key checked by "Auto-check: gpt-6-luna (date)" (a teacher can take it back). `apply-checks` does the same on a draft pool that is already imported, never touching a teacher's own check.
+- **The builder:** the key panel shows the verdict at the top (green, red or amber); the list says "key auto-checked", "AI disputes key" or "AI unsure".
+
 ## Open for the owner
 
 - `HW_INKBUDDY_POOL_AI_ENABLED`: AI marking of written answers against a teacher-checked authored key in InkBuddy.
-- Who checks ~320 assistant keys. The builder shows each key with "KEY TO CHECK".
+- The assistant keys gpt-6-luna disputed or could not confirm still need a teacher; the rest arrive auto-checked.
 - Study Buddy's prerequisites from earlier work: an R2 bucket (done 13 Nov), a job runner and HW env.

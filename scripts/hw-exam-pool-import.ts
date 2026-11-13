@@ -10,6 +10,11 @@
 //
 //   npm run hw:exam:pool -w apps/api -- check  <pool.json> [--figures <dir>]                    (no database: checks every question and picture)
 //   npm run hw:exam:pool -w apps/api -- import <pool.json> --year 2027 --slug cbse-x-science-chapter-practice --by "name" [--figures <dir>]
+//   npm run hw:exam:pool -w apps/api -- apply-checks <pool.json> --year 2027 --slug cbse-x-science-chapter-practice   (an imported draft pool)
+//
+// An assistant key may carry `autoCheck` (cbse-science-qbank verify_keys.py: a model checked it against the NCERT chapter text, and code checked
+// its quotes are really in the book). Its verdict goes into the scheme text as "AI check (...)", and a key the model confirmed is marked checked
+// by "Auto-check: <model> (<date>)", so a teacher only has to look at the disputed and unsure ones (and can take any auto check back).
 //
 // `--figures` is the folder the pool's image paths are relative to (default: the folder above the pool file's folder, as in cbse-science-qbank).
 // `import` writes in one transaction and refuses when the package already has a pool of the same title (a pool is replaced on purpose, by
@@ -44,6 +49,10 @@ const item = z.object({
   ncert: z.object({ section: z.string().min(1), title: z.string().min(1), pages: z.string().regex(/^\d+(-\d+)?$/) }).optional(),
   choiceGroup: z.string().min(1).max(100).nullable().optional(),
   figures: z.array(z.object({ image: z.string().nullable().optional(), description: z.string().min(1), labels: z.array(z.string()).default([]) })).optional(),
+  // the second check of an assistant key by a model against the NCERT chapter text (cbse-science-qbank verify_keys.py)
+  autoCheck: z.object({
+    model: z.string().min(1), at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), status: z.enum(['approved', 'disputed', 'needs_person']), why: z.string(),
+  }).optional(),
 });
 const pool = z.object({
   format: z.enum(['exam-pool/1', 'exam-pool/2']), title: z.string().min(1), board: z.string(), classLevel: z.number().int(), subject: z.string(), subjectCode: z.string(),
@@ -74,6 +83,26 @@ export function figuresOf(q: Item, base: string): { figures: StoredFigure[]; pro
   return { figures, problems };
 }
 
+const AI_CHECK = /^AI check \(/;
+const AI_SAYS = { approved: 'confirmed from the textbook', disputed: 'DISPUTED', needs_person: 'a person must check' } as const;
+
+/** The scheme-text line that records a model's second check of an assistant key (none for an official key or an unchecked one). */
+export function aiCheckLine(q: Item): string | null {
+  if (q.key !== 'assistant' || !q.autoCheck) return null;
+  const a = q.autoCheck;
+  return `AI check (${a.model}, ${a.at}): ${AI_SAYS[a.status]}. ${a.why.replace(/\s+/g, ' ').trim()}`.slice(0, 1200);
+}
+
+/** The scheme text with its AI-check line put in (or replaced): always the second line, so "KEY TO CHECK" stays first. */
+export function withAiCheck(schemeText: string, line: string | null): string {
+  const lines = schemeText.split('\n').filter((l) => !AI_CHECK.test(l));
+  if (line) lines.splice(1, 0, line);
+  return lines.join('\n');
+}
+
+/** Who the check stamps when the model confirmed the key: the builder shows it, and a teacher can take it back. */
+export const autoCheckedBy = (q: Item) => (q.key === 'assistant' && q.autoCheck?.status === 'approved' ? `Auto-check: ${q.autoCheck.model} (${q.autoCheck.at})` : null);
+
 /** One pool question as the builder takes it; the key's origin is said in its scheme text. */
 export function authoredOf(p: Pool, q: Item, figures: ItemFigure[] = []): AuthoredInput {
   const choice = q.qtype === 'mcq' || q.qtype === 'assertion_reason';
@@ -91,7 +120,7 @@ export function authoredOf(p: Pool, q: Item, figures: ItemFigure[] = []): Author
     ...(choice ? { options: q.qtype === 'assertion_reason' ? p.ar_options : q.options, correctOption: q.correctOption } : {}),
     parts,
     diagramParts: (q.parts ?? []).filter((pt) => pt.drawing).map((pt) => pt.label),
-    schemeText: `${from}\nSource: ${q.sources.join(', ')}${q.ncert ? `\nTaught in: NCERT ${q.ncert.section} ${q.ncert.title}, pages ${q.ncert.pages}` : ''}${q.note ? `\nNote: ${q.note}` : ''}\n${keyText}`,
+    schemeText: withAiCheck(`${from}\nSource: ${q.sources.join(', ')}${q.ncert ? `\nTaught in: NCERT ${q.ncert.section} ${q.ncert.title}, pages ${q.ncert.pages}` : ''}${q.note ? `\nNote: ${q.note}` : ''}\n${keyText}`, aiCheckLine(q)),
     ...(q.ncert ? { ncert: { book: p.book, chapterNo: p.chapterNo, ...q.ncert } } : {}),
     sources: q.sources,
     choiceGroup: q.choiceGroup ?? null,
@@ -122,9 +151,48 @@ export function check(p: Pool, base: string): { problems: string[]; leftOut: { i
   return { problems, leftOut, pictures };
 }
 
+/**
+ * `apply-checks`: puts the pool file's AI checks on a pool already imported (matched by title, its questions by their first printed source).
+ * Writes the AI-check line into each assistant key's scheme text and stamps the keys the model confirmed as checked "Auto-check: <model> (<date>)".
+ * A teacher's own check is never touched; an auto-check stamp the model no longer gives is taken back. The question's content is not changed, so this
+ * does not go through updateItem (which would clear every check). Only a DRAFT pool can be changed (the 034 guard refuses the rest).
+ */
+async function applyChecks(p: Pool, year: number, slug: string) {
+  const { db } = await import('@/db');
+  const { and, eq } = await import('drizzle-orm');
+  const { hwExamPackage, hwExamSet, hwExamSetItem } = await import('@/db/hw-exams-schema');
+  const byRef = new Map(p.items.filter((q) => q.key === 'assistant').map((q) => [q.sources[0]!, q]));
+  const n = { lines: 0, stamped: 0, unstamped: 0, teacher: 0, unmatched: 0 };
+  await db.transaction(async (tx) => {
+    const pkg = (await tx.select().from(hwExamPackage).where(and(eq(hwExamPackage.board, p.board), eq(hwExamPackage.classLevel, p.classLevel), eq(hwExamPackage.examYear, year), eq(hwExamPackage.slug, slug))).limit(1))[0];
+    if (!pkg) throw new Error(`no package ${p.board} class ${p.classLevel} ${year} "${slug}"`);
+    const set = (await tx.select().from(hwExamSet).where(and(eq(hwExamSet.packageId, pkg.id), eq(hwExamSet.kind, 'pool'), eq(hwExamSet.title, p.title))).limit(1))[0];
+    if (!set) throw new Error(`the package has no pool called "${p.title}"`);
+    if (set.status !== 'draft') throw new Error(`the pool "${p.title}" is ${set.status}; only a draft pool can take the AI checks`);
+    const rows = await tx.select({ id: hwExamSetItem.id, sources: hwExamSetItem.sources, schemeText: hwExamSetItem.schemeText, keyCheckedBy: hwExamSetItem.keyCheckedBy })
+      .from(hwExamSetItem).where(eq(hwExamSetItem.setId, set.id));
+    for (const r of rows) {
+      if (!(r.schemeText ?? '').startsWith('KEY TO CHECK')) continue;
+      const q = (r.sources ?? []).map((s) => byRef.get(s)).find(Boolean);
+      if (!q) { n.unmatched++; continue; }
+      const schemeText = withAiCheck(r.schemeText ?? '', aiCheckLine(q));
+      const auto = autoCheckedBy(q);
+      const byAuto = (r.keyCheckedBy ?? '').startsWith('Auto-check:');
+      const patch: Partial<typeof hwExamSetItem.$inferInsert> = {};
+      if (schemeText !== r.schemeText) { patch.schemeText = schemeText; n.lines++; }
+      if (r.keyCheckedBy && !byAuto) n.teacher++;
+      else if (auto && r.keyCheckedBy !== auto) { patch.keyCheckedBy = auto; patch.keyCheckedAt = new Date(); n.stamped++; }
+      else if (!auto && byAuto) { patch.keyCheckedBy = null; patch.keyCheckedAt = null; n.unstamped++; }
+      if (Object.keys(patch).length) await tx.update(hwExamSetItem).set(patch).where(eq(hwExamSetItem.id, r.id));
+    }
+  });
+  console.log(`${p.title}: ${n.lines} AI-check lines written, ${n.stamped} keys stamped as auto-checked, ${n.unstamped} auto stamps taken back, `
+    + `${n.teacher} already checked by a teacher (left alone), ${n.unmatched} assistant keys not found in the pool file`);
+}
+
 async function main() {
   const [cmd, path] = process.argv.slice(2);
-  if (!cmd || !path || !['check', 'import'].includes(cmd)) throw new Error('usage: check|import <pool.json> [--figures <dir>] [--year 2027 --slug ... --by name]');
+  if (!cmd || !path || !['check', 'import', 'apply-checks'].includes(cmd)) throw new Error('usage: check|import|apply-checks <pool.json> [--figures <dir>] [--year 2027 --slug ... --by name]');
   const p = pool.parse(JSON.parse(readFileSync(path, 'utf8')));
   const base = resolve(arg('figures') ?? join(dirname(resolve(path)), '..'));
   const { problems, leftOut, pictures } = check(p, base);
@@ -137,11 +205,14 @@ async function main() {
     + `${kept.filter((q) => q.needsCheck).length} keys to check, ${kept.filter((q) => q.key === 'official').length} official; ${pics.size} pictures`);
   if (leftOut.length) console.log(`left out (missing pictures, or only a drawing):\n${leftOut.map((l) => `  - ${l.id}: ${l.why.join('; ')}`).join('\n')}`);
   if (problems.length) { console.error(problems.map((x) => `  - ${x}`).join('\n')); process.exit(1); }
+  const ai = p.items.filter((q) => q.key === 'assistant' && q.autoCheck);
+  if (ai.length) console.log(`AI checks: ${['approved', 'disputed', 'needs_person'].map((s) => `${ai.filter((q) => q.autoCheck!.status === s).length} ${s}`).join(', ')} of ${p.items.filter((q) => q.key === 'assistant').length} assistant keys`);
   if (cmd === 'check') return;
-  if (!kept.length) throw new Error('nothing to import');
-
   const year = Number(arg('year') ?? 2027);
   const slug = arg('slug') ?? 'chapter-practice';
+  if (cmd === 'apply-checks') { await applyChecks(p, year, slug); process.exit(0); }
+  if (!kept.length) throw new Error('nothing to import');
+
   const by = arg('by') ?? 'pool-importer';
   const { examPageStore } = await import('@/lib/hw/storage/exam-pages');
   const store = examPageStore();
@@ -161,7 +232,9 @@ async function main() {
     const set = await b.addSet(tx, pkgId, { kind: 'pool', subject: p.subject, subjectCode: p.subjectCode, title: p.title, maxMarks: marks, durationMinutes: 60, syllabusScope: [p.chapter] });
     for (const q of kept) {
       const figures = pictures.get(q.id)!.map((f) => ({ key: f.key, description: f.description, labels: f.labels }));
-      await b.addAuthoredItem(tx, set.id, authoredOf(p, q, figures));
+      const { id } = await b.addAuthoredItem(tx, set.id, authoredOf(p, q, figures));
+      const auto = autoCheckedBy(q);
+      if (auto) await b.checkItemKey(tx, id, auto, true);
     }
     return { packageId: pkgId, poolId: set.id, created: !pkg };
   });

@@ -1,6 +1,7 @@
 // A question's key as a teacher checks it (migration 037; docs/hw-eval/board-bank-roadmap.md, phase 2): the whole question with its pictures, the
 // right option or the value points, where the key came from, where the question is taught and where it was printed. A key the assistant wrote
-// ("KEY TO CHECK") is marked checked here, by the signed-in account, and its pool cannot be published until every such key is.
+// ("KEY TO CHECK") is marked checked here, by the signed-in account, and its pool cannot be published until every such key is. A key a model
+// confirmed against the NCERT chapter arrives already checked by "Auto-check: ..." (the pool importer); its verdict is shown at the top.
 
 import { api } from '@/lib/trpc/client'
 import type { HwOut } from '@/components/hw/types'
@@ -11,14 +12,34 @@ import { Note } from './shared'
 export type SetItem = HwOut['exams']['admin']['getSet']['items'][number]
 type Part = { label?: string; marks?: number; answer_kind?: string; value_points?: { text?: string; marks?: number }[] }
 
+/**
+ * The second check of an assistant key by a model against the NCERT chapter (the pool importer writes it into the scheme text as
+ * "AI check (model, date): confirmed from the textbook | DISPUTED | a person must check. <why>"). Confirmed keys arrive marked checked by
+ * "Auto-check: model (date)"; a teacher can take that back like any check.
+ */
+export function aiCheckOf(schemeText: string | null | undefined) {
+  const line = (schemeText ?? '').split('\n').find((l) => l.startsWith('AI check ('))
+  if (!line) return null
+  const status = line.includes('): confirmed') ? 'confirmed' : line.includes('): DISPUTED') ? 'disputed' : 'person'
+  return { line, status } as const
+}
+
+const AI_TONE = {
+  confirmed: 'border-emerald-300 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200',
+  disputed: 'border-red-300 bg-red-50 text-red-900 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200',
+  person: 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200',
+} as const
+
 /** The small badges in the question list: whose key it is, how often the boards asked it, where it is taught. */
 export function KeyBadges({ it }: { it: SetItem }) {
   const ncert = it.ncert as { section?: string; pages?: string }
+  const ai = it.keyToCheck ? aiCheckOf(it.schemeText) : null
   return (
     <>
       {it.keyToCheck && (it.keyCheckedBy
-        ? <Badge variant="secondary" title={`Checked by ${it.keyCheckedBy}`}>key checked</Badge>
+        ? <Badge variant="secondary" title={`Checked by ${it.keyCheckedBy}`}>{it.keyCheckedBy.startsWith('Auto-check:') ? 'key auto-checked' : 'key checked'}</Badge>
         : <Badge variant="destructive">key to check</Badge>)}
+      {ai && ai.status !== 'confirmed' && !it.keyCheckedBy && <Badge variant="outline" title={ai.line}>{ai.status === 'disputed' ? 'AI disputes key' : 'AI unsure'}</Badge>}
       {(it.schemeText ?? '').startsWith('CBSE marking scheme') && <Badge variant="secondary">CBSE key</Badge>}
       {it.sources.length > 1 && <Badge variant="outline" title={it.sources.join(', ')}>asked {it.sources.length}×</Badge>}
       {ncert.section && <Badge variant="outline">NCERT {ncert.section} · p{ncert.pages}</Badge>}
@@ -32,8 +53,10 @@ export function KeyPanel({ it, editable, onChanged }: { it: SetItem; editable: b
   const ncert = it.ncert as { section?: string; title?: string; pages?: string; chapterNo?: number }
   const options = it.options as string[]
   const parts = it.parts as Part[]
+  const ai = it.keyToCheck ? aiCheckOf(it.schemeText) : null
   return (
     <div className="mt-2 space-y-3 rounded-md border bg-muted/30 p-3 text-sm">
+      {ai && <p className={`rounded border px-2 py-1 text-xs ${AI_TONE[ai.status]}`}>{ai.line}</p>}
       <p className="whitespace-pre-wrap">{it.stem}</p>
       {it.figures.map((f, k) => (
         <figure key={k} className="space-y-1">
