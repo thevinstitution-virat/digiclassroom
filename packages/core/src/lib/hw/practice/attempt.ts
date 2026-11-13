@@ -102,14 +102,19 @@ export async function startAttempt(userId: string, input: StartAttemptInput, dep
   const q = await verifyCatalogQuestion(scope, input, deps.hub === undefined ? defaultHub() : deps.hub);
   if (!q) throw new HwError('NOT_FOUND', 'That question was not found in the textbook. Search again and pick it from the list.');
 
-  // The same question twice opens the same attempt.
+  // A question already practised opens its LATEST attempt (its result, or the draft); writing it again starts from there (attempts.ts).
   const prior = await db.execute<{ id: string }>(sql`
     SELECT a.id FROM hw_assignment a JOIN hw_question hq ON hq.assignment_id = a.id
-     WHERE a.organization_id = ${PRACTICE_ORG_ID} AND a.created_by = ${userId} AND hq.origin_ref ->> 'exercise' = ${q.ref} LIMIT 1`);
+     WHERE a.organization_id = ${PRACTICE_ORG_ID} AND a.created_by = ${userId} AND hq.origin_ref ->> 'exercise' = ${q.ref}
+     ORDER BY a.created_at DESC, a.id DESC LIMIT 1`);
   if (prior.rows[0]) return { assignmentId: prior.rows[0].id, reused: true };
 
+  // the trial's limit is on different questions (each costs an answer key); writing one again is limited per question instead
   const limit = getHwConfig().HW_SELF_PRACTICE_MAX_ATTEMPTS;
-  const [{ n }] = (await db.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM hw_assignment WHERE organization_id = ${PRACTICE_ORG_ID} AND created_by = ${userId}`)).rows;
+  const [{ n }] = (await db.execute<{ n: number }>(sql`
+    SELECT count(DISTINCT coalesce(hq.origin_ref ->> 'exercise', 'bank:' || (hq.origin_ref ->> 'bankRowId'), a.id))::int AS n
+      FROM hw_assignment a JOIN hw_question hq ON hq.assignment_id = a.id
+     WHERE a.organization_id = ${PRACTICE_ORG_ID} AND a.created_by = ${userId}`)).rows;
   if (n >= limit) throw new HwError('QUOTA_EXCEEDED', both(PRACTICE_TEXT.attemptLimit));
 
   const assignmentId = newId();
@@ -127,7 +132,7 @@ export async function startAttempt(userId: string, input: StartAttemptInput, dep
       languageHint: scope.medium, answerLines: q.shape.type === 'long' ? 12 : q.shape.type === 'short' ? 6 : 3,
       // A textbook exercise: its key is built from the book, and is public enough for the shared key library.
       origin: 'textbook_exercise',
-      originRef: { book: q.book, chapter: `Chapter ${q.chapter}`, exercise: q.ref, passageId: q.passageId },
+      originRef: { book: q.book, chapter: `Chapter ${q.chapter}`, exercise: q.ref, passageId: q.passageId, ...(q.workId ? { workId: q.workId } : {}) },
       rubricMode: 'key',
     });
     const [row] = await tx.select().from(hwQuestion).where(eq(hwQuestion.id, questionId)).limit(1);

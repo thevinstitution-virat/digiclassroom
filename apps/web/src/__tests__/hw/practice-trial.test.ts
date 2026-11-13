@@ -282,13 +282,13 @@ suite('self-practice — integration', () => {
       } finally { process.env.HW_SELF_PRACTICE_ENABLED = 'true'; config._resetHwConfig() }
     })
 
-    it('shows the learner the result with the "AI practice estimate" label in both languages', async () => {
+    it('shows the learner the result with the "Evaluated by Virat Evaluator" label in both languages', async () => {
       const subs = await import('@/lib/hw/services/submissions')
       const u = await addUser('r7'); await trial.startTrial(u)
       const at = await attempt(u)
       await marking.releasePracticeSubmissions()
       const res = await subs.myResult({ userId: u, orgId: PRACTICE_ORG_ID, role: 'student', isPlatformStaff: false }, at.submissionId)
-      expect(res.practiceEstimate?.label.en).toBe('AI practice estimate')
+      expect(res.practiceEstimate?.label.en).toBe('Evaluated by Virat Evaluator · practice marks')
       expect(/[ऀ-ॿ]/.test(res.practiceEstimate?.label.hi ?? '')).toBe(true)
       expect(res.total).toBe(2)
     })

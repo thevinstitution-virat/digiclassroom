@@ -25,6 +25,8 @@ export interface PracticeScope { classLevel: number; subject: string; medium: 'e
 export interface CatalogQuestion {
   /** `passageId:index`: stable while the book is unchanged. */
   ref: string;
+  /** The library work (book) the question is from. */
+  workId: string;
   passageId: string;
   index: number;
   text: string;
@@ -195,7 +197,7 @@ function questionsOf(res: HubSearchResponse): CatalogQuestion[] {
       const ref = `${r.passage_id}:${index}`;
       if (seen.has(ref) || text.length < 8) return;
       seen.add(ref);
-      out.push({ ref, passageId: r.passage_id, index, text, book: r.work_title, chapter: r.chapter_no, page: r.page_start, shape: questionShape(matchWords(text).length) });
+      out.push({ ref, passageId: r.passage_id, index, text, book: r.work_title, workId: r.work_id, chapter: r.chapter_no, page: r.page_start, shape: questionShape(matchWords(text).length) });
     });
   }
   return out;

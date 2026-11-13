@@ -100,6 +100,7 @@ function Finder({ scopes }: { scopes: Scope[] }) {
                 <div className="min-w-0 flex-1 space-y-1">
                   <p className="whitespace-pre-wrap text-sm">{q.text}</p>
                   <p className="text-xs text-muted-foreground">{t('pr.search.from', { book: q.book, n: q.chapter, p: q.page })} · {marksLabel(t, q.shape.marks)}</p>
+                  {q.attempts > 0 && <Badge variant="secondary">{t('pr.search.attempted', { n: q.attempts })}</Badge>}
                 </div>
                 <Button
                   size="sm"
@@ -107,7 +108,7 @@ function Finder({ scopes }: { scopes: Scope[] }) {
                   onClick={() => asked && open.mutate({ classLevel: asked.classLevel, subject: asked.subject, medium: asked.medium, passageId: q.passageId, index: q.index, text: q.text })}
                 >
                   {open.isPending && open.variables?.passageId === q.passageId && open.variables.index === q.index
-                    ? t('pr.q.opening') : t('pr.q.practise')}
+                    ? t('pr.q.opening') : t(q.attempts > 0 ? 'pr.q.openAgain' : 'pr.q.practise')}
                 </Button>
               </li>
             ))}

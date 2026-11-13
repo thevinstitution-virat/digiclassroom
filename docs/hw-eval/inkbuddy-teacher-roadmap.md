@@ -44,6 +44,12 @@ writing, measured with a test page), and an upload during writing causes no visi
 
 ## Phase 1: quick wins (one to two sessions)
 
+**Built 13 Nov 2026** (DigiClassroom and Study Buddy):
+- Attempts are in `practice/attempts.ts`. "Attempted (n)" in search; a question already practised opens its latest attempt. "Write it again" after a mark makes a new one-question attempt that copies the question, its marking points and its answer key, so no new key is built. The limit is `HW_SELF_PRACTICE_MAX_ATTEMPTS_PER_QUESTION` (10) per question in the current plan, counted from the trial's start (a paid plan's start will restart it). The trial's limit on questions now counts different questions, not attempts.
+- The result page shows "Evaluated by Virat Evaluator · practice marks" with "How is this marked?", the attempt history, the **Your answer / As we read it** toggle (the ink page, photo or typed text), and the book's answer on a notebook page (Kalam, self-hosted in `public/fonts/kalam`, SIL OFL) with the textbook pages.
+- Concept feedback places a practice question through its answer key's own book and passages (`graphFromKey`), before falling back to search. The book's id is now recorded on the question (`origin_ref.workId`).
+- Tests: `practice-attempts` (6). Walked through in a browser.
+
 1. **"Attempted (n)" and up to 10 attempts per question.**
    - In search results, a question already practised shows **Attempted (3)**.
    - Every marked attempt offers **Write it again**, until the 10th. The 10th says it was the last for this question.

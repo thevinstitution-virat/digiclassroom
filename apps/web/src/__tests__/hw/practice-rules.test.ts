@@ -54,9 +54,11 @@ describe('learner-facing text', () => {
       expect(k).toBeTruthy()
     }
   })
-  it('says plainly that no teacher checked the mark', () => {
-    expect(PRACTICE_TEXT.estimateNote.en).toMatch(/No teacher has checked/)
-    expect(PRACTICE_TEXT.estimateLabel.en).toBe('AI practice estimate')
+  it('says who evaluated it and how, not a warning (owner, 13 Nov 2026)', () => {
+    expect(PRACTICE_TEXT.estimateLabel.en).toBe('Evaluated by Virat Evaluator · practice marks')
+    expect(PRACTICE_TEXT.estimateHow.en).toBe('How is this marked?')
+    expect(PRACTICE_TEXT.estimateNote.en).toMatch(/answer key written from your own textbook/)
+    expect(PRACTICE_TEXT.estimateNote.en).not.toMatch(/No teacher/)
   })
   it('refusalText picks the message by reason and language', () => {
     expect(refusalText('time', 'en')).toBe(PRACTICE_TEXT.trialEndedTime.en)

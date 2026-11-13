@@ -172,6 +172,11 @@ const EnvSchema = z.object({
   /** The most questions one learner may start during the trial (each one costs the platform an answer key). */
   HW_SELF_PRACTICE_MAX_ATTEMPTS: num(25, 1, 1000),
   /**
+   * How many times a learner may write the same question in their current plan (owner, 13 Nov 2026): 10 in the free trial; a paid plan
+   * starts the count again from zero. Every attempt is kept as the question's history (practice/attempts.ts).
+   */
+  HW_SELF_PRACTICE_MAX_ATTEMPTS_PER_QUESTION: num(10, 1, 100),
+  /**
    * true = InkBuddy offers the free trial only once a textbook-key group has passed the evaluation gates for the running marking setup.
    * Owner's decision, 13 Nov 2026: open now (default false); InkBuddy's marks are AI practice estimates, labelled as such, and with this off
    * its questions are AI-marked without a promoted group (eligibility/registry.ts). Set true to close it again until a group passes.

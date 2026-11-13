@@ -49,9 +49,12 @@ describe('self-practice text', () => {
     for (const k of used) expect(en.has(k as HwKey)).toBe(true)
   })
 
-  it('the screens say that no teacher checked the mark, from the server text in both languages', () => {
-    expect(read('components/hw/student/AfterSubmit.tsx')).toContain('practiceEstimate.label[lang]')
-    expect(read('components/hw/student/AfterSubmit.tsx')).toContain('practiceEstimate.note[lang]')
+  it('the screens say who evaluated the mark, and how on request, from the server text in both languages', () => {
+    expect(read('components/hw/student/AfterSubmit.tsx')).toContain('<EvaluatedNote label={d.practiceEstimate.label} note={d.practiceEstimate.note} how={d.practiceEstimate.how} />')
+    const extras = read('components/hw/practice/ResultExtras.tsx')
+    expect(extras).toContain('{label[lang]}')
+    expect(extras).toContain('{note[lang]}')
+    expect(extras).toContain('{how[lang]}')
   })
 
   it('"write it again" clears the device\'s old writing before reopening the draft, and is shown only for practice work', () => {

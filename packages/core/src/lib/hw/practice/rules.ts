@@ -40,10 +40,16 @@ const rupees = (paise: number) => `₹${(paise / 100).toFixed(2)}`;
 
 /** What the learner is told. Every string has English and Hindi. */
 export const PRACTICE_TEXT = {
-  estimateLabel: { en: 'AI practice estimate', hi: 'एआई द्वारा अभ्यास का अनुमान' },
+  // Owner, 13 Nov 2026: say who evaluated it, and explain how on request, instead of a warning.
+  estimateLabel: { en: 'Evaluated by Virat Evaluator · practice marks', hi: 'विराट इवैल्यूएटर द्वारा मूल्यांकित · अभ्यास अंक' },
   estimateNote: {
-    en: 'This mark was suggested by AI to help you practise. No teacher has checked it.',
-    hi: 'यह अंक आपके अभ्यास में मदद के लिए एआई ने सुझाया है। किसी शिक्षक ने इसे जाँचा नहीं है।',
+    en: 'Your handwriting is read, then your answer is marked point by point against an answer key written from your own textbook (its pages are named below), the way CBSE marks by value points. These are practice marks, to show you what to improve.',
+    hi: 'पहले आपकी लिखावट पढ़ी जाती है, फिर आपके उत्तर को आपकी अपनी पाठ्यपुस्तक से बनी उत्तर-कुंजी (उसके पृष्ठ नीचे दिए हैं) से बिंदु-दर-बिंदु जाँचा जाता है, जैसे सीबीएसई मूल्य-बिंदुओं से अंक देता है। ये अभ्यास अंक हैं, ताकि आप जान सकें कि कहाँ सुधार करना है।',
+  },
+  estimateHow: { en: 'How is this marked?', hi: 'यह कैसे जाँचा गया?' },
+  questionAttemptLimit: {
+    en: 'You have written this question {n} times in your free trial, the most allowed. Your earlier attempts stay in your history.',
+    hi: 'आप अपने निःशुल्क ट्रायल में यह प्रश्न {n} बार लिख चुके हैं, जो अधिकतम सीमा है। आपके पिछले प्रयास आपके इतिहास में बने रहेंगे।',
   },
   trialEndedTime: {
     en: 'Your free trial has ended. Upgrade to keep practising.',

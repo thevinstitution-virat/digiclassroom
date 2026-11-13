@@ -14,7 +14,8 @@ import { checkRender } from '../ink/png';
 import { inkSummary, validateEncodedInk } from '../ink/stroke-format';
 import { queueSubmissionRead } from '../jobs/read-handler';
 import { finishSubmissionIfRead, setTranscript } from '../pipeline';
-import { answerFileKey, keyVersion } from '../storage/keys';
+import { answerFileKey, answerImageKey, keyVersion } from '../storage/keys';
+import { attemptStatus } from '../practice/attempts';
 import { putHwObject, signedReadUrl } from '../storage/r2';
 import { learnerFigures, type LearnerFigure } from '../bank/figures';
 import { PRACTICE_ORG_ID, PRACTICE_TEXT, answerModesOf } from '../practice/rules';
@@ -305,6 +306,26 @@ export async function flagWords(actor: HwActor, submissionId: string, questionId
 }
 
 /** Marks and feedback, only after the teacher returns the work. */
+/**
+ * The book's answer to a question: the reference answer of its answer key, written from the textbook's own passages, with where it comes
+ * from ("Science, Chapter 5, pages 72-73"). Null when the question has no ready key. Shown only after marking (myResult).
+ */
+async function bookAnswerOf(keyId: string | null): Promise<{ text: string; source: string } | null> {
+  if (!keyId) return null;
+  const r = await db.execute<{ status: string; reference: string | null; citations: { title?: string; chapter?: string | null; pageStart?: number | null; pageEnd?: number | null }[] | null }>(sql`
+    SELECT status, key ->> 'referenceAnswer' AS reference, citations FROM hw_question_key WHERE id = ${keyId}`);
+  const k = r.rows[0];
+  if (!k || k.status !== 'ready' || !k.reference?.trim()) return null;
+  const cites = k.citations ?? [];
+  const titles = [...new Set(cites.map((c) => c.title).filter(Boolean))];
+  const chapters = [...new Set(cites.map((c) => c.chapter).filter(Boolean))];
+  const pages = cites.flatMap((c) => [c.pageStart, c.pageEnd]).filter((p): p is number => typeof p === 'number' && p > 0);
+  const lo = pages.length ? Math.min(...pages) : null;
+  const hi = pages.length ? Math.max(...pages) : null;
+  const source = [titles.join(', '), chapters.join(', '), lo === null ? '' : lo === hi ? `page ${lo}` : `pages ${lo}-${hi}`].filter(Boolean).join(' · ');
+  return { text: k.reference.trim(), source };
+}
+
 export async function myResult(actor: HwActor, submissionId: string) {
   const { submission, assignment } = await ownSubmission(actor, submissionId);
   if (!studentCanSeeResult(actor, submission)) throw new HwError('CONFLICT', 'Your teacher has not returned this work yet.');
@@ -317,10 +338,24 @@ export async function myResult(actor: HwActor, submissionId: string) {
   const total = answers.reduce((s, { g }) => s + num(g?.marks), 0);
   // marks changed after the work was returned (migration 036): who, only when a school's admin or teacher did it
   const revised = await latestRevisionsFor(db, answers.map(({ a }) => a.id));
+  const practice = assignment.organizationId === PRACTICE_ORG_ID;
+  // InkBuddy: the answer as the learner gave it (to set beside the reading), and the book's own answer with its pages
+  const yours = new Map<string, { mode: string; url: string | null; typed: string | null }>();
+  const book = new Map<string, { text: string; source: string } | null>();
+  if (practice) {
+    for (const { a } of answers) {
+      const key = a.mode === 'typed' ? null : answerImageKey(a);
+      yours.set(a.questionId, { mode: a.mode, url: key ? await signedReadUrl(key) : null, typed: a.mode === 'typed' ? a.typedText : null });
+    }
+    for (const q of questions) book.set(q.id, await bookAnswerOf(q.activeKeyId));
+  }
   return {
     assignment: { id: assignment.id, title: assignment.title, totalMarks: num(assignment.totalMarks) },
-    // Self-practice: no teacher checked these marks, and the screen must say so (English and Hindi).
-    ...(assignment.organizationId === PRACTICE_ORG_ID ? { practiceEstimate: { label: PRACTICE_TEXT.estimateLabel, note: PRACTICE_TEXT.estimateNote } } : {}),
+    // Self-practice: who evaluated it, and how, on request (English and Hindi).
+    ...(practice ? {
+      practiceEstimate: { label: PRACTICE_TEXT.estimateLabel, note: PRACTICE_TEXT.estimateNote, how: PRACTICE_TEXT.estimateHow },
+      attempts: await attemptStatus(db, actor.userId, assignment.id),
+    } : {}),
     total,
     questions: questions.map((q) => {
       const row = answers.find(({ a }) => a.questionId === q.id);
@@ -328,6 +363,7 @@ export async function myResult(actor: HwActor, submissionId: string) {
       return {
         ...studentQuestion(q),
         transcript: row?.a.transcript ?? '',
+        ...(practice ? { yours: yours.get(q.id) ?? null, bookAnswer: book.get(q.id) ?? null } : {}),
         awarded: g ? num(g.marks) : null,
         comment: g?.comment ?? null,
         revision: row ? revised.get(row.a.id) ?? null : null,
