@@ -7,12 +7,27 @@ import { encodeGreyPng } from './png-encode'
 
 export const PEN_SIZE = 3.2
 
-export function strokeOutline(s: InkStroke, size = PEN_SIZE): number[][] {
+/** Line width on the pad for a stroke: a 0.5 mm pen (the default), a 0.7 mm pen, or a pencil. */
+export function strokeSize(s: Pick<InkStroke, 'ink' | 'tip'>): number {
+  if (s.ink === 'pencil') return 2.6
+  return s.tip === 7 ? 4.4 : PEN_SIZE
+}
+
+export function strokeOutline(s: InkStroke, size = strokeSize(s)): number[][] {
   const pressureFromDevice = s.tool === 'pen' && s.points.some((p) => p.p !== 0.5)
+  // a ruled line or a strike-through is drawn straight and even, like a pen along a ruler
+  const straight = Boolean(s.line)
   return getStroke(
-    s.points.map((p) => [p.x, p.y, p.p]),
-    { size, thinning: 0.55, smoothing: 0.5, streamline: 0.45, simulatePressure: !pressureFromDevice, last: true },
+    s.points.map((p) => [p.x, p.y, straight ? 0.5 : p.p]),
+    { size, thinning: straight ? 0 : 0.55, smoothing: straight ? 0 : 0.5, streamline: straight ? 0 : 0.45, simulatePressure: !straight && !pressureFromDevice, last: true },
   )
+}
+
+/** The colour a stroke is shown in on the pad: the pen's ink, or pencil grey. The reader's image is always black on white. */
+export function inkColour(s: Pick<InkStroke, 'ink'>, dark: boolean): string {
+  if (s.ink === 'blue') return dark ? '#93c5fd' : '#1d4ed8'
+  if (s.ink === 'pencil') return dark ? '#a8a29e' : '#57534e'
+  return dark ? '#e2e8f0' : '#111827'
 }
 
 export function outlinePath(outline: number[][]): Path2D {
@@ -41,10 +56,13 @@ export function strokePath(s: InkStroke): Path2D {
   return p
 }
 
-/** Finished strokes only (see strokePath). */
-export function drawStrokes(ctx: CanvasRenderingContext2D, strokes: InkStroke[], colour = '#111'): void {
-  ctx.fillStyle = colour
-  for (const s of strokes) ctx.fill(strokePath(s))
+/** Finished strokes only (see strokePath). One colour for all (the reader's image), or each stroke's own ink. */
+export function drawStrokes(ctx: CanvasRenderingContext2D, strokes: InkStroke[], colour: string | ((s: InkStroke) => string) = '#111'): void {
+  if (typeof colour === 'string') ctx.fillStyle = colour
+  for (const s of strokes) {
+    if (typeof colour !== 'string') ctx.fillStyle = colour(s)
+    ctx.fill(strokePath(s))
+  }
 }
 
 export interface Bounds { x: number; y: number; w: number; h: number }

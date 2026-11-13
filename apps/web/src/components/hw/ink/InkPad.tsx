@@ -1,7 +1,6 @@
 // The writing pad. Pointer Events with coalesced points and pressure, perfect-freehand
-// strokes, ruled lines from answer_lines, auto-growing height, undo/redo, stroke eraser,
-// clear with confirmation, and pen-only palm rejection: while a stylus is in use, touch
-// pointers never draw, and two fingers scroll the page.
+// strokes, ruled lines from answer_lines, auto-growing height, and pen-only palm rejection:
+// while a stylus is in use, touch pointers never draw, and two fingers scroll the page.
 //
 // Coordinates are kept in the pad's own space (doc.w wide), so rotating the tablet only
 // rescales the view; nothing already written moves.
@@ -10,18 +9,30 @@
 // every frame, and a long answer lagged): the PAGE layer holds the ruled lines and every finished stroke and is redrawn only when the
 // strokes change; the PEN layer on top draws only the stroke being written, in a low-latency canvas, with the pen's predicted points so
 // the ink sits under the nib.
+//
+// The exam-hall kit (Phase 3 of docs/hw-eval/inkbuddy-teacher-roadmap.md; owner's decisions of 13 Nov 2026): only what a CBSE candidate
+// may use in the hall. A ball pen in blue or black, 0.5 or 0.7 mm; a pencil for diagrams; a ruler for straight lines; a pen mistake is
+// struck through with one line, never erased; the eraser rubs out pencil only. Undo takes back a slip only: the last stroke within
+// INK_DRY_MS of writing it (the ink is still wet), or a pencil stroke. The page is an answer book: a red margin and page breaks, and the
+// pad can fill the screen.
 
 import { memo, useCallback, useEffect, useRef, useState } from 'react'
-import { Eraser, PenLine, Redo2, Trash2, Undo2, Plus } from 'lucide-react'
+import { Eraser, Maximize2, Minimize2, Pencil, PenLine, Plus, Redo2, Ruler, Strikethrough, Undo2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import type { InkDocument, InkPoint, InkStroke, InkTool } from '@/lib/hw/ink/stroke-format'
-import { drawStrokes, outlinePath, strokeOutline } from './render'
+import type { InkDocument, InkKind, InkPoint, InkStroke, InkTip, InkTool } from '@/lib/hw/ink/stroke-format'
+import { drawStrokes, inkColour, outlinePath, strokeOutline } from './render'
 import { useHwT } from '../strings'
 
 export const LINE_HEIGHT = 44
 const TOP_PAD = 24
 const ERASE_RADIUS = 14
+/** A page of the answer book, in ruled lines: a page break is drawn after every this many lines. */
+export const PAGE_LINES = 20
+/** The red margin of the answer book, from the left edge, in pad units. */
+const MARGIN_X = 52
+/** How long after a stroke undo can still take it back (a slip); after that the ink is dry. */
+export const INK_DRY_MS = 10_000
 
 export interface InkStats {
   erasedStrokes: number
@@ -29,6 +40,10 @@ export interface InkStats {
   /** Pointer types seen; `untrusted` counts synthetic events, which never draw. */
   tools: InkTool[]
   untrusted: number
+  /** Exam-hall kit use: strikes through mistakes, ruler lines, pencil strokes. */
+  strikes?: number
+  rulerLines?: number
+  pencilStrokes?: number
 }
 
 interface InkPadProps {
@@ -38,21 +53,41 @@ interface InkPadProps {
   disabled?: boolean
 }
 
+type Tool = 'pen' | 'pencil' | 'strike' | 'eraser'
+
 export function newDoc(width: number, lines: number): InkDocument {
   return { w: Math.round(width), h: TOP_PAD + lines * LINE_HEIGHT + LINE_HEIGHT, strokes: [] }
 }
 
-function penOnlyDefault(): boolean {
+const remembered = <T extends string>(key: string, allowed: readonly T[], fallback: T): T => {
   try {
-    return window.localStorage.getItem('hw-pen-only') === '1'
+    const v = window.localStorage.getItem(key)
+    return allowed.includes(v as T) ? (v as T) : fallback
   } catch {
-    return false
+    return fallback
   }
+}
+const remember = (key: string, v: string) => { try { window.localStorage.setItem(key, v) } catch { /* not remembered */ } }
+
+/** May undo take this stroke back? Pencil always (it can be rubbed out anyway); pen only while the ink is wet. */
+export function undoable(s: InkStroke, nowSessionMs: number): boolean {
+  if (s.ink === 'pencil') return true
+  const end = s.t0 + (s.points[s.points.length - 1]?.t ?? 0)
+  return nowSessionMs - end < INK_DRY_MS
+}
+
+/** A straight stroke from its first point to `to`, with points every few units so it draws evenly. */
+export function straightPoints(from: InkPoint, to: InkPoint): InkPoint[] {
+  const n = Math.max(1, Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / 6))
+  return Array.from({ length: n + 1 }, (_, i) => ({
+    x: from.x + ((to.x - from.x) * i) / n, y: from.y + ((to.y - from.y) * i) / n, p: 0.5, t: Math.round(from.t + ((to.t - from.t) * i) / n),
+  }))
 }
 
 // Memoised: the answer screen re-renders every second (visible time); the pad must not.
 export const InkPad = memo(function InkPad({ value, lines, onChange, disabled }: InkPadProps) {
   const { t } = useHwT()
+  const shellRef = useRef<HTMLDivElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
   /** The page: ruled lines and finished strokes. */
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -63,18 +98,26 @@ export const InkPad = memo(function InkPad({ value, lines, onChange, disabled }:
   const predicted = useRef<InkPoint[]>([])
   const [cssWidth, setCssWidth] = useState(0)
   const [doc, setDoc] = useState<InkDocument | null>(value)
-  const [tool, setTool] = useState<'pen' | 'eraser'>('pen')
+  const [tool, setTool] = useState<Tool>('pen')
+  const [ink, setInk] = useState<Exclude<InkKind, 'pencil'>>('black')
+  const [tip, setTip] = useState<InkTip>(5)
+  const [ruler, setRuler] = useState(false)
+  const [full, setFull] = useState(false)
   const [penOnly, setPenOnly] = useState(false)
-  const [undo, setUndo] = useState<InkStroke[][]>([])
-  const [redo, setRedo] = useState<InkStroke[][]>([])
+  const [redo, setRedo] = useState<InkStroke[]>([])
+  const [, setTick] = useState(0) // re-checks whether undo is still allowed as the ink dries
 
-  const live = useRef<{ id: number; stroke: InkStroke; start: number } | null>(null)
+  const live = useRef<{ id: number; stroke: InkStroke; start: number; first: InkPoint } | null>(null)
   const touches = useRef(new Map<number, { x: number; y: number }>())
   const sessionStart = useRef(performance.now())
-  const stats = useRef<InkStats>({ erasedStrokes: 0, undos: 0, tools: [], untrusted: 0 })
+  const stats = useRef<InkStats>({ erasedStrokes: 0, undos: 0, tools: [], untrusted: 0, strikes: 0, rulerLines: 0, pencilStrokes: 0 })
   const raf = useRef<number | null>(null)
 
-  useEffect(() => setPenOnly(penOnlyDefault()), [])
+  useEffect(() => {
+    setPenOnly(remembered('hw-pen-only', ['1', '0'], '0') === '1')
+    setInk(remembered('hw-pen-ink', ['black', 'blue'] as const, 'black'))
+    setTip(remembered('hw-pen-tip', ['5', '7'] as const, '5') === '7' ? 7 : 5)
+  }, [])
 
   // Size the pad to its container; the document keeps its own width.
   useEffect(() => {
@@ -88,6 +131,16 @@ export const InkPad = memo(function InkPad({ value, lines, onChange, disabled }:
   useEffect(() => {
     if (!doc && cssWidth > 0) setDoc(value ?? newDoc(cssWidth, lines))
   }, [cssWidth, doc, lines, value])
+
+  // Full screen: Escape leaves it, and the page behind does not scroll meanwhile.
+  useEffect(() => {
+    if (!full) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFull(false) }
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', onKey)
+    return () => { document.body.style.overflow = prev; window.removeEventListener('keydown', onKey) }
+  }, [full])
 
   const scale = doc && cssWidth ? cssWidth / doc.w : 1
 
@@ -117,8 +170,8 @@ export const InkPad = memo(function InkPad({ value, lines, onChange, disabled }:
     const l = live.current
     if (!l) return
     ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0)
-    ctx.fillStyle = isDark() ? '#e2e8f0' : '#111827'
-    const stroke = predicted.current.length ? { ...l.stroke, points: [...l.stroke.points, ...predicted.current] } : l.stroke
+    ctx.fillStyle = inkColour(l.stroke, isDark())
+    const stroke = predicted.current.length && !l.stroke.line ? { ...l.stroke, points: [...l.stroke.points, ...predicted.current] } : l.stroke
     ctx.fill(outlinePath(strokeOutline(stroke)))
   }, [doc, scale])
 
@@ -150,26 +203,40 @@ export const InkPad = memo(function InkPad({ value, lines, onChange, disabled }:
     ctx.fillStyle = dark ? '#0f172a' : '#ffffff'
     ctx.fillRect(0, 0, w, h)
     ctx.setTransform(dpr * scale, 0, 0, dpr * scale, 0, 0)
-    ctx.strokeStyle = dark ? 'rgba(148,163,184,0.25)' : 'rgba(59,130,246,0.22)'
+    // the ruled answer book: lines, a red margin, and a break after every PAGE_LINES lines
     ctx.lineWidth = 1 / scale
+    let n = 0
     for (let y = TOP_PAD + LINE_HEIGHT; y < doc.h; y += LINE_HEIGHT) {
+      n++
+      const pageEnd = n % PAGE_LINES === 0
+      ctx.strokeStyle = pageEnd ? (dark ? 'rgba(148,163,184,0.6)' : 'rgba(71,85,105,0.55)') : (dark ? 'rgba(148,163,184,0.25)' : 'rgba(59,130,246,0.22)')
+      ctx.setLineDash(pageEnd ? [6 / scale, 5 / scale] : [])
       ctx.beginPath()
       ctx.moveTo(0, y)
       ctx.lineTo(doc.w, y)
       ctx.stroke()
+      if (pageEnd) {
+        ctx.setLineDash([])
+        ctx.fillStyle = dark ? 'rgba(148,163,184,0.8)' : 'rgba(71,85,105,0.8)'
+        ctx.font = `${11}px system-ui, sans-serif`
+        ctx.textAlign = 'right'
+        ctx.fillText(t('ink.page', { n: n / PAGE_LINES + 1 }), doc.w - 8, y + 14)
+      }
     }
-    drawStrokes(ctx, doc.strokes, dark ? '#e2e8f0' : '#111827')
+    ctx.setLineDash([])
+    ctx.strokeStyle = dark ? 'rgba(248,113,113,0.45)' : 'rgba(239,68,68,0.55)'
+    ctx.beginPath()
+    ctx.moveTo(MARGIN_X, 0)
+    ctx.lineTo(MARGIN_X, doc.h)
+    ctx.stroke()
+    drawStrokes(ctx, doc.strokes, (s) => inkColour(s, dark))
     schedule() // the pen layer follows the page's size, and is cleared once a stroke is committed
-  }, [doc, scale, themeTick, schedule])
+  }, [doc, scale, themeTick, schedule, t])
 
-  const commit = useCallback((next: InkDocument, pushUndo = true) => {
-    if (pushUndo && doc) {
-      setUndo((u) => [...u.slice(-49), doc.strokes])
-      setRedo([])
-    }
+  const commit = useCallback((next: InkDocument) => {
     setDoc(next)
     onChange(next, { ...stats.current, tools: [...stats.current.tools] })
-  }, [doc, onChange])
+  }, [onChange])
 
   const toPad = (e: PointerEvent | React.PointerEvent): { x: number; y: number } => {
     const r = (penRef.current ?? canvasRef.current)!.getBoundingClientRect()
@@ -181,15 +248,17 @@ export const InkPad = memo(function InkPad({ value, lines, onChange, disabled }:
     if (!stats.current.tools.includes(tl)) stats.current.tools.push(tl)
     if (tl === 'pen' && !penOnly) {
       setPenOnly(true)
-      try { window.localStorage.setItem('hw-pen-only', '1') } catch { /* not remembered */ }
+      remember('hw-pen-only', '1')
     }
   }
 
+  // The eraser rubs out pencil only: a pen mistake is struck through, as in the exam hall.
   const eraseAt = (p: { x: number; y: number }) => {
     if (!doc) return
-    const keep = doc.strokes.filter((s) => !s.points.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < ERASE_RADIUS))
+    const keep = doc.strokes.filter((s) => s.ink !== 'pencil' || !s.points.some((q) => Math.hypot(q.x - p.x, q.y - p.y) < ERASE_RADIUS))
     if (keep.length !== doc.strokes.length) {
       stats.current.erasedStrokes += doc.strokes.length - keep.length
+      setRedo([])
       commit({ ...doc, strokes: keep })
     }
   }
@@ -208,10 +277,16 @@ export const InkPad = memo(function InkPad({ value, lines, onChange, disabled }:
     const p = toPad(e)
     if (tool === 'eraser') { eraseAt(p); return }
     const now = e.timeStamp
+    const first: InkPoint = { ...p, p: e.pressure || 0.5, t: 0 }
+    const line = tool === 'strike' ? 'strike' as const : ruler ? 'ruler' as const : undefined
     live.current = {
       id: e.pointerId,
       start: now,
-      stroke: { t0: Math.round(now - sessionStart.current), tool: (e.pointerType === 'pen' || e.pointerType === 'touch' ? e.pointerType : 'mouse') as InkTool, points: [{ ...p, p: e.pressure || 0.5, t: 0 }] },
+      first,
+      stroke: {
+        t0: Math.round(now - sessionStart.current), tool: (e.pointerType === 'pen' || e.pointerType === 'touch' ? e.pointerType : 'mouse') as InkTool, points: [first],
+        ink: tool === 'pencil' ? 'pencil' : ink, ...(tool === 'pencil' ? {} : { tip }), ...(line ? { line } : {}),
+      },
     }
     schedule()
   }
@@ -219,7 +294,10 @@ export const InkPad = memo(function InkPad({ value, lines, onChange, disabled }:
   const onPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (e.pointerType === 'touch' && touches.current.has(e.pointerId)) {
       const prev = touches.current.get(e.pointerId)!
-      if (touches.current.size >= 2) window.scrollBy(0, (prev.y - e.clientY) / touches.current.size)
+      if (touches.current.size >= 2) {
+        const dy = (prev.y - e.clientY) / touches.current.size
+        if (full) shellRef.current?.scrollBy(0, dy); else window.scrollBy(0, dy)
+      }
       touches.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
       if (touches.current.size >= 2 || penOnly) return
     }
@@ -227,6 +305,13 @@ export const InkPad = memo(function InkPad({ value, lines, onChange, disabled }:
     if (tool === 'eraser' && e.buttons) { eraseAt(toPad(e)); return }
     const l = live.current
     if (!l || l.id !== e.pointerId) return
+    if (l.stroke.line) {
+      // a ruler line or a strike-through: straight from where the pen went down to where it is now
+      l.stroke.points = straightPoints(l.first, { ...toPad(e), p: 0.5, t: Math.max(1, Math.round(e.timeStamp - l.start)) })
+      predicted.current = []
+      schedule()
+      return
+    }
     const events = typeof e.nativeEvent.getCoalescedEvents === 'function' ? e.nativeEvent.getCoalescedEvents() : [e.nativeEvent]
     for (const ev of events.length ? events : [e.nativeEvent]) {
       // Event timeStamp and performance.now() share a clock; coalesced events carry their own times.
@@ -247,60 +332,81 @@ export const InkPad = memo(function InkPad({ value, lines, onChange, disabled }:
     if (!l || l.id !== e.pointerId || !doc) return
     live.current = null
     predicted.current = []
+    if (l.stroke.line === 'strike') stats.current.strikes = (stats.current.strikes ?? 0) + 1
+    else if (l.stroke.line === 'ruler') stats.current.rulerLines = (stats.current.rulerLines ?? 0) + 1
+    if (l.stroke.ink === 'pencil') stats.current.pencilStrokes = (stats.current.pencilStrokes ?? 0) + 1
     // Grow the pad when the student writes near the bottom.
     const lowest = Math.max(...l.stroke.points.map((p) => p.y))
     const h = lowest > doc.h - LINE_HEIGHT * 1.5 ? doc.h + LINE_HEIGHT * 3 : doc.h
+    setRedo([])
     commit({ ...doc, h, strokes: [...doc.strokes, l.stroke] })
+    // the ink dries: re-check whether undo still applies once the window has passed
+    window.setTimeout(() => setTick((n) => n + 1), INK_DRY_MS + 50)
   }
 
+  const nowSession = () => performance.now() - sessionStart.current
+  const lastStroke = doc?.strokes[doc.strokes.length - 1]
+  const canUndo = Boolean(lastStroke && undoable(lastStroke, nowSession()))
   const doUndo = () => {
-    if (!doc || !undo.length) return
+    if (!doc || !lastStroke || !undoable(lastStroke, nowSession())) return
     stats.current.undos++
-    setRedo((r) => [...r, doc.strokes])
-    const prev = undo[undo.length - 1]
-    setUndo((u) => u.slice(0, -1))
-    commit({ ...doc, strokes: prev }, false)
+    setRedo((r) => [...r, lastStroke])
+    commit({ ...doc, strokes: doc.strokes.slice(0, -1) })
   }
   const doRedo = () => {
     if (!doc || !redo.length) return
-    setUndo((u) => [...u, doc.strokes])
     const next = redo[redo.length - 1]
     setRedo((r) => r.slice(0, -1))
-    commit({ ...doc, strokes: next }, false)
+    commit({ ...doc, strokes: [...doc.strokes, next] })
   }
-  const doClear = () => {
-    if (!doc || !doc.strokes.length) return
-    if (!window.confirm(t('ink.clearConfirm'))) return
-    stats.current.erasedStrokes += doc.strokes.length
-    commit({ ...doc, strokes: [] })
-  }
-  const moreLines = () => doc && commit({ ...doc, h: doc.h + LINE_HEIGHT * 4 }, false)
+  const moreLines = () => doc && commit({ ...doc, h: doc.h + LINE_HEIGHT * 4 })
+
+  const pickInk = (k: 'black' | 'blue') => { setInk(k); remember('hw-pen-ink', k); if (tool === 'pencil' || tool === 'eraser') setTool('pen') }
+  const pickTip = (v: InkTip) => { setTip(v); remember('hw-pen-tip', String(v)); if (tool === 'pencil' || tool === 'eraser') setTool('pen') }
+  const toolButton = (k: Tool, icon: React.ReactNode, label: string) => (
+    <Button size="sm" variant={tool === k ? 'default' : 'outline'} onClick={() => setTool(k)} disabled={disabled} aria-pressed={tool === k}>
+      {icon}{label}
+    </Button>
+  )
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-1.5" role="toolbar">
-        <Button size="sm" variant={tool === 'pen' ? 'default' : 'outline'} onClick={() => setTool('pen')} disabled={disabled}>
-          <PenLine className="mr-1 h-4 w-4" aria-hidden />{t('ink.pen')}
+    <div ref={shellRef} className={cn('space-y-2', full && 'fixed inset-0 z-50 overflow-auto bg-background p-3 sm:p-6')}>
+      <div className={cn('flex flex-wrap items-center gap-1.5', full && 'sticky top-0 z-10 -mx-1 bg-background/95 px-1 py-1 backdrop-blur')} role="toolbar" aria-label={t('ink.toolbar')}>
+        {toolButton('pen', <PenLine className="mr-1 h-4 w-4" aria-hidden />, t('ink.pen'))}
+        {toolButton('pencil', <Pencil className="mr-1 h-4 w-4" aria-hidden />, t('ink.pencil'))}
+        {toolButton('strike', <Strikethrough className="mr-1 h-4 w-4" aria-hidden />, t('ink.strike'))}
+        {toolButton('eraser', <Eraser className="mr-1 h-4 w-4" aria-hidden />, t('ink.eraserPencil'))}
+        <span className="mx-1 h-6 w-px bg-border" aria-hidden />
+        {(['black', 'blue'] as const).map((k) => (
+          <button
+            key={k} type="button" onClick={() => pickInk(k)} disabled={disabled} aria-pressed={ink === k && tool !== 'pencil'}
+            aria-label={t(k === 'black' ? 'ink.black' : 'ink.blue')} title={t(k === 'black' ? 'ink.black' : 'ink.blue')}
+            className={cn('h-7 w-7 rounded-full border-2 transition', ink === k && tool !== 'pencil' ? 'border-foreground ring-2 ring-offset-1 ring-foreground/30' : 'border-transparent')}
+            style={{ background: k === 'black' ? '#111827' : '#1d4ed8' }}
+          />
+        ))}
+        {([5, 7] as const).map((v) => (
+          <Button key={v} size="sm" variant={tip === v && tool !== 'pencil' ? 'default' : 'outline'} onClick={() => pickTip(v)} disabled={disabled} aria-pressed={tip === v} aria-label={t('ink.tip', { mm: v === 5 ? '0.5' : '0.7' })}>
+            {v === 5 ? '0.5' : '0.7'}
+          </Button>
+        ))}
+        <Button size="sm" variant={ruler ? 'default' : 'outline'} onClick={() => setRuler((r) => !r)} disabled={disabled} aria-pressed={ruler}>
+          <Ruler className="mr-1 h-4 w-4" aria-hidden />{t('ink.ruler')}
         </Button>
-        <Button size="sm" variant={tool === 'eraser' ? 'default' : 'outline'} onClick={() => setTool('eraser')} disabled={disabled}>
-          <Eraser className="mr-1 h-4 w-4" aria-hidden />{t('ink.eraser')}
-        </Button>
-        <Button size="sm" variant="outline" onClick={doUndo} disabled={disabled || !undo.length} aria-label={t('ink.undo')}><Undo2 className="h-4 w-4" /></Button>
+        <span className="mx-1 h-6 w-px bg-border" aria-hidden />
+        <Button size="sm" variant="outline" onClick={doUndo} disabled={disabled || !canUndo} aria-label={t('ink.undo')} title={t('ink.undoHint')}><Undo2 className="h-4 w-4" /></Button>
         <Button size="sm" variant="outline" onClick={doRedo} disabled={disabled || !redo.length} aria-label={t('ink.redo')}><Redo2 className="h-4 w-4" /></Button>
-        <Button size="sm" variant="outline" onClick={doClear} disabled={disabled || !doc?.strokes.length}>
-          <Trash2 className="mr-1 h-4 w-4" aria-hidden />{t('ink.clear')}
-        </Button>
         <Button size="sm" variant="outline" onClick={moreLines} disabled={disabled}>
           <Plus className="mr-1 h-4 w-4" aria-hidden />{t('ink.moreLines')}
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => setFull((f) => !f)} aria-pressed={full}>
+          {full ? <Minimize2 className="mr-1 h-4 w-4" aria-hidden /> : <Maximize2 className="mr-1 h-4 w-4" aria-hidden />}{t(full ? 'ink.exitFull' : 'ink.full')}
         </Button>
         <label className="ml-auto flex items-center gap-2 text-sm">
           <input
             type="checkbox"
             checked={penOnly}
-            onChange={(e) => {
-              setPenOnly(e.target.checked)
-              try { window.localStorage.setItem('hw-pen-only', e.target.checked ? '1' : '0') } catch { /* not remembered */ }
-            }}
+            onChange={(e) => { setPenOnly(e.target.checked); remember('hw-pen-only', e.target.checked ? '1' : '0') }}
           />
           {t('ink.penOnly')}
         </label>
@@ -311,7 +417,7 @@ export const InkPad = memo(function InkPad({ value, lines, onChange, disabled }:
         <canvas
           ref={penRef}
           // Stylus and mouse draw; the browser never pans or zooms the pad itself.
-          style={{ touchAction: 'none', display: 'block', position: 'absolute', left: 0, top: 0 }}
+          style={{ touchAction: 'none', display: 'block', position: 'absolute', left: 0, top: 0, cursor: tool === 'eraser' ? 'cell' : 'crosshair' }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={finish}

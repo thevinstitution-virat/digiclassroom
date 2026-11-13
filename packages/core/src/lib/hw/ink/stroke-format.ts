@@ -12,10 +12,23 @@
 //
 // Erased strokes are removed from the list, not stored as eraser strokes; how much was
 // erased is recorded in ink_stats instead.
+//
+// The exam-hall kit (13 Nov 2026; docs/hw-eval/inkbuddy-teacher-roadmap.md, Phase 3) adds three OPTIONAL fields per stroke, so every
+// answer written before still validates and reads the same: ink ('black', 'blue' or 'pencil'; absent = black), tip (5 or 7 = a 0.5 or
+// 0.7 mm pen; absent = 0.5) and line ('ruler' = drawn along the ruler, 'strike' = a line through a mistake; absent = freehand).
 
 export const STROKE_FORMAT_VERSION = 1;
 
 export type InkTool = 'pen' | 'touch' | 'mouse';
+/** What the stroke was written with: a blue or black ball pen, or a pencil (for diagrams). */
+export type InkKind = 'black' | 'blue' | 'pencil';
+/** Pen tip in tenths of a millimetre. */
+export type InkTip = 5 | 7;
+/** A straight stroke: along the ruler, or a line struck through a mistake. */
+export type InkLine = 'ruler' | 'strike';
+export const INK_KINDS: readonly InkKind[] = ['black', 'blue', 'pencil'];
+export const INK_TIPS: readonly InkTip[] = [5, 7];
+export const INK_LINES: readonly InkLine[] = ['ruler', 'strike'];
 
 /** A point as the pad records it: absolute position, pressure 0..1, time since stroke start. */
 export interface InkPoint {
@@ -29,6 +42,9 @@ export interface InkStroke {
   t0: number;
   tool: InkTool;
   points: InkPoint[];
+  ink?: InkKind;
+  tip?: InkTip;
+  line?: InkLine;
 }
 
 export interface InkDocument {
@@ -41,6 +57,9 @@ export interface EncodedStrokeV1 {
   t0: number;
   tool: InkTool;
   pts: [number, number, number, number][];
+  ink?: InkKind;
+  tip?: InkTip;
+  line?: InkLine;
 }
 
 export interface EncodedInkV1 {
@@ -79,9 +98,14 @@ export function encodeInk(doc: InkDocument): EncodedInkV1 {
         pt = t;
         return out;
       });
-      return { t0: Math.round(s.t0), tool: s.tool, pts };
+      return { t0: Math.round(s.t0), tool: s.tool, pts, ...kitOf(s) };
     }),
   };
+}
+
+/** The exam-hall kit fields of a stroke, only those set (an old stroke has none). */
+function kitOf(s: { ink?: InkKind; tip?: InkTip; line?: InkLine }): Pick<InkStroke, 'ink' | 'tip' | 'line'> {
+  return { ...(s.ink ? { ink: s.ink } : {}), ...(s.tip ? { tip: s.tip } : {}), ...(s.line ? { line: s.line } : {}) };
 }
 
 export function decodeInk(enc: EncodedInkV1): InkDocument {
@@ -104,7 +128,7 @@ export function decodeInk(enc: EncodedInkV1): InkDocument {
         }
         return { x, y, p: p / 1000, t };
       });
-      return { t0: s.t0, tool: s.tool, points };
+      return { t0: s.t0, tool: s.tool, points, ...kitOf(s) };
     }),
   };
 }
@@ -134,6 +158,9 @@ export function validateEncodedInk(input: unknown): { ok: true; ink: EncodedInkV
     if (typeof s !== 'object' || s === null) return fail(`stroke ${si} is not an object`);
     if (!isInt(s.t0) || s.t0 < 0) return fail(`stroke ${si} has a bad t0`);
     if (!TOOLS.includes(s.tool as InkTool)) return fail(`stroke ${si} has an unknown tool`);
+    if (s.ink !== undefined && !INK_KINDS.includes(s.ink as InkKind)) return fail(`stroke ${si} has an unknown ink`);
+    if (s.tip !== undefined && !INK_TIPS.includes(s.tip as InkTip)) return fail(`stroke ${si} has an unknown tip`);
+    if (s.line !== undefined && !INK_LINES.includes(s.line as InkLine)) return fail(`stroke ${si} has an unknown line`);
     if (!Array.isArray(s.pts) || s.pts.length === 0) return fail(`stroke ${si} has no points`);
     if (s.pts.length > INK_LIMITS.maxPointsPerStroke) return fail(`stroke ${si} has too many points`);
     total += s.pts.length;

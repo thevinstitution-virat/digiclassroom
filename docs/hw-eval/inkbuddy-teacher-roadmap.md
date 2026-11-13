@@ -126,6 +126,18 @@ How the remark is held to the brief:
 
 ## Phase 3: the exam-hall writing kit (two sessions)
 
+**Built 13 Nov 2026** (DigiClassroom and Study Buddy), on the one writing pad used by InkBuddy and school homework alike:
+- **Pens:** blue or black, 0.5 or 0.7 mm (remembered on the device); pressure from the stylus.
+- **Pencil:** grey, finer, for diagrams.
+- **Strike through:** a straight line in pen ink. The reader already ignores crossed-out text.
+- **Ruler:** makes pen or pencil strokes straight.
+- **Eraser:** rubs out pencil only (owner's decision).
+- **Clear:** gone.
+- **Undo:** takes back the last stroke only while the ink is wet (10 seconds) or when it is pencil. After that a pen mistake is struck through, as in the hall.
+- **Page:** a red margin and a dashed page break with "Page n" every 20 lines; a full-screen mode (Escape leaves it).
+- **Stroke format:** three optional fields (`ink`, `tip`, `line`), validated on upload. Every earlier answer still validates and reads the same, and the reader's image stays black on white.
+- **Tests:** `ink-exam-kit` (8). Walked through in a browser: pen, pencil, strike, ruler, the eraser leaving pen untouched, upload accepted, full screen.
+
 Only what a CBSE candidate may use in the hall:
 
 | Tool | Detail |
