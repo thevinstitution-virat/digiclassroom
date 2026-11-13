@@ -15,7 +15,7 @@ import type { HwOut } from '../types'
 import { wordsOf } from '../text-spans'
 import { clearDrafts, unqueueSubmit } from '../ink/local-store'
 import { RevisionNote } from '@/components/hw/Revision'
-import { AnswerToggle, AttemptsCard, BookAnswer, EvaluatedNote } from '../practice/ResultExtras'
+import { AnswerToggle, AttemptsCard, BookAnswer, EvaluatedNote, ReviseCard } from '../practice/ResultExtras'
 import { MarkedAnswer, TeacherRemark } from '../practice/TeacherPen'
 import { PaceCard } from '../practice/PaceCard'
 import { GradeCard } from '../practice/GradeCard'
@@ -155,6 +155,7 @@ function Result({ submissionId }: { submissionId: string }) {
               </ul>
             )}
             {'bookAnswer' in q && q.bookAnswer && <BookAnswer text={q.bookAnswer.text} source={q.bookAnswer.source} />}
+            {'revise' in q && q.revise && <ReviseCard revise={q.revise} sources={q.boardSources} />}
             {q.revision && <RevisionNote r={q.revision} />}
             {q.comment && (
               <div>

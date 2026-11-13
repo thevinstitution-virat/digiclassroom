@@ -17,13 +17,14 @@ import { percentileOf } from './pace';
 
 const both = (t: { en: string; hi: string }) => `${t.en} / ${t.hi}`;
 
-/** What identifies "the same question" across attempts: the book exercise (passage:index), or the board-paper row. */
+/** What identifies "the same question" across attempts: the book exercise (passage:index), the board-paper row, or the board-pool question (phase 3). */
 export function practiceRefOf(originRef: Record<string, string> | null | undefined): string | null {
   if (originRef?.exercise) return originRef.exercise;
   if (originRef?.bankRowId) return `bank:${originRef.bankRowId}`;
+  if (originRef?.poolItemId) return `pool:${originRef.poolItemId}`;
   return null;
 }
-const REF_SQL = sql`coalesce(q.origin_ref ->> 'exercise', 'bank:' || (q.origin_ref ->> 'bankRowId'))`;
+const REF_SQL = sql`coalesce(q.origin_ref ->> 'exercise', 'bank:' || (q.origin_ref ->> 'bankRowId'), 'pool:' || (q.origin_ref ->> 'poolItemId'))`;
 
 export const attemptsPerQuestion = (): number => getHwConfig().HW_SELF_PRACTICE_MAX_ATTEMPTS_PER_QUESTION;
 

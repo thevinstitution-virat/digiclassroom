@@ -125,6 +125,20 @@ export const NOTEBOOK_FONT = `
 `
 
 /** The book's answer on a ruled notebook page with a margin, in a handwriting-style font, and the pages it comes from. */
+/** A board question (phase 3): the NCERT section and printed pages to revise, a link to that page of the chapter, and the papers it was asked in. */
+export function ReviseCard({ revise, sources }: { revise: { section: string; title: string; pages: string; url: string | null }; sources?: string | null }) {
+  const { t } = useHwT()
+  const page = revise.pages.split('-')[0]
+  return (
+    <div className="space-y-1 rounded-md border border-sky-300 bg-sky-50 p-3 text-sm dark:border-sky-800 dark:bg-sky-950/40">
+      <p className="font-medium">{t('pr.revise.title')}</p>
+      <p>{t('pr.revise.body', { section: revise.section, title: revise.title, pages: revise.pages })}</p>
+      {revise.url && <a href={revise.url} target="_blank" rel="noopener noreferrer" className="text-primary underline-offset-2 hover:underline">{t('pr.revise.open', { page })}</a>}
+      {sources && <p className="text-xs text-muted-foreground">{t('pr.revise.printed', { sources })}</p>}
+    </div>
+  )
+}
+
 export function BookAnswer({ text, source }: { text: string; source: string }) {
   const { t } = useHwT()
   const line = 34

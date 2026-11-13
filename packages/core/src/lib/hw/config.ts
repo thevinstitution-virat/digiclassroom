@@ -237,6 +237,12 @@ const EnvSchema = z.object({
    */
   HW_EXAMS_AUTHORED_AI_ENABLED: bool(false),
   /**
+   * Decision D3 for InkBuddy board practice (docs/hw-eval/board-bank-roadmap.md, phase 3): WRITTEN answers to board questions from published pools
+   * (keys checked by a named teacher, or the board's own scheme) are AI-marked against those value points. Off = only multiple-choice and
+   * assertion-reason board questions are offered in InkBuddy (marked by code, an unclear answer by the model against the one right option).
+   */
+  HW_INKBUDDY_POOL_AI_ENABLED: bool(false),
+  /**
    * Monitoring and alerts (roadmap 5.4). Rates are over the last 7 Indian-time days, for one group, on the marking setup that was promoted.
    * A rate over its limit raises an alert only when the sample is at least HW_MONITOR_MIN_ANSWERS. Only the two marking-quality alerts
    * (override rate, large override rate) take a group out of 'eligible' automatically, and only while HW_MONITOR_AUTODEMOTE is on; the

@@ -19,7 +19,7 @@ import { requireSuperAdmin, type EvalActor } from '../eval-tools/access';
 import { markPromptVersion } from '../grader/mark-mode';
 import type { Exec } from '../db';
 import { enqueueGrade } from '../jobs/queue';
-import { checkKeyForMarking } from '../keys/product';
+import { checkKeyForMarking, boardPoolAiAllowed } from '../keys/product';
 import { AI_OFF_PREFIX, decide, type EligibilityDecision } from './decision';
 import { fingerprint, runningParts, type FingerprintParts } from './fingerprint';
 import { groupKey, parseGroupKey, type GroupParts } from './group';
@@ -63,6 +63,8 @@ export async function eligibilityOfQuestion(x: Exec, questionId: string, opts: {
   if (!key.ok) return { eligible: false, reason: key.reason };
   // decision D3 for exams only (HW_EXAMS_AUTHORED_AI_ENABLED): an exam question the super admin wrote is AI-marked without a promoted group
   if (q.organizationId === EXAM_ORG_ID && q.rubricMode === 'teacher' && getHwConfig().HW_EXAMS_AUTHORED_AI_ENABLED) return { eligible: true, reason: 'eligible', scheme: key.scheme };
+  // InkBuddy board practice (phase 3): a pool question's teacher-checked key, under its own switch (keys/product.ts boardPoolAiAllowed)
+  if (boardPoolAiAllowed(q)) return { eligible: true, reason: 'eligible', scheme: key.scheme };
   // InkBuddy (owner, 13 Nov 2026): with its gate off, a practice question with a ready key is AI-marked; the learner sees a practice estimate
   if (q.organizationId === PRACTICE_ORG_ID && !getHwConfig().HW_SELF_PRACTICE_REQUIRE_ELIGIBLE_GROUP) return { eligible: true, reason: 'eligible', scheme: key.scheme };
   const parts = await groupOfQuestion(x, questionId);

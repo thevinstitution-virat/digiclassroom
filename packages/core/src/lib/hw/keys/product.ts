@@ -16,6 +16,7 @@ import { hwAssignment, hwQuestion, hwRubricItem, type HwQuestionSchemeSource, ty
 import { db, monthKey, newId, num, type Exec } from '../db';
 import { getHwConfig } from '../config';
 import { EXAM_ORG_ID } from '../exams/space';
+import { PRACTICE_ORG_ID } from '../practice/rules';
 import { HwError, describeError } from '../errors';
 import { quotaAllows, quotaRefusal, quotaState } from '../cost/quota';
 import { costOf } from '../cost/usage';
@@ -313,6 +314,15 @@ export function keyViewOf(q: QuestionRow, k: KeyRowLite | undefined): KeyView {
 
 // ── The marking-time backstop ────────────────────────────────────────────────
 
+/**
+ * An InkBuddy board-pool question (practice/board.ts) may be AI-marked against its teacher-checked key: a multiple-choice one always (the key is one
+ * option; code marks the right and wrong ones, the model only an unclear answer), a written one only while HW_INKBUDDY_POOL_AI_ENABLED is on.
+ */
+export function boardPoolAiAllowed(q: { organizationId: string; originRef: Record<string, string> | null }): boolean {
+  if (q.organizationId !== PRACTICE_ORG_ID || !q.originRef?.poolItemId) return false;
+  return q.originRef.objective === '1' || getHwConfig().HW_INKBUDDY_POOL_AI_ENABLED;
+}
+
 export type KeyCheck = { ok: true; scheme: SchemeStamp } | { ok: false; reason: KeyOffReason };
 
 const TEACHER_STAMP: SchemeStamp = { source: 'teacher_rubric', keyId: null, keyServiceVersion: null, configHash: null };
@@ -325,7 +335,7 @@ const TEACHER_STAMP: SchemeStamp = { source: 'teacher_rubric', keyId: null, keyS
 export async function checkKeyForMarking(x: Exec, q: QuestionRow, opts: { rt?: KeyRuntime | null; enforceTeacherRubric?: boolean; /** false = look only, never queue a rebuild (previews and listings) */ rebuild?: boolean; /** tests: the library passage reader */ libraryPassages?: typeof passageTexts } = {}): Promise<KeyCheck> {
   if (q.rubricMode === 'teacher') {
     const examOverride = q.organizationId === EXAM_ORG_ID && getHwConfig().HW_EXAMS_AUTHORED_AI_ENABLED; // D3 for exams only
-    return opts.enforceTeacherRubric === false || getHwConfig().HW_TEACHER_RUBRIC_AI_ENABLED || examOverride ? { ok: true, scheme: TEACHER_STAMP } : { ok: false, reason: 'teacher_rubric' };
+    return opts.enforceTeacherRubric === false || getHwConfig().HW_TEACHER_RUBRIC_AI_ENABLED || examOverride || boardPoolAiAllowed(q) ? { ok: true, scheme: TEACHER_STAMP } : { ok: false, reason: 'teacher_rubric' };
   }
   const cur = (await currentKeys(x, [q.id])).get(q.id);
   if (!q.activeKeyId) {

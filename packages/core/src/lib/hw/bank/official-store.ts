@@ -88,6 +88,8 @@ export async function officialSourceValid(d: Reader, rowId: string, contentHash:
  * options. null for every other question, and for a row that is no longer checked (then the question goes on as any other).
  */
 export async function choiceRuleOf(d: Reader, q: { origin: string; originRef: Record<string, string> | null }): Promise<{ acceptedAnswers: string[]; wrongAnswers: string[] } | null> {
+  // an InkBuddy board-pool question (practice/board.ts): its pool item says the right option
+  if (q.origin === 'custom' && q.originRef?.poolItemId && q.originRef.objective === '1') return (await import('../practice/board')).boardChoiceRule(d as never, q.originRef.poolItemId);
   const id = q.origin === 'board_paper' ? q.originRef?.bankRowId : undefined;
   if (!id) return null;
   const row = (await d.select().from(hwBankQuestion).where(eq(hwBankQuestion.id, id)).limit(1))[0];

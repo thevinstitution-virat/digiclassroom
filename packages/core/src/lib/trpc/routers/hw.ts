@@ -28,6 +28,8 @@ import { db as hwDb } from '@/lib/hw/db';
 import { retryAttempt, startAttempt } from '@/lib/hw/practice/attempt';
 import { attemptCounts, practiceProgress, writeAgain } from '@/lib/hw/practice/attempts';
 import { offeredPapers, paperQuestions, startPaperAttempt } from '@/lib/hw/practice/paper';
+import { boardCatalogue, boardQuestions, startBoardAttempt } from '@/lib/hw/practice/board';
+import { examPageStore } from '@/lib/hw/storage/exam-pages';
 import { practiceEnabled } from '@/lib/hw/practice/trial';
 import { addBankQuestion } from '@/lib/hw/bank/teacher';
 import { requireRole } from '@/lib/hw/access/guards';
@@ -187,6 +189,17 @@ export const hwRouter = createTRPCRouter({
     startPaperQuestion: protectedProcedure.use(rateLimit(20, 60_000))
       .input(z.object({ rowId: id }))
       .mutation(({ ctx, input }) => runUser(ctx, (u) => startPaperAttempt(u, input.rowId))),
+    /** Board practice (phase 3): chapters and their NCERT topics with how many board questions are on offer and the learner's marks. */
+    boardChapters: protectedProcedure.use(rateLimit(30, 60_000))
+      .query(({ ctx }) => runUser(ctx, (u) => boardCatalogue(hwDb, u))),
+    /** The board questions of one NCERT topic (e.g. "5.2.1"), with their pictures. Never the right option, the key or the scheme. */
+    boardQuestions: protectedProcedure.use(rateLimit(30, 60_000))
+      .input(z.object({ section: z.string().trim().regex(/^\d{1,2}(\.\d{1,2}){1,3}$/) }))
+      .query(({ ctx, input }) => runUser(ctx, (u) => boardQuestions(hwDb, u, input.section, (k) => examPageStore().readUrl(k)))),
+    /** Start a board question (or open the latest attempt at it); the server re-checks that it is on offer. */
+    startBoardQuestion: protectedProcedure.use(rateLimit(20, 60_000))
+      .input(z.object({ itemId: id }))
+      .mutation(({ ctx, input }) => runUser(ctx, (u) => startBoardAttempt(u, input.itemId))),
     /** Start one picked question; returns the assignment to open (the ordinary student answer screen). */
     startQuestion: protectedProcedure.use(rateLimit(20, 60_000))
       .input(practiceScope.extend({ passageId: z.string().min(1).max(200), index: z.number().int().min(0).max(99), text: z.string().trim().min(8).max(2000) }))

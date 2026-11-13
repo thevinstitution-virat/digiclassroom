@@ -19,6 +19,8 @@ import { attemptStatus, marksStanding, practiceRefOf } from '../practice/attempt
 import { activeWritingMs, countWords, handwritingFacts, handwritingNote, pacingGuide, percentileOf, unclearCount, writingSpeed, type HandFacts } from '../practice/pace';
 import { putHwObject, signedReadUrl } from '../storage/r2';
 import { learnerFigures, type LearnerFigure } from '../bank/figures';
+import { boardFiguresOf, reviseOf } from '../practice/board';
+import { examPageStore } from '../storage/exam-pages';
 import { PRACTICE_ORG_ID, PRACTICE_TEXT, answerModesOf } from '../practice/rules';
 import { requireUsableTrial } from '../practice/trial';
 import { latestRevisionsFor } from '../revisions';
@@ -47,8 +49,11 @@ function studentQuestion(q: typeof hwQuestion.$inferSelect) {
 async function withFigures(questions: (typeof hwQuestion.$inferSelect)[]) {
   const ids = [...new Set(questions.filter((q) => q.origin === 'board_paper' && q.originRef?.bankRowId).map((q) => q.originRef.bankRowId))];
   const figs = await learnerFigures(db, ids, signedReadUrl);
+  // an InkBuddy board-pool question (practice/board.ts) shows its pool item's pictures
+  const poolIds = [...new Set(questions.filter((q) => q.originRef?.poolItemId).map((q) => q.originRef.poolItemId))];
+  const poolFigs = poolIds.length ? await boardFiguresOf(db, poolIds, (k) => examPageStore().readUrl(k)) : new Map<string, LearnerFigure[]>();
   return questions.map((q): ReturnType<typeof studentQuestion> & { figures?: LearnerFigure[] } => {
-    const f = q.origin === 'board_paper' && q.originRef?.bankRowId ? figs.get(q.originRef.bankRowId) : undefined;
+    const f = q.origin === 'board_paper' && q.originRef?.bankRowId ? figs.get(q.originRef.bankRowId) : q.originRef?.poolItemId ? poolFigs.get(q.originRef.poolItemId) : undefined;
     return f?.length ? { ...studentQuestion(q), figures: f } : studentQuestion(q);
   });
 }
@@ -443,6 +448,8 @@ export async function myResult(actor: HwActor, submissionId: string) {
         transcript: row?.a.transcript ?? '',
         ...(practice ? {
           yours: yours.get(q.id) ?? null, bookAnswer: book.get(q.id) ?? null,
+          // a board question (phase 3): the NCERT section and pages to revise, with a link to that page of the chapter
+          revise: reviseOf(q.originRef), boardSources: q.originRef?.sources ?? null,
           pen: penOf(row?.a.inkStats), points: green.get(q.id) ?? [], pace: pace.get(q.id) ?? null,
         } : {}),
         awarded: g ? num(g.marks) : null,
