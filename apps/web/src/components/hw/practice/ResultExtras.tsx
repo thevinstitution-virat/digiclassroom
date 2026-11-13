@@ -124,7 +124,6 @@ export const NOTEBOOK_FONT = `
   unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
 `
 
-/** The book's answer on a ruled notebook page with a margin, in a handwriting-style font, and the pages it comes from. */
 /** A board question (phase 3): the NCERT section and printed pages to revise, a link to that page of the chapter, and the papers it was asked in. */
 export function ReviseCard({ revise, sources }: { revise: { section: string; title: string; pages: string; url: string | null }; sources?: string | null }) {
   const { t } = useHwT()
@@ -139,6 +138,46 @@ export function ReviseCard({ revise, sources }: { revise: { section: string; tit
   )
 }
 
+type ReviseRef = { section: string; title: string; pages: string; url: string | null }
+
+/**
+ * A quick test's result (phase 4): the textbook sections behind the questions that lost marks, the most marks lost first, each with its pages and
+ * link; or a word of praise when nothing was lost. Built from the questions already on the page.
+ */
+export function QuickTestRevise({ questions }: { questions: { marks: number; awarded: number | null; revise?: ReviseRef | null }[] }) {
+  const { t } = useHwT()
+  const bySection = new Map<string, { revise: ReviseRef; got: number; of: number }>()
+  for (const q of questions) {
+    if (!q.revise) continue
+    const e = bySection.get(q.revise.section) ?? { revise: q.revise, got: 0, of: 0 }
+    e.got += q.awarded ?? 0; e.of += q.marks
+    bySection.set(q.revise.section, e)
+  }
+  const lost = [...bySection.values()].filter((e) => e.got < e.of).sort((a, b) => (b.of - b.got) - (a.of - a.got) || a.got / a.of - b.got / b.of)
+  return (
+    <Card>
+      <CardHeader><CardTitle className="text-lg">{t('pr.quick.revise')}</CardTitle></CardHeader>
+      <CardContent className="text-sm">
+        {lost.length === 0 ? <p>{t('pr.quick.allFull')}</p> : (
+          <ul className="space-y-2">
+            {lost.map(({ revise, got, of }) => (
+              <li key={revise.section} className="flex flex-wrap items-center justify-between gap-2">
+                <span className="min-w-0 flex-1">
+                  {revise.url
+                    ? <a href={revise.url} target="_blank" rel="noopener noreferrer" className="text-primary underline-offset-2 hover:underline">{t('pr.quick.reviseRow', { section: revise.section, title: revise.title, pages: revise.pages })}</a>
+                    : t('pr.quick.reviseRow', { section: revise.section, title: revise.title, pages: revise.pages })}
+                </span>
+                <Badge variant="secondary">{got} / {of}</Badge>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+/** The book's answer on a ruled notebook page with a margin, in a handwriting-style font, and the pages it comes from. */
 export function BookAnswer({ text, source }: { text: string; source: string }) {
   const { t } = useHwT()
   const line = 34

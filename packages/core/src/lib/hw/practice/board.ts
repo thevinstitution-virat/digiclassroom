@@ -7,7 +7,12 @@
 //   - multiple choice and assertion-reason: the right option and the wrong ones by code (official-store.ts choiceRuleOf); anything unclear, by the model;
 //   - written answers: by the model against the checked value points, ONLY while the owner's switch HW_INKBUDDY_POOL_AI_ENABLED is on (decision D3
 //     for InkBuddy); while it is off, written board questions are simply not offered. A drawing part is never marked (it is left out of the marks).
+//
+// Phase 4: the learner's weak topics (never tried, or under 60% on the first try; weakTopicsOf) and the quick test (startQuickTest: 5 or 10 of
+// these questions in one assignment, one sitting at the board's pace, one grade card). A quick test's questions carry origin_ref.quickTest, so
+// they are never a question's own attempt (attempts.ts practiceRefOf), but their marks do count as the learner's first try at the topic.
 
+import { randomInt } from 'node:crypto';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { hwAssignment, hwQuestion, hwRubricItem } from '@/db/hw-schema';
 import { hwExamPackage, hwExamSet, hwExamSetItem, type ItemFigure } from '@/db/hw-exams-schema';
@@ -16,7 +21,8 @@ import { HwError } from '../errors';
 import { db, newId, num, type Exec } from '../db';
 import { acceptedAnswersFor } from '../bank/expand';
 import { ensureLearnerSpace } from './attempt';
-import { attemptHistory } from './attempts';
+import { drawPractice, practiceMinutes } from '../exams/practice';
+import { attemptHistory, questionsStarted } from './attempts';
 import { answerLinesOf, hwTypeOf } from './paper-rules';
 import { PRACTICE_ORG_ID, PRACTICE_TEXT } from './rules';
 import { ensurePracticeSpace, isPracticeLearner, practiceEnabled, requireUsableTrial } from './trial';
@@ -102,32 +108,85 @@ async function poolItems(x: Exec, classLevels: number[], where?: ReturnType<type
     .orderBy(asc(hwExamSet.position), asc(hwExamSetItem.position));
 }
 
-/** The learner's marks on every board question they tried: best and latest, by pool item. */
-async function triedOf(x: Exec, userId: string): Promise<Map<string, { best: number | null; outOf: number; attempts: number }>> {
-  const r = await x.execute<{ item: string; best: string | null; out_of: string; n: number }>(sql`
-    SELECT q.origin_ref ->> 'poolItemId' AS item, max(g.got) AS best, max(q.marks) AS out_of, count(DISTINCT a.id)::int AS n
+export interface Tried {
+  /** Best marks over the marked attempts, null while none is marked. */
+  best: number | null;
+  /** Marks on the FIRST marked attempt (weak topics, phase 4), null while none is marked. */
+  first: number | null;
+  outOf: number;
+  /** Attempts started, a quick test's question included. */
+  attempts: number;
+}
+
+/**
+ * The learner's marks on every board question they tried, by pool item: on its own (phase 3) or inside a quick test (phase 4). Marks are the
+ * question's own (a quick test has many questions in one submission); a returned question left unanswered counts 0.
+ */
+export async function triedOf(x: Exec, userId: string): Promise<Map<string, Tried>> {
+  const r = await x.execute<{ item: string; assignment_id: string; status: string | null; out_of: string; got: string | null }>(sql`
+    SELECT q.origin_ref ->> 'poolItemId' AS item, a.id AS assignment_id, s.status, q.marks AS out_of,
+           (SELECT sum(gr.marks) FROM hw_answer an JOIN hw_grade gr ON gr.answer_id = an.id WHERE an.submission_id = s.id AND an.question_id = q.id) AS got
       FROM hw_assignment a
       JOIN hw_question q ON q.assignment_id = a.id
       LEFT JOIN hw_submission s ON s.assignment_id = a.id AND s.student_id = ${userId}
-      LEFT JOIN LATERAL (SELECT sum(gr.marks) AS got FROM hw_answer an JOIN hw_grade gr ON gr.answer_id = an.id WHERE an.submission_id = s.id AND s.status = 'returned') g ON true
      WHERE a.organization_id = ${PRACTICE_ORG_ID} AND a.created_by = ${userId} AND q.origin_ref ? 'poolItemId'
-     GROUP BY 1`);
-  return new Map(r.rows.map((row) => [row.item, { best: row.best === null ? null : num(row.best), outOf: num(row.out_of), attempts: row.n }]));
+     ORDER BY a.created_at, a.id`);
+  const out = new Map<string, Tried>();
+  for (const row of r.rows) {
+    const t = out.get(row.item) ?? { best: null, first: null, outOf: num(row.out_of), attempts: 0 };
+    t.attempts++;
+    if (row.status === 'returned') {
+      const got = row.got === null ? 0 : num(row.got);
+      if (t.first === null) t.first = got;
+      t.best = Math.max(t.best ?? 0, got);
+    }
+    out.set(row.item, t);
+  }
+  return out;
 }
 
 const ncertOf = (it: ItemRow) => it.ncert as { book?: string; chapterNo?: number; section?: string; title?: string; pages?: string };
 const sectionKey = (s: string) => s.split('.').map((n) => n.padStart(3, '0')).join('.');
 
-export interface BoardTopic { section: string; title: string; pages: string; questions: number; objective: number; written: number; asked: number; tried: number; best: { got: number; of: number } | null }
+export interface BoardTopic {
+  section: string; title: string; pages: string; questions: number; objective: number; written: number; asked: number; tried: number;
+  /** Marks so far: the best attempt at each question tried. */
+  best: { got: number; of: number } | null;
+  /** Marks on the first attempt at each question tried (weak topics). */
+  first: { got: number; of: number } | null;
+}
 export interface BoardChapter { chapterNo: number | null; chapter: string; questions: number; asked: number; topics: BoardTopic[] }
+export interface WeakTopic extends BoardTopic { chapter: string; chapterNo: number | null; why: 'never_tried' | 'low_marks' }
 
-/** InkBuddy's board practice home: chapters, and within each its NCERT topics, with how many questions are on offer, how often the boards asked them, and the learner's marks. */
-export async function boardCatalogue(x: Exec, userId: string): Promise<{ available: boolean; writtenOn: boolean; chapters: BoardChapter[] }> {
-  if (!practiceEnabled()) return { available: false, writtenOn: false, chapters: [] };
+/** Below this share of the marks on first attempts, a topic is weak (roadmap phase 4). */
+export const WEAK_BELOW = 0.6;
+/** How many weak topics the home shows. */
+export const WEAK_SHOWN = 6;
+
+/**
+ * The learner's weak topics (phase 4): those never tried, and those whose first attempts scored under 60%. The boards' favourites first (how many
+ * times the topic's questions were asked), then the lowest marks; a topic never tried counts as no marks. Pure.
+ */
+export function weakTopicsOf(chapters: BoardChapter[], shown = WEAK_SHOWN): WeakTopic[] {
+  const share = (t: BoardTopic) => (t.first && t.first.of > 0 ? t.first.got / t.first.of : 0);
+  return chapters.flatMap((c) => c.topics.flatMap((t): WeakTopic[] => {
+    if (!t.first) return t.tried ? [] : [{ ...t, chapter: c.chapter, chapterNo: c.chapterNo, why: 'never_tried' }]; // tried, marks not back yet: not weak
+    return share(t) < WEAK_BELOW ? [{ ...t, chapter: c.chapter, chapterNo: c.chapterNo, why: 'low_marks' }] : [];
+  })).sort((a, b) => b.asked - a.asked || share(a) - share(b) || (a.chapterNo ?? 99) - (b.chapterNo ?? 99) || sectionKey(a.section).localeCompare(sectionKey(b.section)))
+    .slice(0, shown);
+}
+
+/**
+ * InkBuddy's board practice home: chapters, and within each its NCERT topics, with how many questions are on offer, how often the boards asked
+ * them and the learner's marks; and the learner's weak topics (phase 4).
+ */
+export async function boardCatalogue(x: Exec, userId: string): Promise<{ available: boolean; writtenOn: boolean; chapters: BoardChapter[]; weak: WeakTopic[]; tests: QuickTestRow[] }> {
+  if (!practiceEnabled()) return { available: false, writtenOn: false, chapters: [], weak: [], tests: [] };
   const rows = await poolItems(x, (await learnerClass(userId)).classLevels);
   const tried = await triedOf(x, userId);
   const on = writtenOn();
   const chapters = new Map<string, BoardChapter>();
+  const add = (acc: { got: number; of: number } | null, got: number, of: number) => ({ got: (acc?.got ?? 0) + got, of: (acc?.of ?? 0) + of });
   for (const { it } of rows) {
     const plan = boardPlanOf(it, on);
     const n = ncertOf(it);
@@ -135,25 +194,26 @@ export async function boardCatalogue(x: Exec, userId: string): Promise<{ availab
     const ch = chapters.get(it.chapter) ?? { chapterNo: n.chapterNo ?? null, chapter: it.chapter, questions: 0, asked: 0, topics: [] };
     chapters.set(it.chapter, ch);
     let t = ch.topics.find((x) => x.section === n.section);
-    if (!t) { t = { section: n.section, title: n.title ?? '', pages: n.pages ?? '', questions: 0, objective: 0, written: 0, asked: 0, tried: 0, best: null }; ch.topics.push(t); }
+    if (!t) { t = { section: n.section, title: n.title ?? '', pages: n.pages ?? '', questions: 0, objective: 0, written: 0, asked: 0, tried: 0, best: null, first: null }; ch.topics.push(t); }
     const asked = Math.max(1, it.sources.length);
     t.questions++; t.asked += asked; ch.questions++; ch.asked += asked;
     if (plan.mode === 'choice') t.objective++; else t.written++;
     const mine = tried.get(it.id);
     if (mine) {
       t.tried++;
-      if (mine.best !== null) t.best = { got: (t.best?.got ?? 0) + mine.best, of: (t.best?.of ?? 0) + plan.marks };
+      if (mine.best !== null) t.best = add(t.best, mine.best, plan.marks);
+      if (mine.first !== null) t.first = add(t.first, mine.first, plan.marks);
     }
   }
   const list = [...chapters.values()].sort((a, b) => (a.chapterNo ?? 99) - (b.chapterNo ?? 99) || a.chapter.localeCompare(b.chapter));
   for (const c of list) c.topics.sort((a, b) => sectionKey(a.section).localeCompare(sectionKey(b.section)));
-  return { available: true, writtenOn: on, chapters: list };
+  return { available: true, writtenOn: on, chapters: list, weak: weakTopicsOf(list), tests: await quickTestsOf(x, userId) };
 }
 
 export interface BoardQuestion {
   itemId: string; qtype: string; marks: number; stem: string; options: { letter: string; text: string }[];
   asked: number; sources: string[]; figures: { description: string; url: string | null }[]; hasDrawing: boolean;
-  tried: { best: number | null; outOf: number; attempts: number } | null;
+  tried: Tried | null;
 }
 
 /** The questions of one NCERT topic (section) on offer to the learner, most-asked first. Never the right option, the key or the scheme. */
@@ -207,11 +267,10 @@ export async function startBoardAttempt(userId: string, itemId: string): Promise
 
   const history = await attemptHistory(db, userId, `pool:${it.id}`);
   if (history.length) return { assignmentId: history[history.length - 1]!.assignmentId, reused: true };
-  const limit = getHwConfig().HW_SELF_PRACTICE_MAX_ATTEMPTS;
-  const [{ n }] = (await db.execute<{ n: number }>(sql`SELECT count(*)::int AS n FROM hw_assignment WHERE organization_id = ${PRACTICE_ORG_ID} AND created_by = ${userId}`)).rows;
-  if (n >= limit) throw new HwError('QUOTA_EXCEEDED', both(PRACTICE_TEXT.attemptLimit));
+  // the trial's limit is on different questions, as for textbook questions (practice/attempt.ts); a question met in a quick test is not new
+  const tried = await triedOf(db, userId);
+  if (!tried.has(it.id) && (await questionsStarted(db, userId)) >= getHwConfig().HW_SELF_PRACTICE_MAX_ATTEMPTS) throw new HwError('QUOTA_EXCEEDED', both(PRACTICE_TEXT.attemptLimit));
 
-  const type = hwTypeOf(it.qtype);
   const assignmentId = newId();
   await db.transaction(async (tx) => {
     await ensurePracticeSpace(tx);
@@ -222,20 +281,117 @@ export async function startBoardAttempt(userId: string, itemId: string): Promise
       title: `${pkg.board} board question · ${ncert.section ? `NCERT ${ncert.section} ${ncert.title}` : it.chapter} · ${it.sources[0] ?? ''}`.slice(0, 300),
       instructions: null, dueAt: null, allowedModes: ['ink', 'typed'], createdBy: userId,
     });
-    const questionId = newId();
-    await tx.insert(hwQuestion).values({
-      id: questionId, organizationId: PRACTICE_ORG_ID, assignmentId, position: 0, type, prompt: plan.prompt, marks: String(plan.marks),
-      languageHint: 'en', answerLines: answerLinesOf(type), acceptedAnswers: plan.acceptedAnswers,
-      modelAnswer: plan.mode === 'choice' ? (it.correctOption ?? null) : plan.rubric.map((r) => r.text).join('; '),
-      // the pool's own key, checked by a teacher (or the board's scheme): the question's rubric, never written by a model here
-      origin: 'custom', originRef: boardOriginRef(it, pkg.classLevel, set.subject, plan.mode === 'choice'), rubricMode: 'teacher',
-    });
-    await tx.insert(hwRubricItem).values(plan.rubric.map((r, i) => ({
-      id: newId(), organizationId: PRACTICE_ORG_ID, questionId, position: i, kind: 'key_point' as const, description: r.text, marks: String(r.marks), source: 'teacher' as const,
-    })));
+    await insertBoardQuestion(tx, assignmentId, 0, row, plan);
     await tx.update(hwAssignment).set({ status: 'published', totalMarks: String(plan.marks), publishedAt: new Date() }).where(eq(hwAssignment.id, assignmentId));
   });
   return { assignmentId, reused: false };
+}
+
+type PoolRow = Awaited<ReturnType<typeof poolItems>>[number];
+type OkPlan = Extract<BoardPlan, { ok: true }>;
+
+/** One pool question as a question of an InkBuddy assignment, with the pool's own key as its rubric. */
+async function insertBoardQuestion(tx: Exec, assignmentId: string, position: number, { it, pkg, set }: PoolRow, plan: OkPlan, extraRef: Record<string, string> = {}) {
+  const type = hwTypeOf(it.qtype);
+  const questionId = newId();
+  await tx.insert(hwQuestion).values({
+    id: questionId, organizationId: PRACTICE_ORG_ID, assignmentId, position, type, prompt: plan.prompt, marks: String(plan.marks),
+    languageHint: 'en', answerLines: answerLinesOf(type), acceptedAnswers: plan.acceptedAnswers,
+    modelAnswer: plan.mode === 'choice' ? (it.correctOption ?? null) : plan.rubric.map((r) => r.text).join('; '),
+    // the pool's own key, checked by a teacher (or the board's scheme): the question's rubric, never written by a model here
+    origin: 'custom', originRef: { ...boardOriginRef(it, pkg.classLevel, set.subject, plan.mode === 'choice'), ...extraRef }, rubricMode: 'teacher',
+  });
+  await tx.insert(hwRubricItem).values(plan.rubric.map((r, i) => ({
+    id: newId(), organizationId: PRACTICE_ORG_ID, questionId, position: i, kind: 'key_point' as const, description: r.text, marks: String(r.marks), source: 'teacher' as const,
+  })));
+}
+
+// ── the quick test (phase 4) ─────────────────────────────────────────────────
+
+export const QUICK_TEST_SIZES = [5, 10] as const;
+export type QuickTestSize = (typeof QUICK_TEST_SIZES)[number];
+
+export const QUICK_TEXT = {
+  none: { en: 'No board questions are on offer for these chapters yet.', hi: 'इन अध्यायों के लिए अभी कोई बोर्ड प्रश्न उपलब्ध नहीं है।' },
+} as const;
+
+/** The writing time of a quick test at the board's pace (exams/practice.ts: 2¼ minutes a mark, at least ten), when these are a quick test's questions. Pure. */
+export function quickTestPace(questions: { marks: string | number; originRef: Record<string, string> | null }[]): { minutes: number; marks: number } | null {
+  if (!questions.length || !questions.every((q) => q.originRef?.quickTest)) return null;
+  const marks = questions.reduce((s, q) => s + num(q.marks), 0);
+  return { minutes: practiceMinutes(marks), marks };
+}
+
+/**
+ * A quick test (phase 4): 5 or 10 board questions from the chosen chapters (all of them when none is chosen), drawn as pool practice tests are
+ * (exams/practice.ts drawPractice: spread over the topics, never both alternatives of one internal choice, in the board's order), written in one
+ * sitting at the board's pace. One InkBuddy assignment with one grade card; each question is marked as in phase 3. Each new question counts
+ * against the trial's limit on questions. While an earlier quick test is not handed in yet, that one is opened instead.
+ */
+export async function startQuickTest(userId: string, input: { chapters: string[]; count: QuickTestSize }, rand: (n: number) => number = (n) => randomInt(n)): Promise<{ assignmentId: string; reused: boolean; questions: number }> {
+  if (!practiceEnabled()) throw new HwError('FEATURE_DISABLED', both(PRACTICE_TEXT.off));
+  if (!(await isPracticeLearner(db, userId))) throw new HwError('FORBIDDEN', both(PRACTICE_TEXT.notStarted));
+  await requireUsableTrial(db, userId);
+  const on = writtenOn();
+  const offered = (await poolItems(db, (await learnerClass(userId)).classLevels)).flatMap((row) => {
+    const plan = boardPlanOf(row.it, on);
+    const n = ncertOf(row.it);
+    if (!plan.ok || !n.section || (input.chapters.length && !input.chapters.includes(row.it.chapter))) return [];
+    return [{ row, plan, id: row.it.id, position: row.it.position, qtype: row.it.qtype, marks: plan.marks, topic: n.section, chapter: row.it.chapter, choiceGroup: row.it.choiceGroup, chapterNo: n.chapterNo ?? null }];
+  });
+  if (!offered.length) throw new HwError('NOT_FOUND', both(QUICK_TEXT.none));
+
+  return db.transaction(async (tx) => {
+    // one quick test at a time for this learner, however fast the button is pressed
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`hw-quick-test:${userId}`}))`);
+    const open = await tx.execute<{ id: string; n: number }>(sql`
+      SELECT a.id, count(q.id)::int AS n FROM hw_assignment a JOIN hw_question q ON q.assignment_id = a.id
+        LEFT JOIN hw_submission s ON s.assignment_id = a.id AND s.student_id = ${userId}
+       WHERE a.organization_id = ${PRACTICE_ORG_ID} AND a.created_by = ${userId} AND q.origin_ref ? 'quickTest' AND (s.id IS NULL OR s.status = 'draft')
+       GROUP BY a.id, a.created_at ORDER BY a.created_at DESC LIMIT 1`);
+    if (open.rows[0]) return { assignmentId: open.rows[0].id, reused: true, questions: open.rows[0].n };
+
+    const chosen = drawPractice(offered, { topics: [], types: [], count: input.count }, rand);
+    const tried = await triedOf(tx, userId);
+    const fresh = chosen.filter((c) => !tried.has(c.id)).length;
+    if ((await questionsStarted(tx, userId)) + fresh > getHwConfig().HW_SELF_PRACTICE_MAX_ATTEMPTS) throw new HwError('QUOTA_EXCEEDED', both(PRACTICE_TEXT.attemptLimit));
+
+    const { pkg, set } = chosen[0]!.row;
+    const marks = chosen.reduce((s, c) => s + c.marks, 0);
+    const minutes = practiceMinutes(marks);
+    const chapterNos = [...new Set(chosen.map((c) => c.chapterNo).filter((n): n is number => n !== null))].sort((a, b) => a - b);
+    const assignmentId = newId();
+    await ensurePracticeSpace(tx);
+    const { classId, sectionId } = await ensureLearnerSpace(tx, userId, pkg.classLevel);
+    await tx.insert(hwAssignment).values({
+      id: assignmentId, organizationId: PRACTICE_ORG_ID, classId, sectionId, subject: set.subject,
+      title: `${pkg.board} quick test · ${chosen.length} board questions${chapterNos.length ? ` · ${chapterNos.length > 1 ? 'chapters' : 'chapter'} ${chapterNos.join(', ')}` : ''}`.slice(0, 300),
+      instructions: `${minutes} minutes for ${marks} marks, the board's pace. Write every answer in one sitting, then hand in.`,
+      dueAt: null, allowedModes: ['ink', 'typed'], createdBy: userId,
+    });
+    for (const [i, c] of chosen.entries()) await insertBoardQuestion(tx, assignmentId, i, c.row, c.plan, { quickTest: '1' });
+    await tx.update(hwAssignment).set({ status: 'published', totalMarks: String(marks), publishedAt: new Date() }).where(eq(hwAssignment.id, assignmentId));
+    return { assignmentId, reused: false, questions: chosen.length };
+  });
+}
+
+export interface QuickTestRow { assignmentId: string; title: string; at: string; questions: number; outOf: number; status: string | null; got: number | null }
+
+/** The learner's quick tests, newest first, with their marks once returned. */
+export async function quickTestsOf(x: Exec, userId: string, limit = 10): Promise<QuickTestRow[]> {
+  const r = await x.execute<{ id: string; title: string; created_at: Date | string; n: number; total_marks: string | null; status: string | null; got: string | null }>(sql`
+    SELECT a.id, a.title, a.created_at, count(q.id)::int AS n, a.total_marks, s.status,
+           CASE WHEN s.status = 'returned' THEN coalesce((SELECT sum(g.marks) FROM hw_answer an JOIN hw_grade g ON g.answer_id = an.id WHERE an.submission_id = s.id), 0) END AS got
+      FROM hw_assignment a JOIN hw_question q ON q.assignment_id = a.id
+      LEFT JOIN hw_submission s ON s.assignment_id = a.id AND s.student_id = ${userId}
+     WHERE a.organization_id = ${PRACTICE_ORG_ID} AND a.created_by = ${userId} AND q.origin_ref ? 'quickTest'
+     GROUP BY a.id, s.id
+     ORDER BY a.created_at DESC, a.id DESC
+     LIMIT ${limit}`);
+  return r.rows.map((row) => ({
+    assignmentId: row.id, title: row.title, at: new Date(row.created_at).toISOString(), questions: row.n, outOf: num(row.total_marks),
+    status: row.status, got: row.got === null ? null : num(row.got),
+  }));
 }
 
 /** The pictures of a pool question, for the answer screen (the item's own, never the scheme's). */

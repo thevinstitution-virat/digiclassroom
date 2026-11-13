@@ -65,6 +65,32 @@ describe('reviseOf (pure)', () => {
   });
 });
 
+describe('weak topics and the quick test pace (pure, phase 4)', () => {
+  const topic = (section: string, asked: number, first: { got: number; of: number } | null, tried = first ? 1 : 0) =>
+    ({ section, title: `T${section}`, pages: '1-2', questions: 2, objective: 2, written: 0, asked, tried, best: first, first });
+  const chapters = [{ chapterNo: 5, chapter: 'Life Processes', questions: 8, asked: 30, topics: [
+    topic('5.1', 3, null), // never tried
+    topic('5.2.1', 15, { got: 1, of: 4 }), // 25% on the first try
+    topic('5.2.4', 6, { got: 3, of: 4 }), // 75%: not weak
+    topic('5.3', 15, null), // never tried, asked as often as 5.2.1
+    topic('5.4.1', 7, null, 1), // tried, marks not back: not weak yet
+    topic('5.4.2', 7, { got: 2, of: 4 }), // 50%
+  ] }];
+  it('never tried, or under 60% on the first try; the boards\' favourites first, then the lowest marks', () => {
+    const w = P.weakTopicsOf(chapters);
+    expect(w.map((x) => [x.section, x.why])).toEqual([['5.3', 'never_tried'], ['5.2.1', 'low_marks'], ['5.4.2', 'low_marks'], ['5.1', 'never_tried']]);
+    expect(w[0]).toMatchObject({ chapter: 'Life Processes', chapterNo: 5 });
+    expect(P.weakTopicsOf(chapters, 2).map((x) => x.section)).toEqual(['5.3', '5.2.1']);
+  });
+  it('the quick test\'s time at the board\'s pace (2¼ minutes a mark, at least ten); nothing for a question that is not in a quick test', () => {
+    const q = (marks: number, quick = true) => ({ marks: String(marks), originRef: (quick ? { quickTest: '1' } : { poolItemId: 'x' }) as Record<string, string> });
+    expect(P.quickTestPace([q(1), q(1), q(1), q(1), q(1)])).toEqual({ minutes: 12, marks: 5 });
+    expect(P.quickTestPace([q(1), q(1)])).toEqual({ minutes: 10, marks: 2 });
+    expect(P.quickTestPace([q(1), q(1, false)])).toBeNull();
+    expect(P.quickTestPace([])).toBeNull();
+  });
+});
+
 // ── the database side ────────────────────────────────────────────────────────
 
 let raw: Pool;
@@ -131,6 +157,9 @@ suite('InkBuddy board practice (phase 3) — integration', () => {
     try {
       await c.query(`SET session_replication_role = replica`);
       if (userIds.length) {
+        await c.query(`DELETE FROM hw_grade WHERE answer_id IN (SELECT an.id FROM hw_answer an JOIN hw_submission s ON s.id = an.submission_id WHERE s.student_id = ANY($1))`, [userIds]);
+        await c.query(`DELETE FROM hw_answer WHERE submission_id IN (SELECT id FROM hw_submission WHERE student_id = ANY($1))`, [userIds]);
+        await c.query(`DELETE FROM hw_submission WHERE student_id = ANY($1)`, [userIds]);
         await c.query(`DELETE FROM hw_rubric_item WHERE question_id IN (SELECT q.id FROM hw_question q JOIN hw_assignment a ON a.id = q.assignment_id WHERE a.created_by = ANY($1))`, [userIds]);
         await c.query(`DELETE FROM hw_question WHERE assignment_id IN (SELECT id FROM hw_assignment WHERE created_by = ANY($1))`, [userIds]);
         await c.query(`DELETE FROM hw_assignment WHERE created_by = ANY($1)`, [userIds]);
@@ -146,8 +175,9 @@ suite('InkBuddy board practice (phase 3) — integration', () => {
   });
 
   it('the catalogue: chapters, then NCERT topics in order, with counts and how often asked; written questions only with the switch on', async () => {
-    await poolPackage();
-    const u = await learner();
+    // class 9: the scratch database's real class 10 pools would add to the counts
+    await poolPackage(9);
+    const u = await learner(9);
     const off = await B.boardCatalogue(database, u);
     expect(off.writtenOn).toBe(false);
     const ch = off.chapters.find((c) => c.chapter === 'Life Processes')!;
@@ -217,5 +247,91 @@ suite('InkBuddy board practice (phase 3) — integration', () => {
     const u = await learner();
     expect(await publicOf(B.startBoardAttempt(u, id))).toMatch(/not on offer/);
     expect((await B.boardQuestions(database, u, '5.3', sign)).questions.map((q) => q.itemId)).not.toContain(id);
+  });
+
+  // ── phase 4: the quick test and weak topics ──
+  // A chapter of its own, so the draw never meets the scratch database's real pools: six questions over three topics, two of them the
+  // alternatives of one internal choice.
+  async function quickPackage() {
+    const chapter = `QT ${randomUUID().slice(0, 8)}`;
+    const p = (await b.createPackage(database, 'owner', { board: 'TESTBOARD', classLevel: 10, examYear: 2099, slug: `bq-${randomUUID().slice(0, 8)}`, title: 'Quick' })).id;
+    packageIds.push(p);
+    const pool = (await b.addSet(database, p, { kind: 'pool', subject: 'Science', subjectCode: '086', title: `${chapter} pool`, maxMarks: 6, durationMinutes: 60, syllabusScope: [chapter] })).id;
+    const add = async (section: string, choiceGroup?: string) => (await b.addAuthoredItem(database, pool, {
+      chapter, section: 'A', schemeText: 'CBSE marking scheme: test', qtype: 'mcq', marks: 1, stem: `Q on ${section}?`, options: ['w', 'x', 'y', 'z'], correctOption: 'B',
+      topic: `${section} T`, ncert: { ...ncert(section, `T${section}`, '81-83'), chapterNo: 5 }, sources: ['31/1/1 Q1'], ...(choiceGroup ? { choiceGroup } : {}),
+    })).id;
+    const ids = { a1: await add('5.1'), a2: await add('5.1'), g1: await add('5.2', 'Q9'), g2: await add('5.2', 'Q9'), c1: await add('5.3'), c2: await add('5.3') };
+    expect(await b.publishSet(database, pool)).toMatchObject({ published: true });
+    expect(await b.publishPackage(database, p)).toMatchObject({ published: true });
+    return { chapter, ids };
+  }
+  /** Hand in and return a quick test with these marks by NCERT section (a section missing = left unanswered). */
+  async function returnWith(assignmentId: string, u: string, marksBySection: Record<string, number>) {
+    const sub = randomUUID();
+    await raw.query(`INSERT INTO hw_submission (id, organization_id, assignment_id, student_id, status, submitted_at) VALUES ($1, 'virat-gyankosh-practice', $2, $3, 'returned', now())`, [sub, assignmentId, u]);
+    for (const q of (await raw.query(`SELECT id, origin_ref FROM hw_question WHERE assignment_id = $1 ORDER BY position`, [assignmentId])).rows) {
+      const m = marksBySection[q.origin_ref.ncertSection];
+      if (m === undefined) continue;
+      const ans = randomUUID();
+      await raw.query(`INSERT INTO hw_answer (id, organization_id, submission_id, question_id, mode, typed_text, transcript, transcript_status) VALUES ($1, 'virat-gyankosh-practice', $2, $3, 'typed', 'B', 'B', 'not_needed')`, [ans, sub, q.id]);
+      await raw.query(`INSERT INTO hw_grade (answer_id, organization_id, marks, source, graded_by) VALUES ($1, 'virat-gyankosh-practice', $2, 'manual', $3)`, [ans, m, u]);
+    }
+  }
+
+  it('a quick test: board questions from the chosen chapter, never both alternatives of a choice, at the board\'s pace; the open one is offered again', async () => {
+    const { chapter, ids } = await quickPackage();
+    const u = await learner();
+    const t = await B.startQuickTest(u, { chapters: [chapter], count: 5 });
+    expect(t).toMatchObject({ reused: false, questions: 5 });
+    const qs = (await raw.query(`SELECT marks, origin_ref FROM hw_question WHERE assignment_id = $1 ORDER BY position`, [t.assignmentId])).rows;
+    const items = qs.map((q) => q.origin_ref.poolItemId);
+    expect(new Set(items).size).toBe(5);
+    expect(items.every((id: string) => Object.values(ids).includes(id))).toBe(true);
+    expect([ids.g1, ids.g2].filter((g) => items.includes(g))).toHaveLength(1); // one alternative of the choice, never both
+    expect(qs.every((q) => q.origin_ref.quickTest === '1' && q.origin_ref.objective === '1')).toBe(true);
+    const a = (await raw.query(`SELECT total_marks, instructions, title FROM hw_assignment WHERE id = $1`, [t.assignmentId])).rows[0];
+    expect(a).toMatchObject({ total_marks: '5.00' });
+    expect(a.instructions).toMatch(/^12 minutes for 5 marks/);
+    expect(a.title).toMatch(/quick test · 5 board questions · chapter 5$/);
+    expect(B.quickTestPace(qs.map((q) => ({ marks: q.marks, originRef: q.origin_ref })))).toEqual({ minutes: 12, marks: 5 });
+    // not handed in yet: asking again opens the same test
+    expect(await B.startQuickTest(u, { chapters: [chapter], count: 10 })).toEqual({ assignmentId: t.assignmentId, reused: true, questions: 5 });
+    // a question of the test is not an attempt of its own: practising it alone starts a fresh one-question attempt
+    const at = await import('@/lib/hw/practice/attempts');
+    expect(at.practiceRefOf(qs[0].origin_ref)).toBeNull();
+    expect(await at.attemptHistory(database, u, `pool:${items[0]}`)).toEqual([]);
+    expect(await B.startBoardAttempt(u, items[0])).toMatchObject({ reused: false });
+    // no chapter with questions: refused plainly
+    expect(await publicOf(B.startQuickTest(u, { chapters: ['No such chapter'], count: 5 }))).toMatch(/No board questions are on offer for these chapters/);
+  });
+
+  it('marks from a quick test are the first try: the topic marks, the weak topics and the list of tests', async () => {
+    const { chapter } = await quickPackage();
+    const u = await learner();
+    const t = await B.startQuickTest(u, { chapters: [chapter], count: 5 });
+    const sections = (await raw.query(`SELECT origin_ref ->> 'ncertSection' AS s FROM hw_question WHERE assignment_id = $1`, [t.assignmentId])).rows.map((r) => r.s);
+    // 5.1 all wrong, 5.2 left unanswered (counts 0), 5.3 all right
+    await returnWith(t.assignmentId, u, { '5.1': 0, '5.3': 1 });
+    const cat = await B.boardCatalogue(database, u);
+    const ch = cat.chapters.find((c) => c.chapter === chapter)!;
+    const n = (s: string) => sections.filter((x) => x === s).length;
+    expect(ch.topics.find((x) => x.section === '5.1')).toMatchObject({ tried: n('5.1'), first: { got: 0, of: n('5.1') } });
+    expect(ch.topics.find((x) => x.section === '5.3')).toMatchObject({ first: { got: n('5.3'), of: n('5.3') } });
+    expect(ch.topics.find((x) => x.section === '5.2')).toMatchObject({ first: { got: 0, of: 1 } });
+    expect(B.weakTopicsOf([ch]).map((w) => [w.section, w.why]).sort()).toEqual([['5.1', 'low_marks'], ['5.2', 'low_marks']]);
+    expect(cat.tests[0]).toMatchObject({ assignmentId: t.assignmentId, questions: 5, outOf: 5, status: 'returned', got: n('5.3') });
+    // handed in: the next request starts a new test
+    expect(await B.startQuickTest(u, { chapters: [chapter], count: 5 })).toMatchObject({ reused: false });
+  });
+
+  it('the trial\'s limit on questions: a quick test needs room for each question the learner has not met before', async () => {
+    const { chapter } = await quickPackage();
+    const u = await learner();
+    process.env.HW_SELF_PRACTICE_MAX_ATTEMPTS = '3'; config._resetHwConfig();
+    try {
+      expect(await publicOf(B.startQuickTest(u, { chapters: [chapter], count: 5 }))).toMatch(/as many practice questions as the free trial allows/);
+    } finally { process.env.HW_SELF_PRACTICE_MAX_ATTEMPTS = '25'; config._resetHwConfig(); }
+    expect(await B.startQuickTest(u, { chapters: [chapter], count: 5 })).toMatchObject({ reused: false, questions: 5 });
   });
 });

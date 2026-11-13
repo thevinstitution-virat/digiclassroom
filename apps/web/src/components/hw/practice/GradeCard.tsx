@@ -10,12 +10,14 @@ import { useHwT } from '../strings'
 import type { AttemptsInfo } from './ResultExtras'
 import type { Pace } from './PaceCard'
 
-export function GradeCard({ total, outOf, attempts, standing, pace }: {
+export function GradeCard({ total, outOf, attempts, standing, pace, label }: {
   total: number
   outOf: number
   attempts: AttemptsInfo | null
   standing: { percentile: number | null; peers: number } | null
   pace: Pace | null
+  /** What was marked, when it is not one question's attempt (a quick test, phase 4 of the board-bank roadmap). */
+  label?: string
 }) {
   const { t, lang } = useHwT()
   const share = outOf > 0 ? total / outOf : 0
@@ -34,6 +36,7 @@ export function GradeCard({ total, outOf, attempts, standing, pace }: {
             <p className="text-sm text-muted-foreground">{t('pr.card.title')}</p>
             <p className={`text-3xl font-semibold tabular-nums ${tone}`}>{Math.round(share * 100)}%</p>
             {current && attempts && <p className="text-sm text-muted-foreground">{t('pr.card.attempt', { n: current.n, total: attempts.history.length })}{date ? ` · ${date}` : ''}</p>}
+            {label && <p className="text-sm text-muted-foreground">{label}</p>}
           </div>
         </div>
         <ul className="space-y-1.5 text-sm">

@@ -136,6 +136,26 @@ The pictures come to 40 distinct objects. On the scratch database all 13 were im
 - **Weak topics:** topics with marks below 60% on first attempts, or never tried. They are ordered by how often the boards asked the topic, then by the learner's marks.
 - **Quick test:** 5 or 10 questions from the chosen chapters, drawn as pool practice tests are, written with the pen in one sitting with the board's pace as the timer. Each question is marked as in phase 3, with one grade card for the test. It counts against the same trial and attempt limits.
 
+### Phase 4 as built (13 Nov 2026)
+
+- **Weak topics** (`board.ts weakTopicsOf`, returned by `boardCatalogue` as `weak`): topics never tried, and topics whose first attempts scored under 60% (`WEAK_BELOW`). A topic tried but not yet marked is left out. Ordered by times asked, then lowest marks; the six first (`WEAK_SHOWN`). Shown at the top of the board card as "Start with these topics", each opening its questions.
+- **First try:** `triedOf` now reads each question's own marks (a quick test has many questions in one submission) and keeps the first marked attempt as well as the best; a returned question left unanswered counts 0. Marks from a quick test count as the first try.
+- **Quick test** (`board.ts startQuickTest`, tRPC `hw.practice.startQuickTest({chapters, count: 5|10})`):
+  - draws with `exams/practice.ts drawPractice` from the offered questions of the chosen chapters (all when none): spread over the NCERT topics, never both alternatives of one `choiceGroup`, in the board's order;
+  - one practice assignment, one question per pool item (`origin_ref.quickTest = '1'`), instructions "N minutes for M marks, the board's pace";
+  - a test not handed in yet is opened again instead of a new one (advisory lock per learner);
+  - each question the learner has not met before counts against `HW_SELF_PRACTICE_MAX_ATTEMPTS`.
+- **Quick-test questions are not attempts of their own:** `attempts.ts practiceRefOf` and `PRACTICE_REF_SQL` give them no ref, so they never become a question's latest attempt, "write it again", a peer's first attempt or a row of "Your practice".
+- **Answer screen:** `QuickTimer` counts down the board's time (2¼ minutes a mark, at least ten) from when the test was first opened (`startSubmission` returns `quickTest` and `submission.openedAt`). It only tells the time; it never hands in.
+- **Result:** one `GradeCard` labelled "Quick test · N questions" (no peer standing), then `QuickTestRevise`: the NCERT sections that lost marks, the most marks lost first, each linked to its page. Every question keeps its own revise card.
+- **Home:** "Your quick tests", the last ten, with marks once returned.
+- **Fixed on the way:**
+  - the topic list said "1 questions" and "asked 1 times": plural strings now;
+  - `startBoardAttempt` counted every assignment against the trial's limit; it now counts different questions, as textbook practice does (`attempts.ts questionsStarted`);
+  - the writing-speed percentile left out board-pool questions (`paceOf` used its own ref).
+- **Tests:** `practice-board-db.test.ts` 15 (weak-topic order, pace, the draw and its choice rule, reopening an open test, first-try marks from a test, the trial's limit). The catalogue test now runs on class 9, because scratch's real class 10 pools changed its counts.
+- **Browser walk on scratch (13 Nov):** weak topics listed; quick test on chapter 5, 5 questions, timer "12 minutes for 5 marks"; 3 right, 1 wrong, 1 blank → handed in, job runner → grade card 3/5 (60%), "Revise these first" 5.4.2 and 5.4.1; the home listed the test at 3 / 5 and "Your practice" did not count its questions.
+
 ## Open for the owner
 
 - `HW_INKBUDDY_POOL_AI_ENABLED`: AI marking of written answers against a teacher-checked authored key in InkBuddy.

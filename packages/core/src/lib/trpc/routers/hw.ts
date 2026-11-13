@@ -28,7 +28,7 @@ import { db as hwDb } from '@/lib/hw/db';
 import { retryAttempt, startAttempt } from '@/lib/hw/practice/attempt';
 import { attemptCounts, practiceProgress, writeAgain } from '@/lib/hw/practice/attempts';
 import { offeredPapers, paperQuestions, startPaperAttempt } from '@/lib/hw/practice/paper';
-import { boardCatalogue, boardQuestions, startBoardAttempt } from '@/lib/hw/practice/board';
+import { boardCatalogue, boardQuestions, startBoardAttempt, startQuickTest } from '@/lib/hw/practice/board';
 import { examPageStore } from '@/lib/hw/storage/exam-pages';
 import { practiceEnabled } from '@/lib/hw/practice/trial';
 import { addBankQuestion } from '@/lib/hw/bank/teacher';
@@ -200,6 +200,10 @@ export const hwRouter = createTRPCRouter({
     startBoardQuestion: protectedProcedure.use(rateLimit(20, 60_000))
       .input(z.object({ itemId: id }))
       .mutation(({ ctx, input }) => runUser(ctx, (u) => startBoardAttempt(u, input.itemId))),
+    /** Start a quick test: 5 or 10 board questions from the chosen chapters (all when none), one sitting at the board's pace; or open the one not handed in yet. */
+    startQuickTest: protectedProcedure.use(rateLimit(10, 60_000))
+      .input(z.object({ chapters: z.array(z.string().trim().min(1).max(200)).max(20), count: z.union([z.literal(5), z.literal(10)]) }))
+      .mutation(({ ctx, input }) => runUser(ctx, (u) => startQuickTest(u, input))),
     /** Start one picked question; returns the assignment to open (the ordinary student answer screen). */
     startQuestion: protectedProcedure.use(rateLimit(20, 60_000))
       .input(practiceScope.extend({ passageId: z.string().min(1).max(200), index: z.number().int().min(0).max(99), text: z.string().trim().min(8).max(2000) }))

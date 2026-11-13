@@ -19,6 +19,7 @@ import { QuestionFigures } from './QuestionFigures'
 import { PhotoAnswer } from './PhotoAnswer'
 import { Stopwatch, elapsedMs, type StopwatchState } from './Stopwatch'
 import type { HwOut } from '../types'
+import { QuickTimer } from '../practice/QuickTimer'
 
 type Started = HwOut['student']['start']
 
@@ -246,6 +247,7 @@ export function AnswerWorkspace({ data, onSubmitted }: { data: Started; onSubmit
       {!online && <HwMessage><span className="flex items-center gap-2"><CloudOff className="h-4 w-4" aria-hidden />{t('st.offline')}</span></HwMessage>}
       {queued && <HwMessage>{t('st.offlineQueued')}</HwMessage>}
       {problem && <HwMessage tone="error">{problem}</HwMessage>}
+      {data.quickTest && <QuickTimer openedAt={data.submission.openedAt} minutes={data.quickTest.minutes} marks={data.quickTest.marks} />}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap gap-1" role="tablist">

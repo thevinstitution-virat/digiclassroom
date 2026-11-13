@@ -15,11 +15,11 @@ import { inkSummary, validateEncodedInk } from '../ink/stroke-format';
 import { queueSubmissionRead } from '../jobs/read-handler';
 import { finishSubmissionIfRead, setTranscript } from '../pipeline';
 import { answerFileKey, answerImageKey, keyVersion } from '../storage/keys';
-import { attemptStatus, marksStanding, practiceRefOf } from '../practice/attempts';
+import { attemptStatus, marksStanding, PRACTICE_REF_SQL, practiceRefOf } from '../practice/attempts';
 import { activeWritingMs, countWords, handwritingFacts, handwritingNote, pacingGuide, percentileOf, unclearCount, writingSpeed, type HandFacts } from '../practice/pace';
 import { putHwObject, signedReadUrl } from '../storage/r2';
 import { learnerFigures, type LearnerFigure } from '../bank/figures';
-import { boardFiguresOf, reviseOf } from '../practice/board';
+import { boardFiguresOf, quickTestPace, reviseOf } from '../practice/board';
 import { examPageStore } from '../storage/exam-pages';
 import { PRACTICE_ORG_ID, PRACTICE_TEXT, answerModesOf } from '../practice/rules';
 import { requireUsableTrial } from '../practice/trial';
@@ -102,7 +102,9 @@ export async function startSubmission(actor: HwActor, assignmentId: string) {
     assignment: { id: a.id, title: a.title, subject: a.subject, instructions: a.instructions, dueAt: a.dueAt, totalMarks: num(a.totalMarks), allowedModes: answerModesOf(a), status: a.status },
     // Self-practice: no teacher is involved, and the screens say so.
     practice: a.organizationId === PRACTICE_ORG_ID,
-    submission: { id: s.id, status: s.status, submittedAt: s.submittedAt, isLate: s.isLate },
+    // an InkBuddy quick test (practice/board.ts, phase 4): its writing time at the board's pace, counted from when it was first opened
+    quickTest: a.organizationId === PRACTICE_ORG_ID ? quickTestPace(questions) : null,
+    submission: { id: s.id, status: s.status, submittedAt: s.submittedAt, isLate: s.isLate, openedAt: s.createdAt },
     questions: await withFigures(questions),
     answers: await Promise.all(answers.map(async (x) => ({
       questionId: x.questionId, mode: x.mode, typedText: x.typedText, hasInk: Boolean(x.inkKey), timeSpentMs: x.timeSpentMs,
@@ -360,7 +362,7 @@ async function paceOf(a: AnswerRow, ref: string | null, studentId: string) {
         JOIN hw_submission sb ON sb.assignment_id = a.id
         JOIN hw_answer an ON an.submission_id = sb.id
        WHERE a.organization_id = ${PRACTICE_ORG_ID} AND a.created_by <> ${studentId} AND sb.status = 'returned'
-         AND coalesce(q.origin_ref ->> 'exercise', 'bank:' || (q.origin_ref ->> 'bankRowId')) = ${ref}
+         AND ${PRACTICE_REF_SQL} = ${ref}
        ORDER BY a.created_by, a.created_at
        LIMIT 5000`);
     const others = r.rows.map((x) => speedOfAnswer({ mode: x.mode as AnswerRow['mode'], transcript: x.transcript, inkStats: x.ink_stats as AnswerRow['inkStats'], timeSpentMs: x.time_spent_ms }))
@@ -432,12 +434,13 @@ export async function myResult(actor: HwActor, submissionId: string) {
     ...(practice ? {
       practiceEstimate: { label: PRACTICE_TEXT.estimateLabel, note: PRACTICE_TEXT.estimateNote, how: PRACTICE_TEXT.estimateHow },
       attempts: await attemptStatus(db, actor.userId, assignment.id),
-      // this mark among other learners' first attempts at the same question (one question per InkBuddy attempt)
+      // this mark among other learners' first attempts at the same question (one question per InkBuddy attempt); none for a quick test
       standing: await (async () => {
         const ref = practiceRefOf(questions[0]?.originRef);
         const outOf = questions.reduce((n, q) => n + num(q.marks), 0);
-        return ref && outOf > 0 ? marksStanding(db, submission.studentId, ref, total / outOf) : { percentile: null, peers: 0 };
+        return ref && outOf > 0 ? marksStanding(db, submission.studentId, ref, total / outOf) : null;
       })(),
+      quickTest: quickTestPace(questions),
     } : {}),
     total,
     questions: questions.map((q) => {

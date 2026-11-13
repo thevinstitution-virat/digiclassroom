@@ -17,14 +17,33 @@ import { percentileOf } from './pace';
 
 const both = (t: { en: string; hi: string }) => `${t.en} / ${t.hi}`;
 
-/** What identifies "the same question" across attempts: the book exercise (passage:index), the board-paper row, or the board-pool question (phase 3). */
+/**
+ * What identifies "the same question" across attempts: the book exercise (passage:index), the board-paper row, or the board-pool question (phase 3).
+ * A question inside a quick test (board.ts, phase 4) is part of that test, not an attempt of its own: it has no ref, so it never becomes the
+ * question's "latest attempt", its "write it again" or a peer's first attempt.
+ */
 export function practiceRefOf(originRef: Record<string, string> | null | undefined): string | null {
+  if (originRef?.quickTest) return null;
   if (originRef?.exercise) return originRef.exercise;
   if (originRef?.bankRowId) return `bank:${originRef.bankRowId}`;
   if (originRef?.poolItemId) return `pool:${originRef.poolItemId}`;
   return null;
 }
-const REF_SQL = sql`coalesce(q.origin_ref ->> 'exercise', 'bank:' || (q.origin_ref ->> 'bankRowId'), 'pool:' || (q.origin_ref ->> 'poolItemId'))`;
+/** practiceRefOf in SQL, over `q` (hw_question). */
+export const PRACTICE_REF_SQL = sql`CASE WHEN q.origin_ref ? 'quickTest' THEN NULL ELSE coalesce(q.origin_ref ->> 'exercise', 'bank:' || (q.origin_ref ->> 'bankRowId'), 'pool:' || (q.origin_ref ->> 'poolItemId')) END`;
+const REF_SQL = PRACTICE_REF_SQL;
+
+/**
+ * How many different questions the learner has started (the trial's HW_SELF_PRACTICE_MAX_ATTEMPTS is on these): writing one again does not
+ * count again, and a quick test counts each of its board questions.
+ */
+export async function questionsStarted(x: Exec, userId: string): Promise<number> {
+  const [{ n }] = (await x.execute<{ n: number }>(sql`
+    SELECT count(DISTINCT coalesce(q.origin_ref ->> 'exercise', 'bank:' || (q.origin_ref ->> 'bankRowId'), 'pool:' || (q.origin_ref ->> 'poolItemId'), q.id))::int AS n
+      FROM hw_assignment a JOIN hw_question q ON q.assignment_id = a.id
+     WHERE a.organization_id = ${PRACTICE_ORG_ID} AND a.created_by = ${userId}`)).rows;
+  return n;
+}
 
 export const attemptsPerQuestion = (): number => getHwConfig().HW_SELF_PRACTICE_MAX_ATTEMPTS_PER_QUESTION;
 

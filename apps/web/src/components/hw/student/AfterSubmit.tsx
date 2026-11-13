@@ -15,7 +15,7 @@ import type { HwOut } from '../types'
 import { wordsOf } from '../text-spans'
 import { clearDrafts, unqueueSubmit } from '../ink/local-store'
 import { RevisionNote } from '@/components/hw/Revision'
-import { AnswerToggle, AttemptsCard, BookAnswer, EvaluatedNote, ReviseCard } from '../practice/ResultExtras'
+import { AnswerToggle, AttemptsCard, BookAnswer, EvaluatedNote, QuickTestRevise, ReviseCard } from '../practice/ResultExtras'
 import { MarkedAnswer, TeacherRemark } from '../practice/TeacherPen'
 import { PaceCard } from '../practice/PaceCard'
 import { GradeCard } from '../practice/GradeCard'
@@ -114,6 +114,9 @@ function Result({ submissionId }: { submissionId: string }) {
         // InkBuddy: the grade card (one question per attempt, so its pace is the attempt's)
         <GradeCard total={d.total} outOf={d.assignment.totalMarks} attempts={d.attempts} standing={d.standing ?? null}
           pace={(d.questions[0] && 'pace' in d.questions[0] ? d.questions[0].pace : null) ?? null} />
+      ) : d.quickTest ? (
+        // an InkBuddy quick test: one grade card for the test; each question's pace is on its own card below
+        <GradeCard total={d.total} outOf={d.assignment.totalMarks} attempts={null} standing={null} pace={null} label={t('pr.quick.card', { n: d.questions.length })} />
       ) : (
         <Card>
           <CardHeader><CardTitle>{t('st.result.title')}</CardTitle></CardHeader>
@@ -121,6 +124,7 @@ function Result({ submissionId }: { submissionId: string }) {
         </Card>
       )}
       {d.attempts && <AttemptsCard attempts={d.attempts} assignmentId={d.assignment.id} />}
+      {d.quickTest && <QuickTestRevise questions={d.questions.map((q) => ({ marks: q.marks, awarded: q.awarded, revise: 'revise' in q ? q.revise : null }))} />}
       <ConceptPanel submissionId={submissionId} />
       {d.questions.map((q) => (
         <Card key={q.id}>
