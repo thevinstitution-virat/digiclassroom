@@ -27,6 +27,11 @@ export const isOverdue = (readyByIso: string | undefined, now: Date): boolean =>
 
 export type BatchDecision = { batch: true } | { batch: false; reason: string | null };
 
+/** Small work (HW_BATCH_SMALL_MAX answers or fewer) is not worth waiting on a batch for. Pure. */
+export function isSmallWork(answers: number, smallMax: number): boolean {
+  return smallMax > 0 && answers > 0 && answers <= smallMax;
+}
+
 /** Should this piece of work go to the batch API? `reason` explains a standard-path choice the teacher should know about. */
 export function decideBatch(input: { standardForced: boolean; fallbackReason?: string; providerCanBatch: boolean; dueAt: Date | null; now: Date; urgentHours: number }): BatchDecision {
   if (input.standardForced) return { batch: false, reason: input.fallbackReason ?? 'run on the standard path' };

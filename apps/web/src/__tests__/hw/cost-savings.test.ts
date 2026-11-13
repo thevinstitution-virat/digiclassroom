@@ -9,7 +9,7 @@ import { keyVersionHash, planDuplicates, transcriptHash } from '@/lib/hw/grader/
 import { gradeCall } from '@/lib/hw/grader/ai-grader'
 import type { GradeQuestion } from '@/lib/hw/grader/types'
 import { readCall } from '@/lib/hw/reader/gemini-reader'
-import { decideBatch, isOverdue, isUrgent, readyBy, summariseStatus, fallbackNote } from '@/lib/hw/jobs/homework-batch'
+import { decideBatch, isOverdue, isSmallWork, isUrgent, readyBy, summariseStatus, fallbackNote } from '@/lib/hw/jobs/homework-batch'
 import { reusedSuggestion } from '@/lib/hw/pipeline'
 import { buildKey, memoryKeyCache, memorySharedKeyStore, type KeyDeps, type KeySettings } from '@/lib/hw/keys'
 import { sharedKeyId, normaliseQuestion, isPublicOrigin } from '@/lib/hw/keys/shared'
@@ -161,6 +161,10 @@ describe('homework batch rules', () => {
   it('homework batches; urgent work, a fallback and an unbatchable provider stay standard, each with its reason', () => {
     const base = { standardForced: false, providerCanBatch: true, dueAt: hours(48), now, urgentHours: 3 }
     expect(decideBatch(base)).toEqual({ batch: true })
+    // small work is not batched (HW_BATCH_SMALL_MAX, default 5); 0 turns the rule off
+    expect([1, 5, 6].map((n) => isSmallWork(n, 5))).toEqual([true, true, false])
+    expect(isSmallWork(1, 0)).toBe(false)
+    expect(isSmallWork(0, 5)).toBe(false)
     expect(decideBatch({ ...base, dueAt: hours(1) })).toMatchObject({ batch: false, reason: expect.stringContaining('due soon') })
     expect(decideBatch({ ...base, providerCanBatch: false })).toMatchObject({ batch: false, reason: expect.stringContaining('cannot batch') })
     expect(decideBatch({ ...base, standardForced: true, fallbackReason: fallbackNote('the batch failed') })).toMatchObject({ batch: false, reason: 'Re-run on the standard path: the batch failed' })

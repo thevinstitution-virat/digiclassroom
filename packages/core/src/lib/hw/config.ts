@@ -98,6 +98,12 @@ const EnvSchema = z.object({
   HW_HOMEWORK_BATCH_DEADLINE_HOURS: num(24, 1, 96),
   /** Work due within this many hours (or already past due) is not batched: the teacher is waiting for it. */
   HW_HOMEWORK_URGENT_HOURS: num(3, 0, 720),
+  /**
+   * Small work is never batched (owner, 13 Nov 2026): a hand-in with this many answers to read or fewer, and a marking job with this many
+   * answers or fewer, go straight to the AI so a learner is not kept waiting on the batch queue to save a fraction of a rupee. 0 = batch
+   * everything the batch settings allow. Exam booklets keep their own rules (exams/batch.ts).
+   */
+  HW_BATCH_SMALL_MAX: num(5, 0, 1000),
   /** A key built from the official scheme or the textbook for a public question is reused across tenants. */
   HW_SHARED_KEYS_ENABLED: bool(false),
   /**

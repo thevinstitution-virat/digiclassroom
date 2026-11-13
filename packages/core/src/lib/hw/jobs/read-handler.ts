@@ -23,7 +23,7 @@ import { mimeOfKey } from '../photo/image';
 import { failAnswers, finishSubmissionIfRead, setTranscript } from '../pipeline';
 import { claim, claimBatchPending, complete, enqueueRead, fail, markBatchPending, payloadOf, type JobRow, type ReadPayload } from './queue';
 import { shadowAfterRead } from '../shadow/shadow';
-import { decideBatch, dueFor, homeworkBatchSettings, isOverdue, readyBy, requeueStandard, saveStamp, stampPayload } from './homework-batch';
+import { decideBatch, dueFor, homeworkBatchSettings, isOverdue, isSmallWork, readyBy, requeueStandard, saveStamp, stampPayload } from './homework-batch';
 import { EXAM_ORG_ID } from '../exams/space';
 
 interface PreparedRead {
@@ -195,6 +195,12 @@ export async function runReadJobs(workerId: string, deadline: number): Promise<n
       continue;
     }
     if (!p) continue;
+
+    // A hand-in with only a few answers to read is read now: the learner is waiting, and batching it saves almost nothing.
+    if (p.tier === 1 && isSmallWork(p.input.answers.length, cfg.HW_BATCH_SMALL_MAX) && (cfg.HW_HOMEWORK_BATCH_ENABLED || cfg.HW_BATCH_ENABLED)) {
+      await runSync(p);
+      continue;
+    }
 
     if (cfg.HW_HOMEWORK_BATCH_ENABLED) {
       // Homework batches; urgent work, escalation, a fallback and anything the provider cannot batch stay standard.

@@ -133,3 +133,12 @@ Read from the code on 7 Nov:
   A subject whose book exists only in the other medium is offered in that medium rather than not at all. Board papers in InkBuddy follow
   the same rule. Search, starting a question and starting a board-paper question all refuse another class. No class set: the screen asks
   the learner to set it in their profile; class set but no book yet: the screen says so.
+
+## Small work is not batched (owner, 13 Nov 2026)
+
+With batching on (`HW_BATCH_ENABLED`, on by default, or `HW_HOMEWORK_BATCH_ENABLED`), a hand-in with **5 answers or fewer to read** is
+read at once, and a marking job with **5 answers or fewer** is marked at once, instead of waiting on the provider's batch queue (minutes
+to hours). An InkBuddy attempt is one answer, so a learner's reading and mark come back within a minute or two of the next job-runner
+pass. Larger homework still goes through the half-price batch. The limit is `HW_BATCH_SMALL_MAX` (default 5; 0 batches everything as
+before). Exam booklets keep their own rules. Code: `isSmallWork` in `jobs/homework-batch.ts`, used by `jobs/read-handler.ts` and
+`jobs/grade-handler.ts`; tests in `cost-savings` and `cost-savings-integration`.

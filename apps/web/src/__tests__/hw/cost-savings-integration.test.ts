@@ -456,6 +456,42 @@ suite('cost work, task 2 — integration', () => {
 
   describe('homework batch', () => {
     const farFuture = () => new Date(Date.now() + 5 * 24 * 3_600_000)
+    // These tests exercise the batch itself on one or two answers, so the small-work rule (HW_BATCH_SMALL_MAX) is off here except where a
+    // test says otherwise.
+    beforeEach(() => { process.env.HW_BATCH_SMALL_MAX = '0'; svc.config._resetHwConfig() })
+    afterAll(() => { delete process.env.HW_BATCH_SMALL_MAX; svc.config._resetHwConfig() })
+
+    it('small work (5 answers or fewer) is read and marked now, with batching on: no batch, no wait (owner, 13 Nov 2026)', async () => {
+      for (const on of [['HW_HOMEWORK_BATCH_ENABLED'], []]) {
+        delete process.env.HW_BATCH_SMALL_MAX // the default, 5
+        setFlags(on)
+        process.env.HW_BATCH_ENABLED = 'true'
+        svc.config._resetHwConfig()
+        gem.calls = []
+        gem.batches = new Map()
+        const w = await makeWorld()
+        const a = await publish(w, farFuture())
+        const h = await inkHandIn(w.s1, a, 'plants make food from sun lite')
+        await drainAll(3)
+        expect(gem.batches.size).toBe(0)
+        expect(aiCallsFor('read').length).toBeGreaterThan(0)
+        expect((await raw.query(`SELECT status FROM hw_submission WHERE id = $1`, [h.sid])).rows[0].status).toBe('ready_for_review')
+        expect((await raw.query(`SELECT count(*)::int AS n FROM hw_ai_job WHERE organization_id = $1 AND batch_ref IS NOT NULL`, [w.org])).rows[0].n).toBe(0)
+      }
+    })
+
+    it('with the rule set lower than the work, the same hand-in is batched', async () => {
+      process.env.HW_BATCH_SMALL_MAX = '0'
+      setFlags(['HW_HOMEWORK_BATCH_ENABLED'])
+      const w = await makeWorld()
+      const a = await publish(w, farFuture())
+      await inkHandIn(w.s1, a, 'plants make food from sun lite')
+      gem.batchMode = 'pending'
+      await svc.runner.drain('itest', 20_000)
+      expect(gem.batches.size).toBe(1)
+      gem.batchMode = 'succeed'
+      await drainAll(4) // finish it, so no batch is left for the next test to pick up
+    })
 
     it('homework is read and marked through a batch, with a ready-by time the teacher can see', async () => {
       setFlags(['HW_HOMEWORK_BATCH_ENABLED'])
