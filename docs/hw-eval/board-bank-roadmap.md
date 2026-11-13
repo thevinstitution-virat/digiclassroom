@@ -116,6 +116,21 @@ The pictures come to 40 distinct objects. On the scratch database all 13 were im
 - **Browse:** chapter → topic, showing each topic's number of questions, how often the boards asked it, and the learner's best marks.
 - **After marking:** "Revise NCERT 5.2.1 Autotrophic Nutrition, pages 81-83", with a link to the book in the library reader when the hub has it.
 
+### Phase 3 as built (13 Nov 2026, commit e500fcb)
+
+- **Server:** `packages/core/src/lib/hw/practice/board.ts`.
+  - `boardPlanOf` decides whether a pool item is offered and how it is marked: an unchecked assistant key is never offered; MCQ and assertion-reason are code-marked; written answers only while `HW_INKBUDDY_POOL_AI_ENABLED` is on; drawing parts are left out of the marks.
+  - `boardCatalogue` and `boardQuestions` list only items of published pools in published packages for the learner's class, never with the key.
+  - `startBoardAttempt` makes a one-question practice assignment (`origin = 'custom'`, `rubric_mode = 'teacher'`, rubric from the pool's value points, attempt ref `pool:<itemId>`).
+  - `reviseOf` links to `ncert.nic.in/textbook/pdf/jesc1NN.pdf#page=…` using the chapter first-page table `NCERT_SCI10_FIRST_PAGE`. The library reader link waits for the hub (not built).
+  - The MCQ rule is read back from the pool item by `official-store.ts choiceRuleOf`; `keys/product.ts boardPoolAiAllowed()` and `eligibility/registry.ts` let these questions through the key gate.
+- **tRPC:** `hw.practice.boardChapters`, `boardQuestions({section})`, `startBoardQuestion({itemId})`.
+- **UI:** `BoardPractice.tsx` above `PaperPractice` on the InkBuddy page; `ReviseCard` in `ResultExtras.tsx`, shown by `AfterSubmit.tsx`; strings `pr.board.*`, `pr.revise.*` (EN, HI).
+- **Tests:** `practice-board-db.test.ts` (10).
+- **Browser walk on scratch (13 Nov):** chapter 5 → 5.2.4 → the pepsin MCQ (31/7/1 Q1) → typed "A" → handed in. The code marked it 1/1, the job runner released it, and the result showed the grade card and "Revise from your textbook: NCERT 5.2.4 Nutrition in Human Beings, pages 84-86" linking to `jesc105.pdf#page=6`. Topic 5.2.1 showed its picture from dev storage with its description as alt text.
+  - Locally, a practice mark appears only after `POST /api/cron/hw-jobs` (Bearer `HW_CRON_SECRET`), which runs `releasePracticeSubmissions`; in production the cron does this.
+  - "Hand in" asks with `window.confirm`; the in-app browser pane dismisses it, so a scripted walk must stub it.
+
 ### Phase 4: weak topics and the quick test
 
 - **Weak topics:** topics with marks below 60% on first attempts, or never tried. They are ordered by how often the boards asked the topic, then by the learner's marks.
