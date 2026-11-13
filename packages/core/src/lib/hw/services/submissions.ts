@@ -15,7 +15,7 @@ import { inkSummary, validateEncodedInk } from '../ink/stroke-format';
 import { queueSubmissionRead } from '../jobs/read-handler';
 import { finishSubmissionIfRead, setTranscript } from '../pipeline';
 import { answerFileKey, answerImageKey, keyVersion } from '../storage/keys';
-import { attemptStatus, practiceRefOf } from '../practice/attempts';
+import { attemptStatus, marksStanding, practiceRefOf } from '../practice/attempts';
 import { activeWritingMs, countWords, handwritingFacts, handwritingNote, pacingGuide, percentileOf, unclearCount, writingSpeed, type HandFacts } from '../practice/pace';
 import { putHwObject, signedReadUrl } from '../storage/r2';
 import { learnerFigures, type LearnerFigure } from '../bank/figures';
@@ -427,6 +427,12 @@ export async function myResult(actor: HwActor, submissionId: string) {
     ...(practice ? {
       practiceEstimate: { label: PRACTICE_TEXT.estimateLabel, note: PRACTICE_TEXT.estimateNote, how: PRACTICE_TEXT.estimateHow },
       attempts: await attemptStatus(db, actor.userId, assignment.id),
+      // this mark among other learners' first attempts at the same question (one question per InkBuddy attempt)
+      standing: await (async () => {
+        const ref = practiceRefOf(questions[0]?.originRef);
+        const outOf = questions.reduce((n, q) => n + num(q.marks), 0);
+        return ref && outOf > 0 ? marksStanding(db, submission.studentId, ref, total / outOf) : { percentile: null, peers: 0 };
+      })(),
     } : {}),
     total,
     questions: questions.map((q) => {

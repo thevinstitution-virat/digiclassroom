@@ -26,7 +26,7 @@ import { offeredScopesFor, parseScope, practiceReady, searchPracticeQuestions } 
 import { learnerClass } from '@/lib/hw/practice/learner-class';
 import { db as hwDb } from '@/lib/hw/db';
 import { retryAttempt, startAttempt } from '@/lib/hw/practice/attempt';
-import { attemptCounts, writeAgain } from '@/lib/hw/practice/attempts';
+import { attemptCounts, practiceProgress, writeAgain } from '@/lib/hw/practice/attempts';
 import { offeredPapers, paperQuestions, startPaperAttempt } from '@/lib/hw/practice/paper';
 import { practiceEnabled } from '@/lib/hw/practice/trial';
 import { addBankQuestion } from '@/lib/hw/bank/teacher';
@@ -157,6 +157,8 @@ export const hwRouter = createTRPCRouter({
         const counts = await attemptCounts(hwDb, u, res.questions.map((q) => q.ref));
         return { ...res, questions: res.questions.map((q) => ({ ...q, attempts: counts.get(q.ref)?.attempts ?? 0 })) };
       })),
+    /** The InkBuddy home: every question practised, its attempts and marks, and which are worth writing again. */
+    progress: protectedProcedure.query(({ ctx }) => runUser(ctx, (u) => practiceProgress(hwDb, u))),
     /** Write a marked practice question again: a new attempt (up to the plan's limit per question); returns the attempt to open. */
     writeAgain: protectedProcedure.use(rateLimit(10, 60_000))
       .input(z.object({ assignmentId: id }))

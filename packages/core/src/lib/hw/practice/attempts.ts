@@ -13,6 +13,7 @@ import { db, newId, num, type Exec } from '../db';
 import { queueKey } from '../keys/product';
 import { PRACTICE_ORG_ID, PRACTICE_TEXT } from './rules';
 import { isPracticeLearner, practiceEnabled, requireUsableTrial } from './trial';
+import { percentileOf } from './pace';
 
 const both = (t: { en: string; hi: string }) => `${t.en} / ${t.hi}`;
 
@@ -59,6 +60,66 @@ export async function attemptHistory(x: Exec, userId: string, ref: string): Prom
     createdAt: new Date(row.created_at), submittedAt: row.submitted_at ? new Date(row.submitted_at) : null,
     awarded: row.awarded === null ? null : num(row.awarded), outOf: num(row.out_of),
   }));
+}
+
+/**
+ * Where this mark stands among other learners on the same question (owner, 13 Nov 2026): their FIRST attempts only, as a share of the
+ * question's marks; a percentile only with at least 20 of them (practice/pace.ts percentileOf). Anonymous: only the number comes back.
+ */
+export async function marksStanding(x: Exec, userId: string, ref: string, share: number): Promise<{ percentile: number | null; peers: number }> {
+  const r = await x.execute<{ share: string | null }>(sql`
+    SELECT DISTINCT ON (a.created_by)
+           (SELECT sum(g.marks) FROM hw_answer an JOIN hw_grade g ON g.answer_id = an.id WHERE an.submission_id = s.id) / NULLIF(q.marks, 0) AS share
+      FROM hw_assignment a
+      JOIN hw_question q ON q.assignment_id = a.id
+      JOIN hw_submission s ON s.assignment_id = a.id
+     WHERE a.organization_id = ${PRACTICE_ORG_ID} AND a.created_by <> ${userId} AND s.status = 'returned' AND ${REF_SQL} = ${ref}
+     ORDER BY a.created_by, a.created_at
+     LIMIT 5000`);
+  const others = r.rows.map((x) => (x.share === null ? null : Number(x.share))).filter((v): v is number => v !== null && Number.isFinite(v));
+  return { percentile: percentileOf(share, others), peers: others.length };
+}
+
+export interface ProgressRow {
+  ref: string;
+  prompt: string;
+  book: string | null;
+  chapter: string | null;
+  attempts: { assignmentId: string; status: string | null; awarded: number | null; at: string }[];
+  outOf: number;
+  best: number | null;
+  latestAssignmentId: string;
+  /** Marked, and not yet full marks on any attempt: worth writing again. */
+  revisit: boolean;
+}
+
+/** The InkBuddy home: every question the learner practised, with all its attempts, newest question first. */
+export async function practiceProgress(x: Exec, userId: string): Promise<{ questions: ProgressRow[]; attempts: number; marked: number; full: number }> {
+  const r = await x.execute<{ ref: string; prompt: string; book: string | null; chapter: string | null; assignment_id: string; status: string | null; created_at: Date | string; out_of: string; awarded: string | null }>(sql`
+    SELECT ${REF_SQL} AS ref, q.prompt, q.origin_ref ->> 'book' AS book, q.origin_ref ->> 'chapter' AS chapter, a.id AS assignment_id, s.status, a.created_at, q.marks AS out_of,
+           CASE WHEN s.status = 'returned' THEN (SELECT sum(g.marks) FROM hw_answer an JOIN hw_grade g ON g.answer_id = an.id WHERE an.submission_id = s.id) END AS awarded
+      FROM hw_assignment a
+      JOIN hw_question q ON q.assignment_id = a.id
+      LEFT JOIN hw_submission s ON s.assignment_id = a.id AND s.student_id = ${userId}
+     WHERE a.organization_id = ${PRACTICE_ORG_ID} AND a.created_by = ${userId} AND ${REF_SQL} IS NOT NULL
+     ORDER BY a.created_at, a.id`);
+  const byRef = new Map<string, ProgressRow>();
+  for (const row of r.rows) {
+    const e = byRef.get(row.ref) ?? { ref: row.ref, prompt: row.prompt, book: row.book, chapter: row.chapter, attempts: [], outOf: num(row.out_of), best: null, latestAssignmentId: row.assignment_id, revisit: false };
+    const awarded = row.awarded === null ? null : num(row.awarded);
+    e.attempts.push({ assignmentId: row.assignment_id, status: row.status, awarded, at: new Date(row.created_at).toISOString() });
+    if (awarded !== null) e.best = Math.max(e.best ?? 0, awarded);
+    e.latestAssignmentId = row.assignment_id;
+    byRef.set(row.ref, e);
+  }
+  const questions = [...byRef.values()].map((q) => ({ ...q, revisit: q.best !== null && q.best < q.outOf }))
+    .sort((a, b) => (b.attempts[b.attempts.length - 1]!.at).localeCompare(a.attempts[a.attempts.length - 1]!.at));
+  return {
+    questions,
+    attempts: questions.reduce((n, q) => n + q.attempts.length, 0),
+    marked: questions.filter((q) => q.best !== null).length,
+    full: questions.filter((q) => q.best !== null && q.best >= q.outOf).length,
+  };
 }
 
 /** For a list of questions (search results): how many times each was attempted, and the latest attempt to open. */

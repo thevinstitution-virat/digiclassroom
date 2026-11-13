@@ -186,6 +186,26 @@ The ink colour is stored with each stroke; the reader is unaffected (it reads da
 
 ## Phase 5: the grade card and the UI upgrade (two sessions)
 
+**Built 13 Nov 2026** (DigiClassroom and Study Buddy; the exam part in DigiClassroom only, which has exams):
+- **Grade card** at the top of an InkBuddy result (`GradeCard.tsx`):
+  - the marks as a stamp, the share, and "attempt n of m" with the date;
+  - the **marks standing** among other learners' first attempts at the same question (`marksStanding`, 20 or more);
+  - the writing speed and its standing;
+  - "Full marks. Well done!" when earned.
+  - Below it, as before: the teacher's pen, the book's answer, and time and speed.
+- **InkBuddy home** (`PracticeProgress.tsx`, `practice.progress`):
+  - a summary: questions practised, attempts, and how many at full marks;
+  - every question with one chip per attempt in order, and the best mark;
+  - "Write it again";
+  - a **To revisit** filter for questions marked below full marks.
+  - It replaces the flat list of attempts.
+- **Exam reports:** the score's **standing among other learners' first attempts at the same set**, each at its latest revision (`setStanding`, 20 or more), beside "since attempt n".
+- **Percentiles are anonymous:** only the number comes back, never another learner's name or mark.
+- **Tests:**
+  - `practice-pace-db` (question standing; progress and revisit);
+  - `exams-report` (set standing: none, then exactly 50% against 20 others).
+  - Walked through in a browser: grade card, home and filter.
+
 - **One result page per attempt,** built like a teacher's corrected copy:
   - the learner's page with the coloured underlines;
   - the teacher's remark in a handwriting-style font beside it;

@@ -131,6 +131,10 @@ export function ExamReport({ report: r, attemptNo }: { report: Rep; attemptNo: n
                   {t('ex.r.vsPrev', { n: prev.attemptNo, d: `${r.marksAwarded - prev.marksAwarded >= 0 ? '+' : '−'}${fmt(Math.abs(r.marksAwarded - prev.marksAwarded))}` })}
                 </p>
               )}
+              {/* among other learners' first attempts at this set (only with 20 of them) */}
+              <p className="text-sm text-muted-foreground">
+                {r.standing.percentile !== null ? t('ex.r.standing', { p: r.standing.percentile }) : t('ex.r.fewPeers')}
+              </p>
             </div>
           </div>
           <Bar value={share} band={share >= 0.8 ? 'strong' : share >= 0.5 ? 'fair' : 'weak'} />

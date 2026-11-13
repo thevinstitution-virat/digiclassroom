@@ -25,6 +25,7 @@ import { blueprintFor, studyPriorities, type Blueprint, type StudyPriority } fro
 import { liveExamAi, type ExamAi } from './page-reader';
 import { profileFrom, weakAreas, type ParameterId, type ParameterResult, type WeakArea } from './rules';
 import { EXAM_ORG_ID } from './space';
+import { percentileOf } from '../practice/pace';
 
 export const REPORT_VERSION = 'exam-report.v1';
 
@@ -536,8 +537,22 @@ export interface ReportView extends ReportBody {
   revision: number;
   /** The changes of marks behind the revisions, oldest first. */
   revisions: LearnerRevision[];
+  /** Where this score stands among other learners' FIRST attempts at the same set (owner, 13 Nov 2026); a percentile only with 20 of them. */
+  standing: { percentile: number | null; peers: number };
   /** This learner's earlier reports on the same set, oldest first, for progress. */
   progress: { attemptNo: number; marksAwarded: number; maxMarks: number; reportedAt: Date; parameters: { id: ParameterId; score: number | null }[] }[];
+}
+
+/** The score among other learners' first attempts at the same set, each at its latest revision. Anonymous: only the number comes back. */
+async function setStanding(x: Exec, attempt: { userId: string; setId: string }, share: number): Promise<{ percentile: number | null; peers: number }> {
+  const r = await x.execute<{ share: string | null }>(sql`
+    SELECT DISTINCT ON (a.user_id) r.marks_awarded / NULLIF(r.max_marks, 0) AS share
+      FROM hw_exam_report r JOIN hw_exam_attempt a ON a.id = r.attempt_id
+     WHERE a.set_id = ${attempt.setId} AND a.user_id <> ${attempt.userId} AND a.attempt_no = 1
+     ORDER BY a.user_id, r.revision DESC
+     LIMIT 5000`);
+  const others = r.rows.map((y) => (y.share === null ? null : Number(y.share))).filter((v): v is number => v !== null && Number.isFinite(v));
+  return { percentile: percentileOf(share, others), peers: others.length };
 }
 
 /** An attempt's revisions as its learner may see them. */
@@ -572,6 +587,7 @@ export async function reportView(x: Exec, attempt: { id: string; userId: string;
     createdAt: row.createdAt,
     revision: row.revision,
     revisions: await learnerRevisions(x, attempt.id),
+    standing: await setStanding(x, attempt, row.maxMarks > 0 ? row.marksAwarded / row.maxMarks : 0),
     progress: [...latestOf.values()].filter((e) => e.a.attemptNo <= attempt.attemptNo).map((e) => ({
       attemptNo: e.a.attemptNo, marksAwarded: e.r.marksAwarded, maxMarks: e.r.maxMarks, reportedAt: e.a.reportedAt ?? e.r.createdAt,
       parameters: (((e.r.profile as { parameters?: ReportParameter[] }).parameters) ?? []).map((x) => ({ id: x.id, score: x.score })),

@@ -237,6 +237,25 @@ suite('exam report — integration', () => {
 
     const v1 = await L.attemptView(database, u, first.attemptId, { now: T0 });
     expect(v1.report).toMatchObject({ marksAwarded: 2, maxMarks: 7, pendingMarks: 3, progress: [{ attemptNo: 1, marksAwarded: 2 }] });
+    // where the score stands on this set (owner, 13 Nov 2026): no others yet, so no percentile
+    expect(v1.report!.standing).toEqual({ percentile: null, peers: 0 });
+    // twenty others' FIRST attempts at the same set: ten scored 1 of 7, ten 3 of 7; 2 of 7 is above half of them. (This fixture's set is
+    // the learner's own practice set, which the database keeps to its owner; a published set is shared. The rows are copied on one
+    // connection with the checks off, only to put a field of other learners behind the same set.)
+    const fx = await raw.connect();
+    await fx.query(`SET session_replication_role = replica`);
+    for (let i = 0; i < 20; i++) {
+      const o = `rp-${randomUUID().slice(0, 8)}`;
+      userIds.push(o);
+      await fx.query(`INSERT INTO "user" (id, name, email, role) VALUES ($1, 'O', $2, 'student')`, [o, `${o}@example.test`]);
+      const att = randomUUID();
+      await fx.query(`INSERT INTO hw_exam_attempt SELECT (jsonb_populate_record(NULL::hw_exam_attempt, to_jsonb(a) || jsonb_build_object('id', $1::text, 'user_id', $2::text, 'assignment_id', NULL))).* FROM hw_exam_attempt a WHERE a.id = $3`, [att, o, first.attemptId]);
+      await fx.query(`INSERT INTO hw_exam_report SELECT (jsonb_populate_record(NULL::hw_exam_report, to_jsonb(r) || jsonb_build_object('id', $1::text, 'attempt_id', $2::text, 'marks_awarded', $3::numeric))).* FROM hw_exam_report r WHERE r.attempt_id = $4`, [randomUUID(), att, i < 10 ? 1 : 3, first.attemptId]);
+    }
+    await fx.query(`SET session_replication_role = origin`);
+    fx.release();
+    const standing = (await L.attemptView(database, u, first.attemptId, { now: T0 })).report!.standing;
+    expect(standing).toEqual({ percentile: 50, peers: 20 });
     const qs = v1.report!.perQuestion;
     expect(qs.map((q) => [q.number, q.status, q.awarded])).toEqual([[1, 'marked', 1], [2, 'marked', 1], [3, 'pending', null]]);
     expect(qs[1]!.points).toEqual([

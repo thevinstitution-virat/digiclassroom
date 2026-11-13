@@ -57,13 +57,13 @@ async function learner() {
 }
 
 /** A learner's marked answer to the question, with what it was timed at. */
-async function markedAnswer(u: { id: string; actor: { userId: string } }, opts: { transcript: string; stats: Record<string, unknown>; mode?: string }) {
+async function markedAnswer(u: { id: string; actor: { userId: string } }, opts: { transcript: string; stats: Record<string, unknown>; mode?: string; marks?: number }) {
   const a = (await attempt.startAttempt(u.id, { classLevel: '10', subject: 'Science', medium: 'en', passageId: PID, index: 0, text: Q }, { hub })).assignmentId
   const s = await subs.startSubmission(u.actor as never, a)
   const ans = randomUUID()
   await raw.query(`INSERT INTO hw_answer (id, organization_id, submission_id, question_id, mode, transcript, transcript_status, transcript_confidence, ink_stats) VALUES ($1,$2,$3,$4,$5,$6,'done',0.95,$7::jsonb)`,
     [ans, PRACTICE_ORG_ID, s.submission.id, s.questions[0].id, opts.mode ?? 'ink', opts.transcript, JSON.stringify(opts.stats)])
-  await raw.query(`INSERT INTO hw_grade (answer_id, organization_id, marks, item_marks, source, graded_by) VALUES ($1, $2, 1, '[]', 'manual', $3)`, [ans, PRACTICE_ORG_ID, u.id])
+  await raw.query(`INSERT INTO hw_grade (answer_id, organization_id, marks, item_marks, source, graded_by) VALUES ($1, $2, $3, '[]', 'manual', $4)`, [ans, PRACTICE_ORG_ID, opts.marks ?? 1, u.id])
   await raw.query(`UPDATE hw_submission SET status = 'returned', submitted_at = now() WHERE id = $1`, [s.submission.id])
   return { assignmentId: a, submissionId: s.submission.id }
 }
@@ -126,5 +126,20 @@ suite('InkBuddy time, speed and handwriting — integration', () => {
     expect(pace.percentile).toBe(48)
     expect(pace.guide).toHaveLength(3)
     expect(pace.hand).toBe('unclear') // two words could not be read
+
+    // the grade card's standing on marks: every first attempt in this field scored 1 of 1, as did I: all ties, so half
+    expect((r as unknown as { standing: unknown }).standing).toEqual({ percentile: 50, peers: 20 })
+    const progressOf = async (id: string) => (await import('@/lib/hw/practice/attempts')).practiceProgress((await import('@/lib/hw/db')).db, id)
+    // the InkBuddy home: one question with both of that learner's attempts, in order; at full marks, so nothing to revisit
+    const first = (await raw.query(`SELECT DISTINCT a.created_by AS u FROM hw_assignment a JOIN hw_question q ON q.assignment_id = a.id
+       WHERE q.origin_ref ->> 'exercise' = $1 GROUP BY a.created_by HAVING count(*) = 2`, [`${PID}:0`])).rows[0].u as string
+    const p1 = await progressOf(first)
+    expect(p1).toMatchObject({ attempts: 2, marked: 1, full: 1 })
+    expect(p1.questions).toEqual([expect.objectContaining({ ref: `${PID}:0`, prompt: Q, best: 1, outOf: 1, revisit: false })])
+    expect(p1.questions[0]!.attempts.map((x) => x.awarded)).toEqual([1, 1])
+    // a learner marked below full marks has it to revisit
+    const low = await learner()
+    await markedAnswer(low, { transcript: SIXTY, stats: {}, marks: 0 })
+    expect((await progressOf(low.id)).questions).toEqual([expect.objectContaining({ best: 0, revisit: true })])
   })
 })

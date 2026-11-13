@@ -46,12 +46,12 @@ export function PaperPractice() {
           {questions.data?.questions.map((q) => (
             <li key={q.rowId} className="flex flex-wrap items-start justify-between gap-3 rounded-md border p-3">
               <div className="min-w-0 flex-1 space-y-1">
-                <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
                   {t('pr.paper.q', { label: q.label })}
                   <Badge variant="secondary">{t('pr.paper.section', { s: q.section })}</Badge>
                   <Badge>{marksLabel(t, q.marks)}</Badge>
                   {q.figures.length > 0 && <Badge variant="outline">{t('pr.paper.figure')}</Badge>}
-                </p>
+                </div>
                 <p className="line-clamp-4 whitespace-pre-wrap text-sm">{q.stem}</p>
                 {q.alsoOffered.length > 0 && <p className="text-xs text-muted-foreground">{t('pr.paper.also', { others: q.alsoOffered.join(', ') })}</p>}
                 {q.hasDrawing && <p className="text-xs text-amber-700 dark:text-amber-400">{t('pr.paper.drawing')}</p>}
