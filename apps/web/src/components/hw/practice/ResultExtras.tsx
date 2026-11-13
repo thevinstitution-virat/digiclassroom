@@ -4,7 +4,7 @@
 // attempts at the question with "Write it again", their answer as they wrote it beside how it was read, and the book's own answer on a
 // notebook page in a handwriting-style font (Kalam, self-hosted under /fonts/kalam, covers English and Devanagari; SIL OFL).
 
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Loader2, RotateCcw } from 'lucide-react'
@@ -89,7 +89,7 @@ export function AttemptsCard({ attempts, assignmentId }: { attempts: AttemptsInf
 }
 
 /** The answer as the learner gave it (their writing, photo or typing) beside how Virat Evaluator read it. */
-export function AnswerToggle({ yours, transcript }: { yours: { mode: string; url: string | null; typed: string | null } | null; transcript: string }) {
+export function AnswerToggle({ yours, transcript, readView }: { yours: { mode: string; url: string | null; typed: string | null } | null; transcript: string; /** The reading, drawn by the caller (with the teacher's underlines). */ readView?: ReactNode }) {
   const { t } = useHwT()
   const [view, setView] = useState<'read' | 'yours'>('read')
   return (
@@ -102,7 +102,7 @@ export function AnswerToggle({ yours, transcript }: { yours: { mode: string; url
         ))}
       </div>
       {view === 'read' ? (
-        <p className="whitespace-pre-wrap rounded bg-muted p-3">{transcript || '—'}</p>
+        readView ?? <p className="whitespace-pre-wrap rounded bg-muted p-3">{transcript || '—'}</p>
       ) : yours?.mode === 'typed' ? (
         <p className="whitespace-pre-wrap rounded border p-3">{yours.typed || '—'}</p>
       ) : yours?.url ? (
@@ -115,7 +115,7 @@ export function AnswerToggle({ yours, transcript }: { yours: { mode: string; url
   )
 }
 
-const NOTEBOOK_FONT = `
+export const NOTEBOOK_FONT = `
 @font-face { font-family: 'Kalam'; font-style: normal; font-weight: 400; font-display: swap;
   src: url(/fonts/kalam/kalam-devanagari-400-normal.woff2) format('woff2');
   unicode-range: U+0900-097F,U+1CD0-1CF9,U+200C-200D,U+20A8,U+20B9,U+20F0,U+25CC,U+A830-A839,U+A8E0-A8FF,U+11B00-11B09; }

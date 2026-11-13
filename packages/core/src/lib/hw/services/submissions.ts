@@ -3,7 +3,7 @@
 
 import { gunzipSync } from 'node:zlib';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
-import { hwAnswer, hwAssignment, hwGrade, hwQuestion, hwRubricItem, hwSubmission, type HwAnswerMode, type HwStudentFlag } from '@/db/hw-schema';
+import { hwAiGrade, hwAnswer, hwAssignment, hwGrade, hwQuestion, hwRubricItem, hwSubmission, type HwAnswerMode, type HwStudentFlag } from '@/db/hw-schema';
 import { assignmentForStudent, ownSubmission, requireHwEnabled, requireRole, studentEnrollmentsOf } from '../access/guards';
 import { studentCanSeeResult, type HwActor } from '../access/policy';
 import { getHwConfig } from '../config';
@@ -310,7 +310,14 @@ export async function flagWords(actor: HwActor, submissionId: string, questionId
  * The book's answer to a question: the reference answer of its answer key, written from the textbook's own passages, with where it comes
  * from ("Science, Chapter 5, pages 72-73"). Null when the question has no ready key. Shown only after marking (myResult).
  */
-async function bookAnswerOf(keyId: string | null): Promise<{ text: string; source: string } | null> {
+/** The teacher's pen saved with an answer (practice/teacher-pen.ts), as the learner sees it: the remark and the checked notes. */
+function penOf(stats: unknown): { remark: string; notes: { kind: 'fact' | 'language' | 'presentation'; quote: string; note: string; fix: string }[] } | null {
+  const p = (stats as { pen?: { remark?: unknown; notes?: unknown } } | null)?.pen;
+  if (!p || typeof p.remark !== 'string') return null;
+  return { remark: p.remark, notes: Array.isArray(p.notes) ? (p.notes as { kind: 'fact' | 'language' | 'presentation'; quote: string; note: string; fix: string }[]) : [] };
+}
+
+export async function bookAnswerOf(keyId: string | null): Promise<{ text: string; source: string } | null> {
   if (!keyId) return null;
   const r = await db.execute<{ status: string; reference: string | null; citations: { title?: string; chapter?: string | null; pageStart?: number | null; pageEnd?: number | null }[] | null }>(sql`
     SELECT status, key ->> 'referenceAnswer' AS reference, citations FROM hw_question_key WHERE id = ${keyId}`);
@@ -342,7 +349,14 @@ export async function myResult(actor: HwActor, submissionId: string) {
   // InkBuddy: the answer as the learner gave it (to set beside the reading), and the book's own answer with its pages
   const yours = new Map<string, { mode: string; url: string | null; typed: string | null }>();
   const book = new Map<string, { text: string; source: string } | null>();
+  // the teacher's pen (practice/teacher-pen.ts): green from the marking's own quotes; red, yellow and grey notes and the remark, when written
+  const green = new Map<string, { verdict: 'met' | 'partial'; quote: string }[]>();
   if (practice) {
+    for (const { a, g } of answers) {
+      if (!g?.aiGradeId) continue;
+      const [ai] = await db.select({ items: hwAiGrade.items }).from(hwAiGrade).where(eq(hwAiGrade.id, g.aiGradeId)).limit(1);
+      green.set(a.questionId, (ai?.items ?? []).flatMap((i) => (i.verdict === 'met' || i.verdict === 'partial') && i.quote?.trim() ? [{ verdict: i.verdict, quote: i.quote.trim() }] : []));
+    }
     for (const { a } of answers) {
       const key = a.mode === 'typed' ? null : answerImageKey(a);
       yours.set(a.questionId, { mode: a.mode, url: key ? await signedReadUrl(key) : null, typed: a.mode === 'typed' ? a.typedText : null });
@@ -363,7 +377,10 @@ export async function myResult(actor: HwActor, submissionId: string) {
       return {
         ...studentQuestion(q),
         transcript: row?.a.transcript ?? '',
-        ...(practice ? { yours: yours.get(q.id) ?? null, bookAnswer: book.get(q.id) ?? null } : {}),
+        ...(practice ? {
+          yours: yours.get(q.id) ?? null, bookAnswer: book.get(q.id) ?? null,
+          pen: penOf(row?.a.inkStats), points: green.get(q.id) ?? [],
+        } : {}),
         awarded: g ? num(g.marks) : null,
         comment: g?.comment ?? null,
         revision: row ? revised.get(row.a.id) ?? null : null,

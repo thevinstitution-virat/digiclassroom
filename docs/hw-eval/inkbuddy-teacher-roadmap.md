@@ -76,6 +76,18 @@ writing, measured with a test page), and an upload during writing causes no visi
 
 ## Phase 2: the teacher's pen (two to three sessions, behind a setting)
 
+**Built 13 Nov 2026** (DigiClassroom and Study Buddy), off until `HW_TEACHER_PEN_ENABLED=true`:
+- **A separate call, not the marking call.** The remark and the notes come from one extra call per answer (`practice/teacher-pen.ts`, prompt `teacher-pen.v1` with the teacher's charter). It is made by the job runner's new "teacher pen" step after the practice release. It cannot move a mark, and it needs no regression run of the marking prompts. The cost is one small call per answer on the marking model, recorded as a finished job (kind `grade`, payload `{pen: true}`), so it shows in the AI usage view and is charged to the learner's trial. Each answer is tried at most twice.
+- **Green** comes from the marking's own quotes (met: solid; partly met: dotted). There is no new call for it.
+- **Checks in code** (`checkPen`):
+  - every quote must be in the reading;
+  - language notes only on a confident reading;
+  - at most three wrong-fact, three language and two presentation notes;
+  - no notes on unread words.
+- **Storage:** `hw_answer.ink_stats.pen`. No migration.
+- **Screen:** the reading with underlines (wavy red, yellow, dotted grey, green), a key to the colours, numbered notes with the better wording, and the remark on a paper slip in Kalam, signed "— Virat Evaluator".
+- **Tests:** `teacher-pen` (7), `practice-teacher-pen` (4, database). Walked through in a browser with a sample pen.
+
 **Coloured underlines on the transcript:**
 
 | Colour | Meaning | Where it comes from |

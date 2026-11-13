@@ -177,6 +177,11 @@ const EnvSchema = z.object({
    */
   HW_SELF_PRACTICE_MAX_ATTEMPTS_PER_QUESTION: num(10, 1, 100),
   /**
+   * The teacher's pen on InkBuddy answers (practice/teacher-pen.ts): after the mark is released, a teacher's remark and notes on the
+   * learner's own words (wrong fact, language, presentation), one extra call per answer. Never changes a mark. Off until switched on.
+   */
+  HW_TEACHER_PEN_ENABLED: bool(false),
+  /**
    * true = InkBuddy offers the free trial only once a textbook-key group has passed the evaluation gates for the running marking setup.
    * Owner's decision, 13 Nov 2026: open now (default false); InkBuddy's marks are AI practice estimates, labelled as such, and with this off
    * its questions are AI-marked without a promoted group (eligibility/registry.ts). Set true to close it again until a group passes.

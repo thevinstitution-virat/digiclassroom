@@ -16,6 +16,7 @@ import { wordsOf } from '../text-spans'
 import { clearDrafts, unqueueSubmit } from '../ink/local-store'
 import { RevisionNote } from '@/components/hw/Revision'
 import { AnswerToggle, AttemptsCard, BookAnswer, EvaluatedNote } from '../practice/ResultExtras'
+import { MarkedAnswer, TeacherRemark } from '../practice/TeacherPen'
 
 type Started = HwOut['student']['start']
 type Answer = Started['answers'][number]
@@ -129,7 +130,11 @@ function Result({ submissionId }: { submissionId: string }) {
           )}
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {'yours' in q ? <AnswerToggle yours={q.yours ?? null} transcript={q.transcript} /> : <p className="whitespace-pre-wrap rounded bg-muted p-3">{q.transcript || '—'}</p>}
+            {'yours' in q ? (
+              <AnswerToggle yours={q.yours ?? null} transcript={q.transcript}
+                readView={<MarkedAnswer transcript={q.transcript} points={q.points ?? []} pen={q.pen ?? null} />} />
+            ) : <p className="whitespace-pre-wrap rounded bg-muted p-3">{q.transcript || '—'}</p>}
+            {'pen' in q && q.pen && <TeacherRemark remark={q.pen.remark} />}
             {q.keyPoints.length > 0 && (
               <ul className="space-y-1">
                 {q.keyPoints.map((k, i) => (
