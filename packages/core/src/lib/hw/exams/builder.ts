@@ -5,7 +5,8 @@
 
 import { and, asc, eq, inArray, isNull, max, sql } from 'drizzle-orm';
 import { hwBankPaper, hwBankQuestion } from '@/db/hw-bank-schema';
-import { hwExamEntitlement, hwExamPackage, hwExamSet, hwExamSetItem, type ExamSetKind } from '@/db/hw-exams-schema';
+import { hwExamEntitlement, hwExamPackage, hwExamSet, hwExamSetItem, type ExamSetKind, type ItemFigure, type ItemNcertRef } from '@/db/hw-exams-schema';
+import { assertHwKey } from '@/lib/hw/storage/keys';
 import { HwError } from '@/lib/hw/errors';
 import { offerCheck } from '@/lib/hw/practice/paper';
 import type { Exec } from '@/lib/hw/db';
@@ -265,20 +266,54 @@ async function packageKey(d: Exec, packageId: string): Promise<PackageKey> {
   return pkg;
 }
 
-export async function getSet(d: Exec, setId: string) {
+/** A key the assistant wrote says so in its scheme text (the pool importer writes "KEY TO CHECK: ..."); a teacher must check it before learners see it. */
+export const keyNeedsCheck = (schemeText: string | null | undefined) => (schemeText ?? '').startsWith('KEY TO CHECK');
+
+/** The publish problem for keys the assistant wrote and no teacher has checked yet (none when every such key is checked). */
+export function uncheckedKeysProblem(items: { schemeText: string | null; keyCheckedBy: string | null }[]): string[] {
+  const n = items.filter((i) => keyNeedsCheck(i.schemeText) && !i.keyCheckedBy).length;
+  return n ? [`${n} key${n === 1 ? '' : 's'} written by the assistant ${n === 1 ? 'is' : 'are'} not checked by a teacher yet. Open each question's key and mark it checked.`] : [];
+}
+
+/**
+ * A teacher marks an assistant-written key as checked (or takes the check back). Only on a draft set (the 034 guard refuses the rest); only for a key
+ * that needs it. The check is named and timed; changing the question's content later clears it (updateItem).
+ */
+export async function checkItemKey(d: Exec, itemId: string, by: string, checked: boolean, now = new Date()): Promise<void> {
+  const item = (await d.select({ schemeText: hwExamSetItem.schemeText }).from(hwExamSetItem).where(eq(hwExamSetItem.id, itemId)).limit(1))[0];
+  if (!item) throw notFound('Question');
+  if (!keyNeedsCheck(item.schemeText)) throw new HwError('BAD_REQUEST', 'This key is not one the assistant wrote; there is nothing to check.');
+  const name = by.trim();
+  if (checked && !name) throw new HwError('BAD_REQUEST', 'A check needs the name of the teacher who checked it.');
+  await guarded(checked ? 'Marking the key checked' : 'Taking back the key check', () => d.update(hwExamSetItem)
+    .set(checked ? { keyCheckedBy: name, keyCheckedAt: now } : { keyCheckedBy: null, keyCheckedAt: null }).where(eq(hwExamSetItem.id, itemId)));
+}
+
+export async function getSet(d: Exec, setId: string, sign?: (key: string) => Promise<string>) {
   const set = (await d.select().from(hwExamSet).where(eq(hwExamSet.id, setId)).limit(1))[0];
   if (!set) throw notFound('Set');
   const items = await d.select({
     id: hwExamSetItem.id, position: hwExamSetItem.position, number: hwExamSetItem.number, section: hwExamSetItem.section, marks: hwExamSetItem.marks,
     qtype: hwExamSetItem.qtype, chapter: hwExamSetItem.chapter, topic: hwExamSetItem.topic, bankQuestionId: hwExamSetItem.bankQuestionId,
-    stem: sql<string>`COALESCE(${hwExamSetItem.stem}, ${hwBankQuestion.stem})`, alt: hwBankQuestion.alt, choiceGroup: hwBankQuestion.choiceGroup,
+    stem: sql<string>`COALESCE(${hwExamSetItem.stem}, ${hwBankQuestion.stem})`, alt: hwBankQuestion.alt,
+    choiceGroup: sql<string | null>`COALESCE(${hwBankQuestion.choiceGroup}, ${hwExamSetItem.choiceGroup})`,
+    // what a teacher checks in the key panel (037): the right option or value points, the scheme text, where it is taught and printed, its pictures
+    options: hwExamSetItem.options, correctOption: hwExamSetItem.correctOption, parts: hwExamSetItem.parts, schemeText: hwExamSetItem.schemeText,
+    diagramParts: hwExamSetItem.diagramParts, ncert: hwExamSetItem.ncert, sources: hwExamSetItem.sources, figures: hwExamSetItem.figures,
+    keyCheckedBy: hwExamSetItem.keyCheckedBy, keyCheckedAt: hwExamSetItem.keyCheckedAt,
   }).from(hwExamSetItem).leftJoin(hwBankQuestion, eq(hwBankQuestion.id, hwExamSetItem.bankQuestionId))
     .where(eq(hwExamSetItem.setId, setId)).orderBy(asc(hwExamSetItem.position));
+  const shown = await Promise.all(items.map(async (it) => ({
+    ...it,
+    keyToCheck: keyNeedsCheck(it.schemeText),
+    figures: await Promise.all((it.figures ?? []).map(async (f) => ({ ...f, url: sign ? await sign(f.key) : null }))),
+  })));
   const facts = (await itemFactsBySet(d, [setId])).get(setId) ?? [];
   const bp = await blueprintFindings(d, await packageKey(d, set.packageId), set);
   const problems: SetProblem[] = set.status === 'draft' ? [...setProblems(set, facts), ...(await offerProblems(d, setId)), ...bp.problems] : [];
+  const unchecked = set.status === 'draft' ? uncheckedKeysProblem(shown) : [];
   return {
-    set, items, attainable: attainableMarks(facts), problems: problems.map(describeSetProblem),
+    set, items: shown, attainable: attainableMarks(facts), problems: [...problems.map(describeSetProblem), ...unchecked],
     // Advice from the board's blueprint that does not stop publishing, and the curriculum's chapter names to pick from.
     warnings: set.status === 'draft' ? bp.warnings : [],
     blueprint: bp.blueprint && { session: bp.blueprint.session, source: bp.blueprint.source, chapters: blueprintChapters(bp.blueprint) },
@@ -293,7 +328,9 @@ export async function publishSet(d: Exec, setId: string): Promise<{ published: b
     if (set.status === 'retired') throw new HwError('CONFLICT', 'A retired set is reopened, not published again.');
     const facts = (await itemFactsBySet(tx, [setId])).get(setId) ?? [];
     const problems = [...setProblems(set, facts), ...(await offerProblems(tx, setId)), ...(await blueprintFindings(tx, await packageKey(tx, set.packageId), set)).problems];
-    if (problems.length) return { published: false, problems: problems.map(describeSetProblem) };
+    const keys = await tx.select({ schemeText: hwExamSetItem.schemeText, keyCheckedBy: hwExamSetItem.keyCheckedBy }).from(hwExamSetItem).where(eq(hwExamSetItem.setId, setId));
+    const unchecked = uncheckedKeysProblem(keys);
+    if (problems.length || unchecked.length) return { published: false, problems: [...problems.map(describeSetProblem), ...unchecked] };
     await guarded('Publishing the set', () => tx.update(hwExamSet).set({ status: 'published' }).where(eq(hwExamSet.id, setId)));
     return { published: true, problems: [] };
   });
@@ -369,6 +406,11 @@ export interface AuthoredInput {
   parts?: Record<string, unknown>[];
   schemeText?: string;
   diagramParts?: string[];
+  /** 037: where it is taught, where it was printed, its internal-choice group and its own pictures. */
+  ncert?: ItemNcertRef;
+  sources?: string[];
+  choiceGroup?: string | null;
+  figures?: ItemFigure[];
 }
 
 const refuseAuthored = (q: Parameters<typeof authoredProblems>[0]) => {
@@ -384,6 +426,8 @@ export async function addAuthoredItem(d: Exec, setId: string, input: AuthoredInp
       setId, position: slot.position, number: input.number ?? slot.number, section: input.section ?? '', marks: input.marks, qtype: input.qtype,
       chapter: input.chapter ?? '', topic: input.topic ?? '', stem: input.stem, options: input.options ?? [], correctOption: input.correctOption ?? null,
       acceptedAnswers: input.acceptedAnswers ?? [], parts: input.parts ?? [], schemeText: input.schemeText ?? '', diagramParts: input.diagramParts ?? [],
+      ncert: input.ncert ?? {}, sources: input.sources ?? [], choiceGroup: input.choiceGroup ?? null,
+      figures: (input.figures ?? []).map((f) => ({ key: assertHwKey(f.key), description: f.description, labels: f.labels ?? [] })),
     }).returning({ id: hwExamSetItem.id });
     return r!;
   });
@@ -393,7 +437,7 @@ export async function addAuthoredItem(d: Exec, setId: string, input: AuthoredInp
 export async function updateItem(d: Exec, itemId: string, patch: Partial<AuthoredInput>): Promise<void> {
   const item = (await d.select().from(hwExamSetItem).where(eq(hwExamSetItem.id, itemId)).limit(1))[0];
   if (!item) throw notFound('Question');
-  const { number, section, chapter, topic, ...content } = patch;
+  const { number, section, chapter, topic, ncert, sources, choiceGroup, ...content } = patch;
   if (item.bankQuestionId && Object.keys(content).length) throw new HwError('BAD_REQUEST', 'A board-paper question is changed in the bank, not here.');
   if (Object.keys(content).length) {
     refuseAuthored({
@@ -402,7 +446,13 @@ export async function updateItem(d: Exec, itemId: string, patch: Partial<Authore
       parts: (content.parts ?? item.parts) as Parameters<typeof authoredProblems>[0]['parts'],
     });
   }
-  const set = { ...(number !== undefined && { number }), ...(section !== undefined && { section }), ...(chapter !== undefined && { chapter }), ...(topic !== undefined && { topic }), ...content };
+  if (content.figures) content.figures = content.figures.map((f) => ({ key: assertHwKey(f.key), description: f.description, labels: f.labels ?? [] }));
+  const set = {
+    // the teacher checked the old content; changed content must be checked again
+    ...(Object.keys(content).length && { keyCheckedBy: null, keyCheckedAt: null }),
+    ...(number !== undefined && { number }), ...(section !== undefined && { section }), ...(chapter !== undefined && { chapter }), ...(topic !== undefined && { topic }),
+    ...(ncert !== undefined && { ncert }), ...(sources !== undefined && { sources }), ...(choiceGroup !== undefined && { choiceGroup }), ...content,
+  };
   if (!Object.keys(set).length) return;
   await guarded('Changing the question', () => d.update(hwExamSetItem).set(set).where(eq(hwExamSetItem.id, itemId)));
 }

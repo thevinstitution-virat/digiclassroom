@@ -49,6 +49,15 @@ export function bankFigureKey(figureRowId: string, version: number, ext: 'png' |
   return `${HW_BANK_PREFIX}${checkId('figureRowId', figureRowId)}.v${version}.${ext}`;
 }
 
+/**
+ * A picture printed with an exam question (migration 037): hw-exams/figures/{sha-256 of the bytes}.{ext}. Named by its content, so the same picture
+ * in several pools or practice tests is one object, and an object never changes once written.
+ */
+export function examFigureKey(sha256Hex: string, ext: 'png' | 'jpg' | 'webp'): string {
+  if (!/^[0-9a-f]{64}$/.test(sha256Hex)) throw new Error('hw key: an exam figure is named by the sha-256 of its bytes (64 hex characters)');
+  return `${HW_EXAMS_PREFIX}figures/${sha256Hex}.${ext}`;
+}
+
 /** One photographed answer page: hw-exams/{attempt id}/p{page id}.{ext}. A page row is never re-pointed, so no version is needed. */
 export function examPageKey(attemptId: string, pageId: string, ext: 'png' | 'jpg' | 'webp'): string {
   return `${HW_EXAMS_PREFIX}${checkId('attemptId', attemptId)}/p${checkId('pageId', pageId)}.${ext}`;

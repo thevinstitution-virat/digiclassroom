@@ -71,9 +71,25 @@ export const hwExamSetItem = pgTable('hw_exam_set_item', {
   parts: jsonb('parts').$type<BankPart[] | Record<string, unknown>[]>().notNull().default([]),
   schemeText: text('scheme_text').notNull().default(''),
   diagramParts: jsonb('diagram_parts').$type<string[]>().notNull().default([]),
+  /** 037: the textbook section that teaches it ({} when not known). */
+  ncert: jsonb('ncert').$type<ItemNcertRef | Record<string, never>>().notNull().default({}),
+  /** 037: the printed papers it was asked in, e.g. "31/2/1 Q13" ("31/2/1 Q28A" for a choice alternative). */
+  sources: jsonb('sources').$type<string[]>().notNull().default([]),
+  /** 037: questions sharing a group are the alternatives of one internal choice; a practice test never draws two of them. */
+  choiceGroup: text('choice_group'),
+  /** 037: the question's own pictures, private objects under hw-exams/figures/. */
+  figures: jsonb('figures').$type<ItemFigure[]>().notNull().default([]),
+  /** 037: the teacher who checked a key the assistant wrote ("KEY TO CHECK"), and when; cleared when the content changes. */
+  keyCheckedBy: text('key_checked_by'),
+  keyCheckedAt: ts('key_checked_at'),
   createdAt: ts('created_at').notNull().defaultNow(),
   updatedAt: ts('updated_at').notNull().defaultNow(),
 });
+
+/** Where a question is taught (migration 037). */
+export interface ItemNcertRef { book?: string; chapterNo?: number; section: string; title: string; pages: string }
+/** A question's own picture (migration 037): `key` is a private object under hw-exams/figures/. */
+export interface ItemFigure { key: string; description: string; labels: string[] }
 
 export const hwExamEntitlement = pgTable('hw_exam_entitlement', {
   id: id(),

@@ -37,11 +37,12 @@ export const QTYPE_LABEL: Record<string, { en: string; hi: string }> = {
   long: { en: 'Long answer', hi: 'दीर्घ उत्तरीय' },
 };
 
-export interface PoolItem { id: string; position: number; qtype: string; marks: number; topic: string; chapter: string }
+export interface PoolItem { id: string; position: number; qtype: string; marks: number; topic: string; chapter: string; choiceGroup?: string | null }
 
 /**
  * The questions for one practice test: those of the chosen topics and types, spread across the chosen topics as evenly as the pool allows,
- * then put in the board's order. `rand(n)` gives an integer in [0, n). Fewer than asked when the pool has fewer.
+ * then put in the board's order. Never two alternatives of the same internal choice (037 choiceGroup). `rand(n)` gives an integer in [0, n).
+ * Fewer than asked when the pool has fewer.
  */
 export function drawPractice<T extends PoolItem>(items: T[], pick: { topics: string[]; types: string[]; count: number }, rand: (n: number) => number): T[] {
   const fit = items.filter((i) => (!pick.topics.length || pick.topics.includes(i.topic)) && (!pick.types.length || pick.types.includes(i.qtype)));
@@ -52,8 +53,27 @@ export function drawPractice<T extends PoolItem>(items: T[], pick: { topics: str
   const topics = [...byTopic.keys()];
   for (let k = topics.length - 1; k > 0; k--) { const j = rand(k + 1); [topics[k], topics[j]] = [topics[j]!, topics[k]!]; }
   const chosen: T[] = [];
+  const groups = new Set<string>();
   const want = Math.min(Math.max(0, Math.floor(pick.count)), fit.length);
-  while (chosen.length < want) for (const t of topics) { const next = byTopic.get(t)!.shift(); if (next && chosen.length < want) chosen.push(next); }
+  const takeFrom = (t: string): T | undefined => {
+    const list = byTopic.get(t)!;
+    while (list.length) {
+      const next = list.shift()!;
+      if (!next.choiceGroup || !groups.has(next.choiceGroup)) return next;
+    }
+    return undefined;
+  };
+  while (chosen.length < want) {
+    let took = false;
+    for (const t of topics) {
+      if (chosen.length >= want) break;
+      const next = takeFrom(t);
+      if (!next) continue;
+      if (next.choiceGroup) groups.add(next.choiceGroup);
+      chosen.push(next); took = true;
+    }
+    if (!took) break; // every topic ran dry (the rest were other alternatives of choices already drawn)
+  }
   const rank = (q: string) => { const i = (QTYPE_ORDER as readonly string[]).indexOf(q); return i < 0 ? QTYPE_ORDER.length : i; };
   return chosen.sort((a, b) => rank(a.qtype) - rank(b.qtype) || a.marks - b.marks || a.position - b.position);
 }
@@ -124,6 +144,7 @@ export async function buildPractice(d: Exec, userId: string, input: { poolSetId:
       setId: set!.id, position: k, number: k + 1, section: i.section, marks: i.marks, qtype: i.qtype, chapter: i.chapter, topic: i.topic,
       bankQuestionId: i.bankQuestionId, stem: i.stem, options: i.options, correctOption: i.correctOption, acceptedAnswers: i.acceptedAnswers,
       parts: i.parts, schemeText: i.schemeText, diagramParts: i.diagramParts,
+      ncert: i.ncert, sources: i.sources, choiceGroup: i.choiceGroup, figures: i.figures, keyCheckedBy: i.keyCheckedBy, keyCheckedAt: i.keyCheckedAt,
     })));
     await tx.update(hwExamSet).set({ status: 'published' }).where(eq(hwExamSet.id, set!.id));
     return { setId: set!.id, questions: chosen.length, maxMarks, durationMinutes };

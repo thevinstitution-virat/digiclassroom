@@ -8,7 +8,7 @@
 
 import { and, asc, count, desc, eq, inArray, sql } from 'drizzle-orm';
 import { hwBankQuestion } from '@/db/hw-bank-schema';
-import { hwExamAttempt, hwExamEntitlement, hwExamPackage, hwExamPage, hwExamSet, hwExamSetItem, type ExamAttemptStatus } from '@/db/hw-exams-schema';
+import { hwExamAttempt, hwExamEntitlement, hwExamPackage, hwExamPage, hwExamSet, hwExamSetItem, type ExamAttemptStatus, type ItemFigure } from '@/db/hw-exams-schema';
 import { HwError } from '@/lib/hw/errors';
 import type { Exec } from '@/lib/hw/db';
 import { getHwConfig } from '@/lib/hw/config';
@@ -233,6 +233,12 @@ export function paperQuestionOf(
   };
 }
 
+/** An authored question's own pictures (037), as short-lived links; none without a signer. */
+export async function authoredFigures(figures: ItemFigure[] | null | undefined, sign?: (key: string) => Promise<string>): Promise<LearnerFigure[]> {
+  if (!sign || !figures?.length) return [];
+  return Promise.all(figures.map(async (f, k) => ({ figureId: `fig${k + 1}`, description: f.description, url: await sign(f.key) })));
+}
+
 export async function attemptView<P = never>(d: Exec, userId: string, attemptId: string, opts: { now?: Date; sign?: (key: string) => Promise<string>; booklet?: (attemptId: string) => Promise<P[]> } = {}) {
   requireEnabled();
   const now = opts.now ?? new Date();
@@ -244,6 +250,8 @@ export async function attemptView<P = never>(d: Exec, userId: string, attemptId:
     .where(eq(hwExamSetItem.setId, set.id)).orderBy(asc(hwExamSetItem.position));
   const bankIds = rows.flatMap((r) => (r.b ? [r.b.id] : []));
   const figs = opts.sign && bankIds.length ? await learnerFigures(d, bankIds, opts.sign) : new Map<string, LearnerFigure[]>();
+  const authoredGroups = new Map<string, number>();
+  for (const { i, b } of rows) if (!b && i.choiceGroup) authoredGroups.set(i.choiceGroup, (authoredGroups.get(i.choiceGroup) ?? 0) + 1);
   const pages = (await d.select({ n: count() }).from(hwExamPage).where(and(eq(hwExamPage.attemptId, a.id), eq(hwExamPage.status, 'accepted'))))[0]!.n;
   return {
     attempt: {
@@ -259,7 +267,11 @@ export async function attemptView<P = never>(d: Exec, userId: string, attemptId:
     set: { id: set.id, packageId: set.packageId, title: set.title, subject: set.subject, subjectCode: set.subjectCode, kind: set.kind, maxMarks: set.maxMarks, durationMinutes: set.durationMinutes },
     /** The photographed pages, in order (phase 4), when the caller can show them. */
     booklet: opts.booklet ? await opts.booklet(a.id) : ([] as P[]),
-    paper: rows.map(({ i, b }) => paperQuestionOf(i, b && { stem: b.stem, alt: b.alt, options: b.options, choiceGroup: b.choiceGroup }, b ? figs.get(b.id) ?? [] : [])),
+    paper: await Promise.all(rows.map(async ({ i, b }) => {
+      const q = paperQuestionOf(i, b && { stem: b.stem, alt: b.alt, options: b.options, choiceGroup: b.choiceGroup }, b ? figs.get(b.id) ?? [] : await authoredFigures(i.figures, opts.sign));
+      // an authored question's choice group (037) only means "attempt either" when the set really holds both alternatives
+      return b || !i.choiceGroup || (authoredGroups.get(i.choiceGroup) ?? 0) < 2 ? q : { ...q, choiceGroup: i.choiceGroup };
+    })),
     /** The report (phase 6), once made; with this learner's earlier attempts at the same set. */
     // loaded on demand: the report module brings the job runner's database and AI clients, which this module otherwise never needs
     report: a.status === 'reported' ? await (await import('./report')).reportView(d, a) : null,

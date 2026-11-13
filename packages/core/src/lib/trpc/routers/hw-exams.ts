@@ -34,6 +34,9 @@ async function admin<T>(ctx: { userId: string | null }, fn: (actor: string) => P
   }
 }
 
+/** A short-lived link to a picture: exam pictures (hw-exams/) through the page store (a local folder in development), bank pictures from R2. */
+const pictureUrl = (key: string) => (key.startsWith('hw-exams/') ? examPageStore().readUrl(key) : signedReadUrl(key));
+
 const id = z.string().min(1).max(64);
 const halfMarks = z.number().positive().max(1000).refine((n) => Math.round(n * 2) === n * 2, 'Marks must be whole or half marks');
 const slug = z.string().trim().min(2).max(60).regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, 'lowercase letters, digits and single hyphens');
@@ -99,7 +102,7 @@ export const hwExamsRouter = createTRPCRouter({
     .mutation(({ ctx, input }) => admin(ctx, (u) => learner.startAttempt(hwDb, u, input.setId))),
   attempt: protectedProcedure.input(z.object({ attemptId: id }))
     .query(({ ctx, input }) => admin(ctx, (u) => learner.attemptView(hwDb, u, input.attemptId, {
-      sign: signedReadUrl, booklet: (attemptId) => pages.bookletPages(hwDb, examPageStore(), attemptId),
+      sign: pictureUrl, booklet: (attemptId) => pages.bookletPages(hwDb, examPageStore(), attemptId),
     }))),
   /** The printable answer sheet for a set (numbers and boxes, never the questions). */
   sheet: protectedProcedure.input(z.object({ setId: id })).query(({ ctx, input }) => admin(ctx, (u) => learner.sheetForLearner(hwDb, u, input.setId))),
@@ -143,7 +146,13 @@ export const hwExamsRouter = createTRPCRouter({
       .query(({ ctx, input }) => admin(ctx, () => paperQuestions(hwDb, input.paperId, 'teacher'))),
     setFromPaper: superAdminProcedure.input(z.object({ packageId: id, paperId: id, title: z.string().trim().min(3).max(200).optional(), durationMinutes: z.number().int().min(5).max(360).optional() }))
       .mutation(({ ctx, input }) => admin(ctx, () => builder.setFromPaper(hwDb, input.packageId, input.paperId, input))),
-    getSet: superAdminProcedure.input(z.object({ setId: id })).query(({ ctx, input }) => admin(ctx, () => builder.getSet(hwDb, input.setId))),
+    getSet: superAdminProcedure.input(z.object({ setId: id })).query(({ ctx, input }) => admin(ctx, () => builder.getSet(hwDb, input.setId, pictureUrl))),
+    /** A teacher marks a key the assistant wrote as checked, or takes the check back (037); named by the signed-in account. */
+    checkItemKey: superAdminProcedure.input(z.object({ itemId: id, checked: z.boolean() }))
+      .mutation(({ ctx, input }) => admin(ctx, async (a) => {
+        const u = (await hwDb.select({ name: user.name, email: user.email }).from(user).where(eq(user.id, a)).limit(1))[0];
+        return builder.checkItemKey(hwDb, input.itemId, (u?.name || u?.email || a).slice(0, 200), input.checked);
+      })),
     sheet: superAdminProcedure.input(z.object({ setId: id })).query(({ ctx, input }) => admin(ctx, () => learner.sheetFor(hwDb, input.setId))),
     updateSet: superAdminProcedure.input(z.object({ setId: id, patch: setInput.omit({ kind: true }).partial() }))
       .mutation(({ ctx, input }) => admin(ctx, () => builder.updateSet(hwDb, input.setId, input.patch))),

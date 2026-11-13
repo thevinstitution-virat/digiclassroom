@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { HwError, HwLoading } from '@/components/hw/HwShell'
 import { Field } from '@/components/hw/fields'
 import { AuthoredForm, BankPicker } from './AddItems'
+import { KeyBadges, KeyPanel } from './KeyPanel'
 import { BASE, Crumbs, KIND_LABEL, Note, Problems, QTYPE_LABEL, StatusBadge, marksText } from './shared'
 
 type SetRow = { id: string; status: string; title: string; maxMarks: number; durationMinutes: number; graceMinutes: number; syllabusScope: string[]; kind: string }
@@ -74,6 +75,8 @@ export function SetDetail({ packageId, setId }: { packageId: string; setId: stri
   const q = api.hw.exams.admin.getSet.useQuery({ setId })
   const pkg = api.hw.exams.admin.get.useQuery({ packageId })
   const [adding, setAdding] = useState<'bank' | 'authored' | null>(null)
+  const [open, setOpenRow] = useState<string | null>(null)
+  const [onlyToCheck, setOnlyToCheck] = useState(false)
   const [publishProblems, setPublishProblems] = useState<string[]>([])
   const refresh = () => { utils.hw.exams.admin.getSet.invalidate({ setId }); utils.hw.exams.admin.get.invalidate({ packageId }) }
   const publish = api.hw.exams.admin.publishSet.useMutation({ onSuccess: (r) => { setPublishProblems(r.problems); refresh() } })
@@ -92,6 +95,8 @@ export function SetDetail({ packageId, setId }: { packageId: string; setId: stri
     ids.splice(i + by, 0, it!)
     reorder.mutate({ setId, orderedIds: ids })
   }
+  const toCheck = items.filter((x) => x.keyToCheck && !x.keyCheckedBy).length
+  const shown = onlyToCheck ? items.filter((x) => x.keyToCheck && !x.keyCheckedBy) : items
   const actionError = publish.error?.message ?? setOpen.error?.message ?? del.error?.message ?? remove.error?.message ?? reorder.error?.message
 
   return (
@@ -133,6 +138,12 @@ export function SetDetail({ packageId, setId }: { packageId: string; setId: stri
       <Card>
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-2">
           <CardTitle className="text-base">Questions</CardTitle>
+          {items.some((x) => x.keyToCheck) && (
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={onlyToCheck} onChange={(e) => setOnlyToCheck(e.target.checked)} />
+              Only keys still to check ({toCheck})
+            </label>
+          )}
           {draft && !adding && (
             <div className="flex gap-2">
               <Button size="sm" variant="outline" onClick={() => setAdding('bank')}><FileText className="mr-1 h-4 w-4" />From a board paper</Button>
@@ -147,7 +158,7 @@ export function SetDetail({ packageId, setId }: { packageId: string; setId: stri
             <table className="w-full text-left text-sm">
               <thead className="text-xs text-muted-foreground"><tr><th className="py-2 pr-3">No.</th><th className="pr-3">Question</th><th className="pr-3">Marks</th><th className="pr-3">Chapter</th>{draft && <th />}</tr></thead>
               <tbody>
-                {items.map((it, i) => (
+                {shown.map((it) => { const i = items.indexOf(it); return (
                   <tr key={it.id} className="border-t align-top">
                     <td className="whitespace-nowrap py-2 pr-3 font-medium">Q{it.number}{it.alt ?? ''}{it.section && <div className="text-xs font-normal text-muted-foreground">Sec {it.section}</div>}</td>
                     <td className="max-w-xl pr-3">
@@ -156,7 +167,14 @@ export function SetDetail({ packageId, setId }: { packageId: string; setId: stri
                         <Badge variant="outline">{QTYPE_LABEL[it.qtype] ?? it.qtype}</Badge>
                         <Badge variant={it.bankQuestionId ? 'secondary' : 'outline'}>{it.bankQuestionId ? 'board paper' : 'written here'}</Badge>
                         {it.choiceGroup && <Badge variant="outline">internal choice</Badge>}
+                        <KeyBadges it={it} />
                       </span>
+                      {!it.bankQuestionId && (
+                        <Button size="sm" variant="link" className="h-auto px-0" onClick={() => setOpenRow(open === it.id ? null : it.id)} aria-expanded={open === it.id}>
+                          {open === it.id ? 'Hide the key' : 'Show the key'}
+                        </Button>
+                      )}
+                      {open === it.id && <KeyPanel it={it} editable={draft} onChanged={refresh} />}
                     </td>
                     <td className="pr-3">{marksText(it.marks)}</td>
                     <td className="pr-3"><ChapterCell key={`${it.id}-${it.chapter}`} itemId={it.id} value={it.chapter} editable={draft} onSaved={refresh} /></td>
@@ -168,7 +186,7 @@ export function SetDetail({ packageId, setId }: { packageId: string; setId: stri
                       </td>
                     )}
                   </tr>
-                ))}
+                ) })}
                 {!items.length && <tr><td colSpan={5} className="py-4 text-muted-foreground">No questions yet.</td></tr>}
               </tbody>
             </table>
