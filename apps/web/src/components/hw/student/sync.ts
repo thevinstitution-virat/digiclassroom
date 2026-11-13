@@ -15,7 +15,16 @@ export class UploadError extends Error {
   }
 }
 
+/** Resolves when the browser is idle (at most `ms` later), so preparing an upload never competes with the pen. */
+function whenIdle(ms = 1500): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) window.requestIdleCallback(() => resolve(), { timeout: ms })
+    else setTimeout(resolve, 0)
+  })
+}
+
 export async function uploadInk(submissionId: string, questionId: string, doc: InkDocument): Promise<{ renderBytes: number; inkBytes: number }> {
+  await whenIdle()
   const [{ png }, ink] = await Promise.all([
     renderForReader(doc, RENDER_MAX_WIDTH),
     gzipBytes(new TextEncoder().encode(JSON.stringify(encodeInk(doc)))),

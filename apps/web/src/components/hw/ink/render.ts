@@ -28,9 +28,23 @@ export function outlinePath(outline: number[][]): Path2D {
   return path
 }
 
+/**
+ * A finished stroke's shape, worked out once. A stroke is never changed after the pen lifts (erasing and undo replace the list, not the
+ * strokes), so its outline is cached by the stroke object itself: redrawing the page, and the export for the reader, no longer recompute
+ * every stroke (that recomputation, on every frame, was what made a long answer lag behind the pen). Never call this for the stroke still
+ * under the pen; it grows.
+ */
+const shapes = new WeakMap<InkStroke, Path2D>()
+export function strokePath(s: InkStroke): Path2D {
+  let p = shapes.get(s)
+  if (!p) { p = outlinePath(strokeOutline(s)); shapes.set(s, p) }
+  return p
+}
+
+/** Finished strokes only (see strokePath). */
 export function drawStrokes(ctx: CanvasRenderingContext2D, strokes: InkStroke[], colour = '#111'): void {
   ctx.fillStyle = colour
-  for (const s of strokes) ctx.fill(outlinePath(strokeOutline(s)))
+  for (const s of strokes) ctx.fill(strokePath(s))
 }
 
 export interface Bounds { x: number; y: number; w: number; h: number }

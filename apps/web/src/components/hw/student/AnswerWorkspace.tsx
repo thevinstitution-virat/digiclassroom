@@ -174,6 +174,16 @@ export function AnswerWorkspace({ data, onSubmitted }: { data: Started; onSubmit
   }, [ready])
 
   const lastChange = useMemo(() => Object.values(states).reduce((s, x) => s + x.rev, 0), [states])
+
+  // One callback for the pad for the life of the screen, so the memoised pad is not re-rendered by the one-second visible-time tick
+  // (the pad is keyed by question, so the question it writes to is read when the stroke lands).
+  const inkQuestion = useRef<string | null>(null)
+  inkQuestion.current = question?.id ?? null
+  const onInk = useCallback((doc: InkDocument, stats: InkStats) => {
+    const qid = inkQuestion.current
+    if (!qid) return
+    setStates((s) => (s[qid] ? { ...s, [qid]: { ...s[qid], ink: doc, stats: { ...s[qid].stats, pad: stats }, rev: s[qid].rev + 1 } } : s))
+  }, [])
   useEffect(() => {
     if (!ready) return
     const h = setTimeout(() => { void flushRef.current() }, UPLOAD_AFTER_IDLE_MS)
@@ -290,7 +300,7 @@ export function AnswerWorkspace({ data, onSubmitted }: { data: Started; onSubmit
                 key={question.id}
                 value={st.ink}
                 lines={question.answerLines}
-                onChange={(doc: InkDocument, stats: InkStats) => update(question.id, { ink: doc, stats: { ...st.stats, pad: stats } })}
+                onChange={onInk}
               />
             )
           ) : (
