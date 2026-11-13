@@ -164,15 +164,17 @@ export const WEAK_BELOW = 0.6;
 export const WEAK_SHOWN = 6;
 
 /**
- * The learner's weak topics (phase 4): those never tried, and those whose first attempts scored under 60%. The boards' favourites first (how many
- * times the topic's questions were asked), then the lowest marks; a topic never tried counts as no marks. Pure.
+ * The learner's weak topics (phase 4): those whose first attempts scored under 60%, then those never tried (owner, 13 Nov 2026: what the
+ * learner got wrong comes before what they have not met). Within each, the boards' favourites first (how many times the topic's questions
+ * were asked), then the lowest marks. Pure.
  */
 export function weakTopicsOf(chapters: BoardChapter[], shown = WEAK_SHOWN): WeakTopic[] {
   const share = (t: BoardTopic) => (t.first && t.first.of > 0 ? t.first.got / t.first.of : 0);
+  const rank = (w: WeakTopic) => (w.why === 'low_marks' ? 0 : 1);
   return chapters.flatMap((c) => c.topics.flatMap((t): WeakTopic[] => {
     if (!t.first) return t.tried ? [] : [{ ...t, chapter: c.chapter, chapterNo: c.chapterNo, why: 'never_tried' }]; // tried, marks not back yet: not weak
     return share(t) < WEAK_BELOW ? [{ ...t, chapter: c.chapter, chapterNo: c.chapterNo, why: 'low_marks' }] : [];
-  })).sort((a, b) => b.asked - a.asked || share(a) - share(b) || (a.chapterNo ?? 99) - (b.chapterNo ?? 99) || sectionKey(a.section).localeCompare(sectionKey(b.section)))
+  })).sort((a, b) => rank(a) - rank(b) || b.asked - a.asked || share(a) - share(b) || (a.chapterNo ?? 99) - (b.chapterNo ?? 99) || sectionKey(a.section).localeCompare(sectionKey(b.section)))
     .slice(0, shown);
 }
 

@@ -76,11 +76,12 @@ describe('weak topics and the quick test pace (pure, phase 4)', () => {
     topic('5.4.1', 7, null, 1), // tried, marks not back: not weak yet
     topic('5.4.2', 7, { got: 2, of: 4 }), // 50%
   ] }];
-  it('never tried, or under 60% on the first try; the boards\' favourites first, then the lowest marks', () => {
+  it('under 60% on the first try before never tried; within each, the boards\' favourites first, then the lowest marks', () => {
     const w = P.weakTopicsOf(chapters);
-    expect(w.map((x) => [x.section, x.why])).toEqual([['5.3', 'never_tried'], ['5.2.1', 'low_marks'], ['5.4.2', 'low_marks'], ['5.1', 'never_tried']]);
+    expect(w.map((x) => [x.section, x.why])).toEqual([['5.2.1', 'low_marks'], ['5.4.2', 'low_marks'], ['5.3', 'never_tried'], ['5.1', 'never_tried']]);
     expect(w[0]).toMatchObject({ chapter: 'Life Processes', chapterNo: 5 });
-    expect(P.weakTopicsOf(chapters, 2).map((x) => x.section)).toEqual(['5.3', '5.2.1']);
+    // a short list keeps what the learner got wrong
+    expect(P.weakTopicsOf(chapters, 2).map((x) => x.section)).toEqual(['5.2.1', '5.4.2']);
   });
   it('the quick test\'s time at the board\'s pace (2¼ minutes a mark, at least ten); nothing for a question that is not in a quick test', () => {
     const q = (marks: number, quick = true) => ({ marks: String(marks), originRef: (quick ? { quickTest: '1' } : { poolItemId: 'x' }) as Record<string, string> });

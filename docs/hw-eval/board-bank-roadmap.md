@@ -138,7 +138,7 @@ The pictures come to 40 distinct objects. On the scratch database all 13 were im
 
 ### Phase 4 as built (13 Nov 2026)
 
-- **Weak topics** (`board.ts weakTopicsOf`, returned by `boardCatalogue` as `weak`): topics never tried, and topics whose first attempts scored under 60% (`WEAK_BELOW`). A topic tried but not yet marked is left out. Ordered by times asked, then lowest marks; the six first (`WEAK_SHOWN`). Shown at the top of the board card as "Start with these topics", each opening its questions.
+- **Weak topics** (`board.ts weakTopicsOf`, returned by `boardCatalogue` as `weak`): topics never tried, and topics whose first attempts scored under 60% (`WEAK_BELOW`). A topic tried but not yet marked is left out. Low-mark topics come before never-tried ones (owner, 13 Nov 2026, after the walk showed a just-failed topic pushed off the list); within each, by times asked, then lowest marks; the six first (`WEAK_SHOWN`). Shown at the top of the board card as "Start with these topics", each opening its questions.
 - **First try:** `triedOf` now reads each question's own marks (a quick test has many questions in one submission) and keeps the first marked attempt as well as the best; a returned question left unanswered counts 0. Marks from a quick test count as the first try.
 - **Quick test** (`board.ts startQuickTest`, tRPC `hw.practice.startQuickTest({chapters, count: 5|10})`):
   - draws with `exams/practice.ts drawPractice` from the offered questions of the chosen chapters (all when none): spread over the NCERT topics, never both alternatives of one `choiceGroup`, in the board's order;
