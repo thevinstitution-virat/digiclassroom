@@ -162,19 +162,30 @@ async function applyChecks(p: Pool, year: number, slug: string) {
   const { and, eq } = await import('drizzle-orm');
   const { hwExamPackage, hwExamSet, hwExamSetItem } = await import('@/db/hw-exams-schema');
   const byRef = new Map(p.items.filter((q) => q.key === 'assistant').map((q) => [q.sources[0]!, q]));
-  const n = { lines: 0, stamped: 0, unstamped: 0, teacher: 0, unmatched: 0 };
+  const n = { lines: 0, stamped: 0, unstamped: 0, teacher: 0, unmatched: 0, differs: [] as string[] };
+  const keyOf = (option: string | null | undefined, parts: unknown) => JSON.stringify([option ?? null,
+    ((parts ?? []) as { label?: string; value_points?: { text: string; marks: number }[] }[]).map((pt) => [pt.label ?? '', (pt.value_points ?? []).map((v) => [v.text, Number(v.marks)])])]);
   await db.transaction(async (tx) => {
     const pkg = (await tx.select().from(hwExamPackage).where(and(eq(hwExamPackage.board, p.board), eq(hwExamPackage.classLevel, p.classLevel), eq(hwExamPackage.examYear, year), eq(hwExamPackage.slug, slug))).limit(1))[0];
     if (!pkg) throw new Error(`no package ${p.board} class ${p.classLevel} ${year} "${slug}"`);
     const set = (await tx.select().from(hwExamSet).where(and(eq(hwExamSet.packageId, pkg.id), eq(hwExamSet.kind, 'pool'), eq(hwExamSet.title, p.title))).limit(1))[0];
     if (!set) throw new Error(`the package has no pool called "${p.title}"`);
     if (set.status !== 'draft') throw new Error(`the pool "${p.title}" is ${set.status}; only a draft pool can take the AI checks`);
-    const rows = await tx.select({ id: hwExamSetItem.id, sources: hwExamSetItem.sources, schemeText: hwExamSetItem.schemeText, keyCheckedBy: hwExamSetItem.keyCheckedBy })
-      .from(hwExamSetItem).where(eq(hwExamSetItem.setId, set.id));
+    const rows = await tx.select({
+      id: hwExamSetItem.id, sources: hwExamSetItem.sources, schemeText: hwExamSetItem.schemeText, keyCheckedBy: hwExamSetItem.keyCheckedBy,
+      correctOption: hwExamSetItem.correctOption, parts: hwExamSetItem.parts,
+    }).from(hwExamSetItem).where(eq(hwExamSetItem.setId, set.id));
     for (const r of rows) {
       if (!(r.schemeText ?? '').startsWith('KEY TO CHECK')) continue;
       const q = (r.sources ?? []).map((s) => byRef.get(s)).find(Boolean);
       if (!q) { n.unmatched++; continue; }
+      // the verdict is for the key in the pool file: a key that differs in the database (edited there, or loaded from an older file) keeps none
+      const fileKey = authoredOf(p, q);
+      if (keyOf(r.correctOption, r.parts) !== keyOf(fileKey.correctOption, fileKey.parts)) {
+        n.differs.push(q.sources[0]!);
+        if ((r.keyCheckedBy ?? '').startsWith('Auto-check:')) await tx.update(hwExamSetItem).set({ keyCheckedBy: null, keyCheckedAt: null }).where(eq(hwExamSetItem.id, r.id));
+        continue;
+      }
       const schemeText = withAiCheck(r.schemeText ?? '', aiCheckLine(q));
       const auto = autoCheckedBy(q);
       const byAuto = (r.keyCheckedBy ?? '').startsWith('Auto-check:');
@@ -187,7 +198,8 @@ async function applyChecks(p: Pool, year: number, slug: string) {
     }
   });
   console.log(`${p.title}: ${n.lines} AI-check lines written, ${n.stamped} keys stamped as auto-checked, ${n.unstamped} auto stamps taken back, `
-    + `${n.teacher} already checked by a teacher (left alone), ${n.unmatched} assistant keys not found in the pool file`);
+    + `${n.teacher} already checked by a teacher (left alone), ${n.unmatched} assistant keys not found in the pool file`
+    + (n.differs.length ? `\n  left alone, the key in the database differs from the pool file (update it there, or check it by hand): ${n.differs.join(', ')}` : ''));
 }
 
 async function main() {
