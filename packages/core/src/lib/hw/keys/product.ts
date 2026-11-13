@@ -24,6 +24,7 @@ import { replaceRubric } from '../services/rubric-store';
 import { canonicalJson } from './cache';
 import { buildKey, currentKeyServiceVersion, keyConfigHash, keySettingsFromEnv, type KeyDeps, type KeySettings } from './service';
 import { defaultKeyDeps } from './index';
+import { passageTexts } from '../../library/db';
 import { pgSharedKeyStore } from './shared-pg';
 import { lookupOfficialScheme, officialSourceValid } from '../bank/official-store';
 import type { AnswerKey, KeyRequest, KeyResult, ValuePoint } from './types';
@@ -321,7 +322,7 @@ const TEACHER_STAMP: SchemeStamp = { source: 'teacher_rubric', keyId: null, keyS
  * with the settings running now (R_min, models, index), for this very question, from book text that has not changed. If it fails, a rebuild is queued
  * (once). `rt` and `chunks` are injectable for tests.
  */
-export async function checkKeyForMarking(x: Exec, q: QuestionRow, opts: { rt?: KeyRuntime | null; enforceTeacherRubric?: boolean; /** false = look only, never queue a rebuild (previews and listings) */ rebuild?: boolean } = {}): Promise<KeyCheck> {
+export async function checkKeyForMarking(x: Exec, q: QuestionRow, opts: { rt?: KeyRuntime | null; enforceTeacherRubric?: boolean; /** false = look only, never queue a rebuild (previews and listings) */ rebuild?: boolean; /** tests: the library passage reader */ libraryPassages?: typeof passageTexts } = {}): Promise<KeyCheck> {
   if (q.rubricMode === 'teacher') {
     const examOverride = q.organizationId === EXAM_ORG_ID && getHwConfig().HW_EXAMS_AUTHORED_AI_ENABLED; // D3 for exams only
     return opts.enforceTeacherRubric === false || getHwConfig().HW_TEACHER_RUBRIC_AI_ENABLED || examOverride ? { ok: true, scheme: TEACHER_STAMP } : { ok: false, reason: 'teacher_rubric' };
@@ -360,10 +361,21 @@ export async function checkKeyForMarking(x: Exec, q: QuestionRow, opts: { rt?: K
     if (!valid) return stale('key_stale_book');
   }
   if (k.scheme_source === 'textbook_key' && ids.length) {
+    // A key built through the library hub cites the library's passages; read them there, not in the old Gyankosh content tables (13 Nov 2026:
+    // reading them there found nothing, or failed where those tables are not configured, so every InkBuddy key looked stale and nothing was marked).
     let rows: Array<{ id: string; text: string }>;
-    try { rows = await rt.deps.trio.chunks(ids); } catch { return { ok: false, reason: 'key_stale_book' }; }
-    const have = new Map(rows.map((c) => [c.id, sha(c.text)]));
-    if (ids.some((i) => have.get(i) !== k.passage_hashes![i])) return stale('key_stale_book');
+    try { rows = rt.deps.hub ? await (opts.libraryPassages ?? passageTexts)(ids) : await rt.deps.trio.chunks(ids); } catch (e) {
+      console.warn(`[hw] key check: the book text could not be read (${describeError(e)})`);
+      return { ok: false, reason: 'key_stale_book' };
+    }
+    // still good while each cited passage's exact text is in the library (any book's row with that id; ids are unique within a book only)
+    const have = new Map<string, Set<string>>();
+    for (const c of rows) {
+      const s = have.get(c.id) ?? new Set<string>();
+      s.add(sha(c.text)); s.add(sha(c.text.normalize('NFC')));
+      have.set(c.id, s);
+    }
+    if (ids.some((i) => !have.get(i)?.has(k.passage_hashes![i]))) return stale('key_stale_book');
   }
   return { ok: true, scheme: { source: k.scheme_source, keyId: k.id, keyServiceVersion: k.key_service_version, configHash: k.config_hash } };
 }

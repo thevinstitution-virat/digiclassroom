@@ -35,6 +35,17 @@ async function readOnly<T>(p: Pool, sql: string, params: unknown[]): Promise<T[]
   }
 }
 
+/**
+ * The stored text of library passages, by passage id (the hub's `passage_id`), for the answer-key freshness check (hw/keys/product.ts): a key
+ * built from hub passages is still good while each passage's exact text is still in the library. A passage id is unique within one book only
+ * (the contract's point id is work + passage), so every row with that id comes back and the caller accepts any whose text matches.
+ */
+export async function passageTexts(ids: readonly string[]): Promise<{ id: string; text: string }[]> {
+  if (!ids.length) return [];
+  return readOnly<{ id: string; text: string }>(pool('LIBRARY_READER_DATABASE_URL'),
+    `SELECT passage_id AS id, text FROM library.passage WHERE passage_id = ANY($1::text[])`, [ids]);
+}
+
 export interface WorkSummary {
   id: string;
   title: string;

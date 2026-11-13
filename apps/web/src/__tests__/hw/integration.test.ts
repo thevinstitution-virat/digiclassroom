@@ -1292,6 +1292,36 @@ suite('handwritten assignments — integration', () => {
       expect((await currentKey(a.qid)).passage_hashes.c1).not.toBe((await raw.query(`SELECT passage_hashes FROM hw_question_key WHERE question_id = $1 AND superseded_at IS NOT NULL ORDER BY created_at LIMIT 1`, [a.qid])).rows[0].passage_hashes.c1)
     })
 
+    it('a key built through the library hub is checked against the library, not the old content tables (13 Nov 2026)', async () => {
+      const { a } = await readyPublished({ student: false })
+      const k = await currentKey(a.qid)
+      const cited = Object.keys(k.passage_hashes).filter((i) => i !== 'given')
+      expect(cited.length).toBeGreaterThan(0)
+      // the same key, as if built in hub mode: the hub's index in the settings, so the config still matches
+      const trioChunks = jest.fn(async () => { throw new Error('TRIO_CONTENT_DATABASE_URL is not set') })
+      const hubRt = () => { const rt = runtime() as { deps: Record<string, unknown> }; rt.deps.hub = { indexId: 'hub|library_v2|embed', search: async () => ({ scope: [], results: [], warnings: [] }) }; rt.deps.trio = { practiceRows: async () => [], chunks: trioChunks }; return rt as never }
+      await raw.query(`UPDATE hw_question_key SET config_hash = $2 WHERE id = $1`, [k.id, keys.currentConfigHash(hubRt())])
+      const { db: hwDb } = await import('@/lib/hw/db')
+      const { hwQuestion } = await import('@/db/hw-schema')
+      const { eq } = await import('drizzle-orm')
+      const [qrow] = await hwDb.select().from(hwQuestion).where(eq(hwQuestion.id, a.qid))
+      const text = (i: string) => chunks[i].text
+      const check = (lib: (ids: readonly string[]) => Promise<{ id: string; text: string }[]>) =>
+        keys.checkKeyForMarking(hwDb, qrow as never, { rt: hubRt(), rebuild: false, libraryPassages: lib })
+      // the same text in the library: good, and the old content tables are never touched
+      expect(await check(async (ids) => ids.map((i) => ({ id: i, text: text(i) })))).toMatchObject({ ok: true })
+      // another book has a passage with the same id and other words: still good (ids are unique within a book only)
+      expect(await check(async (ids) => ids.flatMap((i) => [{ id: i, text: 'another book' }, { id: i, text: text(i) }]))).toMatchObject({ ok: true })
+      // the words changed, or the passage is gone: stale
+      expect(await check(async (ids) => ids.map((i) => ({ id: i, text: text(i) + ' (revised)' })))).toEqual({ ok: false, reason: 'key_stale_book' })
+      expect(await check(async () => [])).toEqual({ ok: false, reason: 'key_stale_book' })
+      // the library cannot be read: not marked, said as such
+      const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined)
+      expect(await check(async () => { throw new Error('LIBRARY_READER_DATABASE_URL is not set') })).toEqual({ ok: false, reason: 'key_stale_book' })
+      warn.mockRestore()
+      expect(trioChunks).not.toHaveBeenCalled()
+    })
+
     it('the key-service version changed, or the question changed after its key was built: no suggestion', async () => {
       const { a } = await readyPublished({ student: false })
       await raw.query(`UPDATE hw_question_key SET key_service_version = 'old-prompts+old-checks' WHERE id = $1`, [(await currentKey(a.qid)).id])
