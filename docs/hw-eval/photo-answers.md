@@ -31,8 +31,8 @@ A question left on Photo with no photo cannot be handed in ("Question N has no p
 
 - **Cropping on the device.** The learner frames the photo; the reader sees the whole picture.
 - **More than one photo per answer.** One photo per question; a long answer must fit one page.
-- **Thresholds are provisional.** The light, glare and focus limits are the exam booklet's, not yet calibrated on real photos; a clean white
-  page measured 0.92 brightness locally, right at the "too bright" limit. Because these problems can be overridden, a wrong threshold costs a
+- **Thresholds are provisional.** The light, glare and focus limits are the exam booklet's, not yet calibrated on real photos; the "too bright"
+  limit was raised from 0.92 to 0.97 on 13 Nov 2026, after a light page with little writing was called too bright. Because these problems can be overridden, a wrong threshold costs a
   learner one extra tap, not their answer. Calibrate on the first real photos.
 - **Cost.** A photo is a larger picture than an ink render (1600 px against at most 1000 px), so reading it costs somewhat more. Watch the AI
   usage view after launch.

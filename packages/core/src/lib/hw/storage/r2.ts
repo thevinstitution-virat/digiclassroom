@@ -9,7 +9,7 @@
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { r2Client } from '@/lib/services/r2';
-import { HwError } from '../errors';
+import { HwError, isHwError } from '../errors';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { assertHwKey } from './keys';
@@ -35,18 +35,34 @@ function bucket(): string {
   return R2_BUCKET_NAME;
 }
 
+/**
+ * A storage call. When the bucket refuses it, the learner sees which refusal it was (AccessDenied, NoSuchBucket, InvalidAccessKeyId, ...:
+ * names, never secrets), so a wrong storage setting is found from the screen; the full error goes to the log.
+ */
+async function storage<T>(what: string, key: string, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (e) {
+    if (isHwError(e)) throw e;
+    const err = e as { name?: string; Code?: string; message?: string; $metadata?: { httpStatusCode?: number } };
+    const name = err.Code ?? err.name ?? 'Error';
+    throw new HwError('PROVIDER_ERROR', `File storage did not accept this (${name}). Please try again later.`,
+      `R2 ${what} ${key} failed: ${name} (HTTP ${err.$metadata?.httpStatusCode ?? '?'}): ${err.message ?? ''}`);
+  }
+}
+
 export async function putHwObject(key: string, body: Uint8Array, contentType: string): Promise<void> {
   assertHwKey(key);
   const dev = devPath(key);
   if (dev) { await mkdir(dirname(dev), { recursive: true }); await writeFile(dev, body); return; }
-  await r2Client.send(new PutObjectCommand({ Bucket: bucket(), Key: key, Body: body, ContentType: contentType }));
+  await storage('put', key, () => r2Client.send(new PutObjectCommand({ Bucket: bucket(), Key: key, Body: body, ContentType: contentType })));
 }
 
 export async function getHwObject(key: string): Promise<Uint8Array> {
   assertHwKey(key);
   const dev = devPath(key);
   if (dev) return new Uint8Array(await readFile(dev));
-  const res = await r2Client.send(new GetObjectCommand({ Bucket: bucket(), Key: key }));
+  const res = await storage('get', key, () => r2Client.send(new GetObjectCommand({ Bucket: bucket(), Key: key })));
   if (!res.Body) throw new HwError('NOT_FOUND', 'File not found.', `R2 object ${key} has no body`);
   return res.Body.transformToByteArray();
 }

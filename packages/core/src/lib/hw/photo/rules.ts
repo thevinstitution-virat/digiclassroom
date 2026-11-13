@@ -21,7 +21,9 @@ export const PHOTO_LIMITS = {
   maxBytes: 8_000_000,
   minSharpness: 0.25,
   minBrightness: 0.18,
-  maxBrightness: 0.92,
+  // 0.92 until 13 Nov 2026: a light page with little writing measures about 0.94 and was called too bright. Blown-out light is the glare
+  // check's job; this only stops a washed-out picture.
+  maxBrightness: 0.97,
   maxGlare: 0.08,
 } as const;
 

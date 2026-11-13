@@ -162,7 +162,8 @@ describe('a page the reader can actually read', () => {
     expect(pageVerdict({ ...good, bytes: PAGE_LIMITS.maxBytes + 1 })).toEqual({ ok: false, why: 'too_large' });
     expect(pageVerdict({ ...good, sharpness: 0.1 })).toEqual({ ok: false, why: 'too_blurred' });
     expect(pageVerdict({ ...good, brightness: 0.05 })).toEqual({ ok: false, why: 'too_dark' });
-    expect(pageVerdict({ ...good, brightness: 0.97 })).toEqual({ ok: false, why: 'too_bright' });
+    expect(pageVerdict({ ...good, brightness: 0.98 })).toEqual({ ok: false, why: 'too_bright' });
+    expect(pageVerdict({ ...good, brightness: 0.95 })).toEqual({ ok: true }); // a light page with little writing (limit raised 13 Nov 2026)
     expect(pageVerdict({ ...good, glare: 0.5 })).toEqual({ ok: false, why: 'glare' });
   });
 
