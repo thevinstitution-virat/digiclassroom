@@ -6,37 +6,21 @@ import { useRef, useState } from 'react'
 import { ArrowDown, ArrowUp, Camera, Images, Loader2, Send, Trash2 } from 'lucide-react'
 import { api } from '@/lib/trpc/client'
 import type { HwOut } from '@/components/hw/types'
-import { measurePage, measureSize } from '@/lib/hw/exams/page-measure'
-import { PAGE_LIMITS, SOFT_PAGE_PROBLEMS, pageVerdict, type PageProblem } from '@/lib/hw/exams/rules'
+import { PAGE_LIMITS, SOFT_PAGE_PROBLEMS, type PageProblem } from '@/lib/hw/exams/rules'
+import { preparePhoto, type PhotoFacts } from '@/components/hw/photo/prepare'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useExamT, type ExKey } from './strings'
 
 type Page = HwOut['exams']['attempt']['booklet'][number]
-type Facts = { sharpness: number; brightness: number; glare: number }
+type Facts = PhotoFacts
 type Held = { id: string; name: string; blob: Blob; preview: string; facts: Facts; problem: PageProblem | 'unreadable' }
 
 /** The long side a page is uploaded at: plenty for handwriting, a fraction of a phone photo's size. */
 const UPLOAD_LONG_SIDE = 2400
 
-async function prepare(file: File): Promise<{ blob: Blob; facts: Facts; verdict: ReturnType<typeof pageVerdict> }> {
-  const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' })
-  try {
-    const m = measureSize(bmp.width, bmp.height)
-    const small = new OffscreenCanvas(m.width, m.height)
-    const sctx = small.getContext('2d')!
-    sctx.drawImage(bmp, 0, 0, m.width, m.height)
-    const facts = measurePage(sctx.getImageData(0, 0, m.width, m.height))
-    const u = measureSize(bmp.width, bmp.height, UPLOAD_LONG_SIDE)
-    const big = new OffscreenCanvas(u.width, u.height)
-    big.getContext('2d')!.drawImage(bmp, 0, 0, u.width, u.height)
-    const blob = await big.convertToBlob({ type: 'image/jpeg', quality: 0.85 })
-    return { blob, facts, verdict: pageVerdict({ widthPx: u.width, heightPx: u.height, bytes: blob.size, ...facts }) }
-  } finally {
-    bmp.close()
-  }
-}
+const prepare = (file: File) => preparePhoto(file, UPLOAD_LONG_SIDE)
 
 export function Booklet({ attemptId, status, pages, onChanged }: { attemptId: string; status: string; pages: Page[]; onChanged: () => void }) {
   const { t, pick } = useExamT()

@@ -12,7 +12,8 @@ export interface LocalDraft {
   key: string // `${submissionId}:${questionId}`
   submissionId: string
   questionId: string
-  mode: 'typed' | 'ink'
+  /** 'photo': the photo itself is never kept on the device; it is uploaded at once. */
+  mode: 'typed' | 'ink' | 'photo'
   ink?: InkDocument
   typedText?: string
   timeSpentMs: number

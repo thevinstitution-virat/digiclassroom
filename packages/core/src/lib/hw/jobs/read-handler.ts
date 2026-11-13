@@ -18,6 +18,8 @@ import { readCall, readerForTier } from '../reader/gemini-reader';
 import { parseReadOutput } from '../reader/parse';
 import type { ReadAnswerResult, ReadInput } from '../reader/types';
 import { getHwObject } from '../storage/r2';
+import { answerImageKey } from '../storage/keys';
+import { mimeOfKey } from '../photo/image';
 import { failAnswers, finishSubmissionIfRead, setTranscript } from '../pipeline';
 import { claim, claimBatchPending, complete, enqueueRead, fail, markBatchPending, payloadOf, type JobRow, type ReadPayload } from './queue';
 import { shadowAfterRead } from '../shadow/shadow';
@@ -44,7 +46,7 @@ async function prepare(job: JobRow): Promise<PreparedRead | null> {
   const where = payload.answerIds?.length
     ? and(eq(hwAnswer.submissionId, job.submissionId!), inArray(hwAnswer.id, payload.answerIds))
     : and(eq(hwAnswer.submissionId, job.submissionId!), inArray(hwAnswer.mode, ['ink', 'photo']));
-  const rows = await db.select({ id: hwAnswer.id, renderKey: hwAnswer.renderKey, imageKey: hwAnswer.imageKey, status: hwAnswer.transcriptStatus, lang: hwQuestion.languageHint })
+  const rows = await db.select({ id: hwAnswer.id, mode: hwAnswer.mode, renderKey: hwAnswer.renderKey, imageKey: hwAnswer.imageKey, status: hwAnswer.transcriptStatus, lang: hwQuestion.languageHint })
     .from(hwAnswer).innerJoin(hwQuestion, eq(hwQuestion.id, hwAnswer.questionId))
     .where(where);
   const pending = rows.filter((r) => r.status === 'pending');
@@ -83,13 +85,13 @@ async function prepare(job: JobRow): Promise<PreparedRead | null> {
     pending.splice(0, pending.length, ...pending.filter((p) => !trialRefused.has(p.id)));
   }
 
-  const noImage = pending.filter((p) => !(p.renderKey ?? p.imageKey));
+  const noImage = pending.filter((p) => !answerImageKey(p));
   if (noImage.length) {
     await db.transaction(async (tx) => {
       await failAnswers(tx, noImage.map((p) => p.id), 'No handwriting image was uploaded for this answer.', 'needs_review');
     });
   }
-  const readable = pending.filter((p) => p.renderKey ?? p.imageKey);
+  const readable = pending.filter((p) => answerImageKey(p));
   if (!readable.length) {
     await db.transaction(async (tx) => {
       await complete(tx, job.id, undefined, 'no images to read');
@@ -98,11 +100,11 @@ async function prepare(job: JobRow): Promise<PreparedRead | null> {
     return null;
   }
 
-  const answers = await Promise.all(readable.map(async (r) => ({
-    answerId: r.id,
-    languageHint: r.lang,
-    png: await getHwObject((r.renderKey ?? r.imageKey)!),
-  })));
+  const answers = await Promise.all(readable.map(async (r) => {
+    const key = answerImageKey(r)!;
+    // a photo is JPEG, PNG or WebP; the reader is told which
+    return { answerId: r.id, languageHint: r.lang, png: await getHwObject(key), mimeType: mimeOfKey(key) };
+  }));
   return { job, tier: payload.tier, input: { answers }, bytes: answers.reduce((s, a) => s + a.png.length, 0) };
 }
 

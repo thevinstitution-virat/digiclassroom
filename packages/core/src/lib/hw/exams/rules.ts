@@ -10,6 +10,8 @@
 // Marks are NOT decided here. They come from the official marking scheme through the strict marking path, which code turns into marks
 // (grader/strict.ts). The 8-parameter profile never moves a mark.
 
+import { PHOTO_LIMITS } from '../photo/rules';
+
 export interface PackageLike {
   id: string;
   status: 'draft' | 'published' | 'retired';
@@ -128,47 +130,14 @@ export function uploadVerdict(now: Date, attempt: AttemptLike): UploadVerdict {
   return { ok: true, remainingMs: attempt.uploadDeadlineAt.getTime() - now.getTime() };
 }
 
-/** What the browser measured about one photographed page before it was sent. */
-export interface PageFacts {
-  widthPx: number;
-  heightPx: number;
-  bytes: number;
-  /** Variance of the Laplacian, normalised 0..1 by the client; lower is blurrier. */
-  sharpness: number;
-  /** Mean luminance 0..1. */
-  brightness: number;
-  /** Share of pixels at or near full white, 0..1 — a flash or a window reflection. */
-  glare: number;
-}
-
-export type PageProblem = 'too_small' | 'too_blurred' | 'too_dark' | 'too_bright' | 'glare' | 'too_large';
+// The photo checks (what a page must be to be worth reading) are shared with photo answers: lib/hw/photo/rules.ts.
+export { SOFT_PAGE_PROBLEMS, pageVerdict, type PageFacts, type PageProblem, type PageVerdict } from '../photo/rules';
 
 export const PAGE_LIMITS = {
-  minPx: 1_000_000, // about 1.2 MP: below this handwriting stops being legible at this size
-  maxBytes: 8_000_000,
-  minSharpness: 0.25,
-  minBrightness: 0.18,
-  maxBrightness: 0.92,
-  maxGlare: 0.08,
+  ...PHOTO_LIMITS,
   /** A board paper is rarely more than 30 sides; this stops a runaway upload, not a learner. */
   maxPages: 40,
 } as const;
-
-/** Problems a learner may override ("use this photo anyway"): the measurements behind them are not yet calibrated on real pages. */
-export const SOFT_PAGE_PROBLEMS: ReadonlySet<PageProblem> = new Set(['too_blurred', 'too_dark', 'too_bright', 'glare']);
-
-export type PageVerdict = { ok: true } | { ok: false; why: PageProblem };
-
-/** A page the reader cannot read is a wasted call and a wrong mark. Refuse it here, and tell the learner what to fix. */
-export function pageVerdict(f: PageFacts): PageVerdict {
-  if (f.widthPx * f.heightPx < PAGE_LIMITS.minPx) return { ok: false, why: 'too_small' };
-  if (f.bytes > PAGE_LIMITS.maxBytes) return { ok: false, why: 'too_large' };
-  if (f.sharpness < PAGE_LIMITS.minSharpness) return { ok: false, why: 'too_blurred' };
-  if (f.brightness < PAGE_LIMITS.minBrightness) return { ok: false, why: 'too_dark' };
-  if (f.brightness > PAGE_LIMITS.maxBrightness) return { ok: false, why: 'too_bright' };
-  if (f.glare > PAGE_LIMITS.maxGlare) return { ok: false, why: 'glare' };
-  return { ok: true };
-}
 
 /**
  * Batch halves the price of reading and marking and takes up to 24 hours, so it is the default and the learner is told when their report is due.

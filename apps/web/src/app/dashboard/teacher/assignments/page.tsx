@@ -14,7 +14,7 @@ import { HwError, HwLoading, HwMessage, HwShell } from '@/components/hw/HwShell'
 import { Field, NativeSelect } from '@/components/hw/fields'
 import { marksLabel, useHwT } from '@/components/hw/strings'
 
-type Mode = 'typed' | 'ink'
+type Mode = 'typed' | 'ink' | 'photo'
 
 function NewAssignment({ onDone }: { onDone: () => void }) {
   const { t } = useHwT()
@@ -87,10 +87,10 @@ function NewAssignment({ onDone }: { onDone: () => void }) {
           <fieldset className="space-y-2 sm:col-span-2">
             <legend className="text-sm font-medium">{t('tc.new.modes')}</legend>
             <div className="flex flex-wrap gap-4 text-sm">
-              {(['ink', 'typed'] as Mode[]).map((m) => (
+              {(['ink', 'typed', 'photo'] as Mode[]).map((m) => (
                 <label key={m} className="flex items-center gap-2">
                   <input type="checkbox" checked={modes.includes(m)} onChange={() => toggleMode(m)} />
-                  {t(m === 'ink' ? 'st.mode.write' : 'st.mode.type')}
+                  {t(m === 'ink' ? 'st.mode.write' : m === 'photo' ? 'st.mode.photo' : 'st.mode.type')}
                 </label>
               ))}
             </div>

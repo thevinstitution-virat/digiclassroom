@@ -104,7 +104,6 @@ fonts, so these are the first real readings: the open questions are luna's confi
 
 ## What is still not built or not decided
 
-- **Photo answers** (D4): learners write on screen or type; writing on paper is not possible.
 - **A clean-up of old handwriting files**, and a retention period (P2).
 - **Payment after the trial**: the end of the trial shows an upgrade message and nothing else; the plan and payment flow is the subscription system's job.
 - **Parent consent and parent view for independent learners**: nothing is built.

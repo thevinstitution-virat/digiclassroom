@@ -48,6 +48,8 @@ const gem = {
   /** The last "Draft with AI" request: system prompt and user text. */
   lastRubric: null as null | { system: string; text: string },
   batches: new Map<string, Req[]>(),
+  /** The picture types the reader was sent. */
+  readMimes: [] as string[],
 }
 
 function respond(model: string, body: unknown, usage = { promptTokenCount: 1000, candidatesTokenCount: 120, thoughtsTokenCount: 30, cachedContentTokenCount: 200 }) {
@@ -66,6 +68,7 @@ function handle(req: Req) {
   if (gem.fail === 'badjson') return respond(req.model, 'this is not json')
   const parts = req.contents[0].parts
   if (kind === 'read') {
+    gem.readMimes.push(...parts.filter((p) => p.inlineData).map((p) => (p.inlineData as { mimeType: string }).mimeType))
     const ids = parts.map((p) => p.text?.match(/^Answer id: (\S+)/)?.[1]).filter(Boolean) as string[]
     const plans = gem.readByModel.get(req.model) ?? gem.read
     return respond(req.model, {
@@ -173,8 +176,8 @@ async function makeWorld(quota = 1000): Promise<World> {
 }
 
 /** Teacher builds and publishes: Q1 very short with accepted answers, Q2 short with two key points. */
-async function publishedAssignment(w: World) {
-  const { id } = await svc.assignments.createAssignment(w.teacher, { classId: w.classId, sectionId: null, subject: 'Science', title: 'Photosynthesis', allowedModes: ['typed', 'ink'] })
+async function publishedAssignment(w: World, allowedModes: ('typed' | 'ink' | 'photo')[] = ['typed', 'ink']) {
+  const { id } = await svc.assignments.createAssignment(w.teacher, { classId: w.classId, sectionId: null, subject: 'Science', title: 'Photosynthesis', allowedModes })
   const q1 = await svc.assignments.addQuestion(w.teacher, id, { type: 'very_short', prompt: 'Capital of India?', marks: 1, acceptedAnswers: ['New Delhi', 'नई दिल्ली'] })
   const q2 = await svc.assignments.addQuestion(w.teacher, id, { type: 'short', prompt: 'What is photosynthesis?', marks: 2, modelAnswer: 'Plants make food using sunlight.' })
   await svc.assignments.setRubric(w.teacher, q2.id, [
@@ -231,6 +234,7 @@ suite('handwritten assignments — integration', () => {
     gem.gradeQuote = (t) => t.split(/\s+/).slice(0, 3).join(' ')
     gem.fail = null
     gem.lastRubric = null
+    gem.readMimes = []
     process.env.HW_BATCH_ENABLED = 'false'
     svc.config._resetHwConfig()
   })
@@ -301,6 +305,58 @@ suite('handwritten assignments — integration', () => {
     const keys = [...store.keys()].filter((k) => k.includes(w.org))
     expect(keys.length).toBe(2)
     expect(keys.every((k) => k.startsWith(`hw-assignments/${w.org}/${a.id}/${h.sid}/${a.q2}/`))).toBe(true)
+  })
+
+  it('photo answer: checked, stored with its real type, read as that type instead of earlier writing, shown to the teacher', async () => {
+    const w = await makeWorld()
+    // the smallest bytes the server reads as a JPEG of this size
+    const jpeg = (width: number, height: number) => { const b = new Uint8Array(2048); b.set([0xff, 0xd8, 0xff, 0xc0, 0x00, 0x11, 0x08, height >> 8, height & 0xff, width >> 8, width & 0xff]); return b }
+    const sharp = { sharpness: 0.6, brightness: 0.6, glare: 0.01, override: false }
+
+    // a school assignment takes photos only when the teacher allowed them
+    const inkOnly = await publishedAssignment(w)
+    const s0 = (await svc.submissions.startSubmission(w.s2, inkOnly.id)).submission.id
+    await expect(svc.submissions.storePhoto(w.s2, s0, inkOnly.q2, jpeg(1200, 1600), sharp)).rejects.toThrow(/does not accept photos/)
+
+    const a = await publishedAssignment(w, ['typed', 'ink', 'photo'])
+    const sid = (await svc.submissions.startSubmission(w.s1, a.id)).submission.id
+    await svc.submissions.saveAnswer(w.s1, sid, a.q1, { mode: 'typed', typedText: 'new delhi', timeSpentMs: 10_000 })
+    // writes on screen first, then changes their mind and photographs a paper answer
+    const { ink, png } = await inkFiles()
+    await svc.submissions.storeInk(w.s1, sid, a.q2, ink, png)
+
+    await expect(svc.submissions.storePhoto(w.s1, sid, a.q2, jpeg(1000, 750), sharp)).rejects.toMatchObject({ publicMessage: expect.stringMatching(/too small/) })
+    await expect(svc.submissions.storePhoto(w.s1, sid, a.q2, new TextEncoder().encode('not a picture at all'), sharp)).rejects.toMatchObject({ publicMessage: expect.stringMatching(/not a photo/) })
+    await expect(svc.submissions.storePhoto(w.s1, sid, a.q2, jpeg(1200, 1600), { ...sharp, sharpness: 0.1 })).rejects.toMatchObject({ publicMessage: expect.stringMatching(/blurred/) })
+    const kept = await svc.submissions.storePhoto(w.s1, sid, a.q2, jpeg(1200, 1600), { ...sharp, sharpness: 0.1, override: true })
+    expect(kept).toMatchObject({ version: 1, warning: 'too_blurred' })
+    const retake = await svc.submissions.storePhoto(w.s1, sid, a.q2, jpeg(1600, 1200), sharp)
+    expect(retake).toMatchObject({ version: 2, warning: null })
+    expect(retake.url).toMatch(/photo\.v2\.jpg$/)
+
+    // the photo shows again after a reload; the time autosave keeps the photo
+    await svc.submissions.saveAnswer(w.s1, sid, a.q2, { mode: 'photo', timeSpentMs: 60_000 })
+    const again = await svc.submissions.startSubmission(w.s1, a.id)
+    expect(again.answers.find((x) => x.questionId === a.q2)).toMatchObject({ mode: 'photo', photoUrl: expect.stringMatching(/photo\.v2\.jpg$/) })
+
+    const res = await svc.submissions.submit(w.s1, sid)
+    expect(res.status).toBe('processing')
+    const a2 = (await raw.query(`SELECT id FROM hw_answer WHERE submission_id = $1 AND question_id = $2`, [sid, a.q2])).rows[0].id as string
+    gem.read.set(a2, { text: 'plants make food using sunlight', confidence: 'high' })
+    await drainAll()
+
+    expect(gem.readMimes).toEqual(['image/jpeg']) // the photo, not the earlier writing (a PNG)
+    expect((await raw.query(`SELECT transcript, transcript_status FROM hw_answer WHERE id = $1`, [a2])).rows[0]).toEqual({ transcript: 'plants make food using sunlight', transcript_status: 'done' })
+    // the teacher sees the photo that was read
+    expect((await svc.marking.answerDetail(w.teacher, a2)).renderUrl).toMatch(/photo\.v2\.jpg$/)
+  })
+
+  it('photo answer: a question set to Photo with no photo taken cannot be handed in', async () => {
+    const w = await makeWorld()
+    const a = await publishedAssignment(w, ['typed', 'photo'])
+    const sid = (await svc.submissions.startSubmission(w.s1, a.id)).submission.id
+    await svc.submissions.saveAnswer(w.s1, sid, a.q2, { mode: 'photo', timeSpentMs: 5_000 })
+    await expect(svc.submissions.submit(w.s1, sid)).rejects.toThrow(/has no photo yet/)
   })
 
   it('access: a student cannot read another student’s work; another institution sees nothing', async () => {

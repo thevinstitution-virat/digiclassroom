@@ -30,7 +30,7 @@ function checkId(label: string, v: string): string {
  * Versioned names: a re-upload writes a new object, so a reader job in flight never sees a
  * half-replaced file.
  */
-export function answerFileKey(ref: AnswerFileRef, kind: HwFileKind, version: number): string {
+export function answerFileKey(ref: AnswerFileRef, kind: HwFileKind, version: number, photoExt?: 'png' | 'jpg' | 'webp'): string {
   if (!Number.isInteger(version) || version < 1) throw new Error('hw key: version must be a positive integer');
   return [
     'hw-assignments',
@@ -38,7 +38,8 @@ export function answerFileKey(ref: AnswerFileRef, kind: HwFileKind, version: num
     checkId('assignmentId', ref.assignmentId),
     checkId('submissionId', ref.submissionId),
     checkId('questionId', ref.questionId),
-    `${kind}.v${version}.${EXT[kind]}`,
+    // a photo keeps the type it really is (photo/image.ts reads it from the bytes)
+    `${kind}.v${version}.${kind === 'photo' && photoExt ? photoExt : EXT[kind]}`,
   ].join('/');
 }
 
@@ -51,6 +52,14 @@ export function bankFigureKey(figureRowId: string, version: number, ext: 'png' |
 /** One photographed answer page: hw-exams/{attempt id}/p{page id}.{ext}. A page row is never re-pointed, so no version is needed. */
 export function examPageKey(attemptId: string, pageId: string, ext: 'png' | 'jpg' | 'webp'): string {
   return `${HW_EXAMS_PREFIX}${checkId('attemptId', attemptId)}/p${checkId('pageId', pageId)}.${ext}`;
+}
+
+/**
+ * The picture of an answer that is read and shown: the photo when the learner answered with a photo, else the ink render. Both may exist when
+ * a learner switched between Write and Photo; the mode they handed in with decides.
+ */
+export function answerImageKey(a: { mode: string; renderKey: string | null; imageKey: string | null }): string | null {
+  return a.mode === 'photo' ? a.imageKey : a.renderKey ?? a.imageKey;
 }
 
 /** Refuse any key outside this feature's prefixes, or with path tricks in it. */

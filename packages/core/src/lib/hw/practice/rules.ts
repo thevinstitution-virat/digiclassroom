@@ -123,3 +123,11 @@ export function questionShape(wordCount: number): { type: PracticeQuestionType; 
   if (wordCount <= 25) return { type: 'short', marks: 3 };
   return { type: 'long', marks: 5 };
 }
+
+/**
+ * How a learner may answer. InkBuddy (the practice space) always takes a photo of an answer written on paper too, as well as the modes the
+ * question was made with, so questions started before photo answers existed take photos as well.
+ */
+export function answerModesOf<M extends string>(a: { organizationId: string; allowedModes: M[] }): (M | 'photo')[] {
+  return a.organizationId === PRACTICE_ORG_ID && !(a.allowedModes as string[]).includes('photo') ? [...a.allowedModes, 'photo' as const] : a.allowedModes;
+}

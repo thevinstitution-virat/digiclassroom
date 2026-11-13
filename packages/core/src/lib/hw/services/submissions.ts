@@ -17,11 +17,23 @@ import { finishSubmissionIfRead, setTranscript } from '../pipeline';
 import { answerFileKey, keyVersion } from '../storage/keys';
 import { putHwObject, signedReadUrl } from '../storage/r2';
 import { learnerFigures, type LearnerFigure } from '../bank/figures';
-import { PRACTICE_ORG_ID, PRACTICE_TEXT } from '../practice/rules';
+import { PRACTICE_ORG_ID, PRACTICE_TEXT, answerModesOf } from '../practice/rules';
 import { requireUsableTrial } from '../practice/trial';
 import { latestRevisionsFor } from '../revisions';
+import { readImageHeader } from '../photo/image';
+import { PHOTO_LIMITS, SOFT_PAGE_PROBLEMS, pageVerdict } from '../photo/rules';
 
 const MAX_TYPED_CHARS = 50_000;
+
+/** Why a photo answer was refused, in words for the learner. */
+const PHOTO_PROBLEM_TEXT = {
+  too_small: 'This photo is too small to read. Take it again, closer, with the answer filling the frame.',
+  too_large: 'This photo file is too large.',
+  too_blurred: 'This photo is blurred. Hold the phone still and take it again.',
+  too_dark: 'This photo is too dark. Take it again in better light.',
+  too_bright: 'This photo is too bright. Move away from direct light.',
+  glare: 'There is glare on this photo. Tilt the page or switch off the flash.',
+} as const;
 
 /** What a student may see of a question. */
 function studentQuestion(q: typeof hwQuestion.$inferSelect) {
@@ -58,7 +70,7 @@ export async function myAssignments(actor: HwActor) {
     .filter(({ a }) => a.organizationId !== PRACTICE_ORG_ID || a.createdBy === actor.userId)
     .map(({ a, s }) => ({
       id: a.id, title: a.title, subject: a.subject, dueAt: a.dueAt, totalMarks: num(a.totalMarks), status: a.status,
-      allowedModes: a.allowedModes,
+      allowedModes: answerModesOf(a),
       submission: s ? { id: s.id, status: s.status, submittedAt: s.submittedAt, isLate: s.isLate } : null,
     }));
 }
@@ -80,18 +92,20 @@ export async function startSubmission(actor: HwActor, assignmentId: string) {
   const questions = await db.select().from(hwQuestion).where(eq(hwQuestion.assignmentId, a.id)).orderBy(asc(hwQuestion.position));
   const answers = await db.select().from(hwAnswer).where(eq(hwAnswer.submissionId, s.id));
   return {
-    assignment: { id: a.id, title: a.title, subject: a.subject, instructions: a.instructions, dueAt: a.dueAt, totalMarks: num(a.totalMarks), allowedModes: a.allowedModes, status: a.status },
+    assignment: { id: a.id, title: a.title, subject: a.subject, instructions: a.instructions, dueAt: a.dueAt, totalMarks: num(a.totalMarks), allowedModes: answerModesOf(a), status: a.status },
     // Self-practice: no teacher is involved, and the screens say so.
     practice: a.organizationId === PRACTICE_ORG_ID,
     submission: { id: s.id, status: s.status, submittedAt: s.submittedAt, isLate: s.isLate },
     questions: await withFigures(questions),
-    answers: answers.map((x) => ({
+    answers: await Promise.all(answers.map(async (x) => ({
       questionId: x.questionId, mode: x.mode, typedText: x.typedText, hasInk: Boolean(x.inkKey), timeSpentMs: x.timeSpentMs,
+      // the learner's own photo of their answer, as a short-lived link, so it shows again on another device or after a reload
+      photoUrl: x.mode === 'photo' && x.imageKey ? await signedReadUrl(x.imageKey) : null,
       // Transcripts appear once reading is done; never while the student can still edit.
       transcript: s.status === 'draft' ? null : x.transcript,
       transcriptStatus: s.status === 'draft' ? null : x.transcriptStatus,
       studentFlags: x.studentFlags,
-    })),
+    }))),
   };
 }
 
@@ -118,8 +132,7 @@ export async function saveAnswer(actor: HwActor, submissionId: string, questionI
 }) {
   const { submission, assignment } = await draftOf(actor, submissionId);
   const q = await questionOf(assignment.id, questionId);
-  if (!assignment.allowedModes.includes(input.mode)) throw new HwError('BAD_REQUEST', `This assignment does not accept ${input.mode} answers.`);
-  if (input.mode === 'photo') throw new HwError('BAD_REQUEST', 'Photo answers arrive in a later update.');
+  if (!answerModesOf(assignment).includes(input.mode)) throw new HwError('BAD_REQUEST', `This assignment does not accept ${input.mode} answers.`);
   if (input.typedText && input.typedText.length > MAX_TYPED_CHARS) throw new HwError('PAYLOAD_TOO_LARGE', 'This answer is too long.');
   const stats = input.typingStats ? JSON.parse(JSON.stringify(input.typingStats)) as Record<string, unknown> : undefined;
   if (stats && JSON.stringify(stats).length > 10_000) throw new HwError('PAYLOAD_TOO_LARGE', 'Answer metadata is too large.');
@@ -186,6 +199,40 @@ export async function storeInk(actor: HwActor, submissionId: string, questionId:
 }
 
 /**
+ * A photo of an answer written on paper. The browser has already checked it (photo/measure.ts) and shrunk it; here the bytes are checked for
+ * what they really are, their size in pixels and in bytes, and the browser's light and focus measurements are applied (a learner may use a
+ * photo anyway when only those are doubtful). Stored under a new version, like ink, so a re-take never half-replaces a file.
+ */
+export async function storePhoto(actor: HwActor, submissionId: string, questionId: string, bytes: Uint8Array,
+  facts: { sharpness: number; brightness: number; glare: number; override: boolean }) {
+  const { submission, assignment } = await draftOf(actor, submissionId);
+  const q = await questionOf(assignment.id, questionId);
+  if (!answerModesOf(assignment).includes('photo')) throw new HwError('BAD_REQUEST', 'This assignment does not accept photos of answers.');
+  if (bytes.length > PHOTO_LIMITS.maxBytes) throw new HwError('PAYLOAD_TOO_LARGE', PHOTO_PROBLEM_TEXT.too_large);
+  const head = readImageHeader(bytes);
+  if ('problem' in head) throw new HwError('BAD_REQUEST', 'This file is not a photo we can use. Please take a photo of your answer.', head.problem);
+  const verdict = pageVerdict({ widthPx: head.width, heightPx: head.height, bytes: bytes.length, sharpness: facts.sharpness, brightness: facts.brightness, glare: facts.glare });
+  if (!verdict.ok && !(SOFT_PAGE_PROBLEMS.has(verdict.why) && facts.override)) throw new HwError('BAD_REQUEST', PHOTO_PROBLEM_TEXT[verdict.why], `photo refused: ${verdict.why}`);
+
+  const [existing] = await db.select({ imageKey: hwAnswer.imageKey }).from(hwAnswer)
+    .where(and(eq(hwAnswer.submissionId, submission.id), eq(hwAnswer.questionId, q.id))).limit(1);
+  const version = keyVersion(existing?.imageKey) + 1;
+  const imageKey = answerFileKey({ orgId: actor.orgId, assignmentId: assignment.id, submissionId: submission.id, questionId: q.id }, 'photo', version, head.ext);
+  await putHwObject(imageKey, bytes, head.mime);
+
+  const photo = { width: head.width, height: head.height, bytes: bytes.length, mime: head.mime, sharpness: facts.sharpness, brightness: facts.brightness, glare: facts.glare, override: facts.override, verdict: verdict.ok ? 'ok' : verdict.why };
+  await db.insert(hwAnswer).values({
+    id: newId(), organizationId: actor.orgId, submissionId: submission.id, questionId: q.id,
+    mode: 'photo', imageKey, inkStats: { photo },
+  }).onConflictDoUpdate({
+    target: [hwAnswer.submissionId, hwAnswer.questionId],
+    // the ink files stay (switching back to Write keeps them); what is read is chosen by the mode (answerImageKey)
+    set: { mode: 'photo', typedText: null, imageKey, inkStats: sql`${hwAnswer.inkStats} || ${JSON.stringify({ photo })}::jsonb` },
+  });
+  return { version, url: await signedReadUrl(imageKey), warning: verdict.ok ? null : verdict.why };
+}
+
+/**
  * Hand in. Typed answers are their own transcript (no AI reading). Questions left
  * unanswered get a blank answer, which marks as 0 without AI. If anything is handwritten,
  * one read job covers the whole submission.
@@ -202,9 +249,13 @@ export async function submit(actor: HwActor, submissionId: string) {
 
     const answers = await tx.select().from(hwAnswer).where(eq(hwAnswer.submissionId, submission.id));
     const missingInk = answers.filter((a) => a.mode === 'ink' && !a.renderKey);
+    const qNums = (rows: typeof answers) => rows.map((a) => (questions.find((q) => q.id === a.questionId)?.position ?? 0) + 1).sort((x, y) => x - y).join(', ');
     if (missingInk.length) {
-      const nums = missingInk.map((a) => (questions.find((q) => q.id === a.questionId)?.position ?? 0) + 1).sort((x, y) => x - y);
-      throw new HwError('BAD_REQUEST', `Your writing for question ${nums.join(', ')} has not finished uploading. Please wait and try again.`);
+      throw new HwError('BAD_REQUEST', `Your writing for question ${qNums(missingInk)} has not finished uploading. Please wait and try again.`);
+    }
+    const missingPhoto = answers.filter((a) => a.mode === 'photo' && !a.imageKey);
+    if (missingPhoto.length) {
+      throw new HwError('BAD_REQUEST', `Question ${qNums(missingPhoto)} has no photo yet. Take a photo of your answer, or choose Write or Type.`);
     }
 
     for (const q of questions) {

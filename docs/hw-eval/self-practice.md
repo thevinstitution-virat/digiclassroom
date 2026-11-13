@@ -74,12 +74,11 @@ Read from the code on 7 Nov:
 
 ### What a learner cannot do yet
 
-- **Write on paper and photograph it** (decision D4).
 - **See the amounts.** By design they see days left and a percentage of the allowance, not rupees.
 
 ### Limits to know
 
-- **Photo answers do not exist yet** (decision D4), so a learner answers on screen (ink) or by typing. Writing on paper and photographing it is not possible.
+- **Photo answers (13 Nov 2026, D4 decided: build them).** Every InkBuddy question offers Write, Type and **Photo**: the learner writes on paper, takes a photo (camera or gallery), and that photo is read and marked. See `photo-answers.md`.
 - Whether a key can be built depends on the live blockers below; until then a started question shows no mark.
 
 ### Choices made in phase 1 that you may overrule

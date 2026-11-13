@@ -18,6 +18,7 @@ import { gradeRulesThenQueue, setTranscript, suggestionSources, type SuggestionS
 import { aiOffMessage, isRuleModel } from '../eligibility/decision';
 import { eligibilityOfQuestion } from '../eligibility/registry';
 import { signedReadUrl } from '../storage/r2';
+import { answerImageKey } from '../storage/keys';
 import { tenantUsage } from '../tenants';
 import { writeAudit } from '../admin-audit';
 import { PRACTICE_ORG_ID } from '../practice/rules';
@@ -389,7 +390,8 @@ export async function answerDetail(actor: HwActor, answerId: string) {
   const history = await db.select().from(hwTranscriptRevision).where(eq(hwTranscriptRevision.answerId, answer.id)).orderBy(asc(hwTranscriptRevision.createdAt));
   return {
     answerId: answer.id,
-    renderUrl: answer.renderKey ? await signedReadUrl(answer.renderKey) : null,
+    // the picture that was read: the learner's photo for a photo answer, else the ink render
+    renderUrl: answerImageKey(answer) ? await signedReadUrl(answerImageKey(answer)!) : null,
     inkUrl: answer.inkKey ? await signedReadUrl(answer.inkKey) : null,
     imageUrl: answer.imageKey ? await signedReadUrl(answer.imageKey) : null,
     transcriptHistory: history.map((h) => ({ transcript: h.transcript, source: h.source, readerEngine: h.readerEngine, confidence: h.confidence === null ? null : num(h.confidence), at: h.createdAt })),

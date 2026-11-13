@@ -28,6 +28,8 @@ import type { ReadInputAnswer } from '../reader/types';
 import { READ_PROMPT_VERSION } from '../prompts/read.v1';
 import { GRADE_PROMPT_VERSION } from '../prompts/grade.v1';
 import { getHwObject } from '../storage/r2';
+import { answerImageKey } from '../storage/keys';
+import { mimeOfKey } from '../photo/image';
 import type { TokenUsage } from '../cost/pricing';
 
 const ShadowConfig = z.object({
@@ -109,14 +111,13 @@ export async function shadowAfterRead(orgId: string, answerIds: string[]): Promi
     const quota = await quotaState(db, orgId, 'read');
     if (!quotaAllows(quota, pick.length)) return saveFailures(orgId, pick, 'read', s.configHash, 'AI quota reached: not run');
 
-    const rows = await db.select({ id: hwAnswer.id, renderKey: hwAnswer.renderKey, imageKey: hwAnswer.imageKey, transcript: hwAnswer.transcript, lang: hwQuestion.languageHint })
+    const rows = await db.select({ id: hwAnswer.id, mode: hwAnswer.mode, renderKey: hwAnswer.renderKey, imageKey: hwAnswer.imageKey, transcript: hwAnswer.transcript, lang: hwQuestion.languageHint })
       .from(hwAnswer).innerJoin(hwQuestion, eq(hwQuestion.id, hwAnswer.questionId))
       .where(and(eq(hwAnswer.organizationId, orgId), inArray(hwAnswer.id, pick)));
-    const withImage = rows.filter((r) => r.renderKey ?? r.imageKey);
+    const withImage = rows.filter((r) => answerImageKey(r));
     const answers: ReadInputAnswer[] = await Promise.all(withImage.map(async (r) => {
-      const key = (r.renderKey ?? r.imageKey)!;
-      const ext = key.split('.').pop()?.toLowerCase();
-      return { answerId: r.id, languageHint: r.lang, png: await getHwObject(key), mimeType: ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' as const : ext === 'webp' ? 'image/webp' as const : 'image/png' as const };
+      const key = answerImageKey(r)!;
+      return { answerId: r.id, languageHint: r.lang, png: await getHwObject(key), mimeType: mimeOfKey(key) };
     }));
     if (!answers.length) return;
 

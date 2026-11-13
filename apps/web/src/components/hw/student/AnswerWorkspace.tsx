@@ -1,5 +1,5 @@
 // The student's answer screen while the work is still a draft: one question at a time,
-// Write (ink) or Type, visible-time tracking, autosave to the device every few seconds and
+// Write (ink), Type, or Photo (an answer written on paper; uploaded at once), visible-time tracking, autosave to the device every few seconds and
 // on blur, upload when online, and hand-in that waits for the network if it has to.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -16,6 +16,7 @@ import { marksLabel, useHwT } from '../strings'
 import { HwMessage } from '../HwShell'
 import { isOnline, uploadInk } from './sync'
 import { QuestionFigures } from './QuestionFigures'
+import { PhotoAnswer } from './PhotoAnswer'
 import type { HwOut } from '../types'
 
 type Started = HwOut['student']['start']
@@ -23,9 +24,13 @@ type Started = HwOut['student']['start']
 const AUTOSAVE_MS = 4000
 const UPLOAD_AFTER_IDLE_MS = 8000
 
+type Mode = 'typed' | 'ink' | 'photo'
+
 interface QState {
-  mode: 'typed' | 'ink'
+  mode: Mode
   ink: InkDocument | null
+  /** The stored photo of a paper answer (a short-lived link), or null. Photos live on the server only. */
+  photoUrl: string | null
   typedText: string
   timeSpentMs: number
   rev: number
@@ -38,12 +43,13 @@ interface QState {
 export function AnswerWorkspace({ data, onSubmitted }: { data: Started; onSubmitted: () => void }) {
   const { t } = useHwT()
   const submissionId = data.submission.id
-  const modes = data.assignment.allowedModes.filter((m) => m === 'typed' || m === 'ink') as ('typed' | 'ink')[]
+  const modes = data.assignment.allowedModes.filter((m) => m === 'typed' || m === 'ink' || m === 'photo') as Mode[]
   const [index, setIndex] = useState(0)
   const [states, setStates] = useState<Record<string, QState>>({})
   const [ready, setReady] = useState(false)
   const [online, setOnline] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [photoBusy, setPhotoBusy] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
   const [queued, setQueued] = useState(false)
   const statesRef = useRef(states)
@@ -64,9 +70,11 @@ export function AnswerWorkspace({ data, onSubmitted }: { data: Started; onSubmit
         const server = data.answers.find((a) => a.questionId === q.id)
         const d = local.find((x) => x.questionId === q.id)
         const preferInk = modes.includes('ink') && (!modes.includes('typed') || server?.mode !== 'typed')
-        next[q.id] = d
-          ? { mode: d.mode, ink: d.ink ?? null, typedText: d.typedText ?? '', timeSpentMs: Math.max(d.timeSpentMs, server?.timeSpentMs ?? 0), rev: d.rev, uploadedRev: d.uploadedRev, uploadedTimeMs: server?.timeSpentMs ?? 0, stats: d.stats ?? {} }
-          : { mode: server?.mode === 'typed' || !preferInk ? 'typed' : 'ink', ink: null, typedText: server?.typedText ?? '', timeSpentMs: server?.timeSpentMs ?? 0, rev: 0, uploadedRev: 0, uploadedTimeMs: server?.timeSpentMs ?? 0, stats: {} }
+        const photoUrl = server?.photoUrl ?? null
+        const fromServer: Mode = server?.mode === 'photo' && photoUrl ? 'photo' : server?.mode === 'typed' || !preferInk ? (modes.includes('typed') ? 'typed' : modes[0]) : 'ink'
+        next[q.id] = d && modes.includes(d.mode)
+          ? { mode: d.mode, ink: d.ink ?? null, photoUrl, typedText: d.typedText ?? '', timeSpentMs: Math.max(d.timeSpentMs, server?.timeSpentMs ?? 0), rev: d.rev, uploadedRev: d.uploadedRev, uploadedTimeMs: server?.timeSpentMs ?? 0, stats: d.stats ?? {} }
+          : { mode: fromServer, ink: null, photoUrl, typedText: server?.typedText ?? '', timeSpentMs: server?.timeSpentMs ?? 0, rev: 0, uploadedRev: 0, uploadedTimeMs: server?.timeSpentMs ?? 0, stats: {} }
         if (!d && server?.hasInk) {
           // The writing exists on the server but not on this device: it cannot be redrawn here.
           next[q.id].uploadedRev = next[q.id].rev = 1
@@ -109,7 +117,10 @@ export function AnswerWorkspace({ data, onSubmitted }: { data: Started; onSubmit
       const rev = st.rev
       const time = st.timeSpentMs
       try {
-        if (st.mode === 'ink' && !contentChanged) {
+        if (st.mode === 'photo' && st.photoUrl) {
+          // the photo itself went up when it was taken; this records the mode and the time
+          await saveAnswer.mutateAsync({ submissionId, questionId: q.id, mode: 'photo', timeSpentMs: time })
+        } else if (st.mode === 'ink' && !contentChanged) {
           await saveAnswer.mutateAsync({ submissionId, questionId: q.id, mode: 'ink', timeSpentMs: time })
         } else if (st.mode === 'ink' && st.ink && st.ink.strokes.length) {
           setUploading(true)
@@ -206,7 +217,7 @@ export function AnswerWorkspace({ data, onSubmitted }: { data: Started; onSubmit
   const st = states[question.id]
   const unanswered = data.questions.filter((q) => {
     const s = states[q.id]
-    return !s || (s.mode === 'ink' ? !(s.ink?.strokes.length) && s.uploadedRev === 0 : !s.typedText.trim())
+    return !s || (s.mode === 'photo' ? !s.photoUrl : s.mode === 'ink' ? !(s.ink?.strokes.length) && s.uploadedRev === 0 : !s.typedText.trim())
   }).length
   const serverOnlyInk = st.mode === 'ink' && !st.ink && st.uploadedRev > 0
 
@@ -231,7 +242,7 @@ export function AnswerWorkspace({ data, onSubmitted }: { data: Started; onSubmit
           ))}
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          {uploading ? <><Loader2 className="h-4 w-4 animate-spin" />{t('st.uploading')}</> : st.rev === st.uploadedRev ? t('common.saved') : t('common.saving')}
+          {uploading || photoBusy ? <><Loader2 className="h-4 w-4 animate-spin" />{t('st.uploading')}</> : st.rev === st.uploadedRev ? t('common.saved') : t('common.saving')}
         </div>
       </div>
 
@@ -255,14 +266,23 @@ export function AnswerWorkspace({ data, onSubmitted }: { data: Started; onSubmit
               {modes.map((m) => (
                 <Button key={m} size="sm" variant={st.mode === m ? 'default' : 'outline'} role="radio" aria-checked={st.mode === m}
                   onClick={() => update(question.id, { mode: m })}>
-                  {t(m === 'ink' ? 'st.mode.write' : 'st.mode.type')}
+                  {t(m === 'ink' ? 'st.mode.write' : m === 'photo' ? 'st.mode.photo' : 'st.mode.type')}
                 </Button>
               ))}
             </div>
           )}
         </CardHeader>
         <CardContent>
-          {st.mode === 'ink' ? (
+          {st.mode === 'photo' ? (
+            <PhotoAnswer
+              key={question.id}
+              submissionId={submissionId}
+              questionId={question.id}
+              url={st.photoUrl}
+              onBusy={setPhotoBusy}
+              onUploaded={(url) => update(question.id, { photoUrl: url, mode: 'photo' })}
+            />
+          ) : st.mode === 'ink' ? (
             serverOnlyInk ? (
               <HwMessage>{t('common.saved')} ✓</HwMessage>
             ) : (
@@ -296,7 +316,7 @@ export function AnswerWorkspace({ data, onSubmitted }: { data: Started; onSubmit
           <Button variant="outline" onClick={() => goTo(index - 1)} disabled={index === 0}><ChevronLeft className="mr-1 h-4 w-4" />{t('common.previous')}</Button>
           <Button variant="outline" onClick={() => goTo(index + 1)} disabled={index === data.questions.length - 1}>{t('common.next')}<ChevronRight className="ml-1 h-4 w-4" /></Button>
         </div>
-        <Button onClick={confirmSubmit} disabled={submit.isPending || uploading || queued}>
+        <Button onClick={confirmSubmit} disabled={submit.isPending || uploading || photoBusy || queued}>
           {submit.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
           {t('st.submit')}
         </Button>
