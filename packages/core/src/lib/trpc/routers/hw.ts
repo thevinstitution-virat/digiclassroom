@@ -276,6 +276,7 @@ export const hwRouter = createTRPCRouter({
         typedText: z.string().max(50_000).nullable().optional(),
         timeSpentMs: z.number().int().min(0).max(24 * 3600 * 1000),
         typingStats: z.record(z.unknown()).optional(),
+        stopwatchMs: z.number().int().min(0).max(6 * 3600 * 1000).optional(),
       }))
       .mutation(({ ctx, input }) => run(ctx, (a) => submissions.saveAnswer(a, input.submissionId, input.questionId, input))),
     submit: protectedProcedure.input(z.object({ submissionId: id }))

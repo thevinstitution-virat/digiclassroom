@@ -17,6 +17,7 @@ import { HwMessage } from '../HwShell'
 import { isOnline, uploadInk } from './sync'
 import { QuestionFigures } from './QuestionFigures'
 import { PhotoAnswer } from './PhotoAnswer'
+import { Stopwatch, elapsedMs, type StopwatchState } from './Stopwatch'
 import type { HwOut } from '../types'
 
 type Started = HwOut['student']['start']
@@ -112,6 +113,9 @@ export function AnswerWorkspace({ data, onSubmitted }: { data: Started; onSubmit
     for (const q of data.questions) {
       const st = statesRef.current[q.id]
       if (!st) continue
+      // InkBuddy's stopwatch goes up with every save of the answer (practice only)
+      const sw = st.stats.stopwatch as StopwatchState | undefined
+      const stopwatchMs = sw ? Math.round(elapsedMs(sw)) : undefined
       const contentChanged = st.rev !== st.uploadedRev
       if (!contentChanged && st.timeSpentMs - st.uploadedTimeMs < 5000) continue
       const rev = st.rev
@@ -119,17 +123,17 @@ export function AnswerWorkspace({ data, onSubmitted }: { data: Started; onSubmit
       try {
         if (st.mode === 'photo' && st.photoUrl) {
           // the photo itself went up when it was taken; this records the mode and the time
-          await saveAnswer.mutateAsync({ submissionId, questionId: q.id, mode: 'photo', timeSpentMs: time })
+          await saveAnswer.mutateAsync({ submissionId, questionId: q.id, mode: 'photo', timeSpentMs: time, stopwatchMs })
         } else if (st.mode === 'ink' && !contentChanged) {
-          await saveAnswer.mutateAsync({ submissionId, questionId: q.id, mode: 'ink', timeSpentMs: time })
+          await saveAnswer.mutateAsync({ submissionId, questionId: q.id, mode: 'ink', timeSpentMs: time, stopwatchMs })
         } else if (st.mode === 'ink' && st.ink && st.ink.strokes.length) {
           setUploading(true)
           await uploadInk(submissionId, q.id, st.ink)
-          await saveAnswer.mutateAsync({ submissionId, questionId: q.id, mode: 'ink', timeSpentMs: st.timeSpentMs })
+          await saveAnswer.mutateAsync({ submissionId, questionId: q.id, mode: 'ink', timeSpentMs: st.timeSpentMs, stopwatchMs })
         } else {
           await saveAnswer.mutateAsync({
             submissionId, questionId: q.id, mode: 'typed', typedText: st.mode === 'typed' ? st.typedText : '',
-            timeSpentMs: st.timeSpentMs, typingStats: st.mode === 'typed' ? st.stats : undefined,
+            timeSpentMs: st.timeSpentMs, typingStats: st.mode === 'typed' ? st.stats : undefined, stopwatchMs,
           })
         }
         update(q.id, { uploadedRev: rev, uploadedTimeMs: time }, false)
@@ -270,6 +274,12 @@ export function AnswerWorkspace({ data, onSubmitted }: { data: Started; onSubmit
               <p className="mb-1 text-xs font-medium text-muted-foreground">{t('st.q.passage')}</p>
               <p className="whitespace-pre-wrap text-sm leading-relaxed">{question.passage}</p>
             </div>
+          )}
+          {data.practice && (
+            <Stopwatch
+              value={st.stats.stopwatch as StopwatchState | undefined}
+              onChange={(next) => update(question.id, { stats: { ...st.stats, stopwatch: next } })}
+            />
           )}
           {modes.length > 1 && (
             <div className="flex gap-1" role="radiogroup">

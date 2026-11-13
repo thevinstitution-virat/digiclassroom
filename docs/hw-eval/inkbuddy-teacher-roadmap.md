@@ -156,6 +156,19 @@ The ink colour is stored with each stroke; the reader is unaffected (it reads da
 
 ## Phase 4: time, writing speed and handwriting (two sessions)
 
+**Built 13 Nov 2026** (DigiClassroom and Study Buddy), InkBuddy only, no AI and no migration (`practice/pace.ts`):
+- **Stopwatch** on the answer screen: Start, Pause, Resume, Stop, Reset, with the hint. It is saved with every autosave (`ink_stats.stopwatch`).
+- **Measured from the ink:**
+  - the pen's own **active writing time**: strokes plus gaps up to 20 seconds;
+  - **handwriting facts**: median letter size against the ruled lines, and the share of strokes running across a line. Ruler lines, strike-throughs and pencil are left out.
+  - Both are stored with the ink on upload (`ink_stats.ink.activeMs`, `.hand`).
+- **Result page:**
+  - **writing speed** (words in the reading per minute), timed by the stopwatch when used, else by the pen; a photo needs the stopwatch;
+  - a **pacing guide** for 2-, 3- and 5-mark answers at that speed, labelled a teacher's rule of thumb, not a CBSE limit;
+  - the **percentile** among other learners' first attempts at the same question, shown only with at least 20 of them;
+  - one kind **handwriting note**: unclear words, running across lines, small, large, or clear.
+- **Tests:** `practice-pace` (8) and `practice-pace-db` (2: saved facts; an exact percentile of 48% with a faster second attempt excluded). Walked through in a browser.
+
 1. **Stopwatch** above the answer area: Start, Pause, Stop, with the hint "Start when you begin writing, pause if you leave, stop when
    you finish."
    - The pad also measures **active writing time** by itself, from the timestamp on every ink point. Gaps longer than about 20 seconds

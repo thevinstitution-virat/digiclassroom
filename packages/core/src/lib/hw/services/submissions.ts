@@ -15,7 +15,8 @@ import { inkSummary, validateEncodedInk } from '../ink/stroke-format';
 import { queueSubmissionRead } from '../jobs/read-handler';
 import { finishSubmissionIfRead, setTranscript } from '../pipeline';
 import { answerFileKey, answerImageKey, keyVersion } from '../storage/keys';
-import { attemptStatus } from '../practice/attempts';
+import { attemptStatus, practiceRefOf } from '../practice/attempts';
+import { activeWritingMs, countWords, handwritingFacts, handwritingNote, pacingGuide, percentileOf, unclearCount, writingSpeed, type HandFacts } from '../practice/pace';
 import { putHwObject, signedReadUrl } from '../storage/r2';
 import { learnerFigures, type LearnerFigure } from '../bank/figures';
 import { PRACTICE_ORG_ID, PRACTICE_TEXT, answerModesOf } from '../practice/rules';
@@ -130,6 +131,8 @@ export async function saveAnswer(actor: HwActor, submissionId: string, questionI
   timeSpentMs: number;
   /** Typed mode only: paste events etc., for information. */
   typingStats?: Record<string, unknown>;
+  /** InkBuddy's stopwatch: the time the learner timed themselves writing this answer (practice/pace.ts). */
+  stopwatchMs?: number;
 }) {
   const { submission, assignment } = await draftOf(actor, submissionId);
   const q = await questionOf(assignment.id, questionId);
@@ -138,10 +141,14 @@ export async function saveAnswer(actor: HwActor, submissionId: string, questionI
   const stats = input.typingStats ? JSON.parse(JSON.stringify(input.typingStats)) as Record<string, unknown> : undefined;
   if (stats && JSON.stringify(stats).length > 10_000) throw new HwError('PAYLOAD_TOO_LARGE', 'Answer metadata is too large.');
 
+  const merge: Record<string, unknown> = {
+    ...(stats ? { typing: stats } : {}),
+    ...(typeof input.stopwatchMs === 'number' && input.stopwatchMs >= 0 ? { stopwatch: { ms: Math.round(Math.min(input.stopwatchMs, 6 * 3600_000)) } } : {}),
+  };
   await db.insert(hwAnswer).values({
     id: newId(), organizationId: actor.orgId, submissionId: submission.id, questionId: q.id,
     mode: input.mode, typedText: input.mode === 'typed' ? input.typedText ?? '' : null,
-    timeSpentMs: Math.max(0, Math.round(input.timeSpentMs)), inkStats: stats ? { typing: stats } : {},
+    timeSpentMs: Math.max(0, Math.round(input.timeSpentMs)), inkStats: merge,
   }).onConflictDoUpdate({
     target: [hwAnswer.submissionId, hwAnswer.questionId],
     set: {
@@ -149,7 +156,7 @@ export async function saveAnswer(actor: HwActor, submissionId: string, questionI
       typedText: input.mode === 'typed' ? input.typedText ?? '' : null,
       // Time only grows: an older autosave arriving late must not lower it.
       timeSpentMs: sql`GREATEST(${hwAnswer.timeSpentMs}, ${Math.max(0, Math.round(input.timeSpentMs))})`,
-      ...(stats ? { inkStats: sql`${hwAnswer.inkStats} || ${JSON.stringify({ typing: stats })}::jsonb` } : {}),
+      ...(Object.keys(merge).length ? { inkStats: sql`${hwAnswer.inkStats} || ${JSON.stringify(merge)}::jsonb` } : {}),
     },
   });
 }
@@ -188,7 +195,11 @@ export async function storeInk(actor: HwActor, submissionId: string, questionId:
   await putHwObject(inkKey, inkGz, 'application/gzip');
   await putHwObject(renderKey, png, 'image/png');
 
-  const summary = { ...inkSummary(ink.ink), renderWidth: render.info.width, renderHeight: render.info.height, renderBytes: png.length, inkBytes: inkGz.length };
+  // active writing time and handwriting facts (practice/pace.ts), for the writing speed and the handwriting note on the result page
+  const summary = {
+    ...inkSummary(ink.ink), activeMs: activeWritingMs(ink.ink), hand: handwritingFacts(ink.ink),
+    renderWidth: render.info.width, renderHeight: render.info.height, renderBytes: png.length, inkBytes: inkGz.length,
+  };
   await db.insert(hwAnswer).values({
     id: newId(), organizationId: actor.orgId, submissionId: submission.id, questionId: q.id,
     mode: 'ink', inkKey, renderKey, inkStats: { ink: summary },
@@ -317,6 +328,48 @@ function penOf(stats: unknown): { remark: string; notes: { kind: 'fact' | 'langu
   return { remark: p.remark, notes: Array.isArray(p.notes) ? (p.notes as { kind: 'fact' | 'language' | 'presentation'; quote: string; note: string; fix: string }[]) : [] };
 }
 
+type AnswerRow = typeof hwAnswer.$inferSelect;
+type PaceStats = { stopwatch?: { ms?: number }; ink?: { activeMs?: number; hand?: HandFacts | null } };
+
+/** The speed of one answer, from what was saved with it. */
+function speedOfAnswer(a: Pick<AnswerRow, 'mode' | 'transcript' | 'inkStats' | 'timeSpentMs'>) {
+  const s = (a.inkStats ?? {}) as PaceStats;
+  return writingSpeed({ words: countWords(a.transcript), stopwatchMs: s.stopwatch?.ms ?? null, activeMs: s.ink?.activeMs ?? null, typedMs: a.timeSpentMs, mode: a.mode });
+}
+
+/**
+ * Time, speed and handwriting for one InkBuddy answer (practice/pace.ts): words a minute (stopwatch, else the pen's own active time),
+ * a pacing guide, the percentile among other learners' FIRST attempts at the same question (only with enough of them), and a kind note
+ * on handwriting. Never a mark.
+ */
+async function paceOf(a: AnswerRow, ref: string | null, studentId: string) {
+  const speed = speedOfAnswer(a);
+  const s = (a.inkStats ?? {}) as PaceStats;
+  let percentile: number | null = null;
+  let peers = 0;
+  if (speed && ref) {
+    const r = await db.execute<{ mode: string; transcript: string | null; ink_stats: unknown; time_spent_ms: number }>(sql`
+      SELECT DISTINCT ON (a.created_by) an.mode, an.transcript, an.ink_stats, an.time_spent_ms
+        FROM hw_assignment a
+        JOIN hw_question q ON q.assignment_id = a.id
+        JOIN hw_submission sb ON sb.assignment_id = a.id
+        JOIN hw_answer an ON an.submission_id = sb.id
+       WHERE a.organization_id = ${PRACTICE_ORG_ID} AND a.created_by <> ${studentId} AND sb.status = 'returned'
+         AND coalesce(q.origin_ref ->> 'exercise', 'bank:' || (q.origin_ref ->> 'bankRowId')) = ${ref}
+       ORDER BY a.created_by, a.created_at
+       LIMIT 5000`);
+    const others = r.rows.map((x) => speedOfAnswer({ mode: x.mode as AnswerRow['mode'], transcript: x.transcript, inkStats: x.ink_stats as AnswerRow['inkStats'], timeSpentMs: x.time_spent_ms }))
+      .filter((x): x is NonNullable<typeof x> => Boolean(x)).map((x) => x.wpm);
+    peers = others.length;
+    percentile = percentileOf(speed.wpm, others);
+  }
+  return {
+    speed, percentile, peers,
+    guide: speed ? pacingGuide(speed.wpm) : [],
+    hand: handwritingNote({ mode: a.mode, facts: s.ink?.hand ?? null, unclear: unclearCount(a.transcript) }),
+  };
+}
+
 export async function bookAnswerOf(keyId: string | null): Promise<{ text: string; source: string } | null> {
   if (!keyId) return null;
   const r = await db.execute<{ status: string; reference: string | null; citations: { title?: string; chapter?: string | null; pageStart?: number | null; pageEnd?: number | null }[] | null }>(sql`
@@ -351,7 +404,12 @@ export async function myResult(actor: HwActor, submissionId: string) {
   const book = new Map<string, { text: string; source: string } | null>();
   // the teacher's pen (practice/teacher-pen.ts): green from the marking's own quotes; red, yellow and grey notes and the remark, when written
   const green = new Map<string, { verdict: 'met' | 'partial'; quote: string }[]>();
+  const pace = new Map<string, Awaited<ReturnType<typeof paceOf>>>();
   if (practice) {
+    for (const q of questions) {
+      const row = answers.find(({ a }) => a.questionId === q.id);
+      if (row) pace.set(q.id, await paceOf(row.a, practiceRefOf(q.originRef), submission.studentId));
+    }
     for (const { a, g } of answers) {
       if (!g?.aiGradeId) continue;
       const [ai] = await db.select({ items: hwAiGrade.items }).from(hwAiGrade).where(eq(hwAiGrade.id, g.aiGradeId)).limit(1);
@@ -379,7 +437,7 @@ export async function myResult(actor: HwActor, submissionId: string) {
         transcript: row?.a.transcript ?? '',
         ...(practice ? {
           yours: yours.get(q.id) ?? null, bookAnswer: book.get(q.id) ?? null,
-          pen: penOf(row?.a.inkStats), points: green.get(q.id) ?? [],
+          pen: penOf(row?.a.inkStats), points: green.get(q.id) ?? [], pace: pace.get(q.id) ?? null,
         } : {}),
         awarded: g ? num(g.marks) : null,
         comment: g?.comment ?? null,
