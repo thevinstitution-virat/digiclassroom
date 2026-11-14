@@ -107,7 +107,10 @@ export const autoCheckedBy = (q: Item) => (q.key === 'assistant' && q.autoCheck?
 export function authoredOf(p: Pool, q: Item, figures: ItemFigure[] = []): AuthoredInput {
   const choice = q.qtype === 'mcq' || q.qtype === 'assertion_reason';
   const where = `NCERT Class X Science${p.chapterNo ? `, chapter ${p.chapterNo} (${p.chapter})` : `, ${p.chapter}`}`;
-  const from = q.key === 'official' ? `CBSE marking scheme: ${q.official ?? q.sources[0]}` : `KEY TO CHECK: written by the assistant from ${where}; a teacher must confirm it`;
+  const from = q.key !== 'official' ? `KEY TO CHECK: written by the assistant from ${where}; a teacher must confirm it`
+    // the Exemplar's answers are NCERT's own, printed in the book; only the board's keys are a CBSE marking scheme
+    : (q.sources[0] ?? '').startsWith('NCERT Exemplar') ? `NCERT Exemplar's own answer: ${(q.official ?? q.sources[0]!).replace(/^NCERT Exemplar answers?:\s*/, '')}`
+    : `CBSE marking scheme: ${q.official ?? q.sources[0]}`;
   const keyText = choice
     ? `Answer: (${q.correctOption})`
     : (q.parts ?? []).map((pt) => `${pt.label ? `(${pt.label}) ` : ''}${pt.drawing ? '[drawing, not marked by the AI] ' : ''}${pt.points.map(([t, m]) => `${t} [${m}]`).join('; ')}`).join('\n');
