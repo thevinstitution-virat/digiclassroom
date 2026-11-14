@@ -4,7 +4,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
-import { authoredOf, autoCheckedBy, refresh, type Pool as PoolFile, type StoredFigure } from '../../../../../scripts/hw-exam-pool-import';
+import { authoredOf, autoCheckedBy, check, refresh, type Pool as PoolFile, type StoredFigure } from '../../../../../scripts/hw-exam-pool-import';
 
 const DB_URL = process.env.HW_ITEST_DATABASE_URL;
 const suite = DB_URL ? describe : describe.skip;
@@ -32,6 +32,24 @@ describe('authoredOf carries the model answer and the permanent ID', () => {
   it('a question without them stores none', () => {
     const q = mcq('31/1/1 Q2', { answer: undefined, answerSource: undefined, qid: undefined });
     expect(authoredOf(poolFile('t', [q]), q)).toMatchObject({ modelAnswer: null, answerSource: null, qid: null });
+  });
+});
+
+describe('a drawing pool', () => {
+  const drawingQ = (ref: string, parts: Item['parts']): Item => ({
+    id: ref, qtype: 'short', marks: 2, topic: '13.1.1 Food Chains and Webs', sources: [ref], key: 'assistant', needsCheck: true, stem: 'Draw and label.', parts,
+    answer: 'Diagram: a labelled food chain with arrows from grass to deer to lion.', answerSource: 'assistant',
+  });
+  const onlyDrawing = drawingQ('31/1/1 Q20', [{ label: '', marks: 2, drawing: true, points: [['arrows from producer to consumers', 1], ['three levels labelled', 1]] }]);
+  const mixed = drawingQ('31/1/1 Q21', [{ label: 'a', marks: 1, points: [['a point', 1]] }, { label: 'b', marks: 1, drawing: true, points: [['labels', 1]] }]);
+  it('keeps a question that is wholly a drawing (a teacher marks it), which an ordinary pool leaves out', () => {
+    expect(check(poolFile('t', [onlyDrawing]), '.').leftOut.map((l) => l.id)).toEqual(['31/1/1 Q20']);
+    const r = check({ ...poolFile('t', [onlyDrawing]), section: 'drawing' }, '.');
+    expect(r).toMatchObject({ problems: [], leftOut: [] });
+    expect(r.pictures.has('31/1/1 Q20')).toBe(true);
+  });
+  it('refuses a question that is not wholly a drawing', () => {
+    expect(check({ ...poolFile('t', [mixed]), section: 'drawing' }, '.').problems.join(' ')).toMatch(/only questions that are wholly a drawing/);
   });
 });
 

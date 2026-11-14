@@ -5,11 +5,12 @@
 //
 // exam-pool/2 adds, per question: the NCERT section that teaches it (`ncert`), how often the 2026 papers asked it (`asked`), the internal-choice
 // group of its alternatives (`choiceGroup`), its pictures (`figures`, image files beside the pool file) and drawing parts (`"drawing": true`,
-// never marked by the AI; a question that is ONLY a drawing is left out). Pictures are stored once, named by their content (hw-exams/figures/<sha-256>.<ext>). A question whose picture file is
+// never marked by the AI; a question that is ONLY a drawing is left out, unless the pool is a drawing pool, `"section": "drawing"`,
+// whose questions are all wholly drawings that a teacher marks by hand). Pictures are stored once, named by their content (hw-exams/figures/<sha-256>.<ext>). A question whose picture file is
 // missing is LEFT OUT and listed (a learner must never get "in the given figure" without the figure); import it later with the picture.
 //
 //   npm run hw:exam:pool -w apps/api -- check  <pool.json> [--figures <dir>]                    (no database: checks every question and picture)
-//   npm run hw:exam:pool -w apps/api -- import <pool.json> --year 2027 --slug cbse-x-science-chapter-practice --by "name" [--figures <dir>]
+//   npm run hw:exam:pool -w apps/api -- import <pool.json> --year 2027 --slug cbse-x-science-chapter-practice --by "name" [--figures <dir>] [--no-upload]
 //   npm run hw:exam:pool -w apps/api -- apply-checks <pool.json> --year 2027 --slug cbse-x-science-chapter-practice   (an imported draft pool)
 //   npm run hw:exam:pool -w apps/api -- refresh <pool.json> --year 2027 --slug … [--keys] [--add] [--write] [--no-upload] [--by name]   (an imported draft pool)
 //
@@ -73,6 +74,8 @@ const pool = z.object({
   format: z.enum(['exam-pool/1', 'exam-pool/2']), title: z.string().min(1), board: z.string(), classLevel: z.number().int(), subject: z.string(), subjectCode: z.string(),
   chapter: z.string().min(1), chapterNo: z.number().int().optional(), book: z.string().optional(), topics: z.array(z.string()).min(1),
   ar_options: z.array(z.string()).length(4), items: z.array(item).min(1),
+  // a drawing pool: every question is wholly a drawing, marked by a teacher by hand (never by the AI)
+  section: z.enum(['drawing']).optional(),
 });
 export type Pool = z.infer<typeof pool>;
 type Item = Pool['items'][number];
@@ -168,8 +171,11 @@ export function check(p: Pool, base: string): { problems: string[]; leftOut: { i
     if (q.key === 'official' && !q.official) problems.push(`${q.id}: an official key must quote the scheme`);
     for (const m of authoredProblems(authoredOf(p, q) as never)) problems.push(`${q.id}: ${m}`);
     const f = figuresOf(q, base);
-    // a question that is only a drawing has nothing the AI may mark: a learner would write it and get no marks back
-    if (q.parts?.length && q.parts.every((pt) => pt.drawing)) f.problems.push('every part is a drawing, which the AI does not mark');
+    // a question that is only a drawing has nothing the AI may mark: a learner would write it and get no marks back. It belongs in a drawing
+    // pool (`"section": "drawing"`), whose questions a teacher marks by hand (the exam marking plan's 'hand' mode).
+    const onlyDrawing = (q.parts?.length ?? 0) > 0 && q.parts!.every((pt) => pt.drawing);
+    if (onlyDrawing && p.section !== 'drawing') f.problems.push('every part is a drawing, which the AI does not mark (it goes in a drawing pool)');
+    if (p.section === 'drawing' && !onlyDrawing) problems.push(`${q.id}: a drawing pool holds only questions that are wholly a drawing`);
     if (f.problems.length) leftOut.push({ id: q.id, why: f.problems });
     else pictures.set(q.id, f.figures);
   }
@@ -356,9 +362,12 @@ async function main() {
   if (!kept.length) throw new Error('nothing to import');
 
   const by = arg('by') ?? 'pool-importer';
-  const { examPageStore } = await import('@/lib/hw/storage/exam-pages');
-  const store = examPageStore();
-  for (const f of pics.values()) await store.put(f.key, f.bytes, f.mime);
+  // --no-upload: the pictures are already in storage (or this is a rehearsal on a copy of the database)
+  if (!process.argv.includes('--no-upload')) {
+    const { examPageStore } = await import('@/lib/hw/storage/exam-pages');
+    const store = examPageStore();
+    for (const f of pics.values()) await store.put(f.key, f.bytes, f.mime);
+  }
   const { db } = await import('@/db');
   const { and, eq } = await import('drizzle-orm');
   const { hwExamPackage, hwExamSet } = await import('@/db/hw-exams-schema');
