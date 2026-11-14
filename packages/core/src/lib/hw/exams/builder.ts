@@ -5,7 +5,7 @@
 
 import { and, asc, eq, inArray, isNull, max, sql } from 'drizzle-orm';
 import { hwBankPaper, hwBankQuestion } from '@/db/hw-bank-schema';
-import { hwExamEntitlement, hwExamPackage, hwExamSet, hwExamSetItem, type ExamSetKind, type ItemFigure, type ItemNcertRef } from '@/db/hw-exams-schema';
+import { hwExamEntitlement, hwExamPackage, hwExamSet, hwExamSetItem, type ExamSetKind, type ItemFigure, type ItemNcertRef, type ModelAnswerSource } from '@/db/hw-exams-schema';
 import { assertHwKey } from '@/lib/hw/storage/keys';
 import { HwError } from '@/lib/hw/errors';
 import { offerCheck } from '@/lib/hw/practice/paper';
@@ -301,6 +301,8 @@ export async function getSet(d: Exec, setId: string, sign?: (key: string) => Pro
     options: hwExamSetItem.options, correctOption: hwExamSetItem.correctOption, parts: hwExamSetItem.parts, schemeText: hwExamSetItem.schemeText,
     diagramParts: hwExamSetItem.diagramParts, ncert: hwExamSetItem.ncert, sources: hwExamSetItem.sources, figures: hwExamSetItem.figures,
     keyCheckedBy: hwExamSetItem.keyCheckedBy, keyCheckedAt: hwExamSetItem.keyCheckedAt,
+    // 038: the worked answer a teacher reads beside the key, and the bank's permanent ID
+    modelAnswer: hwExamSetItem.modelAnswer, answerSource: hwExamSetItem.answerSource, qid: hwExamSetItem.qid,
   }).from(hwExamSetItem).leftJoin(hwBankQuestion, eq(hwBankQuestion.id, hwExamSetItem.bankQuestionId))
     .where(eq(hwExamSetItem.setId, setId)).orderBy(asc(hwExamSetItem.position));
   const shown = await Promise.all(items.map(async (it) => ({
@@ -411,6 +413,32 @@ export interface AuthoredInput {
   sources?: string[];
   choiceGroup?: string | null;
   figures?: ItemFigure[];
+  /** 038: the worked model answer and who wrote it (both or neither), and the question's permanent ID in the bank. Not the key: changing them
+   *  does not take back a teacher's key check. */
+  modelAnswer?: string | null;
+  answerSource?: ModelAnswerSource | null;
+  qid?: string | null;
+}
+
+const ANSWER_SOURCES: readonly ModelAnswerSource[] = ['assistant', 'NCERT Exemplar', 'NCERT', 'CBSE marking scheme'];
+const QID = /^[A-Za-z0-9][A-Za-z0-9.-]{2,79}$/;
+
+/** The model answer, its source and the permanent ID as stored, or a refusal naming what is wrong (the 038 CHECK says the same). */
+function answerFields(input: Pick<AuthoredInput, 'modelAnswer' | 'answerSource' | 'qid'>) {
+  const out: { modelAnswer?: string | null; answerSource?: ModelAnswerSource | null; qid?: string | null } = {};
+  if (input.modelAnswer !== undefined || input.answerSource !== undefined) {
+    const text = input.modelAnswer?.trim() || null;
+    const source = input.answerSource ?? null;
+    if (!text !== !source) throw new HwError('BAD_REQUEST', 'A model answer needs its source, and a source needs its answer.');
+    if (text && text.length > 8000) throw new HwError('BAD_REQUEST', 'The model answer is longer than 8000 characters.');
+    if (source && !ANSWER_SOURCES.includes(source)) throw new HwError('BAD_REQUEST', `Unknown model-answer source "${source}".`);
+    out.modelAnswer = text; out.answerSource = source;
+  }
+  if (input.qid !== undefined) {
+    if (input.qid !== null && !QID.test(input.qid)) throw new HwError('BAD_REQUEST', `"${input.qid}" is not a question ID.`);
+    out.qid = input.qid;
+  }
+  return out;
 }
 
 const refuseAuthored = (q: Parameters<typeof authoredProblems>[0]) => {
@@ -420,6 +448,7 @@ const refuseAuthored = (q: Parameters<typeof authoredProblems>[0]) => {
 
 export async function addAuthoredItem(d: Exec, setId: string, input: AuthoredInput): Promise<{ id: string }> {
   refuseAuthored(input);
+  const answer = answerFields(input);
   return guarded('Adding the question', async () => {
     const slot = await nextItemSlot(d, setId);
     const [r] = await d.insert(hwExamSetItem).values({
@@ -428,6 +457,7 @@ export async function addAuthoredItem(d: Exec, setId: string, input: AuthoredInp
       acceptedAnswers: input.acceptedAnswers ?? [], parts: input.parts ?? [], schemeText: input.schemeText ?? '', diagramParts: input.diagramParts ?? [],
       ncert: input.ncert ?? {}, sources: input.sources ?? [], choiceGroup: input.choiceGroup ?? null,
       figures: (input.figures ?? []).map((f) => ({ key: assertHwKey(f.key), description: f.description, labels: f.labels ?? [] })),
+      ...answer,
     }).returning({ id: hwExamSetItem.id });
     return r!;
   });
@@ -437,7 +467,14 @@ export async function addAuthoredItem(d: Exec, setId: string, input: AuthoredInp
 export async function updateItem(d: Exec, itemId: string, patch: Partial<AuthoredInput>): Promise<void> {
   const item = (await d.select().from(hwExamSetItem).where(eq(hwExamSetItem.id, itemId)).limit(1))[0];
   if (!item) throw notFound('Question');
-  const { number, section, chapter, topic, ncert, sources, choiceGroup, ...content } = patch;
+  const { number, section, chapter, topic, ncert, sources, choiceGroup, modelAnswer, answerSource, qid, ...content } = patch;
+  // the model answer and the ID are not the key: they never take back a teacher's check
+  const answer = answerFields({
+    qid,
+    ...(modelAnswer !== undefined || answerSource !== undefined
+      ? { modelAnswer: modelAnswer !== undefined ? modelAnswer : item.modelAnswer, answerSource: answerSource !== undefined ? answerSource : item.answerSource }
+      : {}),
+  });
   if (item.bankQuestionId && Object.keys(content).length) throw new HwError('BAD_REQUEST', 'A board-paper question is changed in the bank, not here.');
   if (Object.keys(content).length) {
     refuseAuthored({
@@ -451,7 +488,7 @@ export async function updateItem(d: Exec, itemId: string, patch: Partial<Authore
     // the teacher checked the old content; changed content must be checked again
     ...(Object.keys(content).length && { keyCheckedBy: null, keyCheckedAt: null }),
     ...(number !== undefined && { number }), ...(section !== undefined && { section }), ...(chapter !== undefined && { chapter }), ...(topic !== undefined && { topic }),
-    ...(ncert !== undefined && { ncert }), ...(sources !== undefined && { sources }), ...(choiceGroup !== undefined && { choiceGroup }), ...content,
+    ...(ncert !== undefined && { ncert }), ...(sources !== undefined && { sources }), ...(choiceGroup !== undefined && { choiceGroup }), ...answer, ...content,
   };
   if (!Object.keys(set).length) return;
   await guarded('Changing the question', () => d.update(hwExamSetItem).set(set).where(eq(hwExamSetItem.id, itemId)));

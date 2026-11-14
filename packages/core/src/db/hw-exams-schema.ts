@@ -82,9 +82,17 @@ export const hwExamSetItem = pgTable('hw_exam_set_item', {
   /** 037: the teacher who checked a key the assistant wrote ("KEY TO CHECK"), and when; cleared when the content changes. */
   keyCheckedBy: text('key_checked_by'),
   keyCheckedAt: ts('key_checked_at'),
+  /** 038: the worked answer in the NCERT / Exemplar style (not the key; marking uses correctOption / parts), and who wrote it. */
+  modelAnswer: text('model_answer'),
+  answerSource: text('answer_source').$type<ModelAnswerSource>(),
+  /** 038: the question's permanent ID in the question bank, the same in every pool, practice test and app. */
+  qid: text('qid'),
   createdAt: ts('created_at').notNull().defaultNow(),
   updatedAt: ts('updated_at').notNull().defaultNow(),
 });
+
+/** Who wrote a question's model answer (migration 038). */
+export type ModelAnswerSource = 'assistant' | 'NCERT Exemplar' | 'NCERT' | 'CBSE marking scheme';
 
 /** Where a question is taught (migration 037). */
 export interface ItemNcertRef { book?: string; chapterNo?: number; section: string; title: string; pages: string }

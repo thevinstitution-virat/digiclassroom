@@ -145,6 +145,7 @@ export async function buildPractice(d: Exec, userId: string, input: { poolSetId:
       bankQuestionId: i.bankQuestionId, stem: i.stem, options: i.options, correctOption: i.correctOption, acceptedAnswers: i.acceptedAnswers,
       parts: i.parts, schemeText: i.schemeText, diagramParts: i.diagramParts,
       ncert: i.ncert, sources: i.sources, choiceGroup: i.choiceGroup, figures: i.figures, keyCheckedBy: i.keyCheckedBy, keyCheckedAt: i.keyCheckedAt,
+      modelAnswer: i.modelAnswer, answerSource: i.answerSource, qid: i.qid,
     })));
     await tx.update(hwExamSet).set({ status: 'published' }).where(eq(hwExamSet.id, set!.id));
     return { setId: set!.id, questions: chosen.length, maxMarks, durationMinutes };

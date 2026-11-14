@@ -171,6 +171,24 @@ The owner asked that teachers should not have to check every assistant key by ha
 - **Into the pools:** `pools.py build` adds `autoCheck` {model, at, status, why} to each checked assistant key. The importer writes the verdict into the scheme text as the second line, "AI check (gpt-6-luna, date): confirmed from the textbook | DISPUTED | a person must check. <why>". It marks a confirmed key checked by "Auto-check: gpt-6-luna (date)" (a teacher can take it back). `apply-checks` does the same on a draft pool that is already imported, never touching a teacher's own check.
 - **The builder:** the key panel shows the verdict at the top (green, red or amber); the list says "key auto-checked", "AI disputes key" or "AI unsure".
 
+### Model answers and permanent IDs (migration 038, 14 Nov 2026)
+
+After the bank's quality pass every keyed question (1,677) has a worked model answer in the NCERT / Exemplar style, and every question has a permanent ID (`cbse-science-qbank/ids.json`). Pool items carry `answer`, `answerSource` ("assistant" or "NCERT Exemplar") and `qid`.
+
+- **038** adds `model_answer`, `answer_source` and `qid` to `hw_exam_set_item`. One CHECK: the answer and its source come together, the source is from a fixed list, and the ID has the bank's shape. There is a partial index on `qid`. Apply it with `apply-migration-038.sh`: it rehearses first, and `--apply` writes. The same script serves Study Buddy through its PG_* variables.
+- **The model answer is not the key.** Marking still uses `correct_option` and `parts`. Changing the answer or the ID never takes back a teacher's key check (`updateItem`). The builder's `getSet` returns all three, a practice test copies them, and the learner's paper does not show them. Where learners see the model answer (after marking, in revision) is left for the owner to decide.
+- **Importer:** `import` stores all three. The new **`refresh`** command updates a draft pool that is already loaded, so a reload keeps the teachers' checks:
+  - It matches questions by their first printed source.
+  - It always writes the answer, its source, the ID, and any scheme-text change where the key is the same. Those writes keep the check.
+  - `--keys` replaces a question whose key, stem or key origin changed. That takes the check back, and a confirmed key is stamped auto-checked again.
+  - `--add` adds questions the pool does not have yet.
+  - It is a dry run unless you pass `--write`; `--no-upload` skips picture uploads.
+- **A note asking for a teacher outranks the model.** A key whose note says "a teacher should/must confirm/check" is never stamped auto-checked, even when the model agreed. That applies to 5 such keys (31/5/2 Q7, Q19; 31/7/1 Q31; 31(B)-E2 Q9; Exemplar ch12 Q2).
+- **Rehearsal** on a copy of the export DB, which matches Study Buddy's 38 pools and 1,097 questions:
+  - All 38 refreshed: 13 keys replaced and the 223 newer board questions added, giving 1,320 questions, each with a model answer and a distinct ID.
+  - 735 keys are auto-checked.
+  - A second run had nothing left to do.
+
 ## Open for the owner
 
 - `HW_INKBUDDY_POOL_AI_ENABLED`: AI marking of written answers against a teacher-checked authored key in InkBuddy.

@@ -11,6 +11,17 @@
 //   npm run hw:exam:pool -w apps/api -- check  <pool.json> [--figures <dir>]                    (no database: checks every question and picture)
 //   npm run hw:exam:pool -w apps/api -- import <pool.json> --year 2027 --slug cbse-x-science-chapter-practice --by "name" [--figures <dir>]
 //   npm run hw:exam:pool -w apps/api -- apply-checks <pool.json> --year 2027 --slug cbse-x-science-chapter-practice   (an imported draft pool)
+//   npm run hw:exam:pool -w apps/api -- refresh <pool.json> --year 2027 --slug … [--keys] [--add] [--write] [--no-upload] [--by name]   (an imported draft pool)
+//
+// Each question may carry its worked model answer (`answer`, NCERT / Exemplar style), who wrote it (`answerSource`) and its permanent ID in the
+// bank (`qid`); migration 038 stores them. They are not the key: marking still uses the right option or the value points.
+//
+// `refresh` brings a draft pool already imported up to date with a newer pool file, without deleting it (so the teachers' key checks survive).
+// Questions are matched by their first printed source. It always writes the model answer, its source and the ID, and a scheme text whose key is
+// unchanged (a new note or AI-check line; a teacher's check stays). `--keys` also replaces a question whose key or stem changed (that takes its
+// teacher's check back, as any content change does; a key the model confirmed is stamped auto-checked again). `--add` adds the file's questions the
+// pool does not have yet. Questions in the pool but not in the file are only listed. It is a DRY RUN unless `--write` is given: the same
+// transaction runs and is rolled back, so the counts are exact.
 //
 // An assistant key may carry `autoCheck` (cbse-science-qbank verify_keys.py: a model checked it against the NCERT chapter text, and code checked
 // its quotes are really in the book). Its verdict goes into the scheme text as "AI check (...)", and a key the model confirmed is marked checked
@@ -53,7 +64,11 @@ const item = z.object({
   autoCheck: z.object({
     model: z.string().min(1), at: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), status: z.enum(['approved', 'disputed', 'needs_person']), why: z.string(),
   }).optional(),
-});
+  // the worked model answer (NCERT / Exemplar style) and who wrote it, and the permanent question ID (cbse-science-qbank answers/ and ids.json; migration 038)
+  answer: z.string().min(1).max(8000).optional(),
+  answerSource: z.enum(['assistant', 'NCERT Exemplar', 'NCERT', 'CBSE marking scheme']).optional(),
+  qid: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9.-]{2,79}$/).optional(),
+}).refine((q) => !q.answer === !q.answerSource, { message: 'a model answer needs its answerSource, and an answerSource its answer' });
 const pool = z.object({
   format: z.enum(['exam-pool/1', 'exam-pool/2']), title: z.string().min(1), board: z.string(), classLevel: z.number().int(), subject: z.string(), subjectCode: z.string(),
   chapter: z.string().min(1), chapterNo: z.number().int().optional(), book: z.string().optional(), topics: z.array(z.string()).min(1),
@@ -100,8 +115,12 @@ export function withAiCheck(schemeText: string, line: string | null): string {
   return lines.join('\n');
 }
 
+/** A note with the key that asks for a teacher ("A teacher should confirm.") outranks the model: such a key is never stamped auto-checked. */
+export const TEACHER_ASKED = /\bteacher\s+(should|must)\s+(confirm|check)\b/i;
+
 /** Who the check stamps when the model confirmed the key: the builder shows it, and a teacher can take it back. */
-export const autoCheckedBy = (q: Item) => (q.key === 'assistant' && q.autoCheck?.status === 'approved' ? `Auto-check: ${q.autoCheck.model} (${q.autoCheck.at})` : null);
+export const autoCheckedBy = (q: Item) => (q.key === 'assistant' && q.autoCheck?.status === 'approved' && !TEACHER_ASKED.test(q.note ?? '')
+  ? `Auto-check: ${q.autoCheck.model} (${q.autoCheck.at})` : null);
 
 /** One pool question as the builder takes it; the key's origin is said in its scheme text. */
 export function authoredOf(p: Pool, q: Item, figures: ItemFigure[] = []): AuthoredInput {
@@ -128,6 +147,9 @@ export function authoredOf(p: Pool, q: Item, figures: ItemFigure[] = []): Author
     sources: q.sources,
     choiceGroup: q.choiceGroup ?? null,
     figures,
+    modelAnswer: q.answer ?? null,
+    answerSource: q.answerSource ?? null,
+    qid: q.qid ?? null,
   };
 }
 
@@ -154,6 +176,90 @@ export function check(p: Pool, base: string): { problems: string[]; leftOut: { i
   return { problems, leftOut, pictures };
 }
 
+/** A key as compared between the database and the pool file: the right option, or each part's value points with their marks. */
+export const keyOf = (option: string | null | undefined, parts: unknown) => JSON.stringify([option ?? null,
+  ((parts ?? []) as { label?: string; value_points?: { text: string; marks: number }[] }[]).map((pt) => [pt.label ?? '', (pt.value_points ?? []).map((v) => [v.text, Number(v.marks)])])]);
+
+/** The first line of a scheme text says where the key comes from ("KEY TO CHECK: …", "CBSE marking scheme: …"); a change there is a change of key. */
+const originOf = (schemeText: string | null | undefined) => (schemeText ?? '').split('\n')[0]!;
+
+class DryRun extends Error {}
+
+/** `refresh` (see the top of the file). Returns what it did, or would do in a dry run. */
+export async function refresh(p: Pool, year: number, slug: string, kept: Item[], pictures: Map<string, StoredFigure[]>,
+  opts: { keys: boolean; add: boolean; write: boolean; by: string }) {
+  const { db } = await import('@/db');
+  const { and, eq } = await import('drizzle-orm');
+  const { hwExamPackage, hwExamSet, hwExamSetItem } = await import('@/db/hw-exams-schema');
+  const b = await import('@/lib/hw/exams/builder');
+  const byRef = new Map(kept.map((q) => [q.sources[0]!, q]));
+  const n = { answers: 0, ids: 0, schemeTexts: 0, keysReplaced: [] as string[], keysDiffer: [] as string[], added: [] as string[], missing: [] as string[],
+    notInFile: [] as string[], checksTakenBack: 0, autoStamped: 0, autoTakenBack: 0, maxMarks: null as number | null };
+  try {
+    await db.transaction(async (tx) => {
+      const pkg = (await tx.select().from(hwExamPackage).where(and(eq(hwExamPackage.board, p.board), eq(hwExamPackage.classLevel, p.classLevel), eq(hwExamPackage.examYear, year), eq(hwExamPackage.slug, slug))).limit(1))[0];
+      if (!pkg) throw new Error(`no package ${p.board} class ${p.classLevel} ${year} "${slug}"`);
+      const set = (await tx.select().from(hwExamSet).where(and(eq(hwExamSet.packageId, pkg.id), eq(hwExamSet.kind, 'pool'), eq(hwExamSet.title, p.title))).limit(1))[0];
+      if (!set) throw new Error(`the package has no pool called "${p.title}"`);
+      if (set.status !== 'draft') throw new Error(`the pool "${p.title}" is ${set.status}; only a draft pool can be refreshed`);
+      const rows = await tx.select().from(hwExamSetItem).where(eq(hwExamSetItem.setId, set.id));
+      const seen = new Set<string>();
+      for (const r of rows) {
+        const q = (r.sources ?? []).map((s) => byRef.get(s)).find(Boolean);
+        if (!q) { n.notInFile.push((r.sources ?? [])[0] ?? `question ${r.number}`); continue; }
+        seen.add(q.id);
+        const file = authoredOf(p, q, pictures.get(q.id)!.map((f) => ({ key: f.key, description: f.description, labels: f.labels })));
+        const keyChanged = keyOf(r.correctOption, r.parts) !== keyOf(file.correctOption, file.parts) || (r.stem ?? '') !== file.stem
+          || originOf(r.schemeText) !== originOf(file.schemeText) || Number(r.marks) !== file.marks || r.qtype !== file.qtype;
+        if (keyChanged && !opts.keys) { n.keysDiffer.push(q.sources[0]!); }
+        else if (keyChanged) {
+          const { number: _n, section: _s, ...content } = file;
+          if (r.keyCheckedBy) n.checksTakenBack++;
+          await b.updateItem(tx, r.id, content);
+          const auto = autoCheckedBy(q);
+          if (auto) { await b.checkItemKey(tx, r.id, auto, true); n.autoStamped++; }
+          n.keysReplaced.push(q.sources[0]!);
+          continue;
+        }
+        // not the key: written directly, so a teacher's check stays
+        const patch: Partial<typeof hwExamSetItem.$inferInsert> = {};
+        if ((r.modelAnswer ?? null) !== (file.modelAnswer ?? null) || (r.answerSource ?? null) !== (file.answerSource ?? null)) {
+          patch.modelAnswer = file.modelAnswer ?? null; patch.answerSource = file.answerSource ?? null; n.answers++;
+        }
+        if ((r.qid ?? null) !== (file.qid ?? null)) { patch.qid = file.qid ?? null; n.ids++; }
+        if (!keyChanged && r.schemeText !== file.schemeText) { patch.schemeText = file.schemeText!; n.schemeTexts++; }
+        // the auto-check stamp follows the file's verdict (as apply-checks does); a teacher's own check is never touched
+        const auto = keyChanged ? null : autoCheckedBy(q);
+        const byAuto = (r.keyCheckedBy ?? '').startsWith('Auto-check:');
+        if (!keyChanged && (!r.keyCheckedBy || byAuto) && (r.keyCheckedBy ?? null) !== auto) {
+          patch.keyCheckedBy = auto; patch.keyCheckedAt = auto ? new Date() : null;
+          if (auto) n.autoStamped++; else n.autoTakenBack++;
+        }
+        if (Object.keys(patch).length) await tx.update(hwExamSetItem).set(patch).where(eq(hwExamSetItem.id, r.id));
+      }
+      for (const q of kept) {
+        if (seen.has(q.id)) continue;
+        if (!opts.add) { n.missing.push(q.sources[0]!); continue; }
+        const figures = pictures.get(q.id)!.map((f) => ({ key: f.key, description: f.description, labels: f.labels }));
+        const { id } = await b.addAuthoredItem(tx, set.id, authoredOf(p, q, figures));
+        const auto = autoCheckedBy(q);
+        if (auto) { await b.checkItemKey(tx, id, auto, true); n.autoStamped++; }
+        n.added.push(q.sources[0]!);
+      }
+      if (n.added.length) {
+        // as the importer sets it: the pool's marks are the sum of its questions'
+        const all = await tx.select({ marks: hwExamSetItem.marks }).from(hwExamSetItem).where(eq(hwExamSetItem.setId, set.id));
+        n.maxMarks = all.reduce((s, x) => s + Number(x.marks), 0);
+        await tx.update(hwExamSet).set({ maxMarks: n.maxMarks }).where(eq(hwExamSet.id, set.id));
+      }
+      if (!opts.write) throw new DryRun();
+    });
+  } catch (e) {
+    if (!(e instanceof DryRun)) throw e;
+  }
+  return n;
+}
+
 /**
  * `apply-checks`: puts the pool file's AI checks on a pool already imported (matched by title, its questions by their first printed source).
  * Writes the AI-check line into each assistant key's scheme text and stamps the keys the model confirmed as checked "Auto-check: <model> (<date>)".
@@ -166,8 +272,6 @@ async function applyChecks(p: Pool, year: number, slug: string) {
   const { hwExamPackage, hwExamSet, hwExamSetItem } = await import('@/db/hw-exams-schema');
   const byRef = new Map(p.items.filter((q) => q.key === 'assistant').map((q) => [q.sources[0]!, q]));
   const n = { lines: 0, stamped: 0, unstamped: 0, teacher: 0, unmatched: 0, differs: [] as string[] };
-  const keyOf = (option: string | null | undefined, parts: unknown) => JSON.stringify([option ?? null,
-    ((parts ?? []) as { label?: string; value_points?: { text: string; marks: number }[] }[]).map((pt) => [pt.label ?? '', (pt.value_points ?? []).map((v) => [v.text, Number(v.marks)])])]);
   await db.transaction(async (tx) => {
     const pkg = (await tx.select().from(hwExamPackage).where(and(eq(hwExamPackage.board, p.board), eq(hwExamPackage.classLevel, p.classLevel), eq(hwExamPackage.examYear, year), eq(hwExamPackage.slug, slug))).limit(1))[0];
     if (!pkg) throw new Error(`no package ${p.board} class ${p.classLevel} ${year} "${slug}"`);
@@ -207,7 +311,7 @@ async function applyChecks(p: Pool, year: number, slug: string) {
 
 async function main() {
   const [cmd, path] = process.argv.slice(2);
-  if (!cmd || !path || !['check', 'import', 'apply-checks'].includes(cmd)) throw new Error('usage: check|import|apply-checks <pool.json> [--figures <dir>] [--year 2027 --slug ... --by name]');
+  if (!cmd || !path || !['check', 'import', 'apply-checks', 'refresh'].includes(cmd)) throw new Error('usage: check|import|apply-checks|refresh <pool.json> [--figures <dir>] [--year 2027 --slug ... --by name] [--keys --add --write]');
   const p = pool.parse(JSON.parse(readFileSync(path, 'utf8')));
   const base = resolve(arg('figures') ?? join(dirname(resolve(path)), '..'));
   const { problems, leftOut, pictures } = check(p, base);
@@ -221,11 +325,34 @@ async function main() {
   if (leftOut.length) console.log(`left out (missing pictures, or only a drawing):\n${leftOut.map((l) => `  - ${l.id}: ${l.why.join('; ')}`).join('\n')}`);
   if (problems.length) { console.error(problems.map((x) => `  - ${x}`).join('\n')); process.exit(1); }
   const ai = p.items.filter((q) => q.key === 'assistant' && q.autoCheck);
+  console.log(`model answers: ${kept.filter((q) => q.answer).length} of ${kept.length} (${kept.filter((q) => q.answerSource === 'assistant').length} assistant, `
+    + `${kept.filter((q) => q.answerSource && q.answerSource !== 'assistant').length} book); question IDs: ${kept.filter((q) => q.qid).length}`);
   if (ai.length) console.log(`AI checks: ${['approved', 'disputed', 'needs_person'].map((s) => `${ai.filter((q) => q.autoCheck!.status === s).length} ${s}`).join(', ')} of ${p.items.filter((q) => q.key === 'assistant').length} assistant keys`);
   if (cmd === 'check') return;
   const year = Number(arg('year') ?? 2027);
   const slug = arg('slug') ?? 'chapter-practice';
   if (cmd === 'apply-checks') { await applyChecks(p, year, slug); process.exit(0); }
+  if (cmd === 'refresh') {
+    const flag = (f: string) => process.argv.includes(`--${f}`);
+    const o = { keys: flag('keys'), add: flag('add'), write: flag('write'), by: arg('by') ?? 'pool-importer' };
+    // --no-upload: the pictures are already in storage (or this is a rehearsal on a copy of the database)
+    if (o.write && (o.keys || o.add) && !flag('no-upload')) {
+      const { examPageStore } = await import('@/lib/hw/storage/exam-pages');
+      const store = examPageStore();
+      for (const f of pics.values()) await store.put(f.key, f.bytes, f.mime);
+    }
+    const r = await refresh(p, year, slug, kept, pictures, o);
+    const list = (xs: string[]) => (xs.length ? `: ${xs.join(', ')}` : '');
+    console.log(`${o.write ? 'REFRESHED' : 'DRY RUN (nothing written; add --write)'} ${p.title}: ${r.answers} model answers, ${r.ids} question IDs, `
+      + `${r.schemeTexts} scheme texts (key unchanged, checks kept)`
+      + `\n  keys replaced ${r.keysReplaced.length}${list(r.keysReplaced)}${r.checksTakenBack ? ` (${r.checksTakenBack} teacher/auto checks taken back)` : ''}`
+      + (r.keysDiffer.length ? `\n  key or stem differs from the file, left alone (add --keys)${list(r.keysDiffer)}` : '')
+      + `\n  questions added ${r.added.length}${list(r.added)}${r.maxMarks !== null ? ` (pool now out of ${r.maxMarks})` : ''}`
+      + (r.missing.length ? `\n  in the file, not in the pool (add --add)${list(r.missing)}` : '')
+      + (r.notInFile.length ? `\n  in the pool, not in the file (left alone)${list(r.notInFile)}` : '')
+      + `\n  ${r.autoStamped} keys stamped auto-checked, ${r.autoTakenBack} auto stamps taken back`);
+    process.exit(0);
+  }
   if (!kept.length) throw new Error('nothing to import');
 
   const by = arg('by') ?? 'pool-importer';
